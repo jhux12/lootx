@@ -3406,6 +3406,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ensureAdmin();
     try {
       await deleteDoc(doc(db, 'coin_packages', id));
+      setCoinPackages((prev) => prev.filter((pkg) => pkg.id !== id));
     } catch (error) {
       console.error('Failed to delete coin package from Firebase', error);
       throw error;

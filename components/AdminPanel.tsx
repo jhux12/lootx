@@ -367,6 +367,7 @@ export const AdminPanel: React.FC = () => {
   });
   const [packageError, setPackageError] = useState<string | null>(null);
   const [isSavingPackage, setIsSavingPackage] = useState(false);
+  const [deletingPackageId, setDeletingPackageId] = useState<string | null>(null);
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
@@ -1759,12 +1760,16 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
-  const handleDeletePackage = async (id: string) => {
-      if (!confirm('Delete this coin package? This cannot be undone.')) return;
+  const handleDeletePackage = async (pkg: CoinPackage) => {
+      if (deletingPackageId) return;
+      if (!confirm(`Delete ${pkg.name || 'this coin package'}? This cannot be undone.`)) return;
+      setDeletingPackageId(pkg.id);
       try {
-          await deleteCoinPackage(id);
+          await deleteCoinPackage(pkg.id);
       } catch (error) {
           alert('Failed to delete package.');
+      } finally {
+          setDeletingPackageId(null);
       }
   };
 
@@ -4506,18 +4511,25 @@ export const AdminPanel: React.FC = () => {
                                                     {pkg.updatedAt ? formatTimestamp(pkg.updatedAt) : '--'}
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
-                                                    <div className="flex justify-end gap-2">
+                                                    <div className="flex flex-col justify-end gap-2 sm:flex-row">
                                                         <button
+                                                            type="button"
                                                             onClick={() => handleEditPackage(pkg)}
-                                                            className="p-1.5 hover:bg-blue-500/10 text-blue-400 rounded transition-colors"
+                                                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-500/20 px-2.5 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/10"
+                                                            aria-label={`Edit ${pkg.name}`}
                                                         >
                                                             <Edit2 className="w-4 h-4" />
+                                                            <span>Edit</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDeletePackage(pkg.id)}
-                                                            className="p-1.5 hover:bg-red-500/10 text-red-400 rounded transition-colors"
+                                                            type="button"
+                                                            onClick={() => handleDeletePackage(pkg)}
+                                                            disabled={deletingPackageId === pkg.id}
+                                                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-red-500/25 px-2.5 py-2 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            aria-label={`Delete ${pkg.name}`}
                                                         >
                                                             <Trash2 className="w-4 h-4" />
+                                                            <span>{deletingPackageId === pkg.id ? 'Deleting...' : 'Delete'}</span>
                                                         </button>
                                                     </div>
                                                 </td>
