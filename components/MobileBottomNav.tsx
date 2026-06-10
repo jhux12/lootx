@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Backpack, Box, Crown, Flame, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -26,14 +27,21 @@ export const MobileBottomNav: React.FC = () => {
   const { playSound } = useSound();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined;
 
-    document.documentElement.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 64px)');
+    const root = document.documentElement;
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
     return () => {
-      document.documentElement.style.removeProperty('--pullz-mobile-bottom-nav-height');
+      root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    setPortalTarget(document.body);
   }, []);
 
   useEffect(() => {
@@ -91,12 +99,21 @@ export const MobileBottomNav: React.FC = () => {
     setIsFreeBoxTooltipDismissed(true);
   };
 
-  return (
+  const nav = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-[70] min-h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-cyan-400/20 bg-[#141b22]/95 px-2.5 pb-[calc(env(safe-area-inset-bottom)+6px)] pt-2 backdrop-blur lg:hidden"
+      data-disable-pull-refresh="true"
+      className="pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur lg:hidden"
       aria-label="Primary navigation"
+      style={{
+        WebkitTransform: 'translate3d(0,0,0)',
+        transform: 'translate3d(0,0,0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+        contain: 'layout paint style',
+        willChange: 'transform'
+      }}
     >
-      <nav className="grid grid-cols-5 gap-0.5">
+      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === 'MENU' ? isMenuOpen : activeId === item.id;
@@ -121,8 +138,8 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium ${
-                  isActive ? 'text-white' : 'text-slate-400'
+                className={`flex min-h-12 w-full flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-semibold transition-colors active:scale-[0.98] ${
+                  isActive ? 'bg-white/[0.07] text-white shadow-inner' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
                 aria-expanded={isMenuToggle ? isMenuOpen : undefined}
@@ -150,7 +167,7 @@ export const MobileBottomNav: React.FC = () => {
                   <span className="relative">
                     <Icon className={item.iconClassName ?? iconClassName} />
                     {item.id === 'INVENTORY' && hasFreeSignupBox && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#05080d]" aria-hidden="true" />
                     )}
                   </span>
                 ) : null}
@@ -162,4 +179,6 @@ export const MobileBottomNav: React.FC = () => {
       </nav>
     </div>
   );
+
+  return portalTarget ? createPortal(nav, portalTarget) : nav;
 };
