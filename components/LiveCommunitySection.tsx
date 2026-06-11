@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Timestamp, collection, doc, getDoc, increment, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
-import { getDownloadURL, ref } from 'firebase/storage';
+import React, { useEffect, useRef, useState } from 'react';
+import { Timestamp, addDoc, collection, doc, getDoc, increment, limit, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { COIN_ICON } from '../constants';
 
 export type LiveCommunityStory = {
   id: string;
@@ -102,6 +103,12 @@ export const LiveCommunitySection: React.FC = () => {
   const [storyDragOffset, setStoryDragOffset] = useState(0);
   const viewedStoryIdsRef = useRef<Set<string>>(new Set());
   const [brokenStoryIds, setBrokenStoryIds] = useState<Set<string>>(new Set());
+  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
+  const [submitUsername, setSubmitUsername] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
+  const [submitPreviewUrl, setSubmitPreviewUrl] = useState<string | null>(null);
+  const [submitNotice, setSubmitNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
+  const [isSubmittingPull, setIsSubmittingPull] = useState(false);
 
   const scrollStoryRail = (direction: 'previous' | 'next') => {
     const rail = storyRailRef.current;
@@ -135,6 +142,17 @@ export const LiveCommunitySection: React.FC = () => {
       if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
     };
   }, []);
+
+  useEffect(() => {
+    if (!submitFile) {
+      setSubmitPreviewUrl(null);
+      return;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(submitFile);
+    setSubmitPreviewUrl(nextPreviewUrl);
+    return () => URL.revokeObjectURL(nextPreviewUrl);
+  }, [submitFile]);
 
   useEffect(() => {
     if (!shouldConnectRealtime) return;
@@ -284,6 +302,82 @@ export const LiveCommunitySection: React.FC = () => {
     }
   };
 
+  const openSubmitPull = () => {
+    setSubmitNotice(null);
+    setIsSubmitOpen(true);
+  };
+
+  const closeSubmitPull = () => {
+    if (isSubmittingPull) return;
+    setIsSubmitOpen(false);
+    setSubmitNotice(null);
+  };
+
+  const resetSubmitForm = () => {
+    setSubmitUsername('');
+    setSubmitFile(null);
+  };
+
+  const handleSubmitPull = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSubmittingPull) return;
+
+    const trimmedUsername = submitUsername.trim();
+    if (trimmedUsername.length < 2) {
+      setSubmitNotice({ tone: 'error', message: 'Add the username you want shown with your pull.' });
+      return;
+    }
+
+    if (!submitFile) {
+      setSubmitNotice({ tone: 'error', message: 'Upload a clean photo of your delivered pull.' });
+      return;
+    }
+
+    if (!submitFile.type.startsWith('image/')) {
+      setSubmitNotice({ tone: 'error', message: 'Please upload an image file.' });
+      return;
+    }
+
+    setIsSubmittingPull(true);
+    setSubmitNotice(null);
+    try {
+      const safeName = submitFile.name.replace(/[^a-z0-9._-]+/gi, '-').toLowerCase();
+      const uploadPath = `live-community-submissions/${Date.now()}-${safeName}`;
+      const uploadRef = ref(storage, uploadPath);
+      await uploadBytes(uploadRef, submitFile, { contentType: submitFile.type || 'image/jpeg' });
+      const mediaUrl = await getDownloadURL(uploadRef);
+
+      await addDoc(collection(db, 'liveCommunityStories'), {
+        username: trimmedUsername,
+        caption: 'Community pull submission',
+        badgeText: 'Delivered',
+        type: 'shipment',
+        rarity: 'rare',
+        featured: false,
+        approved: false,
+        status: 'pending',
+        mediaUrl,
+        mediaType: 'image',
+        storagePath: uploadPath,
+        source: 'community-submit-pull',
+        rewardCoins: 1000,
+        requirements: ['shipped_and_delivered', 'clean_respectful_photo', 'admin_approved'],
+        createdAt: serverTimestamp(),
+        order: Date.now(),
+        views: 0,
+        clicks: 0,
+        hidden: false
+      });
+
+      resetSubmitForm();
+      setSubmitNotice({ tone: 'success', message: 'Submitted! Our admins will review it before it appears and reward eligibility is confirmed.' });
+    } catch (error) {
+      setSubmitNotice({ tone: 'error', message: error instanceof Error ? error.message : 'Unable to submit your pull right now.' });
+    } finally {
+      setIsSubmittingPull(false);
+    }
+  };
+
   const canNavigateStories = stories.length > 1;
 
   return <section ref={sectionRef} className="space-y-3 min-h-[136px]">
@@ -310,6 +404,23 @@ export const LiveCommunitySection: React.FC = () => {
           className="scrollbar-hide flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain px-4 py-1.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:gap-3 sm:px-0.5"
           aria-label="Community Pullz stories. Swipe horizontally to browse."
         >
+          <button
+            type="button"
+            onClick={openSubmitPull}
+            data-community-story-card
+            className="group flex w-[96px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[112px] lg:w-[120px]"
+          >
+            <div className="relative grid h-[86px] w-[86px] place-items-center overflow-hidden rounded-full border border-amber-200/35 bg-gradient-to-br from-amber-300/95 via-lime-300/90 to-emerald-300/90 p-[2px] shadow-[0_0_20px_rgba(250,204,21,0.28)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]">
+              <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#0b1010]/92 px-2 text-center">
+                <img src={COIN_ICON} alt="" aria-hidden="true" className="mb-1 h-6 w-6 object-contain drop-shadow sm:h-7 sm:w-7" loading="lazy" decoding="async" />
+                <span className="text-[9px] font-black uppercase leading-tight tracking-wide text-white sm:text-[10px]">Submit Pull</span>
+                <span className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black text-black">
+                  +1,000
+                </span>
+              </div>
+            </div>
+            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-amber-100">Get 1,000 coins</span>
+          </button>
         {stories.length ? stories.map((story, index) => {
           const badge = getStoryBadge(story);
           return (
@@ -338,6 +449,80 @@ export const LiveCommunitySection: React.FC = () => {
         </div>
       </div>
     </div>
+    {isSubmitOpen && (
+      <div className="fixed inset-0 z-[230] flex items-end justify-center bg-black/75 px-3 pb-3 pt-10 backdrop-blur-sm sm:items-center sm:p-6" onClick={closeSubmitPull}>
+        <form
+          className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#10151b] text-white shadow-[0_28px_90px_rgba(0,0,0,0.62)]"
+          onClick={(event) => event.stopPropagation()}
+          onSubmit={(event) => { void handleSubmitPull(event); }}
+        >
+          <div className="relative border-b border-white/10 bg-gradient-to-br from-amber-300/16 via-lime-300/8 to-fuchsia-400/10 p-4 sm:p-5">
+            <button type="button" aria-label="Close submit pull modal" onClick={closeSubmitPull} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-black/20 text-lg font-bold text-white/80 transition hover:bg-white/10">×</button>
+            <div className="flex items-center gap-3 pr-10">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-amber-200/30 bg-amber-300/12">
+                <img src={COIN_ICON} alt="Coins" className="h-8 w-8 object-contain" loading="lazy" decoding="async" />
+              </span>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Community reward</p>
+                <h3 className="mt-0.5 text-xl font-black leading-tight text-white">Submit your pull, get 1,000 coins</h3>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 p-4 sm:p-5">
+            {submitNotice && <div className={`rounded-2xl border px-3 py-2 text-sm ${submitNotice.tone === 'success' ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-100' : 'border-red-300/30 bg-red-400/10 text-red-100'}`}>{submitNotice.message}</div>}
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-black uppercase tracking-wide text-slate-300">Username</span>
+              <input
+                value={submitUsername}
+                onChange={(event) => setSubmitUsername(event.target.value)}
+                placeholder="@yourname"
+                className="min-h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white outline-none transition placeholder:text-slate-500 focus:border-amber-200/50 focus:bg-white/[0.07]"
+                maxLength={32}
+              />
+            </label>
+
+            <label className="block cursor-pointer rounded-2xl border border-dashed border-white/15 bg-white/[0.035] p-3 transition hover:border-amber-200/40 hover:bg-white/[0.055]">
+              <span className="mb-2 block text-xs font-black uppercase tracking-wide text-slate-300">Photo of delivered pull</span>
+              <div className="flex items-center gap-3">
+                <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-2xl border border-white/10 bg-black/20 text-center text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  {submitPreviewUrl ? <img src={submitPreviewUrl} alt="Submission preview" className="h-full w-full object-cover" /> : 'Add photo'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-white">{submitFile ? submitFile.name : 'Tap to upload an image'}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">Use a clear, respectful photo of an order that has already been delivered.</p>
+                </div>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => setSubmitFile(event.target.files?.[0] ?? null)}
+              />
+            </label>
+
+            <div className="rounded-2xl border border-white/10 bg-black/18 p-3">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-300">Requirements</p>
+              <ul className="mt-2 space-y-1.5 text-xs leading-5 text-slate-300">
+                <li>• Order must be shipped and delivered.</li>
+                <li>• Clean, respectful photos only.</li>
+                <li>• Must be admin approved before posting/reward.</li>
+              </ul>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmittingPull}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 via-lime-300 to-emerald-300 px-4 text-sm font-black uppercase tracking-wide text-black shadow-[0_14px_34px_rgba(132,204,22,0.22)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <img src={COIN_ICON} alt="" aria-hidden="true" className="h-5 w-5 object-contain" />
+              {isSubmittingPull ? 'Submitting...' : 'Submit for 1,000 coins'}
+            </button>
+          </div>
+        </form>
+      </div>
+    )}
     {activeIndex !== null && stories[activeIndex] && (
       <div className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-sm" onClick={closeStory}>
         <div
