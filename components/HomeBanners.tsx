@@ -56,6 +56,7 @@ const HOME_BANNERS: HomeBanner[] = [
 ];
 
 const ROTATION_INTERVAL_MS = 5500;
+const MOBILE_CAROUSEL_QUERY = '(max-width: 639px)';
 
 export const HomeBanners: React.FC = () => {
   const { isAuthenticated, user, setView, setShowTopUpModal, setTopUpModalIntent, openAuthModal } = useGame();
@@ -65,6 +66,7 @@ export const HomeBanners: React.FC = () => {
   }, [isAuthenticated, user]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMobileCarousel, setIsMobileCarousel] = useState(() => (typeof window === 'undefined' ? false : window.matchMedia(MOBILE_CAROUSEL_QUERY).matches));
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const suppressNextClickRef = useRef(false);
@@ -144,14 +146,24 @@ export const HomeBanners: React.FC = () => {
   };
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mobileMediaQuery = window.matchMedia(MOBILE_CAROUSEL_QUERY);
+    const syncMobileCarousel = () => setIsMobileCarousel(mobileMediaQuery.matches);
+    syncMobileCarousel();
+    mobileMediaQuery.addEventListener('change', syncMobileCarousel);
+    return () => mobileMediaQuery.removeEventListener('change', syncMobileCarousel);
+  }, []);
+
+  useEffect(() => {
     setActiveIndex((current) => Math.min(current, Math.max(0, banners.length - 1)));
   }, [banners.length]);
 
   useEffect(() => {
-    if (isPaused || banners.length <= 1) return;
+    if (isMobileCarousel || isPaused || banners.length <= 1) return;
     const rotationTimer = window.setInterval(goToNextSlide, ROTATION_INTERVAL_MS);
     return () => window.clearInterval(rotationTimer);
-  }, [banners.length, goToNextSlide, isPaused]);
+  }, [banners.length, goToNextSlide, isMobileCarousel, isPaused]);
 
   if (banners.length === 0) {
     return null;
@@ -160,7 +172,7 @@ export const HomeBanners: React.FC = () => {
   return (
     <section aria-label="Pullz feature highlights" className="relative">
       <div
-        className="group relative overflow-hidden rounded-[1.35rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_18px_44px_rgba(5,8,12,0.28)] touch-pan-y select-none"
+        className="group relative overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_14px_34px_rgba(5,8,12,0.24)] touch-pan-y select-none sm:rounded-[1.25rem] sm:shadow-[0_16px_38px_rgba(5,8,12,0.26)]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onFocus={() => setIsPaused(true)}
@@ -171,7 +183,7 @@ export const HomeBanners: React.FC = () => {
         aria-roledescription="carousel"
         aria-label="Deposit offer, open, upgrade, and leaderboard highlights"
       >
-        <div className="relative min-h-[255px] sm:min-h-[285px] lg:min-h-[310px]">
+        <div className="relative min-h-[210px] sm:min-h-[250px] lg:min-h-[280px]">
           {banners.map((banner, index) => {
             const isActive = index === activeIndex;
             const slideClassName = `absolute inset-0 transition-all duration-700 ease-out ${isActive ? 'z-10 translate-x-0 opacity-100' : 'z-0 translate-x-4 opacity-0'}`;
@@ -193,16 +205,16 @@ export const HomeBanners: React.FC = () => {
                       : 'absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.22),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]'
                   }
                 />
-                <div className="relative grid h-full min-h-[255px] grid-cols-1 gap-2 p-5 sm:min-h-[285px] sm:grid-cols-[1fr_260px] sm:items-center sm:gap-6 sm:p-6 lg:min-h-[310px] lg:grid-cols-[1fr_340px] lg:p-7">
-                  <div className="relative z-10 max-w-xl pb-24 sm:pb-0">
-                    <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${banner.accent === 'orange' ? 'text-orange-100/90' : 'text-cyan-200/85'}`}>{banner.eyebrow}</p>
-                    <h2 className="mt-2 text-3xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-4xl lg:text-5xl">{banner.title}</h2>
-                    <p className="mt-3 max-w-md text-sm font-medium leading-6 text-slate-300 sm:text-base">{banner.description}</p>
-                    <span className={`mt-5 inline-flex min-h-11 items-center rounded-xl px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white transition group-hover:brightness-110 sm:text-sm ${banner.accent === 'orange' ? 'bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_12px_30px_rgba(249,115,22,0.34)]' : 'bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 shadow-[0_12px_30px_rgba(32,93,215,0.34)]'}`}>
+                <div className="relative grid h-full min-h-[210px] grid-cols-1 gap-2 p-4 sm:min-h-[250px] sm:grid-cols-[1fr_220px] sm:items-center sm:gap-5 sm:p-5 lg:min-h-[280px] lg:grid-cols-[1fr_295px] lg:p-6">
+                  <div className="relative z-10 max-w-lg pb-20 sm:pb-0">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.18em] sm:text-[11px] ${banner.accent === 'orange' ? 'text-orange-100/90' : 'text-cyan-200/85'}`}>{banner.eyebrow}</p>
+                    <h2 className="mt-1.5 text-2xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-3xl lg:text-4xl">{banner.title}</h2>
+                    <p className="mt-2 max-w-sm text-xs font-medium leading-5 text-slate-300 sm:max-w-md sm:text-sm sm:leading-6">{banner.description}</p>
+                    <span className={`mt-4 inline-flex min-h-10 items-center rounded-xl px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.12em] text-white transition group-hover:brightness-110 sm:text-xs lg:text-sm ${banner.accent === 'orange' ? 'bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_12px_30px_rgba(249,115,22,0.34)]' : 'bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 shadow-[0_12px_30px_rgba(32,93,215,0.34)]'}`}>
                       {banner.cta}
                     </span>
                   </div>
-                  <div className="pointer-events-none absolute bottom-[-22px] right-[-18px] z-10 h-[178px] w-[178px] sm:static sm:h-[250px] sm:w-[250px] lg:h-[315px] lg:w-[315px]">
+                  <div className="pointer-events-none absolute bottom-[-18px] right-[-14px] z-10 h-[136px] w-[136px] sm:static sm:h-[210px] sm:w-[210px] lg:h-[280px] lg:w-[280px]">
                     <img
                       src={banner.image}
                       alt={`${banner.title} artwork`}
@@ -220,14 +232,14 @@ export const HomeBanners: React.FC = () => {
           })}
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-3 bg-gradient-to-t from-black/45 via-black/12 to-transparent p-3 sm:p-4">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-2 backdrop-blur-md">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-3 bg-gradient-to-t from-black/45 via-black/12 to-transparent p-2.5 sm:p-3">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-2.5 py-1.5 sm:px-3 sm:py-2 backdrop-blur-md">
             {banners.map((banner, index) => (
               <button
                 key={banner.title}
                 type="button"
                 onClick={() => goToSlide(index)}
-                className={`h-2.5 rounded-full transition-all ${index === activeIndex ? (banner.accent === 'orange' ? 'w-7 bg-orange-200 shadow-[0_0_12px_rgba(254,215,170,0.75)]' : 'w-7 bg-cyan-200 shadow-[0_0_12px_rgba(165,243,252,0.75)]') : 'w-2.5 bg-white/45 hover:bg-white/70'}`}
+                className={`h-2 rounded-full transition-all sm:h-2.5 ${index === activeIndex ? (banner.accent === 'orange' ? 'w-6 bg-orange-200 sm:w-7 shadow-[0_0_12px_rgba(254,215,170,0.75)]' : 'w-6 bg-cyan-200 sm:w-7 shadow-[0_0_12px_rgba(165,243,252,0.75)]') : 'w-2 bg-white/45 hover:bg-white/70 sm:w-2.5'}`}
                 aria-label={`Show ${banner.title}`}
                 aria-current={index === activeIndex ? 'true' : undefined}
               />
