@@ -110,8 +110,10 @@
         left: 0 !important;
         right: 0 !important;
         top: auto !important;
-        bottom: 0 !important;
+        bottom: calc(0px - var(--pullz-mobile-bottom-nav-bleed, 0px)) !important;
         width: 100%;
+        backface-visibility: hidden;
+        will-change: bottom, transform;
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {

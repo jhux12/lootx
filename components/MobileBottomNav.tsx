@@ -31,11 +31,38 @@ export const MobileBottomNav: React.FC = () => {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return undefined;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
+    let rafId = 0;
+
+    const syncMobileViewportBottom = () => {
+      if (rafId) return;
+
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        const visualViewport = window.visualViewport;
+        const viewportBottom = visualViewport ? visualViewport.height + visualViewport.offsetTop : window.innerHeight;
+        const bottomBleed = Math.max(0, Math.ceil(viewportBottom - window.innerHeight));
+
+        root.style.setProperty('--pullz-mobile-bottom-nav-bleed', `${bottomBleed}px`);
+        root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
+      });
+    };
+
+    syncMobileViewportBottom();
+    window.addEventListener('resize', syncMobileViewportBottom);
+    window.addEventListener('orientationchange', syncMobileViewportBottom);
+    window.visualViewport?.addEventListener('resize', syncMobileViewportBottom);
+    window.visualViewport?.addEventListener('scroll', syncMobileViewportBottom);
+
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', syncMobileViewportBottom);
+      window.removeEventListener('orientationchange', syncMobileViewportBottom);
+      window.visualViewport?.removeEventListener('resize', syncMobileViewportBottom);
+      window.visualViewport?.removeEventListener('scroll', syncMobileViewportBottom);
+      root.style.removeProperty('--pullz-mobile-bottom-nav-bleed');
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
   }, []);
@@ -112,7 +139,7 @@ export const MobileBottomNav: React.FC = () => {
   const nav = (
     <div
       data-disable-pull-refresh="true"
-      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur transition-[transform,opacity] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[calc(var(--pullz-mobile-bottom-nav-height,72px)_+_var(--pullz-mobile-bottom-nav-bleed,0px))] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[calc(max(env(safe-area-inset-bottom),8px)_+_var(--pullz-mobile-bottom-nav-bleed,0px))] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur transition-[transform,opacity] duration-200 ease-out lg:hidden ${
         isSuppressed ? 'pointer-events-none translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}
       aria-label="Primary navigation"

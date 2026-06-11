@@ -12,7 +12,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ activeTab, onT
   const tabClass = (tab: 'inventory' | 'orders' | 'account') => activeTab === tab ? 'text-white' : 'text-gray-500';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#2a323b]/95 p-2 backdrop-blur md:hidden">
+    <nav className="pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[#2a323b]/95 p-2 pb-[calc(0.5rem_+_var(--pullz-mobile-bottom-nav-bleed,0px))] backdrop-blur md:hidden">
       <div className="grid grid-cols-4 gap-1">
         <button className="flex flex-col items-center py-1 text-xs text-gray-400" onClick={onGames}><Gamepad2 className="h-4 w-4" />Games</button>
         <button className="flex flex-col items-center py-1 text-xs text-gray-400" onClick={onRewards}><Gift className="h-4 w-4" />Rewards</button>
