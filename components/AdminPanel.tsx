@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
@@ -21,6 +21,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { authedFetch } from '../utils/authedFetch';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -372,6 +373,8 @@ export const AdminPanel: React.FC = () => {
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
   const [oddsEditorMode, setOddsEditorMode] = useState<'auto' | 'manual'>('auto');
+  const [boxMarketPricingBusy, setBoxMarketPricingBusy] = useState<string | null>(null);
+  const [boxMarketPricingMessage, setBoxMarketPricingMessage] = useState<string | null>(null);
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
@@ -2992,6 +2995,117 @@ export const AdminPanel: React.FC = () => {
       applyBoxValueOverride(item.id, getCatalogItemPrice(item));
   };
 
+  const syncSelectedItemsAfterMarketPricing = (pricedItems: CaseItem[]) => {
+      if (pricedItems.length === 0) return;
+      const pricedLookup = new Map(pricedItems.map((entry) => [entry.id, entry]));
+      const nextItems = selectedItems.map((entry) => {
+          const pricedItem = pricedLookup.get(entry.id);
+          if (!pricedItem) return entry;
+          const valueCoins = Math.max(0, Math.round(Number(
+              pricedItem.marketPricing?.approvedValueCoins
+              ?? pricedItem.marketPricing?.suggestedValueCoins
+              ?? pricedItem.valueCoins
+              ?? pricedItem.price
+              ?? entry.price
+              ?? 0
+          ) || 0));
+          const valueUsd = pricedItem.marketPricing?.approvedValueUsd
+              ?? pricedItem.marketPricing?.suggestedValueUsd
+              ?? pricedItem.valueUsd
+              ?? Number((valueCoins / 100).toFixed(2));
+          return {
+              ...entry,
+              marketPricing: pricedItem.marketPricing,
+              price: valueCoins,
+              valueCoins,
+              valueUsd,
+              sellBackCoins: Math.floor(valueCoins * (newBox.sellBackRate ?? 0.8)),
+              boxValueOverrideCoins: valueCoins,
+              originalPriceCoins: Number(entry.originalPriceCoins ?? getCatalogItemPrice(entry))
+          };
+      });
+      const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(nextItems);
+      setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
+      if (!hasExplicitBoxPrice) {
+          setNewBox((prev) => ({
+              ...prev,
+              [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+          }));
+      }
+      if (editingBoxId) {
+          updateBox(buildEditableBoxPayload(updatedItems.map((entry) => ({ ...entry }))));
+      }
+  };
+
+  const saveSelectedItemTcgSource = async (item: CaseItem, sourceId: string) => {
+      const trimmedSourceId = sourceId.trim();
+      const catalogItem = items.find((entry) => entry.id === item.id) ?? item;
+      const marketPricing: NonNullable<CaseItem['marketPricing']> = {
+          ...(catalogItem.marketPricing ?? item.marketPricing ?? {}),
+          enabled: trimmedSourceId.length > 0,
+          source: 'tcgplayer',
+          sourceId: trimmedSourceId,
+          query: catalogItem.marketPricing?.query ?? item.marketPricing?.query ?? item.name,
+          condition: catalogItem.marketPricing?.condition ?? item.marketPricing?.condition ?? 'raw',
+          valueLocked: catalogItem.marketPricing?.valueLocked ?? item.marketPricing?.valueLocked ?? false
+      };
+      await updateDoc(doc(db, 'items', item.id), { marketPricing });
+      const updatedItem = { ...catalogItem, marketPricing };
+      setSelectedItems((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, marketPricing } : entry));
+      return updatedItem;
+  };
+
+  const refreshSelectedBoxMarketPricing = async (targetItems: CaseItem[] = selectedItems) => {
+      const itemsWithSource = targetItems.filter((item) => item.marketPricing?.sourceId?.trim());
+      if (itemsWithSource.length === 0) {
+          setBoxMarketPricingMessage('Add a TCGplayer source ID to at least one selected item first.');
+          return;
+      }
+
+      setBoxMarketPricingBusy('box-market-update');
+      setBoxMarketPricingMessage(null);
+      try {
+          const refreshedItems: CaseItem[] = [];
+          for (const item of itemsWithSource) {
+              await saveSelectedItemTcgSource(item, item.marketPricing?.sourceId ?? '');
+              await authedFetch('/api/admin/market-prices/update', {
+                  method: 'POST',
+                  body: JSON.stringify({ itemId: item.id })
+              });
+              const snapshot = await getDoc(doc(db, 'items', item.id));
+              if (snapshot.exists()) {
+                  refreshedItems.push({ id: snapshot.id, ...(snapshot.data() as Omit<CaseItem, 'id'>) } as CaseItem);
+              }
+          }
+          syncSelectedItemsAfterMarketPricing(refreshedItems);
+          setBoxMarketPricingMessage(`Updated ${refreshedItems.length} item${refreshedItems.length === 1 ? '' : 's'} from TCGplayer and recalculated this box's odds.`);
+      } catch (error) {
+          const text = error instanceof Error ? error.message : 'Unable to update market pricing.';
+          setBoxMarketPricingMessage(text);
+      } finally {
+          setBoxMarketPricingBusy(null);
+      }
+  };
+
+  const updateSelectedItemTcgSourceId = (itemId: string, sourceId: string) => {
+      setSelectedItems((prev) => prev.map((entry) => (
+          entry.id === itemId
+              ? {
+                  ...entry,
+                  marketPricing: {
+                      ...(entry.marketPricing ?? {}),
+                      enabled: sourceId.trim().length > 0,
+                      source: 'tcgplayer',
+                      sourceId,
+                      query: entry.marketPricing?.query ?? entry.name,
+                      condition: entry.marketPricing?.condition ?? 'raw'
+                  }
+              }
+              : entry
+      )));
+  };
+
   const handleSelectedItemChanceChange = (itemId: string, chanceInput: string) => {
       const parsedChance = Number(chanceInput);
       const nextChance = Number.isFinite(parsedChance)
@@ -4159,6 +4273,46 @@ export const AdminPanel: React.FC = () => {
                             </div>
                         </div>
 
+                        <div className="mb-6 rounded-xl border border-cyan-500/20 bg-[#0b0e14] p-3 sm:p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h4 className="text-sm font-bold uppercase text-cyan-100">Market pricing for this box</h4>
+                                    <p className="mt-1 text-[11px] text-gray-400">
+                                        Add TCGplayer source IDs to selected items, then refresh this box to pull market prices and automatically recalculate odds. Source is locked to TCGplayer.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => void refreshSelectedBoxMarketPricing()}
+                                    disabled={selectedItems.length === 0 || boxMarketPricingBusy !== null}
+                                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-cyan-500/15 px-3 py-2 text-xs font-bold text-cyan-100 ring-1 ring-cyan-400/30 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                >
+                                    <BadgeDollarSign className="h-4 w-4" />
+                                    {boxMarketPricingBusy ? 'Updating…' : 'Update box market prices'}
+                                </button>
+                            </div>
+                            {boxMarketPricingMessage && (
+                                <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-gray-200">
+                                    {boxMarketPricingMessage}
+                                </div>
+                            )}
+                            {editingBoxId && boxes.find((box) => box.id === editingBoxId)?.marketValueAudit && (
+                                <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+                                    {(() => {
+                                        const audit = boxes.find((box) => box.id === editingBoxId)?.marketValueAudit;
+                                        return audit ? (
+                                            <>
+                                                <div className="rounded-lg border border-white/10 bg-black/20 p-2"><span className="text-gray-500">Audit EV</span><p className="font-bold text-white">{audit.expectedValueCoins.toLocaleString()} coins</p></div>
+                                                <div className="rounded-lg border border-white/10 bg-black/20 p-2"><span className="text-gray-500">Box price</span><p className="font-bold text-white">{audit.boxPriceCoins.toLocaleString()} coins</p></div>
+                                                <div className="rounded-lg border border-white/10 bg-black/20 p-2"><span className="text-gray-500">Margin</span><p className="font-bold text-white">{Math.round(audit.marginPercent * 1000) / 10}%</p></div>
+                                                <div className="rounded-lg border border-white/10 bg-black/20 p-2"><span className="text-gray-500">Status</span><p className={audit.needsReview ? 'font-bold text-red-300' : 'font-bold text-emerald-300'}>{audit.status}</p></div>
+                                            </>
+                                        ) : null;
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+
                         {/* Middle: Item Selector & Auto-Calculator */}
                         <div className="mb-6 p-4 bg-[#0b0e14] rounded-lg border border-gray-800">
                              <div className="flex justify-between items-center mb-4">
@@ -4302,6 +4456,33 @@ export const AdminPanel: React.FC = () => {
                                                      >
                                                          Reset to catalog: {Math.round(getCatalogItemPrice(item)).toLocaleString()} coins
                                                      </button>
+                                                 </div>
+                                                 <div className="grid w-full grid-cols-1 gap-1 rounded bg-black/30 px-2 py-1 sm:w-[260px] sm:grid-cols-[90px_1fr] sm:items-end">
+                                                     <label className="text-[10px] uppercase text-gray-500">
+                                                         Source
+                                                         <Input
+                                                             value="TCGplayer"
+                                                             readOnly
+                                                             className="mt-1 w-full cursor-not-allowed rounded border border-gray-700 bg-[#0b0e14] px-2 py-1 text-xs font-semibold text-cyan-200"
+                                                             aria-label={`Market source for ${item.name}`}
+                                                         />
+                                                     </label>
+                                                     <label className="text-[10px] uppercase text-gray-500">
+                                                         TCGplayer source ID
+                                                         <Input
+                                                             value={item.marketPricing?.sourceId ?? ''}
+                                                             onChange={(event) => updateSelectedItemTcgSourceId(item.id, event.target.value)}
+                                                             onBlur={() => void saveSelectedItemTcgSource(item, item.marketPricing?.sourceId ?? '')}
+                                                             placeholder="TCGplayer ID"
+                                                             className="mt-1 w-full rounded border border-gray-700 bg-[#0b0e14] px-2 py-1 text-xs text-white"
+                                                             aria-label={`TCGplayer source ID for ${item.name}`}
+                                                         />
+                                                     </label>
+                                                     <div className="sm:col-span-2 flex flex-wrap items-center gap-2 text-[10px] text-gray-500">
+                                                         <span>{item.marketPricing?.updateStatus ? `Status: ${item.marketPricing.updateStatus.replace('_', ' ')}` : 'Ready for TCGplayer ID'}</span>
+                                                         {item.marketPricing?.suggestedValueCoins != null && <span>Suggested: {Math.round(item.marketPricing.suggestedValueCoins).toLocaleString()} coins</span>}
+                                                         {item.marketPricing?.lastError && <span className="text-red-300">{item.marketPricing.lastError}</span>}
+                                                     </div>
                                                  </div>
                                                  <label className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded w-full sm:w-auto">
                                                      <span className="text-gray-400 whitespace-nowrap">Chance %</span>
