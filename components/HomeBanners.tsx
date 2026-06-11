@@ -1,44 +1,68 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import type { View } from '../types';
+import type { ViewState } from '../types';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 type HomeBanner = {
   title: string;
+  eyebrow: string;
   description: string;
   image: string;
   cta: string;
-  view: View;
+  view?: ViewState;
+  action?: 'claim-first-deposit';
+  accent?: 'blue' | 'orange';
+};
+
+const FIRST_DEPOSIT_BANNER: HomeBanner = {
+  title: '100% First deposit match',
+  eyebrow: 'Limited welcome offer',
+  description: 'Double your first top up with a 100% deposit match and start opening more boxes.',
+  image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Announce.png?alt=media&token=9394b72b-d4f2-4207-9989-3e3dbb0e347e',
+  cta: 'Claim offer',
+  action: 'claim-first-deposit',
+  accent: 'orange'
 };
 
 const HOME_BANNERS: HomeBanner[] = [
   {
     title: 'Open mystery boxes',
+    eyebrow: 'Featured on Pullz',
     description: 'Browse featured boxes and reveal collectible pulls in seconds.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060',
     cta: 'Open boxes',
-    view: { type: 'BOXES' }
+    view: { type: 'BOXES' },
+    accent: 'blue'
   },
   {
     title: 'Upgrade your items',
+    eyebrow: 'Featured on Pullz',
     description: 'Use the upgrader to chase higher-value rewards from your inventory.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/upgrade.png?alt=media&token=41935126-5d8f-4430-ae63-e6e47713e793',
     cta: 'Try upgrader',
-    view: { type: 'PLINKO' }
+    view: { type: 'PLINKO' },
+    accent: 'blue'
   },
   {
     title: 'Climb the ranks',
+    eyebrow: 'Featured on Pullz',
     description: 'Compete for the top spot and track the biggest Pullz players on the leaderboard.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/leader.png?alt=media&token=d1904a5a-5b16-4b67-b23d-4b307dc72136',
     cta: 'View leaderboard',
-    view: { type: 'LEADERBOARD' }
+    view: { type: 'LEADERBOARD' },
+    accent: 'blue'
   }
 ];
 
 const ROTATION_INTERVAL_MS = 5500;
 
 export const HomeBanners: React.FC = () => {
-  const { setView } = useGame();
+  const { isAuthenticated, user, setView, setShowTopUpModal, setTopUpModalIntent, openAuthModal } = useGame();
+  const banners = useMemo(() => {
+    const shouldShowFirstDepositOffer = !isAuthenticated || !hasUserMadeDeposit(user);
+    return shouldShowFirstDepositOffer ? [FIRST_DEPOSIT_BANNER, ...HOME_BANNERS] : HOME_BANNERS;
+  }, [isAuthenticated, user]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
@@ -46,22 +70,41 @@ export const HomeBanners: React.FC = () => {
   const suppressNextClickRef = useRef(false);
 
   const goToSlide = useCallback((index: number) => {
-    setActiveIndex((index + HOME_BANNERS.length) % HOME_BANNERS.length);
-  }, []);
+    setActiveIndex((index + banners.length) % banners.length);
+  }, [banners.length]);
 
   const goToNextSlide = useCallback(() => {
-    setActiveIndex((current) => (current + 1) % HOME_BANNERS.length);
-  }, []);
+    setActiveIndex((current) => (current + 1) % banners.length);
+  }, [banners.length]);
 
   const goToPreviousSlide = useCallback(() => {
-    setActiveIndex((current) => (current - 1 + HOME_BANNERS.length) % HOME_BANNERS.length);
-  }, []);
+    setActiveIndex((current) => (current - 1 + banners.length) % banners.length);
+  }, [banners.length]);
 
   const handleBannerAction = (banner: HomeBanner) => {
     if (suppressNextClickRef.current) {
       suppressNextClickRef.current = false;
       return;
     }
+
+    if (banner.action === 'claim-first-deposit') {
+      if (!isAuthenticated) {
+        openAuthModal('login');
+        return;
+      }
+
+      setTopUpModalIntent({
+        reason: 'insufficient_balance',
+        requiredCoins: 4000,
+        currentBalance: Number(user.balance ?? 0),
+        missingCoins: Math.max(0, 4000 - Number(user.balance ?? 0)),
+        preferredPackageUsd: 20
+      });
+      setShowTopUpModal(true);
+      return;
+    }
+
+    if (!banner.view) return;
 
     setView(banner.view);
     if (banner.view.type === 'BOXES' && typeof window !== 'undefined') {
@@ -101,12 +144,16 @@ export const HomeBanners: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isPaused || HOME_BANNERS.length <= 1) return;
+    setActiveIndex((current) => Math.min(current, Math.max(0, banners.length - 1)));
+  }, [banners.length]);
+
+  useEffect(() => {
+    if (isPaused || banners.length <= 1) return;
     const rotationTimer = window.setInterval(goToNextSlide, ROTATION_INTERVAL_MS);
     return () => window.clearInterval(rotationTimer);
-  }, [goToNextSlide, isPaused]);
+  }, [banners.length, goToNextSlide, isPaused]);
 
-  if (HOME_BANNERS.length === 0) {
+  if (banners.length === 0) {
     return null;
   }
 
@@ -122,10 +169,10 @@ export const HomeBanners: React.FC = () => {
         onTouchEnd={handleTouchEnd}
         role="region"
         aria-roledescription="carousel"
-        aria-label="Open, upgrade, and leaderboard highlights"
+        aria-label="Deposit offer, open, upgrade, and leaderboard highlights"
       >
         <div className="relative min-h-[255px] sm:min-h-[285px] lg:min-h-[310px]">
-          {HOME_BANNERS.map((banner, index) => {
+          {banners.map((banner, index) => {
             const isActive = index === activeIndex;
             const slideClassName = `absolute inset-0 transition-all duration-700 ease-out ${isActive ? 'z-10 translate-x-0 opacity-100' : 'z-0 translate-x-4 opacity-0'}`;
 
@@ -139,13 +186,19 @@ export const HomeBanners: React.FC = () => {
                 aria-hidden={!isActive}
                 tabIndex={isActive ? 0 : -1}
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.22),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]" />
+                <div
+                  className={
+                    banner.accent === 'orange'
+                      ? 'absolute inset-0 bg-[radial-gradient(circle_at_78%_68%,rgba(251,146,60,0.36),transparent_56%),radial-gradient(circle_at_22%_12%,rgba(249,115,22,0.30),transparent_46%),linear-gradient(135deg,rgba(120,53,15,0.50),rgba(32,38,43,0.76)_46%,rgba(15,23,42,0.84))]'
+                      : 'absolute inset-0 bg-[radial-gradient(circle_at_78%_70%,rgba(34,211,238,0.30),transparent_56%),radial-gradient(circle_at_25%_15%,rgba(32,93,215,0.22),transparent_46%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.14),transparent_42%)]'
+                  }
+                />
                 <div className="relative grid h-full min-h-[255px] grid-cols-1 gap-2 p-5 sm:min-h-[285px] sm:grid-cols-[1fr_260px] sm:items-center sm:gap-6 sm:p-6 lg:min-h-[310px] lg:grid-cols-[1fr_340px] lg:p-7">
                   <div className="relative z-10 max-w-xl pb-24 sm:pb-0">
-                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200/85">Featured on Pullz</p>
+                    <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${banner.accent === 'orange' ? 'text-orange-100/90' : 'text-cyan-200/85'}`}>{banner.eyebrow}</p>
                     <h2 className="mt-2 text-3xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-4xl lg:text-5xl">{banner.title}</h2>
                     <p className="mt-3 max-w-md text-sm font-medium leading-6 text-slate-300 sm:text-base">{banner.description}</p>
-                    <span className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white shadow-[0_12px_30px_rgba(32,93,215,0.34)] transition group-hover:brightness-110 sm:text-sm">
+                    <span className={`mt-5 inline-flex min-h-11 items-center rounded-xl px-5 py-3 text-xs font-black uppercase tracking-[0.12em] text-white transition group-hover:brightness-110 sm:text-sm ${banner.accent === 'orange' ? 'bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300 shadow-[0_12px_30px_rgba(249,115,22,0.34)]' : 'bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 shadow-[0_12px_30px_rgba(32,93,215,0.34)]'}`}>
                       {banner.cta}
                     </span>
                   </div>
@@ -153,7 +206,7 @@ export const HomeBanners: React.FC = () => {
                     <img
                       src={banner.image}
                       alt={`${banner.title} artwork`}
-                      className="h-full w-full -rotate-12 object-contain drop-shadow-[0_20px_36px_rgba(0,0,0,0.4)] transition-transform duration-500 ease-out group-hover:scale-105 group-hover:-rotate-[15deg]"
+                      className={`h-full w-full object-contain drop-shadow-[0_20px_36px_rgba(0,0,0,0.4)] transition-transform duration-500 ease-out group-hover:scale-105 ${banner.accent === 'orange' ? '-rotate-6 group-hover:-rotate-3' : '-rotate-12 group-hover:-rotate-[15deg]'}`}
                       loading={index === 0 ? 'eager' : 'lazy'}
                       fetchPriority={index === 0 ? 'high' : 'low'}
                       decoding="async"
@@ -169,12 +222,12 @@ export const HomeBanners: React.FC = () => {
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-3 bg-gradient-to-t from-black/45 via-black/12 to-transparent p-3 sm:p-4">
           <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-white/10 bg-black/40 px-3 py-2 backdrop-blur-md">
-            {HOME_BANNERS.map((banner, index) => (
+            {banners.map((banner, index) => (
               <button
                 key={banner.title}
                 type="button"
                 onClick={() => goToSlide(index)}
-                className={`h-2.5 rounded-full transition-all ${index === activeIndex ? 'w-7 bg-cyan-200 shadow-[0_0_12px_rgba(165,243,252,0.75)]' : 'w-2.5 bg-white/45 hover:bg-white/70'}`}
+                className={`h-2.5 rounded-full transition-all ${index === activeIndex ? (banner.accent === 'orange' ? 'w-7 bg-orange-200 shadow-[0_0_12px_rgba(254,215,170,0.75)]' : 'w-7 bg-cyan-200 shadow-[0_0_12px_rgba(165,243,252,0.75)]') : 'w-2.5 bg-white/45 hover:bg-white/70'}`}
                 aria-label={`Show ${banner.title}`}
                 aria-current={index === activeIndex ? 'true' : undefined}
               />
