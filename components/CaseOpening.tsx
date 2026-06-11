@@ -631,6 +631,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [items]);
 
+  const shouldHideMobileBottomNav = Boolean((showWinModal && wonItem) || selectedCaseItem || showXpConfirmSheet);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    window.dispatchEvent(new CustomEvent('pullz:mobile-bottom-nav-visibility', { detail: { hidden: shouldHideMobileBottomNav } }));
+
+    return () => {
+      window.dispatchEvent(new CustomEvent('pullz:mobile-bottom-nav-visibility', { detail: { hidden: false } }));
+    };
+  }, [shouldHideMobileBottomNav]);
+
   useEffect(() => {
     if (!selectedCaseItem) return;
 
