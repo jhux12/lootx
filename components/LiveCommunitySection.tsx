@@ -107,8 +107,8 @@ export const LiveCommunitySection: React.FC = () => {
     const rail = storyRailRef.current;
     if (!rail) return;
     const card = rail.querySelector<HTMLElement>('[data-community-story-card]');
-    const cardWidth = card?.offsetWidth ?? 136;
-    const gap = 20;
+    const cardWidth = card?.offsetWidth ?? 104;
+    const gap = 12;
     rail.scrollBy({ left: (cardWidth + gap) * (direction === 'next' ? 2 : -2), behavior: 'smooth' });
   };
 
@@ -158,7 +158,7 @@ export const LiveCommunitySection: React.FC = () => {
             const bOrder = Number.isFinite(b.order) ? b.order : 9999;
             return aOrder - bOrder;
           })
-          .slice(0, 30);
+          .slice(0, 42);
         setStories(next);
         try { window.localStorage.setItem('liveCommunityStoriesCache', JSON.stringify(next)); } catch {}
       },
@@ -286,20 +286,20 @@ export const LiveCommunitySection: React.FC = () => {
 
   const canNavigateStories = stories.length > 1;
 
-  return <section ref={sectionRef} className="space-y-4 min-h-[168px]">
-    <div className="rounded-[1.35rem] border border-white/[0.06] bg-[#20262b]/62 p-4 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-5">
-      <div className="mb-3 flex items-end justify-between gap-3 px-0.5">
+  return <section ref={sectionRef} className="space-y-3 min-h-[136px]">
+    <div className="rounded-[1.1rem] border border-white/[0.06] bg-[#20262b]/62 p-3 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-4">
+      <div className="mb-2.5 flex items-end justify-between gap-2 px-0.5">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-fuchsia-200/85">Community Pullz</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Real wins &amp; deliveries</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/85">Community Pullz</p>
+          <h2 className="mt-0.5 text-xl font-black tracking-tight text-white sm:text-2xl">Real wins &amp; deliveries</h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
+          <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
           <div className="hidden items-center gap-1 sm:flex" aria-label="Scroll community stories">
-            <button type="button" aria-label="Scroll to previous community stories" onClick={() => scrollStoryRail('previous')} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">‹</button>
-            <button type="button" aria-label="Scroll to next community stories" onClick={() => scrollStoryRail('next')} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-lg font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">›</button>
+            <button type="button" aria-label="Scroll to previous community stories" onClick={() => scrollStoryRail('previous')} className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-base font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">‹</button>
+            <button type="button" aria-label="Scroll to next community stories" onClick={() => scrollStoryRail('next')} className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-base font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">›</button>
           </div>
-          <button className="min-h-10 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black uppercase tracking-wide text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08] hover:text-white">View All</button>
+          <button className="min-h-9 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08] hover:text-white">View All</button>
         </div>
       </div>
       <div className="relative -mx-4 sm:mx-0">
@@ -307,7 +307,7 @@ export const LiveCommunitySection: React.FC = () => {
         <div className="pointer-events-none absolute inset-y-2 right-0 z-10 w-8 bg-gradient-to-l from-[#20262b] to-transparent sm:hidden" aria-hidden="true" />
         <div
           ref={storyRailRef}
-          className="scrollbar-hide flex snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:gap-5 sm:px-0.5"
+          className="scrollbar-hide flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain px-4 py-1.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:gap-3 sm:px-0.5"
           aria-label="Community Pullz stories. Swipe horizontally to browse."
         >
         {stories.length ? stories.map((story, index) => {
@@ -317,9 +317,9 @@ export const LiveCommunitySection: React.FC = () => {
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
             data-community-story-card
-            className="group flex w-[124px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[150px]"
+            className="group flex w-[96px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[112px] lg:w-[120px]"
           >
-            <div className={`relative h-[112px] w-[112px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_24px_rgba(92,101,255,0.45)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[132px] sm:w-[132px]`}>
+            <div className={`relative h-[86px] w-[86px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_18px_rgba(92,101,255,0.38)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]`}>
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
                 <img
                   src={story.mediaUrl}
@@ -330,11 +330,11 @@ export const LiveCommunitySection: React.FC = () => {
                   onError={() => { void handleStoryImageError(story); }}
                 />
               </div>
-              <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide backdrop-blur-md ${storyBadgeClass[badge]}`}>{badge}</span>
+              <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide backdrop-blur-md ${storyBadgeClass[badge]}`}>{badge}</span>
             </div>
-            <span className="mt-2 max-w-full truncate text-xs font-bold text-slate-200">@{story.username || 'pullz'}</span>
+            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-slate-200">@{story.username || 'pullz'}</span>
           </button>
-        );}) : Array.from({ length: 6 }).map((_, idx) => <div key={idx} className="relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[132px] sm:w-[132px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
+        );}) : Array.from({ length: 10 }).map((_, idx) => <div key={idx} className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
         </div>
       </div>
     </div>

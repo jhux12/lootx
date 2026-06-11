@@ -41,7 +41,7 @@ export const LiveTicker: React.FC = () => {
         user
       }));
     })
-      .filter(({ item }) => ['legendary', 'epic'].includes(item.rarity))
+      .filter(({ item }) => ['legendary', 'epic', 'rare'].includes(item.rarity))
       .sort((a, b) => (b.item.obtainedAt ?? 0) - (a.item.obtainedAt ?? 0))
       .slice(0, 12);
 
@@ -55,7 +55,11 @@ export const LiveTicker: React.FC = () => {
           rarity: item.rarity
         }))
       : (items.length ? items : CASE_ITEMS)
-          .filter(item => ['legendary', 'epic'].includes(item.rarity))
+          .filter(item => ['legendary', 'epic', 'rare'].includes(item.rarity))
+          .sort((a, b) => {
+            const rarityRank = { epic: 0, rare: 1, legendary: 2, uncommon: 3, common: 4 } as const;
+            return (rarityRank[a.rarity] ?? 5) - (rarityRank[b.rarity] ?? 5);
+          })
           .map((item, index) => ({
             id: item.id,
             itemName: item.name,

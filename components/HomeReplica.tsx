@@ -38,8 +38,8 @@ type HomeTickerWin = {
 const TICKER_RARITY_MULTIPLIER: Record<HomeTickerWin['rarity'], number> = {
   common: 1,
   uncommon: 0.62,
-  rare: 0.28,
-  epic: 0.18,
+  rare: 0.46,
+  epic: 0.34,
   legendary: 0.055
 };
 
@@ -104,8 +104,9 @@ const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
 
   if (!weightedPool.length) return [];
 
-  return Array.from({ length: Math.min(12, Math.max(8, weightedPool.length)) }, (_, index) => {
-    const entry = pickWeightedItem(weightedPool);
+  const rareEpicPool = weightedPool.filter((entry) => entry.item.rarity === 'rare' || entry.item.rarity === 'epic');
+  const winCount = Math.min(14, Math.max(10, weightedPool.length));
+  const buildWin = (entry: (typeof weightedPool)[number], index: number): HomeTickerWin => {
     const minutesAgo = index < 2 ? 'now' : `${2 + Math.floor(Math.random() * 48)}m`;
 
     return {
@@ -117,8 +118,14 @@ const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
       rarity: entry.item.rarity,
       boxName: entry.boxName,
       timeAgo: minutesAgo,
-      featured: entry.item.price >= 10000 || entry.item.rarity === 'legendary' || index === 0
+      featured: entry.item.price >= 10000 || ['legendary', 'epic'].includes(entry.item.rarity) || index === 0
     };
+  };
+
+  return Array.from({ length: winCount }, (_, index) => {
+    const shouldSprinkleRareEpic = rareEpicPool.length > 0 && [2, 5, 8, 11].includes(index);
+    const entry = shouldSprinkleRareEpic ? pickWeightedItem(rareEpicPool) : pickWeightedItem(weightedPool);
+    return buildWin(entry, index);
   });
 };
 
