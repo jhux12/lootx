@@ -281,7 +281,7 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div data-disable-pull-refresh="true" className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-0 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4">
+    <div className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-0 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}

@@ -632,7 +632,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
         role="dialog"
-        data-disable-pull-refresh="true"
         aria-modal="true"
         aria-label="Mobile navigation menu"
       >
