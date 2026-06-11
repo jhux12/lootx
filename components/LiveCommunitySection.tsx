@@ -387,6 +387,8 @@ export const LiveCommunitySection: React.FC = () => {
         mediaType: 'image',
         storagePath: uploadPath,
         source: 'community-submit-pull',
+        submittedByUserId: user.id,
+        submittedByEmail: user.email ?? null,
         rewardCoins: 1000,
         requirements: ['shipped_and_delivered', 'clean_respectful_photo', 'admin_approved'],
         createdAt: serverTimestamp(),

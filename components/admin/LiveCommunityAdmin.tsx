@@ -33,6 +33,20 @@ export const LiveCommunityAdmin: React.FC = () => {
     return onSnapshot(q, (snap) => setStories(snap.docs.map((d) => ({ id: d.id, ...d.data() } as LiveStory))));
   }, []);
 
+  const sortedStories = useMemo(() => {
+    const statusRank = (story: LiveStory) => (story.status === 'pending' || story.approved === false ? 0 : story.status === 'rejected' ? 2 : 1);
+    return [...stories].sort((a, b) => {
+      const rankDiff = statusRank(a) - statusRank(b);
+      if (rankDiff !== 0) return rankDiff;
+      return Number(b.order ?? 0) - Number(a.order ?? 0);
+    });
+  }, [stories]);
+
+  const pendingSubmissions = useMemo(
+    () => sortedStories.filter((story) => story.source === 'community-submit-pull' && (story.status === 'pending' || story.approved === false)),
+    [sortedStories]
+  );
+
   const analytics = useMemo(
     () =>
       stories.reduce(
@@ -139,6 +153,43 @@ export const LiveCommunityAdmin: React.FC = () => {
         <p>Impressions: {analytics.impressions}</p><p>Taps: {analytics.taps}</p><p>Completion rate total: {analytics.completion}</p><p>Swipe-through total: {analytics.swipe}</p><p>Click-throughs: {analytics.ctr}</p>
       </div>
     </div>
-    <div className="rounded-xl border border-gray-800 bg-[#131720] p-4"><h4 className="mb-3 font-semibold text-white">Moderation Queue</h4><div className="space-y-2">{stories.map((story) => <div key={story.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-800 bg-[#0b0e14] p-2 text-xs text-gray-200"><span className="font-bold">{story.username || 'anon'}</span><span>{story.caption}</span><span className="rounded bg-white/10 px-2 py-0.5">{story.type}</span><span className="rounded bg-slate-700/70 px-2 py-0.5 text-[10px] uppercase">{story.status || (story.approved ? 'approved' : 'pending')}</span><button className="rounded bg-emerald-600/30 px-2 py-1" onClick={()=>handleModerationAction('Approve', story.id, { approved: true, status: 'approved', hidden: false, approvedAt: serverTimestamp() })}>Approve</button><button className="rounded bg-amber-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.hidden ? 'Unhide' : 'Hide', story.id, { hidden: !story.hidden })}>{story.hidden ? 'Unhide':'Hide'}</button><button className="rounded bg-blue-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.featured ? 'Unfeature' : 'Feature', story.id, { featured: !story.featured })}>{story.featured ? 'Unfeature':'Feature'}</button><button className="rounded bg-red-600/30 px-2 py-1" onClick={async()=>{ try { await deleteDoc(doc(db,'liveCommunityStories',story.id)); showNotice('success','Delete successful.'); } catch (error) { showNotice('error', error instanceof Error ? error.message : 'Unable to delete.'); } }}>Delete</button></div>)}</div></div>
+    <div className="rounded-xl border border-amber-400/20 bg-[#131720] p-4">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h4 className="font-semibold text-white">User Pull Submissions</h4>
+          <p className="text-xs text-gray-400">Pending community uploads appear here first for admin approval.</p>
+        </div>
+        <span className="w-fit rounded-full border border-amber-300/25 bg-amber-300/10 px-3 py-1 text-xs font-bold text-amber-100">{pendingSubmissions.length} pending</span>
+      </div>
+      {pendingSubmissions.length ? (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {pendingSubmissions.map((story) => (
+            <div key={story.id} className="overflow-hidden rounded-2xl border border-gray-800 bg-[#0b0e14] text-sm text-gray-200">
+              <div className="aspect-[4/3] bg-black/30">
+                {story.mediaUrl ? <img src={story.mediaUrl} alt={`${story.username || 'User'} pull submission`} className="h-full w-full object-cover" loading="lazy" /> : <div className="grid h-full place-items-center text-xs text-gray-500">No preview</div>}
+              </div>
+              <div className="space-y-3 p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-white">@{story.username || 'anon'}</span>
+                  <span className="rounded bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-100">+{Number(story.rewardCoins ?? 1000).toLocaleString()} coins</span>
+                  <span className="rounded bg-slate-700/70 px-2 py-0.5 text-[10px] uppercase">{story.status || 'pending'}</span>
+                </div>
+                <div className="space-y-1 text-xs text-gray-400">
+                  <p>Submitted from: {story.submittedByEmail || story.submittedByUserId || 'account'}</p>
+                  <p>Requirements: delivered order, clean/respectful photo, admin approved.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="rounded-lg bg-emerald-600/30 px-3 py-2 text-xs font-bold text-emerald-100" onClick={()=>handleModerationAction('Approve submission', story.id, { approved: true, status: 'approved', hidden: false, approvedAt: serverTimestamp() })}>Approve</button>
+                  <button className="rounded-lg bg-red-600/30 px-3 py-2 text-xs font-bold text-red-100" onClick={()=>handleModerationAction('Reject submission', story.id, { approved: false, status: 'rejected', hidden: true, rejectedAt: serverTimestamp() })}>Reject</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-sm text-gray-400">No user submissions are waiting for approval.</div>
+      )}
+    </div>
+    <div className="rounded-xl border border-gray-800 bg-[#131720] p-4"><h4 className="mb-3 font-semibold text-white">Moderation Queue</h4><div className="space-y-2">{sortedStories.map((story) => <div key={story.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-800 bg-[#0b0e14] p-2 text-xs text-gray-200">{story.mediaUrl && <img src={story.mediaUrl} alt="" className="h-10 w-10 rounded-lg object-cover" loading="lazy" />}<span className="font-bold">{story.username || 'anon'}</span><span>{story.caption}</span>{story.source === 'community-submit-pull' && <span className="rounded bg-amber-300/10 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-100">User submission</span>}<span className="rounded bg-white/10 px-2 py-0.5">{story.type}</span><span className="rounded bg-slate-700/70 px-2 py-0.5 text-[10px] uppercase">{story.status || (story.approved ? 'approved' : 'pending')}</span><button className="rounded bg-emerald-600/30 px-2 py-1" onClick={()=>handleModerationAction('Approve', story.id, { approved: true, status: 'approved', hidden: false, approvedAt: serverTimestamp() })}>Approve</button><button className="rounded bg-amber-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.hidden ? 'Unhide' : 'Hide', story.id, { hidden: !story.hidden })}>{story.hidden ? 'Unhide':'Hide'}</button><button className="rounded bg-blue-600/30 px-2 py-1" onClick={()=>handleModerationAction(story.featured ? 'Unfeature' : 'Feature', story.id, { featured: !story.featured })}>{story.featured ? 'Unfeature':'Feature'}</button><button className="rounded bg-red-600/30 px-2 py-1" onClick={async()=>{ try { await deleteDoc(doc(db,'liveCommunityStories',story.id)); showNotice('success','Delete successful.'); } catch (error) { showNotice('error', error instanceof Error ? error.message : 'Unable to delete.'); } }}>Delete</button></div>)}</div></div>
   </div>;
 };
