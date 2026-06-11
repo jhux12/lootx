@@ -8,6 +8,7 @@ import { CoinAmount } from './CoinAmount';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
+import { lockPageScroll } from '../utils/scrollLock';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -140,24 +141,7 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  React.useEffect(() => {
-    const originalBodyOverflow = document.body.style.overflow;
-    const originalBodyOverscrollBehavior = document.body.style.overscrollBehavior;
-    const originalDocumentOverflow = document.documentElement.style.overflow;
-    const originalDocumentOverscrollBehavior = document.documentElement.style.overscrollBehavior;
-
-    document.body.style.overflow = 'hidden';
-    document.body.style.overscrollBehavior = 'none';
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.overscrollBehavior = 'none';
-
-    return () => {
-      document.body.style.overflow = originalBodyOverflow;
-      document.body.style.overscrollBehavior = originalBodyOverscrollBehavior;
-      document.documentElement.style.overflow = originalDocumentOverflow;
-      document.documentElement.style.overscrollBehavior = originalDocumentOverscrollBehavior;
-    };
-  }, []);
+  React.useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
 
   React.useEffect(() => {
     if (!isFirstDepositEligible && showFirstDepositPackages) {

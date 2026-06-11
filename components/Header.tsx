@@ -38,6 +38,7 @@ import { db } from '../firebase';
 import { getClaimReadyQuestCount, normalizeQuestRules } from '../src/lib/quests';
 import { UserAvatar } from './UserAvatar';
 import { resolveUserDisplayName } from '../utils/userIdentity';
+import { lockPageScroll } from '../utils/scrollLock';
 
 const ActivityDrawer = lazy(() => import('../src/ui/activity/ActivityDrawer').then((module) => ({ default: module.ActivityDrawer })));
 
@@ -197,14 +198,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return undefined;
 
     window.dispatchEvent(new CustomEvent('pullz:mobile-menu-state', { detail: { isOpen: isMobileMenuOpen } }));
-    document.body.style.overflow = isMobileMenuOpen ? 'hidden' : '';
+    if (!isMobileMenuOpen) return undefined;
 
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return lockPageScroll({ preserveScrollPosition: true });
   }, [isMobileMenuOpen]);
 
   useEffect(() => {

@@ -21,6 +21,7 @@ import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import { usePerformanceMode } from '../src/lib/performance';
 import pullzLogo from '../assets/pullz-p.PNG';
+import { lockPageScroll } from '../utils/scrollLock';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -419,7 +420,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const itemModalRevealFrameRef = useRef<number | null>(null);
   const itemModalCoinFrameRef = useRef<number | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
-  const bodyOverflowRef = useRef<string>('');
+  const releaseItemModalScrollLockRef = useRef<(() => void) | null>(null);
   const topUpTriggerLockRef = useRef(false);
   const preFreeSpinBalanceRef = useRef<number | null>(null);
   const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
@@ -657,8 +658,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     if (!selectedCaseItem) return;
 
     lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
-    bodyOverflowRef.current = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    releaseItemModalScrollLockRef.current = lockPageScroll({ preserveScrollPosition: true });
 
     const focusableSelectors = [
       'button',
@@ -704,7 +704,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     return () => {
       window.clearTimeout(focusTimer);
-      document.body.style.overflow = bodyOverflowRef.current;
+      releaseItemModalScrollLockRef.current?.();
+      releaseItemModalScrollLockRef.current = null;
       document.removeEventListener('keydown', handleKeyDown);
       lastFocusedElementRef.current?.focus();
     };
