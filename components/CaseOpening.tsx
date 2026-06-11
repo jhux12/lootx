@@ -44,10 +44,16 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 186;
+const DESKTOP_CARD_HEIGHT = 226;
+const DESKTOP_GAP_WIDTH = 8;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 260;
+const TABLET_CARD_WIDTH = 174;
+const TABLET_CARD_HEIGHT = 220;
+const TABLET_SPINNER_VIEWPORT_HEIGHT = 252;
+const MOBILE_CARD_WIDTH = 138;
+const MOBILE_CARD_HEIGHT = 196;
+const MOBILE_SPINNER_VIEWPORT_HEIGHT = 220;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -70,20 +76,25 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  revealDelayMs: 760,
+  landingOffsetMinPx: 18,
+  landingOffsetMaxPx: 68
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
-  legendary: 'bg-transparent',
-  epic: 'bg-transparent',
-  rare: 'bg-transparent',
-  uncommon: 'bg-transparent',
-  common: 'bg-transparent'
+  legendary: 'bg-amber-400/20',
+  epic: 'bg-purple-500/20',
+  ultra: 'bg-purple-500/20',
+  rare: 'bg-blue-500/15',
+  uncommon: 'bg-emerald-500/12',
+  common: 'bg-slate-400/10'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
   legendary: { color: '#fbbf24', glow: 'rgba(251,191,36,0.95)', label: 'Legendary' },
   epic: { color: '#a855f7', glow: 'rgba(168,85,247,0.9)', label: 'Epic' },
+  ultra: { color: '#a855f7', glow: 'rgba(168,85,247,0.9)', label: 'Ultra Rare' },
   rare: { color: '#3b82f6', glow: 'rgba(59,130,246,0.9)', label: 'Rare' },
   uncommon: { color: '#22c55e', glow: 'rgba(34,197,94,0.85)', label: 'Uncommon' },
   common: { color: '#9ca3af', glow: 'rgba(156,163,175,0.65)', label: 'Common' }
@@ -92,6 +103,7 @@ const rarityIndicatorStyle: Record<string, { color: string; glow: string; label:
 const normalizeRarityKey = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
   if (value.includes('legend')) return 'legendary';
+  if (value.includes('ultra')) return 'ultra';
   if (value.includes('epic')) return 'epic';
   if (value.includes('uncommon')) return 'uncommon';
   if (value.includes('rare')) return 'rare';
@@ -118,6 +130,7 @@ const SPINNER_RARITY_DISPLAY_WEIGHTS: Record<ReturnType<typeof normalizeRarityKe
   common: 64,
   uncommon: 32,
   rare: 16,
+  ultra: 9,
   epic: 7,
   legendary: 3
 };
@@ -148,6 +161,38 @@ const pickWeightedSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], 
 
   return weightedItems[weightedItems.length - 1]?.item ?? fallback;
 };
+
+
+const pickPremiumSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], rng: () => number): T | null => {
+  const premiumPool = pool.filter((item) => ['rare', 'ultra', 'epic', 'legendary'].includes(normalizeRarityKey(item.rarity)));
+  if (premiumPool.length === 0) return null;
+  return premiumPool[Math.floor(rng() * premiumPool.length)] ?? premiumPool[0] ?? null;
+};
+
+const pickVisualItemByRarity = <T extends Pick<CaseItem, 'id' | 'rarity'>>(pool: T[], rarityKeys: string[], rng: () => number, excludeId?: string): T | null => {
+  const raritySet = new Set(rarityKeys);
+  const candidates = pool.filter((item) => normalizeRarityKey(item.rarity) && raritySet.has(normalizeRarityKey(item.rarity)) && item.id !== excludeId);
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(rng() * candidates.length)] ?? candidates[0] ?? null;
+};
+
+const resolveCenterTickSound = (rarity?: string) => {
+  const rarityKey = normalizeRarityKey(rarity);
+  if (rarityKey === 'legendary') return 'spin-tick-legendary' as const;
+  if (rarityKey === 'epic') return 'spin-tick-epic' as const;
+  if (rarityKey === 'ultra') return 'spin-tick-ultra' as const;
+  if (rarityKey === 'rare') return 'spin-tick-rare' as const;
+  return 'spin-tick' as const;
+};
+
+const formatSpinnerCoinValue = (value: number) => {
+  const rounded = Math.max(0, Math.round(Number(value) || 0));
+  if (rounded >= 1000000) return `${(rounded / 1000000).toFixed(rounded >= 10000000 ? 0 : 1)}M`;
+  if (rounded >= 1000) return `${(rounded / 1000).toFixed(rounded >= 10000 ? 0 : 1)}K`;
+  return rounded.toLocaleString();
+};
+
+const LANDING_ZONE_FACTORS = [-1, -0.76, -0.52, -0.28, 0.28, 0.52, 0.76, 1] as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 const toHex = (buffer: ArrayBuffer) =>
@@ -388,6 +433,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
+  const [rareFlash, setRareFlash] = useState<{ rarity: string; nonce: number } | null>(null);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
@@ -406,6 +452,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
   const tickFrameRef = useRef<number | null>(null);
+  const rareFlashTimerRef = useRef<number | null>(null);
+  const winRevealTimerRef = useRef<number | null>(null);
   const lastTickedCenterIndexRef = useRef<number>(-1);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
   const spinnerMeasurementsRef = useRef({
@@ -457,10 +505,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && (currentXpBalance > 0 || xpProgress > 0);
   const canOpenMain = isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
+  const spinnerCardWidth = performanceMode.isMobile
+    ? MOBILE_CARD_WIDTH
+    : (typeof window !== 'undefined' && window.innerWidth < 1024 ? TABLET_CARD_WIDTH : DESKTOP_CARD_WIDTH);
+  const spinnerCardHeight = performanceMode.isMobile
+    ? MOBILE_CARD_HEIGHT
+    : (typeof window !== 'undefined' && window.innerWidth < 1024 ? TABLET_CARD_HEIGHT : DESKTOP_CARD_HEIGHT);
   const spinnerGap = DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const spinnerViewportHeight = performanceMode.isMobile
+    ? MOBILE_SPINNER_VIEWPORT_HEIGHT
+    : (typeof window !== 'undefined' && window.innerWidth < 1024 ? TABLET_SPINNER_VIEWPORT_HEIGHT : DESKTOP_SPINNER_VIEWPORT_HEIGHT);
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
   const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
@@ -868,6 +922,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       newReel.push(next);
     }
 
+    const premiumStopOffsets = [-4, -3, -2, 2, 3, 4];
+    premiumStopOffsets.forEach((offset) => {
+      const index = winnerIndex + offset;
+      if (index <= 0 || index >= reelLength || index === winnerIndex) return;
+      if (rng() > 0.58) return;
+      const premiumItem = pickPremiumSpinnerItem(pool, rng);
+      if (!premiumItem || premiumItem.id === target.id) return;
+      newReel[index] = premiumItem;
+    });
+
+    const applyStopPair = (leftRarities: string[], rightRarities: string[]) => {
+      const leftItem = pickVisualItemByRarity(pool, leftRarities, rng, target.id) ?? pickPremiumSpinnerItem(pool, rng);
+      const rightItem = pickVisualItemByRarity(pool, rightRarities, rng, target.id) ?? pickPremiumSpinnerItem(pool, rng);
+      if (leftItem && leftItem.id !== target.id) newReel[winnerIndex - 1] = leftItem;
+      if (rightItem && rightItem.id !== target.id) newReel[winnerIndex + 1] = rightItem;
+    };
+
+    const stopCompositionRoll = rng();
+    if (stopCompositionRoll < 0.11) {
+      applyStopPair(['legendary'], ['legendary']);
+    } else if (stopCompositionRoll < 0.22) {
+      applyStopPair(['ultra', 'epic'], ['legendary']);
+    } else if (stopCompositionRoll < 0.33) {
+      applyStopPair(['legendary'], ['ultra', 'epic']);
+    }
+
     if (sprinkleGold) {
       // Sparse deterministic gold inserts keep readability and premium spacing.
       const minSpacing = 14;
@@ -876,7 +956,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       let nextGold = Math.floor(rng() * minSpacing) + 8;
 
       while (nextGold < reelLength && insertions < maxGoldInsertions) {
-        if (nextGold !== winnerIndex && newReel[nextGold]?.id !== target.id && newReel[nextGold]?.rarity !== 'legendary') {
+        const isStopCompositionSlot = Math.abs(nextGold - winnerIndex) <= 4;
+        if (!isStopCompositionSlot && nextGold !== winnerIndex && newReel[nextGold]?.id !== target.id && newReel[nextGold]?.rarity !== 'legendary') {
           newReel[nextGold] = GOLDEN_TICKET_ITEM;
           insertions += 1;
         }
@@ -945,6 +1026,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
   }, [getTranslateBounds]);
 
+  const triggerRareCenterFlash = useCallback((item: CaseItem | undefined) => {
+    if (reduceMobileEffects || prefersReducedMotion || !item) return;
+    const rarityKey = normalizeRarityKey(item.rarity);
+    if (!['rare', 'ultra', 'epic', 'legendary'].includes(rarityKey)) return;
+
+    setRareFlash({ rarity: rarityKey, nonce: Date.now() });
+    if (rareFlashTimerRef.current !== null) window.clearTimeout(rareFlashTimerRef.current);
+    rareFlashTimerRef.current = window.setTimeout(() => {
+      setRareFlash(null);
+      rareFlashTimerRef.current = null;
+    }, 260);
+  }, [prefersReducedMotion, reduceMobileEffects]);
+
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
       spinnerAnimationRef.current.cancel();
@@ -966,6 +1060,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       tickFrameRef.current = null;
     }
     lastTickedCenterIndexRef.current = -1;
+    if (rareFlashTimerRef.current !== null) {
+      window.clearTimeout(rareFlashTimerRef.current);
+      rareFlashTimerRef.current = null;
+    }
+    setRareFlash(null);
     if (goldStageTimerRef.current !== null) {
       window.clearTimeout(goldStageTimerRef.current);
       goldStageTimerRef.current = null;
@@ -995,7 +1094,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    const landingJitterPx = (rng() < 0.5 ? -1 : 1) * (4 + Math.round(rng() * 6));
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
@@ -1021,11 +1120,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const { cardWidth, stepWidth } = spinnerMeasurementsRef.current;
+    const maxLandingOffset = Math.max(
+      SPINNER_MOTION.landingOffsetMinPx,
+      Math.min(
+        SPINNER_MOTION.landingOffsetMaxPx,
+        Math.round(cardWidth * 0.38),
+        Math.max(SPINNER_MOTION.landingOffsetMinPx, Math.floor((stepWidth / 2) - 10))
+      )
+    );
+    const zoneFactor = LANDING_ZONE_FACTORS[Math.floor(rng() * LANDING_ZONE_FACTORS.length)] ?? 1;
+    const zoneMicroOffset = Math.round((rng() - 0.5) * 8);
+    const landingOffset = clamp(
+      Math.round(zoneFactor * maxLandingOffset) + zoneMicroOffset,
+      -maxLandingOffset,
+      maxLandingOffset
+    );
+    const landingTranslateRaw = await resolveCenteredTranslate(winnerIndex, landingOffset);
+    const landingTranslate = landingTranslateRaw === null ? null : clampTranslate(landingTranslateRaw);
+    const jitterLandingTranslate = landingTranslate === null ? null : clampTranslate(landingTranslate + landingJitterPx);
+    const approachTranslate = landingTranslate === null ? null : clampTranslate(landingTranslate + approachOffset);
+    if (landingTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1035,13 +1150,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
+    const spinKeyframes: Keyframe[] = [
+      { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
+      { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+      { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+      { transform: `translate3d(${landingTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+    ];
+
     const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-      ],
+      spinKeyframes,
       {
         duration: resolvedDuration,
         fill: 'forwards',
@@ -1061,9 +1178,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (index !== previousIndex) {
         lastCenterIndexRef.current = index;
         if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
+          playSound(resolveCenterTickSound(reelItemsRef.current[index]?.rarity));
           lastTickedCenterIndexRef.current = index;
         }
+        triggerRareCenterFlash(reelItemsRef.current[index]);
         if (!reduceSpinnerRerenders) {
           setCurrentCenterIndex(index);
         }
@@ -1090,7 +1208,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${landingTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1100,7 +1218,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
-      spinRequestLockRef.current = false;
       onComplete();
     };
 
@@ -1117,7 +1234,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, triggerRareCenterFlash, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1672,17 +1789,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         window.clearTimeout(winSoundTimerRef.current);
         winSoundTimerRef.current = null;
       }
+      if (winRevealTimerRef.current !== null) {
+        window.clearTimeout(winRevealTimerRef.current);
+        winRevealTimerRef.current = null;
+      }
+      if (rareFlashTimerRef.current !== null) {
+        window.clearTimeout(rareFlashTimerRef.current);
+        rareFlashTimerRef.current = null;
+      }
       resetSpinnerAnimation();
     };
   }, [resetSpinnerAnimation]);
 
   const finishSpin = (item: CaseItem) => {
-    spinRequestLockRef.current = false;
     setIsSpinning(false);
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
+    setWonItem(item);
+    setRewardResolved(false);
 
-    setShowWinModal(true);
+    if (winRevealTimerRef.current !== null) window.clearTimeout(winRevealTimerRef.current);
+    winRevealTimerRef.current = window.setTimeout(() => {
+      setShowWinModal(true);
+      spinRequestLockRef.current = false;
+      winRevealTimerRef.current = null;
+    }, SPINNER_MOTION.revealDelayMs);
+
     if (!winSoundPlayedRef.current) {
       const rarity = String(item.rarity ?? 'common').toLowerCase();
       winSoundTimerRef.current = window.setTimeout(() => {
@@ -1693,7 +1825,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         else playSound('win-common');
         winSoundPlayedRef.current = true;
         winSoundTimerRef.current = null;
-      }, 120);
+      }, SPINNER_MOTION.revealDelayMs + 120);
     }
     if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
       const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
@@ -1704,8 +1836,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         confettiTimerRef.current = null;
       }, reduceMobileEffects ? 520 : 720);
     }
-    setWonItem(item);
-    setRewardResolved(false);
   };
 
   const resetReelTrackPosition = useCallback(() => {
@@ -1986,17 +2116,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
 
-                {/* Center Indicator */}
-                <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
-                  style={{
-                    color: centeredRarityIndicator.color,
-                    filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
-                  }}
+                {/* Premium Center Indicator */}
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-1/2 z-30 -translate-x-1/2 motion-reduce:transition-none"
                   title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
-                ></i>
+                  style={{ ['--marker-color' as string]: centeredRarityIndicator.color, ['--marker-glow' as string]: centeredRarityIndicator.glow }}
+                >
+                  <div className="pullz-center-focus absolute left-1/2 top-1/2 h-[96%] w-52 -translate-x-1/2 -translate-y-1/2 rounded-full sm:w-64" />
+                  {rareFlash && (
+                    <div
+                      key={rareFlash.nonce}
+                      className={`pullz-rare-center-flash pullz-rare-center-flash-${rareFlash.rarity} absolute left-1/2 top-1/2 h-[86%] w-28 -translate-x-1/2 -translate-y-1/2 rounded-full sm:w-36`}
+                    />
+                  )}
+                  <i className="fa-solid fa-caret-down pullz-marker-arrow pullz-marker-arrow-top absolute left-1/2 top-1 -translate-x-1/2 text-base leading-none sm:top-0 sm:text-lg" />
+                  <span className="pullz-marker-beam absolute left-1/2 top-4 h-[calc(100%-2rem)] w-[3px] -translate-x-1/2 rounded-full sm:top-5 sm:h-[calc(100%-2.5rem)]" />
+                  <i className="fa-solid fa-caret-up pullz-marker-arrow pullz-marker-arrow-bottom absolute bottom-1 left-1/2 -translate-x-1/2 text-base leading-none sm:bottom-0 sm:text-lg" />
+                </div>
 
                 {/* The Moving Reel */}
                 <div
@@ -2021,22 +2158,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
+                          const spinnerValue = toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE);
+                          const imageBoxSize = Math.round(spinnerCardWidth * (performanceMode.isMobile ? 0.78 : 0.74));
+                          const winnerSettleScale = performanceMode.isMobile ? 1.06 : 1.08;
+                          const winnerPeakScale = performanceMode.isMobile ? 1.08 : 1.115;
+                          const isLegendaryWinner = isSettledWinner && normalizeRarityKey(item.rarity) === 'legendary';
                           return (
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSpinning ? 'is-spinning' : ''} ${isSettledWinner ? 'pullz-winner-settled' : ''} ${isLegendaryWinner ? 'pullz-winner-legendary' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}66, 0 0 20px ${item.color}42` : `0 0 0 1px ${item.color}aa, 0 0 44px ${item.color}78, 0 0 92px ${item.color}34`)
                                   : 'none',
                                 opacity: 1,
-                                filter: 'none',
-                                zIndex: isFocusedItem ? 4 : 1
+                                filter: isSettledWinner ? 'brightness(1.16) contrast(1.05)' : 'none',
+                                transform: isSettledWinner ? `translateZ(0) scale(${winnerSettleScale})` : 'translateZ(0)',
+                                zIndex: isFocusedItem ? 4 : 1,
+                                ['--winner-settle-scale' as string]: winnerSettleScale,
+                                ['--winner-peak-scale' as string]: winnerPeakScale
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
@@ -2045,7 +2190,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className="flex items-center justify-center" style={{ width: `${imageBoxSize}px`, height: `${imageBoxSize}px` }}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2056,6 +2201,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                                   retryOnError={!(reduceMobileEffects || isSpinning)}
                                   className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
+                              </div>
+                            </div>
+                            <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-xl border border-white/10 bg-[#0b1020]/88 px-2 py-1.5 text-center shadow-[0_8px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm sm:bottom-3 sm:px-2.5">
+                              <p className="truncate text-[10px] font-semibold leading-tight text-slate-200/90 sm:text-[11px]">{item.name}</p>
+                              <div className="mt-0.5 flex items-center justify-center gap-1 text-[12px] font-black leading-none text-white sm:text-[13px]" style={{ textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color, boxShadow: `0 0 8px ${item.color}` }} />
+                                <span>{formatSpinnerCoinValue(spinnerValue)}</span>
                               </div>
                             </div>
                         </div>
@@ -2406,9 +2558,76 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         )}
         <style>{`
           .ambient-pulse { animation: ambientPulse 3s ease-in-out infinite; }
+          .pullz-center-focus {
+            background: radial-gradient(ellipse at center, rgba(98, 127, 255, 0.22) 0%, rgba(34, 211, 238, 0.115) 34%, rgba(111, 77, 255, 0.06) 52%, transparent 76%);
+            filter: blur(12px);
+            opacity: .7;
+            animation: pullzCenterFocusPulse 3.8s ease-in-out infinite;
+            transform: translate3d(-50%, -50%, 0);
+            will-change: opacity, transform;
+          }
+          .pullz-marker-beam {
+            background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--marker-color) 45%, transparent) 13%, #ffffff 48%, color-mix(in srgb, var(--marker-color) 56%, transparent) 87%, transparent 100%);
+            box-shadow: 0 0 16px var(--marker-glow), 0 0 44px color-mix(in srgb, var(--marker-color) 54%, transparent);
+            opacity: 1;
+            animation: pullzMarkerBeamPulse 1.9s ease-in-out infinite;
+            transform: translate3d(-50%, 0, 0);
+            will-change: opacity, box-shadow;
+          }
+          .pullz-marker-beam::before {
+            content: '';
+            position: absolute;
+            inset: 0 -9px;
+            border-radius: 9999px;
+            background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--marker-color) 18%, transparent), transparent);
+            filter: blur(8px);
+            opacity: .78;
+          }
+          .pullz-marker-arrow {
+            color: var(--marker-color);
+            text-shadow: 0 0 12px var(--marker-glow), 0 0 26px color-mix(in srgb, var(--marker-color) 66%, transparent);
+            filter: drop-shadow(0 0 9px var(--marker-glow));
+            animation: pullzMarkerArrowPulse 1.9s ease-in-out infinite;
+            will-change: opacity, transform;
+          }
+          .pullz-marker-arrow-top { transform: translate3d(-50%, 0, 0); }
+          .pullz-marker-arrow-bottom { transform: translate3d(-50%, 0, 0); }
+          .pullz-rare-center-flash {
+            background: radial-gradient(ellipse at center, var(--flash-color) 0%, color-mix(in srgb, var(--flash-color) 32%, transparent) 34%, transparent 72%);
+            filter: blur(11px);
+            opacity: 0;
+            animation: pullzRareCenterFlash 260ms ease-out both;
+            will-change: opacity, transform;
+          }
+          .pullz-rare-center-flash-rare { --flash-color: rgba(59, 130, 246, .34); }
+          .pullz-rare-center-flash-epic,
+          .pullz-rare-center-flash-ultra { --flash-color: rgba(168, 85, 247, .34); }
+          .pullz-rare-center-flash-legendary { --flash-color: rgba(251, 191, 36, .42); }
+          .pullz-spinner-card {
+            border-radius: 1.35rem;
+            transition: transform 420ms cubic-bezier(.16, 1, .3, 1), filter 360ms ease, box-shadow 360ms ease;
+            will-change: transform;
+          }
+          .pullz-winner-settled {
+            animation: pullzWinnerSettlePulse 760ms cubic-bezier(.2, .9, .2, 1) 1 both;
+          }
+          .pullz-winner-settled.pullz-winner-legendary {
+            animation: pullzLegendaryWinnerSettle 860ms cubic-bezier(.2, .9, .2, 1) 1 both;
+          }
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
+          @keyframes pullzCenterFocusPulse { 0%, 100% { opacity: .52; transform: translate3d(-50%, -50%, 0) scale(.98); } 50% { opacity: .78; transform: translate3d(-50%, -50%, 0) scale(1.08); } }
+          @keyframes pullzMarkerBeamPulse { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
+          @keyframes pullzMarkerArrowPulse { 0%, 100% { opacity: .84; } 50% { opacity: 1; } }
+          @keyframes pullzRareCenterFlash { 0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.86); } 35% { opacity: 1; } 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.16); } }
+          @keyframes pullzWinnerSettlePulse { 0% { transform: translateZ(0) scale(1.02); filter: brightness(1.08) contrast(1.02); } 38% { transform: translateZ(0) scale(var(--winner-peak-scale)); filter: brightness(1.28) contrast(1.1); } 100% { transform: translateZ(0) scale(var(--winner-settle-scale)); filter: brightness(1.16) contrast(1.05); } }
+          @keyframes pullzLegendaryWinnerSettle { 0% { transform: translate3d(0,0,0) scale(1.02); filter: brightness(1.1) contrast(1.03); } 36% { transform: translate3d(0,0,0) scale(var(--winner-peak-scale)); filter: brightness(1.34) contrast(1.12); } 62% { transform: translate3d(0,0,0) scale(var(--winner-settle-scale)); filter: brightness(1.2) contrast(1.07); } 72% { transform: translate3d(-2px,0,0) scale(var(--winner-settle-scale)); } 82% { transform: translate3d(2px,0,0) scale(var(--winner-settle-scale)); } 91% { transform: translate3d(-1px,0,0) scale(var(--winner-settle-scale)); } 100% { transform: translate3d(0,0,0) scale(var(--winner-settle-scale)); filter: brightness(1.16) contrast(1.05); } }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-          @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+          @media (max-width: 640px) {
+            .pullz-spinner-card { border-radius: 1.1rem; }
+            .pullz-center-focus { filter: blur(9px); opacity: .56; }
+            .pullz-marker-beam { width: 2px; }
+          }
+          @media (prefers-reduced-motion: reduce){ .ambient-pulse, .pullz-center-focus, .pullz-marker-beam, .pullz-marker-arrow, .pullz-rare-center-flash, .pullz-winner-settled, .pullz-winner-settled.pullz-winner-legendary { animation: none; } }
         `}</style>
 
 

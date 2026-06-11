@@ -6,7 +6,7 @@ import rareWinSoundUrl from '../assets/audio/rare.wav';
 import epicWinSoundUrl from '../assets/audio/epic.wav';
 import legendaryWinSoundUrl from '../assets/audio/legendary.wav';
 
-type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-uncommon' | 'win-rare' | 'win-epic' | 'win-gold' | 'gold-mode' | 'coins';
+type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'spin-tick-rare' | 'spin-tick-ultra' | 'spin-tick-epic' | 'spin-tick-legendary' | 'win-common' | 'win-uncommon' | 'win-rare' | 'win-epic' | 'win-gold' | 'gold-mode' | 'coins';
 
 interface SoundContextType {
   muted: boolean;
@@ -19,6 +19,10 @@ const SoundContext = createContext<SoundContextType | undefined>(undefined);
 
 const SOUND_URLS: Partial<Record<SoundType, string>> = {
   'spin-tick': tickSoundUrl,
+  'spin-tick-rare': tickSoundUrl,
+  'spin-tick-ultra': tickSoundUrl,
+  'spin-tick-epic': tickSoundUrl,
+  'spin-tick-legendary': tickSoundUrl,
   'win-common': commonWinSoundUrl,
   'win-uncommon': uncommonWinSoundUrl,
   'win-rare': rareWinSoundUrl,
@@ -29,12 +33,24 @@ const SOUND_URLS: Partial<Record<SoundType, string>> = {
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
   'spin-start': 0.2,
   'spin-tick': 0.28,
+  'spin-tick-rare': 0.33,
+  'spin-tick-ultra': 0.36,
+  'spin-tick-epic': 0.39,
+  'spin-tick-legendary': 0.43,
   'win-common': 0.5,
   'win-uncommon': 0.52,
   'win-rare': 0.55,
   'win-epic': 0.58,
   'win-gold': 0.65,
   hover: 0.05
+};
+
+const SOUND_PLAYBACK_RATES: Partial<Record<SoundType, number>> = {
+  'spin-tick': 1,
+  'spin-tick-rare': 1.04,
+  'spin-tick-ultra': 1.08,
+  'spin-tick-epic': 1.12,
+  'spin-tick-legendary': 1.16
 };
 
 export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -116,13 +132,13 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (muted || !hasUserInteractedRef.current) return;
     ensureAudioContextReady();
 
-    if (type === 'spin-tick') {
+    if (type.startsWith('spin-tick')) {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       if (now - lastTickAtRef.current < 42) return;
       lastTickAtRef.current = now;
     }
 
-    if (!['spin-start', 'spin-tick', 'win-common', 'win-uncommon', 'win-rare', 'win-epic', 'win-gold'].includes(type)) return;
+    if (!['spin-start', 'spin-tick', 'spin-tick-rare', 'spin-tick-ultra', 'spin-tick-epic', 'spin-tick-legendary', 'win-common', 'win-uncommon', 'win-rare', 'win-epic', 'win-gold'].includes(type)) return;
 
     const audioPool = audioRefs.current[type];
     if (!audioPool || audioPool.length === 0) return;
@@ -132,6 +148,8 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       audio.currentTime = 0;
+      audio.playbackRate = SOUND_PLAYBACK_RATES[type] ?? 1;
+      audio.volume = SOUND_VOLUMES[type] ?? 0.4;
       const playPromise = audio.play();
       if (playPromise && typeof playPromise.then === 'function') {
         void playPromise.catch(() => {
