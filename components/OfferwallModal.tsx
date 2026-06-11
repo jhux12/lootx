@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { auth } from '../firebase';
+import { lockPageScroll } from '../utils/scrollLock';
 import { useSound } from '../context/SoundContext';
 
 type OfferwallModalProps = {
@@ -40,15 +41,8 @@ export const OfferwallModal: React.FC<OfferwallModalProps> = ({ open, onClose, o
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    const previousOverflow = document.body.style.overflow;
-    const previousTouchAction = document.body.style.touchAction;
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.body.style.touchAction = previousTouchAction;
-    };
+    if (!open) return undefined;
+    return lockPageScroll({ preserveScrollPosition: true, disableTouchAction: true });
   }, [open]);
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
 import { toast } from '../src/ui/toast/toast';
 import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { lockPageScroll } from '../utils/scrollLock';
 
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account before signing in.';
@@ -283,34 +284,7 @@ export const LoginModal: React.FC = () => {
     setEmailConfirmationReminderCount((count) => count + 1);
   };
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const scrollY = window.scrollY;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyPosition = document.body.style.position;
-    const previousBodyTop = document.body.style.top;
-    const previousBodyWidth = document.body.style.width;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousHtmlOverscrollBehavior = document.documentElement.style.overscrollBehavior;
-
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.overscrollBehavior = 'none';
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
-
-    return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.documentElement.style.overscrollBehavior = previousHtmlOverscrollBehavior;
-      document.body.style.overflow = previousBodyOverflow;
-      document.body.style.position = previousBodyPosition;
-      document.body.style.top = previousBodyTop;
-      document.body.style.width = previousBodyWidth;
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
+  useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
 
   return (
     <div

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import popupArt from '../assets/popup.png';
 import pullzLogo from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
+import { lockPageScroll } from '../utils/scrollLock';
 
 type PromoPopupModalProps = {
   isOpen: boolean;
@@ -23,13 +24,12 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
       }
     };
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScrollLock = lockPageScroll({ preserveScrollPosition: true });
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      releaseScrollLock();
     };
   }, [isOpen, onClose]);
 
