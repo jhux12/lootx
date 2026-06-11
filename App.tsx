@@ -14,7 +14,6 @@ import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
-import PullToRefresh from './components/PullToRefresh';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
@@ -777,18 +776,16 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <PullToRefresh>
-      <div className="min-h-[var(--app-height,100vh)] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
-        <SeoHead view={view} />
-        <Header
-          onOpenInbox={() => undefined}
-          isSticky={shouldUseStickyHeader}
-        />
-        <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-        <MobileBottomNav />
-        <ResetPasswordModal />
-      </div>
-    </PullToRefresh>
+    <div className="min-h-[var(--app-height,100vh)] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+      <SeoHead view={view} />
+      <Header
+        onOpenInbox={() => undefined}
+        isSticky={shouldUseStickyHeader}
+      />
+      <AppLayout hasStickyHeader={shouldUseStickyHeader} />
+      <MobileBottomNav />
+      <ResetPasswordModal />
+    </div>
   );
 };
 

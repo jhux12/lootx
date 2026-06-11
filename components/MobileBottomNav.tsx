@@ -111,7 +111,6 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      data-disable-pull-refresh="true"
       className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur transition-[transform,opacity] duration-200 ease-out lg:hidden ${
         isSuppressed ? 'pointer-events-none translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}
