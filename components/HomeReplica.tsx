@@ -54,7 +54,7 @@ const TICKER_RARITY_DOT_CLASS: Record<HomeTickerWin['rarity'], string> = {
 const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'border-slate-400/55 shadow-slate-950/30',
   uncommon: 'border-emerald-400/75 shadow-emerald-950/30',
-  rare: 'border-lime-400/75 shadow-lime-950/30',
+  rare: 'border-blue-400/75 shadow-blue-950/30',
   epic: 'border-purple-400/80 shadow-purple-950/35',
   legendary: 'border-emerald-300/85 shadow-emerald-950/35'
 };
@@ -62,7 +62,7 @@ const TICKER_RARITY_CARD_CLASS: Record<HomeTickerWin['rarity'], string> = {
 const TICKER_RARITY_PILL_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'bg-slate-300 text-slate-950',
   uncommon: 'bg-emerald-300 text-emerald-950',
-  rare: 'bg-lime-300 text-lime-950',
+  rare: 'bg-blue-300 text-blue-950',
   epic: 'bg-purple-400 text-white',
   legendary: 'bg-emerald-300 text-emerald-950'
 };
@@ -70,7 +70,7 @@ const TICKER_RARITY_PILL_CLASS: Record<HomeTickerWin['rarity'], string> = {
 const TICKER_RARITY_GLOW_CLASS: Record<HomeTickerWin['rarity'], string> = {
   common: 'from-slate-400/24 via-transparent to-slate-950/70',
   uncommon: 'from-emerald-400/28 via-transparent to-emerald-950/70',
-  rare: 'from-lime-400/30 via-transparent to-lime-950/70',
+  rare: 'from-blue-400/30 via-transparent to-blue-950/70',
   epic: 'from-purple-400/30 via-transparent to-purple-950/70',
   legendary: 'from-emerald-300/35 via-transparent to-emerald-950/75'
 };
