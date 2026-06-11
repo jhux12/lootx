@@ -27,3 +27,5 @@
     background-size: 100% 100%;
   }
 }
+
+.pullz-blur-full.is-static { opacity: 1; transition: none; }

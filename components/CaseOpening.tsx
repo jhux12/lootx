@@ -310,7 +310,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   } = useGame();
   const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
-  
+
   const matchedBox = boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];
 
@@ -352,9 +352,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   );
 
   // Sort items high to low for display purposes
-  const displayItems = [...items].sort(
+  const displayItems = useMemo(() => [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
-  );
+  ), [items]);
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
@@ -392,12 +392,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
   const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
-  
+  const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
+
   // Gold Spin State
   const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
-  
+
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const winningCardRef = useRef<HTMLDivElement>(null);
@@ -434,6 +435,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
   const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
+  const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
+  const hasMoreDropItems = visibleDropItemCount < displayItems.length;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
@@ -491,15 +494,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     updateSpinnerMeasurements();
 
-    const observer = new ResizeObserver(() => updateSpinnerMeasurements());
+    const observer = new ResizeObserver(() => {
+      window.requestAnimationFrame(updateSpinnerMeasurements);
+    });
     observer.observe(viewport);
-    observer.observe(container);
 
     const firstCard = container.firstElementChild as HTMLElement | null;
     if (firstCard) observer.observe(firstCard);
 
     return () => observer.disconnect();
-  }, [reelItems, updateSpinnerMeasurements]);
+  }, [updateSpinnerMeasurements]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -614,11 +618,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     itemModalCoinFrameRef.current = window.requestAnimationFrame(tick);
   }, [prefersReducedMotion]);
-  
+
   useEffect(() => {
     // Fill the static view with random items from the specific box
     if (items.length > 0) {
-        const staticItems = Array.from({ length: 15 }, () => 
+        const staticReelLength = reduceMobileEffects ? 9 : 15;
+        const staticItems = Array.from({ length: staticReelLength }, () =>
           pickWeightedSpinnerItem(items, Math.random)
         );
         const previewCenterIndex = Math.floor(staticItems.length / 2);
@@ -629,7 +634,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         lastCenterIndexRef.current = previewCenterIndex;
         setHasSpinSettled(false);
     }
-  }, [items]);
+  }, [items, reduceMobileEffects]);
+
+  useEffect(() => {
+    setVisibleDropItemCount(performanceMode.isMobile ? 12 : 24);
+  }, [boxId, performanceMode.isMobile]);
 
   const shouldHideMobileBottomNav = Boolean((showWinModal && wonItem) || selectedCaseItem || showXpConfirmSheet);
 
@@ -735,7 +744,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     // Weighted Randomness
     const totalWeight = items.reduce((sum, item) => sum + item.chance, 0);
     let random = randomValue * totalWeight;
-    
+
     for (const item of items) {
       if (random < item.chance) return item;
       random -= item.chance;
@@ -838,8 +847,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const preWinnerItems = SPINNER_MOTION.preWinnerItems;
-    const postWinnerItems = SPINNER_MOTION.postWinnerItems;
+    const preWinnerItems = reduceMobileEffects ? 42 : SPINNER_MOTION.preWinnerItems;
+    const postWinnerItems = reduceMobileEffects ? 8 : SPINNER_MOTION.postWinnerItems;
     const winnerIndex = preWinnerItems;
     const reelLength = preWinnerItems + 1 + postWinnerItems;
     const newReel: CaseItem[] = [];
@@ -876,7 +885,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     return { items: newReel, winnerIndex };
-  }, []);
+  }, [reduceMobileEffects]);
 
   const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
     const viewport = scrollViewportRef.current;
@@ -1175,7 +1184,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
     setIsSpinnerAssetsLoading(true);
-    const preloadLimit = reduceMobileEffects ? 28 : 72;
+    const preloadLimit = reduceMobileEffects ? 10 : 28;
     const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean))).slice(0, preloadLimit);
 
     await Promise.all(uniqueSources.map(async (src) => {
@@ -1186,14 +1195,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
       if (!img.complete) {
         await new Promise<void>((resolve) => {
-          const settle = () => resolve();
+          const timeoutId = window.setTimeout(resolve, reduceMobileEffects ? 650 : 1100);
+          const settle = () => {
+            window.clearTimeout(timeoutId);
+            resolve();
+          };
           img.onload = settle;
           img.onerror = settle;
         });
       }
 
       if (typeof img.decode === 'function') {
-        await img.decode().catch(() => undefined);
+        await Promise.race([
+          img.decode().catch(() => undefined),
+          new Promise<void>((resolve) => window.setTimeout(resolve, reduceMobileEffects ? 450 : 850))
+        ]);
       }
     }));
     setIsSpinnerAssetsLoading(false);
@@ -1352,7 +1368,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     setWonInventoryItem(null);
     setRewardResolved(false);
     playSound('click');
-    
+
     let winner: CaseItem;
     let rollValue = Math.random();
     let rollHash = '';
@@ -1550,9 +1566,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
-        
+
         // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items. 
+        // Note: We use global items pool for buffer if box items are too few, or just box items.
         // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
         const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
         const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
@@ -1565,7 +1581,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
             setIsGoldMode(true);
-            
+
             // Wait a moment to see the ticket
             goldStageTimerRef.current = window.setTimeout(() => {
                 // Stage 2: Spin to Actual Winner (using only legendary items in reel)
@@ -1857,7 +1873,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const handleCopyProof = useCallback(async () => {
     playSound('click');
-    
+
     if (!lastRoll) return;
 
     const proof = [
@@ -1894,7 +1910,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         {/* Breadcrumb */}
         <div className="mb-6 flex items-center justify-between gap-3">
             <div className="flex items-center gap-4">
-                <button 
+                <button
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
                     className="min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
                 >
@@ -1933,7 +1949,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {/* SPINNER AREA */}
         <div className="relative mb-8 w-full overflow-visible p-0">
-            
+
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
@@ -1963,9 +1979,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </div>
                   </div>
                 )}
-                
-                
-                
+
+
+
                 {/* Fade Gradients */}
                 <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
                 <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
@@ -1983,7 +1999,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 ></i>
 
                 {/* The Moving Reel */}
-                <div 
+                <div
                     ref={scrollContainerRef}
                     className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
                     style={{
@@ -2006,7 +2022,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
-                        <div 
+                        <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
                             className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
@@ -2033,8 +2049,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
-                                  loading="eager"
+                                  loading={idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
+                                  fetchPriority={idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
                                   showPlaceholder={false}
+                                  staticRender={reduceMobileEffects || isSpinning}
+                                  retryOnError={!(reduceMobileEffects || isSpinning)}
                                   className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
@@ -2049,7 +2068,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
             {/* Action Bar */}
             <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
-                 <button 
+                 <button
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
                     className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
@@ -2341,7 +2360,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                         </span>
                       </button>
                     )}
-                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white"> 
+                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white">
                       <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><PackageOpen className="h-4 w-4" />Keep Item</span>
                     </button>
                   </div>
@@ -2423,7 +2442,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {displayItems.map((item) => (
+                {visibleDropItems.map((item) => (
                     <button
                         key={item.id}
                         type="button"
@@ -2432,7 +2451,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     >
                         <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
                         <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
-                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" />
+                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" width={160} height={160} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
                             {item.redeemable === false && (
                               <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
                                 i
@@ -2464,6 +2483,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     </button>
                 ))}
             </div>
+            {hasMoreDropItems && (
+              <div className="mt-5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setVisibleDropItemCount((count) => count + (performanceMode.isMobile ? 12 : 24))}
+                  className="min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
+                >
+                  Load more items
+                </button>
+              </div>
+            )}
         </div>
         {/* Slide Up Item Sheet */}
         <div className={`item-modal-overlay fixed inset-0 z-[110] bg-black/80 backdrop-blur-sm ${selectedCaseItem ? '' : 'pointer-events-none'} ${itemModalActive ? 'active' : ''}`} onClick={() => setSelectedCaseItem(null)} />

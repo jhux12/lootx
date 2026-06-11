@@ -7,7 +7,7 @@ import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { 
+import {
   User as FirebaseUser,
   AuthCredential,
   EmailAuthProvider,
@@ -27,7 +27,7 @@ import {
   getIdTokenResult,
   onAuthStateChanged
 } from 'firebase/auth';
-import { 
+import {
   addDoc,
   collection,
   collectionGroup,
@@ -655,7 +655,7 @@ interface GameContextType {
   showEmailVerifiedModal: boolean;
   emailVerificationStatus: EmailVerificationStatus;
   authInitialized: boolean;
-  
+
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<EmailPasswordAuthResult>;
   loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
@@ -1256,7 +1256,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // -- PERSISTENT STATE INITIALIZATION --
-  
+
   // 1. Initialize User State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User>(AUTH_LOADING_USER);
@@ -1266,7 +1266,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  
+
   const [view, setViewState] = useState<ViewState>(() => {
     if (typeof window === 'undefined') {
       return { type: 'HOME' };
@@ -1647,7 +1647,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await checkEmailVerificationStatus(auth.currentUser);
     }
   };
-  
+
   // Initialize Items
   const [items, setItems] = useState<CaseItem[]>(() => CASE_ITEMS);
 
@@ -1724,7 +1724,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     return () => unsubscribe();
   }, []);
-  
+
   // 2. Initialize Boxes
   const [boxes, setBoxes] = useState<MysteryBox[]>([]);
   const upsertAdminBox = (box: MysteryBox) => {
@@ -2023,7 +2023,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               valueUsd: item.valueUsd !== undefined ? Number(item.valueUsd) : undefined,
               valueCoins: item.valueCoins !== undefined ? Number(item.valueCoins) : price,
               sellBackCoins: item.sellBackCoins !== undefined ? Number(item.sellBackCoins) : undefined,
-              marketPricing: item.marketPricing
+              marketPricing: user.isAdmin ? item.marketPricing : undefined
             };
           }) : [];
           const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
@@ -2057,7 +2057,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             items,
             isUserCreated: data.isUserCreated ?? false,
             sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
-            marketValueAudit: data.marketValueAudit,
+            marketValueAudit: user.isAdmin ? data.marketValueAudit : undefined,
             createdAt
           } as MysteryBox;
         })
@@ -2673,7 +2673,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const updated = prev + amount;
       setUser(current => ({ ...current, balance: updated }));
       return updated;
-    }); 
+    });
   };
 
   // Server-authoritative balance updates (no client-side persistence).
