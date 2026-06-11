@@ -163,6 +163,7 @@ service cloud.firestore {
         || docId == 'bonus-settings'
         || docId == 'stripe'
         || docId == 'stripe-settings'
+        || docId == 'rewards'
         || docId == 'economy'
         || docId == 'upgrader';
       allow write: if isAdmin();
@@ -175,6 +176,11 @@ service cloud.firestore {
 
     match /auditLogs/{logId} {
       allow read, write: if isAdmin();
+    }
+
+    match /leaderboards/{seasonId}/users/{uid} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     match /shipments/{shipmentId} {

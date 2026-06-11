@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Flame } from 'lucide-react';
-import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -25,6 +25,7 @@ interface LeaderboardEntry {
   avatarUrl: string;
   points: number;
   hiddenFromLeaderboard?: boolean;
+  updatedAt: number;
 }
 
 const DEFAULT_SETTINGS: RewardsSettings = {
@@ -97,6 +98,12 @@ const getTimeLeft = (seasonEndsAt: number | null) => {
 
 const avatarFallback = (name: string) => name.trim().charAt(0).toUpperCase() || 'P';
 
+const timestampToMillis = (value: any) => {
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
 export const Leaderboard: React.FC = () => {
   const { user, setView } = useGame();
   const { playSound } = useSound();
@@ -107,17 +114,14 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const pathLabel = 'settings/rewards';
-    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
-      console.log('SNAPSHOT OK', {
-        path: pathLabel,
-        size: 'size' in snap ? snap.size : undefined
-      });
-      setSettings(normalizeSettings(snap.data() as Record<string, any>));
+      setSettings(normalizeSettings(snap.data() as Record<string, any> | undefined));
       setSettingsLoaded(true);
+      setLoadError(null);
     }, (error) => {
       console.error('SNAPSHOT FAILED', {
         path: pathLabel,
@@ -125,6 +129,9 @@ export const Leaderboard: React.FC = () => {
         message: error?.message,
         error
       });
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsLoaded(true);
+      setLoadError('Leaderboard settings could not be loaded. Showing the default leaderboard view.');
     });
     return () => unsub();
   }, []);
@@ -135,9 +142,6 @@ export const Leaderboard: React.FC = () => {
     const id = window.setInterval(() => setTimeLeft(getTimeLeft(settings.seasonEndsAt)), 1000);
     return () => window.clearInterval(id);
   }, [settings.seasonEndsAt]);
-
-
-
 
   useEffect(() => {
     if (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt) return;
@@ -162,62 +166,66 @@ export const Leaderboard: React.FC = () => {
   }, [settings.seasonEndsAt]);
 
   useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
-      if (!hasActiveLeaderboard) {
-        if (mounted) {
-          setLeaders([]);
-          setMyPoints(0);
-          setMyRank(null);
-          setLoading(false);
-        }
-        return;
-      }
+    if (!settingsLoaded) return undefined;
 
-      setLoading(true);
-      const topQuery = query(
-        collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
-        orderBy('points', 'desc'),
-        orderBy('updatedAt', 'asc'),
-        limit(500)
-      );
-      const topSnap = await getDocs(topQuery);
+    const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
+    if (!hasActiveLeaderboard) {
+      setLeaders([]);
+      setMyPoints(0);
+      setMyRank(null);
+      setLoading(false);
+      return undefined;
+    }
+
+    setLoading(true);
+    const leaderboardPath = `leaderboards/rewardsSeason_${settings.seasonId}/users?limit=500`;
+    const topQuery = query(
+      collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
+      orderBy('points', 'desc'),
+      limit(500)
+    );
+
+    const unsub = onSnapshot(topQuery, (topSnap) => {
       const rankedEntries = topSnap.docs
         .map((d) => ({
           uid: d.id,
           displayName: String(d.data().displayName ?? 'Player'),
           avatarUrl: String(d.data().avatarUrl ?? ''),
           points: Number(d.data().points ?? 0),
-          hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true
+          hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true,
+          updatedAt: timestampToMillis(d.data().updatedAt)
         }))
-        .filter((entry) => !entry.hiddenFromLeaderboard);
+        .filter((entry) => !entry.hiddenFromLeaderboard)
+        .sort((a, b) => (b.points - a.points) || (a.updatedAt - b.updatedAt));
       const top = rankedEntries.slice(0, 100);
+      const currentUserEntry = user.id !== 'loading' && user.id !== 'guest'
+        ? rankedEntries.find((entry) => entry.uid === user.id)
+        : undefined;
+      const isCurrentUserHidden = user.hiddenFromLeaderboard === true || user.hiddenFromPublicDisplay === true;
+      const nextMyPoints = currentUserEntry && !isCurrentUserHidden ? currentUserEntry.points : 0;
+      const nextMyRank = currentUserEntry && !isCurrentUserHidden ? rankedEntries.findIndex((entry) => entry.uid === user.id) + 1 : null;
 
-      const myDoc = await getDoc(doc(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users', user.id));
-      const myData = myDoc.data();
-      const isCurrentUserHidden = user.hiddenFromLeaderboard === true || user.hiddenFromPublicDisplay === true || myData?.hiddenFromLeaderboard === true;
-      const points = myDoc.exists() && !isCurrentUserHidden ? Number(myData?.points ?? 0) : 0;
+      setLeaders(top);
+      setMyPoints(nextMyPoints);
+      setMyRank(nextMyRank && nextMyRank > 0 ? nextMyRank : null);
+      setLoading(false);
+      setLoadError(null);
+    }, (error) => {
+      console.error('SNAPSHOT FAILED', {
+        path: leaderboardPath,
+        code: error?.code,
+        message: error?.message,
+        error
+      });
+      setLeaders([]);
+      setMyPoints(0);
+      setMyRank(null);
+      setLoading(false);
+      setLoadError('Leaderboard data could not be loaded. Please try again in a moment.');
+    });
 
-      let rank: number | null = null;
-      if (points > 0) {
-        const currentUserIndex = rankedEntries.findIndex((entry) => entry.uid === user.id);
-        rank = currentUserIndex >= 0 ? currentUserIndex + 1 : null;
-      }
-
-      if (mounted) {
-        setLeaders(top);
-        setMyPoints(points);
-        setMyRank(rank);
-        setLoading(false);
-      }
-    };
-
-    void run();
-    return () => {
-      mounted = false;
-    };
-  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
+    return () => unsub();
+  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, settingsLoaded, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
 
   const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
   const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
@@ -293,14 +301,20 @@ export const Leaderboard: React.FC = () => {
                 </section>
               )}
 
-            <section>
-              <h2 className="mb-4 text-center text-3xl font-bold">My Stats</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#8f7dff]">{myPoints.toLocaleString()} pts</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /><span className="font-black">{myReward.label}</span></div>
-              </div>
-            </section>
+              {loadError && (
+                <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-100 sm:px-5" role="status">
+                  {loadError}
+                </div>
+              )}
+
+              <section>
+                <h2 className="mb-4 text-center text-2xl font-bold sm:text-3xl">My Stats</h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                  <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
+                  <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#8f7dff]">{myPoints.toLocaleString()} pts</span></div>
+                  <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /><span className="font-black">{myReward.label}</span></div>
+                </div>
+              </section>
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
@@ -334,7 +348,7 @@ export const Leaderboard: React.FC = () => {
             </section>
 
             <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f]">
-              <div className="grid grid-cols-[70px_1fr_120px] gap-2 border-b border-white/10 px-3 py-3 text-sm font-bold text-gray-400 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6 sm:text-[28px]">
+              <div className="grid grid-cols-[48px_minmax(0,1fr)_86px] gap-2 border-b border-white/10 px-3 py-3 text-xs font-bold text-gray-400 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6 sm:text-[28px]">
                 <div>Rank</div>
                 <div>Player</div>
                 <div className="hidden sm:block">Points</div>
@@ -347,12 +361,17 @@ export const Leaderboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-2 p-3 sm:p-4">
+                  {lowerRows.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm font-semibold text-gray-300 sm:text-base">
+                      No ranked players yet. Open cases to start climbing the leaderboard.
+                    </div>
+                  )}
                   {lowerRows.map((entry, index) => {
                     const rank = index + 4;
                     const rowRewardLabel = rewardLabelForRank(rank, entry.points);
                     return (
-                      <div key={entry.uid} className="grid grid-cols-[70px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#1b2228] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
-                        <div className="text-2xl font-black text-white">{rank}</div>
+                      <div key={entry.uid} className="grid grid-cols-[48px_minmax(0,1fr)_86px] items-center gap-2 rounded-2xl border border-white/10 bg-[#1b2228] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
+                        <div className="text-xl font-black text-white sm:text-2xl">{rank}</div>
                         <div className="flex min-w-0 items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-lg font-black text-white">
                             {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
@@ -365,7 +384,7 @@ export const Leaderboard: React.FC = () => {
                           </div>
                         </div>
                         <div className="hidden text-2xl font-black text-[#8f7dff] sm:block">{entry.points.toLocaleString()} <span className="text-[#8f7dff]">pts</span></div>
-                        <div className="ml-auto flex items-center justify-end gap-1.5 text-lg font-black sm:gap-2 sm:text-2xl">
+                        <div className="ml-auto flex min-w-0 items-center justify-end gap-1.5 text-base font-black sm:gap-2 sm:text-2xl">
                           <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
                           <span>{rowRewardLabel}</span>
                         </div>
