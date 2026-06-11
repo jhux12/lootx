@@ -70,7 +70,15 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  landingEdgePaddingPx: 28,
+  landingMinOffsetPx: 16,
+  imagePreloadInitialLimit: 48,
+  imagePreloadSpinLimit: 72,
+  imagePreloadMobileInitialLimit: 28,
+  imagePreloadMobileSpinLimit: 54,
+  imagePreloadTimeoutMs: 1400,
+  imageDecodeTimeoutMs: 900
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -830,6 +838,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
+  const getLandingOffset = useCallback((rng: () => number, cardWidth: number) => {
+    const safeRange = Math.max(0, (cardWidth / 2) - SPINNER_MOTION.landingEdgePaddingPx);
+    if (safeRange <= 0) return 0;
+
+    const minimumOffset = Math.min(SPINNER_MOTION.landingMinOffsetPx, safeRange);
+    const magnitude = minimumOffset + (rng() * (safeRange - minimumOffset));
+    return (rng() < 0.5 ? -1 : 1) * magnitude;
+  }, []);
+
   const getApproachOffset = useCallback((rng: () => number) => {
     const direction = rng() < 0.5 ? -1 : 1;
 
@@ -995,7 +1012,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
@@ -1016,16 +1032,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     // Force style/layout flush before starting WAAPI timeline.
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
+    const finalLandingOffset = getLandingOffset(rng, spinnerMeasurementsRef.current.cardWidth);
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
+    const finalLandingTranslateRaw = await resolveCenteredTranslate(winnerIndex, finalLandingOffset);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const finalLandingTranslate = finalLandingTranslateRaw === null ? null : clampTranslate(finalLandingTranslateRaw);
+    const approachTranslate = finalLandingTranslate === null ? null : clampTranslate(finalLandingTranslate + approachOffset);
+    if (centeredTranslate === null || approachTranslate === null || finalLandingTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1039,8 +1057,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${finalLandingTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1090,7 +1108,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalLandingTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1117,7 +1135,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, getLandingOffset, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1182,20 +1200,44 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [isAuthenticated, openAuthModal]);
 
-  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
+  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[], winnerIndex?: number) => {
     setIsSpinnerAssetsLoading(true);
-    const preloadLimit = reduceMobileEffects ? 10 : 28;
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean))).slice(0, preloadLimit);
+    const isSpinPreload = typeof winnerIndex === 'number';
+    const preloadLimit = reduceMobileEffects
+      ? (isSpinPreload ? SPINNER_MOTION.imagePreloadMobileSpinLimit : SPINNER_MOTION.imagePreloadMobileInitialLimit)
+      : (isSpinPreload ? SPINNER_MOTION.imagePreloadSpinLimit : SPINNER_MOTION.imagePreloadInitialLimit);
+    const priorityIndexes: number[] = [];
 
-    await Promise.all(uniqueSources.map(async (src) => {
+    for (let index = 0; index < Math.min(nextReelItems.length, reduceMobileEffects ? 18 : 24); index += 1) {
+      priorityIndexes.push(index);
+    }
+
+    if (typeof winnerIndex === 'number') {
+      for (let offset = -6; offset <= 6; offset += 1) {
+        priorityIndexes.push(winnerIndex + offset);
+      }
+    }
+
+    const orderedItems = [
+      ...priorityIndexes
+        .filter((index, position, indexes) => index >= 0 && index < nextReelItems.length && indexes.indexOf(index) === position)
+        .map((index) => nextReelItems[index]),
+      ...nextReelItems
+    ];
+    const uniqueSources = Array.from(new Set(orderedItems.map((item) => item?.image).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
+
+    await Promise.all(uniqueSources.map(async (src, index) => {
       const img = new Image();
       img.decoding = 'async';
       img.loading = 'eager';
+      if ('fetchPriority' in img) {
+        (img as HTMLImageElement & { fetchPriority?: 'high' | 'low' | 'auto' }).fetchPriority = index < 24 ? 'high' : 'auto';
+      }
       img.src = src;
 
       if (!img.complete) {
         await new Promise<void>((resolve) => {
-          const timeoutId = window.setTimeout(resolve, reduceMobileEffects ? 650 : 1100);
+          const timeoutId = window.setTimeout(resolve, SPINNER_MOTION.imagePreloadTimeoutMs);
           const settle = () => {
             window.clearTimeout(timeoutId);
             resolve();
@@ -1208,7 +1250,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       if (typeof img.decode === 'function') {
         await Promise.race([
           img.decode().catch(() => undefined),
-          new Promise<void>((resolve) => window.setTimeout(resolve, reduceMobileEffects ? 450 : 850))
+          new Promise<void>((resolve) => window.setTimeout(resolve, SPINNER_MOTION.imageDecodeTimeoutMs))
         ]);
       }
     }));
@@ -1248,13 +1290,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     reelItemsRef.current = nextReelItems;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
+    await preloadReelImages(nextReelItems, winnerIndex);
     await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
-  }, [getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
+  }, [getCenteredIndexFromTranslate, preloadReelImages, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
 
@@ -2049,11 +2092,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
-                                  loading={idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
-                                  fetchPriority={idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
+                                  loading={isSpinning || idx < 18 || Math.abs(idx - reelWinnerIndex) <= 6 ? 'eager' : 'lazy'}
+                                  fetchPriority={idx < 18 || Math.abs(idx - reelWinnerIndex) <= 6 ? 'high' : 'auto'}
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
-                                  retryOnError={!(reduceMobileEffects || isSpinning)}
+                                  retryOnError={!reduceMobileEffects}
                                   className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
