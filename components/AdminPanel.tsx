@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MarketPricingCondition, MarketPricingSource, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -21,6 +21,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { authedFetch } from '../utils/authedFetch';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -72,6 +73,17 @@ const ITEM_SIZE_SUGGESTIONS = [
     'US 11',
     'US 12'
 ] as const;
+
+
+const MARKET_PRICING_SOURCES: MarketPricingSource[] = ['manual', 'pricecharting', 'tcgplayer', 'justtcg'];
+const MARKET_PRICING_CONDITIONS: MarketPricingCondition[] = ['raw', 'near_mint', 'lightly_played', 'psa_9', 'psa_10', 'sealed'];
+
+const coinsToMarketUsd = (coins?: number) => Math.round(Math.max(0, Number(coins || 0)) / 100 * 100) / 100;
+const marketUsdToCoins = (usd?: number) => Math.max(0, Math.round(Number(usd || 0) * 100));
+const marketSellBackCoins = (coins?: number) => Math.max(0, Math.floor(Number(coins || 0) * 0.8));
+
+const removeUndefinedFields = <T extends Record<string, unknown>>(value: T): T =>
+    Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
 
 const UPGRADER_CATEGORY_OPTIONS = [
     { value: '', label: 'None' },
@@ -304,7 +316,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -371,6 +383,9 @@ export const AdminPanel: React.FC = () => {
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
+  const [boxItemMarketDrafts, setBoxItemMarketDrafts] = useState<Record<string, Partial<NonNullable<CaseItem['marketPricing']>>>>({});
+  const [boxItemMarketBusy, setBoxItemMarketBusy] = useState<string | null>(null);
+  const [boxItemMarketMessage, setBoxItemMarketMessage] = useState<string | null>(null);
   const [oddsEditorMode, setOddsEditorMode] = useState<'auto' | 'manual'>('auto');
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
@@ -2916,6 +2931,9 @@ export const AdminPanel: React.FC = () => {
       });
       setBoxTagInput('');
       setSelectedItems([]);
+      setBoxItemMarketDrafts({});
+      setBoxItemMarketBusy(null);
+      setBoxItemMarketMessage(null);
       setOddsEditorMode('auto');
       setRiskBalance(50);
       setTargetEV(0.85);
@@ -3022,6 +3040,223 @@ export const AdminPanel: React.FC = () => {
       targetEV: clampedTargetEV,
       riskLevel: riskBalance
   });
+
+
+  const getSelectedItemPricingDraft = (item: CaseItem) => ({
+      enabled: false,
+      source: 'manual' as MarketPricingSource,
+      ...(items.find((entry) => entry.id === item.id)?.marketPricing ?? item.marketPricing ?? {}),
+      ...(boxItemMarketDrafts[item.id] ?? {})
+  });
+
+  const updateSelectedItemMarketDraft = (itemId: string, patch: Partial<NonNullable<CaseItem['marketPricing']>>) => {
+      setBoxItemMarketDrafts((prev) => ({
+          ...prev,
+          [itemId]: {
+              ...(prev[itemId] ?? {}),
+              ...patch
+          }
+      }));
+  };
+
+  const applyLatestItemToBoxEditor = (latestItem: CaseItem) => {
+      const nextSourceItems = selectedItems.map((entry) => {
+          if (entry.id !== latestItem.id) return entry;
+          const nextValueCoins = Math.max(0, Number(latestItem.valueCoins ?? latestItem.price ?? entry.price ?? 0) || 0);
+          return {
+              ...entry,
+              ...latestItem,
+              chance: entry.chance,
+              rarity: entry.rarity,
+              color: entry.color,
+              price: nextValueCoins,
+              valueCoins: nextValueCoins,
+              valueUsd: latestItem.valueUsd ?? coinsToMarketUsd(nextValueCoins),
+              sellBackCoins: latestItem.sellBackCoins ?? marketSellBackCoins(nextValueCoins),
+              boxValueOverrideCoins: nextValueCoins,
+              originalPriceCoins: Number(entry.originalPriceCoins ?? getCatalogItemPrice(entry))
+          };
+      });
+      const { updatedItems } = getAutoCalculatedBoxItems(nextSourceItems);
+      setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
+      if (editingBoxId && updatedItems.length > 0) {
+          void updateBox(buildEditableBoxPayload(updatedItems.map((entry) => ({ ...entry }))));
+      }
+  };
+
+  const getMarketPricingValue = (
+      data: Partial<CaseItem>,
+      options: { preferSuggested?: boolean } = {}
+  ) => {
+      const pricing = data.marketPricing ?? {};
+      const fallbackCoins = Math.max(0, Number(data.valueCoins ?? data.price ?? 0) || 0);
+      const suggestedCoins = Number(pricing.suggestedValueCoins);
+      const approvedCoins = Number(pricing.approvedValueCoins);
+      const hasSuggested = Number.isFinite(suggestedCoins) && suggestedCoins > 0;
+      const hasApproved = Number.isFinite(approvedCoins) && approvedCoins > 0;
+      const valueCoins = options.preferSuggested && hasSuggested
+          ? suggestedCoins
+          : hasApproved
+              ? approvedCoins
+              : hasSuggested
+                  ? suggestedCoins
+                  : fallbackCoins;
+      const valueUsd = options.preferSuggested && hasSuggested && pricing.suggestedValueUsd != null
+          ? Number(pricing.suggestedValueUsd)
+          : hasApproved && pricing.approvedValueUsd != null
+              ? Number(pricing.approvedValueUsd)
+              : data.valueUsd !== undefined
+                  ? Number(data.valueUsd)
+                  : coinsToMarketUsd(valueCoins);
+      const sellBackCoins = options.preferSuggested && hasSuggested && pricing.suggestedSellBackCoins != null
+          ? Number(pricing.suggestedSellBackCoins)
+          : hasApproved && pricing.approvedSellBackCoins != null
+              ? Number(pricing.approvedSellBackCoins)
+              : data.sellBackCoins !== undefined
+                  ? Number(data.sellBackCoins)
+                  : marketSellBackCoins(valueCoins);
+
+      return {
+          valueCoins: Math.max(0, Math.round(valueCoins)),
+          valueUsd: Math.max(0, valueUsd),
+          sellBackCoins: Math.max(0, Math.floor(sellBackCoins))
+      };
+  };
+
+  const loadLatestMarketItem = async (itemId: string, options: { preferSuggested?: boolean } = {}) => {
+      const snapshot = await getDoc(doc(db, 'items', itemId));
+      if (!snapshot.exists()) return null;
+      const data = snapshot.data() as Partial<CaseItem>;
+      const marketValue = getMarketPricingValue(data, options);
+      return {
+          id: itemId,
+          name: data.name ?? 'Mystery Item',
+          price: marketValue.valueCoins,
+          image: data.image ?? 'https://picsum.photos/200',
+          rarity: (data.rarity ?? 'common') as CaseItem['rarity'],
+          chance: Number(data.chance ?? 0),
+          color: data.color ?? rarityColorMap[(data.rarity ?? 'common') as CaseItem['rarity']] ?? '#9ca3af',
+          brand: data.brand ?? '',
+          category: data.category ?? '',
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          sizes: Array.isArray(data.sizes) ? data.sizes : undefined,
+          redeemable: data.redeemable ?? true,
+          forceFullSellBack: data.forceFullSellBack === true,
+          upgraderEnabled: data.upgraderEnabled === true,
+          upgraderCategory: data.upgraderCategory ?? '',
+          upgraderSort: data.upgraderSort,
+          upgraderFeatured: data.upgraderFeatured === true,
+          valueUsd: marketValue.valueUsd,
+          valueCoins: marketValue.valueCoins,
+          sellBackCoins: marketValue.sellBackCoins,
+          marketPricing: data.marketPricing
+      } as CaseItem;
+  };
+
+  const saveSelectedItemMarketPricing = async (item: CaseItem, overrides: Partial<NonNullable<CaseItem['marketPricing']>> = {}) => {
+      const catalogItem = items.find((entry) => entry.id === item.id);
+      const existing = catalogItem?.marketPricing ?? item.marketPricing ?? { enabled: false, source: 'manual' as MarketPricingSource };
+      const draft = { ...(boxItemMarketDrafts[item.id] ?? {}), ...overrides };
+      const approvedValueUsd = draft.approvedValueUsd != null
+          ? Math.max(0, Number(draft.approvedValueUsd))
+          : existing.approvedValueUsd;
+      const approvedValueCoins = draft.approvedValueCoins != null
+          ? Math.max(0, Math.round(Number(draft.approvedValueCoins)))
+          : (approvedValueUsd != null ? marketUsdToCoins(approvedValueUsd) : existing.approvedValueCoins);
+      const approvedSellBackCoins = draft.approvedSellBackCoins != null
+          ? Math.max(0, Math.floor(Number(draft.approvedSellBackCoins)))
+          : (approvedValueCoins != null ? marketSellBackCoins(approvedValueCoins) : existing.approvedSellBackCoins);
+      const marketPricing = removeUndefinedFields({
+          ...existing,
+          enabled: draft.enabled ?? existing.enabled ?? false,
+          source: (draft.source || existing.source || 'manual') as MarketPricingSource,
+          sourceId: draft.sourceId ?? existing.sourceId,
+          query: draft.query ?? existing.query,
+          condition: draft.condition ?? existing.condition,
+          valueLocked: draft.valueLocked ?? existing.valueLocked ?? false,
+          approvedValueUsd,
+          approvedValueCoins,
+          approvedSellBackCoins
+      });
+      const itemUpdate = removeUndefinedFields({
+          marketPricing,
+          ...(approvedValueCoins != null ? {
+              valueUsd: approvedValueUsd ?? coinsToMarketUsd(approvedValueCoins),
+              valueCoins: approvedValueCoins,
+              sellBackCoins: approvedSellBackCoins ?? marketSellBackCoins(approvedValueCoins),
+              price: approvedValueCoins
+          } : {})
+      });
+
+      await updateDoc(doc(db, 'items', item.id), itemUpdate);
+      setBoxItemMarketDrafts((prev) => ({ ...prev, [item.id]: { ...(prev[item.id] ?? {}), ...marketPricing } }));
+
+      if (approvedValueCoins != null) {
+          applyLatestItemToBoxEditor({
+              ...(catalogItem ?? item),
+              price: approvedValueCoins,
+              valueUsd: approvedValueUsd ?? coinsToMarketUsd(approvedValueCoins),
+              valueCoins: approvedValueCoins,
+              sellBackCoins: approvedSellBackCoins ?? marketSellBackCoins(approvedValueCoins),
+              marketPricing
+          });
+      } else {
+          setSelectedItems((prev) => prev.map((entry) => entry.id === item.id ? { ...entry, marketPricing } : entry));
+      }
+      return marketPricing;
+  };
+
+  const runSelectedItemMarketAction = async (label: string, action: () => Promise<string>) => {
+      setBoxItemMarketBusy(label);
+      setBoxItemMarketMessage(null);
+      try {
+          const message = await action();
+          setBoxItemMarketMessage(message);
+      } catch (error) {
+          setBoxItemMarketMessage(error instanceof Error ? error.message : 'Market pricing action failed.');
+      } finally {
+          setBoxItemMarketBusy(null);
+      }
+  };
+
+  const handleSaveSelectedItemMarketSource = (item: CaseItem) => {
+      void runSelectedItemMarketAction(`save-${item.id}`, async () => {
+          await saveSelectedItemMarketPricing(item);
+          return `Saved market source for ${item.name}.`;
+      });
+  };
+
+  const handleCheckSelectedItemMarketPrice = (item: CaseItem) => {
+      void runSelectedItemMarketAction(`check-${item.id}`, async () => {
+          await saveSelectedItemMarketPricing(item, { enabled: true });
+          const result = await authedFetch<{ checked?: number; updated?: number; pendingReview?: number; failed?: number; affectedBoxes?: Array<{ id: string }> }>('/api/admin/market-prices/update', {
+              method: 'POST',
+              body: JSON.stringify({ itemId: item.id })
+          });
+          const latestItem = await loadLatestMarketItem(item.id, { preferSuggested: true });
+          if (latestItem) {
+              setBoxItemMarketDrafts((prev) => ({ ...prev, [item.id]: { ...(prev[item.id] ?? {}), ...(latestItem.marketPricing ?? {}) } }));
+              applyLatestItemToBoxEditor(latestItem);
+          }
+          return `Checked ${item.name}. Updated ${result.updated ?? 0}, pending review ${result.pendingReview ?? 0}, failed ${result.failed ?? 0}. Box odds refreshed from the latest suggested value.`;
+      });
+  };
+
+  const handleApproveSelectedItemMarketPrice = (item: CaseItem) => {
+      void runSelectedItemMarketAction(`approve-${item.id}`, async () => {
+          await authedFetch<{ affectedBoxes?: Array<{ id: string }> }>('/api/admin/market-prices/approve', {
+              method: 'POST',
+              body: JSON.stringify({ itemId: item.id })
+          });
+          const latestItem = await loadLatestMarketItem(item.id);
+          if (latestItem) {
+              setBoxItemMarketDrafts((prev) => ({ ...prev, [item.id]: { ...(prev[item.id] ?? {}), ...(latestItem.marketPricing ?? {}) } }));
+              applyLatestItemToBoxEditor(latestItem);
+          }
+          return `Approved ${item.name}. Current box pricing and odds were recalculated.`;
+      });
+  };
 
   const handleSelectedItemRarityChange = (itemId: string, rarity: CaseItem['rarity']) => {
       const normalizedRarity = rarityColorMap[rarity] ? rarity : 'common';
@@ -3339,12 +3574,6 @@ export const AdminPanel: React.FC = () => {
                        <Users className="w-4 h-4" /> Referrals
                    </button>
                    <button
-                     onClick={() => setActiveTab('market-pricing')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'market-pricing' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                   >
-                       <Calculator className="w-4 h-4" /> Market Pricing
-                   </button>
-                   <button
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3412,7 +3641,6 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'legal' && 'Legal Content'}
-                    {activeTab === 'market-pricing' && 'Market Pricing'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -4271,67 +4499,180 @@ export const AdminPanel: React.FC = () => {
                              {selectedItems.length > 0 && (
                                  <div className="border-t border-gray-800 pt-4">
                                      <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
-                                     <div className="space-y-1">
-                                         {selectedItems.map((item, idx) => (
-                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
-                                                 <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
-                                                 <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
-                                                 <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
-                                                     <div className="flex items-center justify-between gap-2">
-                                                         <span className="text-[10px] uppercase text-gray-500">EV value</span>
-                                                         <CoinAmount
-                                                           amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                                           formatOptions={{ maximumFractionDigits: 0 }}
-                                                           className="text-[11px] text-emerald-300"
-                                                           iconClassName="w-3 h-3"
+                                     {boxItemMarketMessage && (
+                                         <div className="mb-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-gray-200">
+                                             {boxItemMarketMessage}
+                                         </div>
+                                     )}
+                                     <div className="space-y-3">
+                                         {selectedItems.map((item) => {
+                                             const pricing = getSelectedItemPricingDraft(item);
+                                             const rowBusy = boxItemMarketBusy?.endsWith(item.id) ?? false;
+                                             return (
+                                             <div key={item.id} className="rounded border border-gray-700 bg-[#131720] p-2 text-xs">
+                                                 <div className="flex flex-wrap items-center gap-2">
+                                                     <img src={item.image} alt={item.name} className="h-8 w-8 rounded object-contain sm:h-5 sm:w-5" />
+                                                     <span className="min-w-[140px] flex-1 truncate text-gray-300">{item.name}</span>
+                                                     <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
+                                                         <div className="flex items-center justify-between gap-2">
+                                                             <span className="text-[10px] uppercase text-gray-500">EV value</span>
+                                                             <CoinAmount
+                                                               amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                                               formatOptions={{ maximumFractionDigits: 0 }}
+                                                               className="text-[11px] text-emerald-300"
+                                                               iconClassName="w-3 h-3"
+                                                             />
+                                                         </div>
+                                                         <Input
+                                                             type="number"
+                                                             min={0}
+                                                             step={1}
+                                                             value={Math.round(Number(item.price ?? 0))}
+                                                             onChange={(event) => handleSelectedItemValueOverrideChange(item.id, event.target.value)}
+                                                             className="w-full bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
+                                                             aria-label={`Override EV coin value for ${item.name}`}
                                                          />
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => resetSelectedItemValueOverride(item)}
+                                                             className="text-left text-[10px] text-gray-500 hover:text-gray-300"
+                                                         >
+                                                             Reset to catalog: {Math.round(getCatalogItemPrice(item)).toLocaleString()} coins
+                                                         </button>
                                                      </div>
-                                                     <Input
-                                                         type="number"
-                                                         min={0}
-                                                         step={1}
-                                                         value={Math.round(Number(item.price ?? 0))}
-                                                         onChange={(event) => handleSelectedItemValueOverrideChange(item.id, event.target.value)}
-                                                         className="w-full bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
-                                                         aria-label={`Override EV coin value for ${item.name}`}
-                                                     />
-                                                     <button
-                                                         type="button"
-                                                         onClick={() => resetSelectedItemValueOverride(item)}
-                                                         className="text-left text-[10px] text-gray-500 hover:text-gray-300"
-                                                     >
-                                                         Reset to catalog: {Math.round(getCatalogItemPrice(item)).toLocaleString()} coins
-                                                     </button>
+                                                     <label className="flex w-full items-center gap-1 rounded bg-black/30 px-2 py-1 sm:w-auto">
+                                                         <span className="whitespace-nowrap text-gray-400">Chance %</span>
+                                                         <Input
+                                                             type="number"
+                                                             min={0}
+                                                             max={100}
+                                                             step={0.0001}
+                                                             value={item.chance}
+                                                             onChange={(event) => handleSelectedItemChanceChange(item.id, event.target.value)}
+                                                             className="w-full bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs sm:w-24"
+                                                         />
+                                                     </label>
+                                                     <label className="relative w-full sm:w-auto">
+                                                         <span className="sr-only">Item rarity for {item.name}</span>
+                                                         <select
+                                                             value={item.rarity}
+                                                             onChange={(event) => handleSelectedItemRarityChange(item.id, event.target.value as CaseItem['rarity'])}
+                                                             className="w-full cursor-pointer rounded border border-white/10 bg-black/30 px-2 py-1 pr-6 text-[10px] font-bold uppercase focus:outline-none focus:ring-2 focus:ring-brand-blue sm:w-auto"
+                                                             style={{ color: item.color, backgroundColor: `${item.color}20` }}
+                                                         >
+                                                             {rarityColorOptions.map((option) => (
+                                                                 <option key={option.value} value={option.value}>
+                                                                     {option.label}
+                                                                 </option>
+                                                             ))}
+                                                         </select>
+                                                     </label>
                                                  </div>
-                                                 <label className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded w-full sm:w-auto">
-                                                     <span className="text-gray-400 whitespace-nowrap">Chance %</span>
-                                                     <Input
-                                                         type="number"
-                                                         min={0}
-                                                         max={100}
-                                                         step={0.0001}
-                                                         value={item.chance}
-                                                         onChange={(event) => handleSelectedItemChanceChange(item.id, event.target.value)}
-                                                         className="w-24 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-white font-semibold text-xs"
-                                                     />
-                                                 </label>
-                                                 <label className="relative">
-                                                     <span className="sr-only">Item rarity for {item.name}</span>
-                                                     <select
-                                                         value={item.rarity}
-                                                         onChange={(event) => handleSelectedItemRarityChange(item.id, event.target.value as CaseItem['rarity'])}
-                                                         className="cursor-pointer rounded font-bold uppercase text-[10px] px-2 py-1 pr-6 border border-white/10 bg-black/30 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                                                         style={{ color: item.color, backgroundColor: `${item.color}20` }}
-                                                     >
-                                                         {rarityColorOptions.map((option) => (
-                                                             <option key={option.value} value={option.value}>
-                                                                 {option.label}
-                                                             </option>
-                                                         ))}
-                                                     </select>
-                                                 </label>
+                                                 <div className="mt-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
+                                                     <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                                         <div>
+                                                             <p className="text-[10px] font-bold uppercase tracking-wide text-cyan-200">Market source</p>
+                                                             <p className="text-[10px] text-gray-500">Save a source, check market price, then auto-refresh this item value and box odds.</p>
+                                                         </div>
+                                                         <span className="w-fit rounded-full border border-gray-700 px-2 py-1 text-[10px] font-semibold uppercase text-gray-400">
+                                                             {(pricing.updateStatus || 'idle').replace('_', ' ')}
+                                                         </span>
+                                                     </div>
+                                                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                                                         <label className="text-[10px] font-bold uppercase text-gray-500">
+                                                             Enabled
+                                                             <Select
+                                                                 value={String(pricing.enabled ?? false)}
+                                                                 onChange={(event) => updateSelectedItemMarketDraft(item.id, { enabled: event.target.value === 'true' })}
+                                                                 className="mt-1 w-full rounded bg-[#0b0e14] p-2 text-xs text-white"
+                                                             >
+                                                                 <option value="false">No</option>
+                                                                 <option value="true">Yes</option>
+                                                             </Select>
+                                                         </label>
+                                                         <label className="text-[10px] font-bold uppercase text-gray-500">
+                                                             Source
+                                                             <Select
+                                                                 value={pricing.source || 'manual'}
+                                                                 onChange={(event) => updateSelectedItemMarketDraft(item.id, { source: event.target.value as MarketPricingSource })}
+                                                                 className="mt-1 w-full rounded bg-[#0b0e14] p-2 text-xs text-white"
+                                                             >
+                                                                 {MARKET_PRICING_SOURCES.map((source) => <option key={source} value={source}>{source}</option>)}
+                                                             </Select>
+                                                         </label>
+                                                         <label className="text-[10px] font-bold uppercase text-gray-500">
+                                                             Source ID
+                                                             <Input
+                                                                 value={pricing.sourceId || ''}
+                                                                 onChange={(event) => updateSelectedItemMarketDraft(item.id, { sourceId: event.target.value })}
+                                                                 placeholder="TCG / JustTCG / PriceCharting ID"
+                                                                 className="mt-1 w-full rounded bg-[#0b0e14] p-2 text-xs text-white"
+                                                             />
+                                                         </label>
+                                                         <label className="text-[10px] font-bold uppercase text-gray-500">
+                                                             Query
+                                                             <Input
+                                                                 value={pricing.query || ''}
+                                                                 onChange={(event) => updateSelectedItemMarketDraft(item.id, { query: event.target.value })}
+                                                                 placeholder="Fallback search query"
+                                                                 className="mt-1 w-full rounded bg-[#0b0e14] p-2 text-xs text-white"
+                                                             />
+                                                         </label>
+                                                         <label className="text-[10px] font-bold uppercase text-gray-500">
+                                                             Condition
+                                                             <Select
+                                                                 value={pricing.condition || 'raw'}
+                                                                 onChange={(event) => updateSelectedItemMarketDraft(item.id, { condition: event.target.value as MarketPricingCondition })}
+                                                                 className="mt-1 w-full rounded bg-[#0b0e14] p-2 text-xs text-white"
+                                                             >
+                                                                 {MARKET_PRICING_CONDITIONS.map((condition) => <option key={condition} value={condition}>{condition}</option>)}
+                                                             </Select>
+                                                         </label>
+                                                     </div>
+                                                     <div className="mt-3 grid grid-cols-1 gap-2 text-[10px] text-gray-400 sm:grid-cols-3">
+                                                         <div className="rounded border border-gray-800 bg-[#0b0e14] px-2 py-1.5">
+                                                             <span className="block uppercase text-gray-500">Editor value</span>
+                                                             <span className="font-semibold text-white">{Math.round(Number(item.valueCoins ?? item.price ?? 0)).toLocaleString()} coins</span>
+                                                         </div>
+                                                         <div className="rounded border border-gray-800 bg-[#0b0e14] px-2 py-1.5">
+                                                             <span className="block uppercase text-gray-500">Suggested</span>
+                                                             <span className="font-semibold text-cyan-200">{pricing.suggestedValueCoins != null ? `${Math.round(Number(pricing.suggestedValueCoins)).toLocaleString()} coins` : '—'}</span>
+                                                         </div>
+                                                         <div className="rounded border border-gray-800 bg-[#0b0e14] px-2 py-1.5">
+                                                             <span className="block uppercase text-gray-500">Approved</span>
+                                                             <span className="font-semibold text-emerald-200">{pricing.approvedValueCoins != null ? `${Math.round(Number(pricing.approvedValueCoins)).toLocaleString()} coins` : '—'}</span>
+                                                         </div>
+                                                     </div>
+                                                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => handleSaveSelectedItemMarketSource(item)}
+                                                             disabled={rowBusy}
+                                                             className="min-h-10 rounded-lg border border-gray-700 px-3 py-2 text-xs font-bold text-gray-200 hover:border-gray-500 disabled:opacity-60"
+                                                         >
+                                                             Save Source
+                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => handleCheckSelectedItemMarketPrice(item)}
+                                                             disabled={rowBusy}
+                                                             className="min-h-10 rounded-lg border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-60"
+                                                         >
+                                                             {rowBusy && boxItemMarketBusy?.startsWith('check-') ? 'Checking…' : 'Check & Auto-Update'}
+                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             onClick={() => handleApproveSelectedItemMarketPrice(item)}
+                                                             disabled={rowBusy}
+                                                             className="min-h-10 rounded-lg border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-100 disabled:opacity-60"
+                                                         >
+                                                             Approve Suggested
+                                                         </button>
+                                                     </div>
+                                                 </div>
                                              </div>
-                                         ))}
+                                             );
+                                         })}
                                      </div>
                                  </div>
                              )}
@@ -4345,6 +4686,8 @@ export const AdminPanel: React.FC = () => {
                             {editingBoxId ? 'Update Box' : 'Create Box'}
                         </button>
                     </div>
+
+                    <MarketPricingAdminSection items={items} boxes={boxes} />
 
                      {/* Box List */}
                      <div className="bg-[#131720] border border-gray-800 rounded-xl overflow-hidden">
@@ -6013,10 +6356,6 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* TAB: FEES & SHIPPING */}
-            {activeTab === 'market-pricing' && (
-                <MarketPricingAdminSection items={items} boxes={boxes} />
-            )}
-
             {activeTab === 'referrals' && (
                 <ReferralAdminSection />
             )}
