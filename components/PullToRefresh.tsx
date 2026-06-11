@@ -125,13 +125,6 @@ const PullToRefresh: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       }}
     >
       <div
-        aria-hidden="true"
-        style={{
-          height: `${pullDistance}px`,
-          transition: isPulling.current || isRefreshing ? 'none' : 'height 200ms ease-out'
-        }}
-      />
-      <div
         aria-live="polite"
         aria-label={indicatorLabel}
         className="pointer-events-none fixed inset-x-0 top-[max(env(safe-area-inset-top),0px)] z-[70] flex justify-center"
