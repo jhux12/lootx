@@ -68,6 +68,7 @@ const SPINNER_MOTION = {
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
   approachOffsetNearMissMaxPx: 34,
+  landingOffsetEdgePaddingPx: 28,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
   initialBlurDurationMs: 260
@@ -993,9 +994,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       return;
     }
 
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
+    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}:${Date.now()}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
@@ -1021,11 +1021,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
 
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const { cardWidth } = spinnerMeasurementsRef.current;
+    const safeLandingRange = Math.max(0, (cardWidth / 2) - SPINNER_MOTION.landingOffsetEdgePaddingPx);
+    const landingOffset = Math.round((rng() * 2 - 1) * safeLandingRange);
+    const finalTranslateRaw = await resolveCenteredTranslate(winnerIndex, landingOffset);
+    const finalTranslate = finalTranslateRaw === null ? null : clampTranslate(finalTranslateRaw);
+    const approachTranslate = finalTranslate === null ? null : clampTranslate(finalTranslate + approachOffset);
+    if (finalTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1039,8 +1041,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       [
         { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
         { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${approachTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1090,7 +1092,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1592,11 +1594,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   animateSpin(goldReelResult.winnerIndex, goldFinalDuration, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { seed: goldSeed });
                 });
               goldStageTimerRef.current = null;
             }, goldStageDelay);
-        });
+        }, { seed: ticketSeed });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1606,7 +1608,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
-        });
+        }, { seed: mainSeed });
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePerformanceMode } from '../src/lib/performance';
 
 export interface ReelItem {
@@ -22,9 +22,10 @@ const DESKTOP_REEL_LENGTH = 40;
 const MOBILE_REEL_LENGTH = 34;
 const DESKTOP_STOP_INDEX = 32;
 const MOBILE_STOP_INDEX = 27;
-const CARD_WIDTH = 128;
+const DESKTOP_CARD_WIDTH = 128;
+const MOBILE_CARD_WIDTH = 112;
 const CARD_GAP = 12;
-const STEP = CARD_WIDTH + CARD_GAP;
+const LANDING_EDGE_PADDING = 18;
 
 const fallbackItem: ReelItem = {
   itemId: 'placeholder-item',
@@ -110,9 +111,13 @@ const hashSeed = (input: string) => {
 export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
+  const landingOffsetRef = useRef(0);
   const performanceMode = usePerformanceMode();
-  const reelLength = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
-  const stopIndex = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
+  const useCompactReel = performanceMode.isMobile || performanceMode.isLowPower;
+  const reelLength = useCompactReel ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
+  const stopIndex = useCompactReel ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
+  const cardWidth = performanceMode.isMobile ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
+  const step = cardWidth + CARD_GAP;
 
   const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
 
@@ -134,28 +139,35 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
     });
   }, [performanceMode.isLowPower, performanceMode.isMobile, reelItems]);
 
-  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
-  const targetTranslateX = useMemo(() => -(stopIndex * STEP), [stopIndex]);
+  const centerOffset = useMemo(() => `calc(50% - ${cardWidth / 2}px)`, [cardWidth]);
+  const getRandomLandingOffset = useCallback(() => {
+    const safeLandingRange = Math.max(0, (cardWidth / 2) - LANDING_EDGE_PADDING);
+    return (Math.random() * 2 - 1) * safeLandingRange;
+  }, [cardWidth]);
+  const getTargetTranslateX = useCallback((offset: number) => -(stopIndex * step) + offset, [step, stopIndex]);
 
   useEffect(() => {
     if (state === 'IDLE') {
       setTransitionEnabled(false);
       setTranslateX(0);
+      landingOffsetRef.current = 0;
       return;
     }
 
     if (state === 'STOPPED') {
       setTransitionEnabled(false);
-      setTranslateX(targetTranslateX);
+      setTranslateX(getTargetTranslateX(landingOffsetRef.current));
       return;
     }
 
+    const nextLandingOffset = getRandomLandingOffset();
+    landingOffsetRef.current = nextLandingOffset;
     setTransitionEnabled(false);
     setTranslateX(0);
 
     const frame = window.requestAnimationFrame(() => {
       setTransitionEnabled(true);
-      setTranslateX(targetTranslateX);
+      setTranslateX(getTargetTranslateX(nextLandingOffset));
     });
 
     const timer = window.setTimeout(() => {
@@ -166,7 +178,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
       window.cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [durationMs, onSpinComplete, state, spinKey, targetTranslateX]);
+  }, [durationMs, getRandomLandingOffset, getTargetTranslateX, onSpinComplete, state, spinKey]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-gray-700/70 bg-[#0b0f18] h-[124px] sm:h-[132px]">
@@ -187,7 +199,8 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                style={{ width: cardWidth }}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
