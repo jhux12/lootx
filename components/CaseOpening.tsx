@@ -431,6 +431,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
+  const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
@@ -1182,36 +1183,57 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
   }, [isAuthenticated, openAuthModal]);
 
-  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[]) => {
+  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[], options: { preloadAll?: boolean } = {}) => {
     setIsSpinnerAssetsLoading(true);
-    const preloadLimit = reduceMobileEffects ? 10 : 28;
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter(Boolean))).slice(0, preloadLimit);
+    const preloadLimit = options.preloadAll ? Number.POSITIVE_INFINITY : (reduceMobileEffects ? 10 : 28);
+    const loadTimeoutMs = options.preloadAll ? (reduceMobileEffects ? 3200 : 5000) : (reduceMobileEffects ? 900 : 1400);
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
 
-    await Promise.all(uniqueSources.map(async (src) => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.loading = 'eager';
-      img.src = src;
+    const loadSource = (src: string) => {
+      const cachedLoad = preloadedSpinnerImagesRef.current.get(src);
+      if (cachedLoad) return cachedLoad;
 
-      if (!img.complete) {
-        await new Promise<void>((resolve) => {
-          const timeoutId = window.setTimeout(resolve, reduceMobileEffects ? 650 : 1100);
-          const settle = () => {
-            window.clearTimeout(timeoutId);
-            resolve();
-          };
-          img.onload = settle;
-          img.onerror = settle;
-        });
-      }
+      let timedOut = false;
+      const loadPromise = new Promise<void>((resolve) => {
+        const img = new Image();
+        const timeoutId = window.setTimeout(() => {
+          timedOut = true;
+          resolve();
+        }, loadTimeoutMs);
+        const settle = () => {
+          window.clearTimeout(timeoutId);
+          resolve();
+        };
 
-      if (typeof img.decode === 'function') {
+        img.decoding = 'async';
+        img.loading = 'eager';
+        img.onload = settle;
+        img.onerror = settle;
+        img.src = src;
+
+        if (img.complete && img.naturalWidth > 0) {
+          settle();
+        }
+      }).then(async () => {
+        if (timedOut) {
+          preloadedSpinnerImagesRef.current.delete(src);
+          return;
+        }
+
+        const decoder = new Image();
+        decoder.src = src;
+        if (typeof decoder.decode !== 'function') return;
         await Promise.race([
-          img.decode().catch(() => undefined),
+          decoder.decode().catch(() => undefined),
           new Promise<void>((resolve) => window.setTimeout(resolve, reduceMobileEffects ? 450 : 850))
         ]);
-      }
-    }));
+      });
+
+      preloadedSpinnerImagesRef.current.set(src, loadPromise);
+      return loadPromise;
+    };
+
+    await Promise.all(uniqueSources.map((src) => loadSource(src)));
     setIsSpinnerAssetsLoading(false);
   }, [reduceMobileEffects]);
 
@@ -1245,6 +1267,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
       scrollContainerRef.current.style.transition = 'none';
     }
 
+    await preloadReelImages(nextReelItems, { preloadAll: true });
+
     reelItemsRef.current = nextReelItems;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
@@ -1254,7 +1278,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
-  }, [getCenteredIndexFromTranslate, resetSpinnerAnimation, updateSpinnerMeasurements]);
+  }, [getCenteredIndexFromTranslate, preloadReelImages, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
 
@@ -2049,8 +2073,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
-                                  loading={idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
-                                  fetchPriority={idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
+                                  loading={isSpinning || idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
+                                  fetchPriority={isSpinning || idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
                                   retryOnError={!(reduceMobileEffects || isSpinning)}
