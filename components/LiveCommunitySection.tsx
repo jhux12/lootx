@@ -3,6 +3,8 @@ import { Timestamp, addDoc, collection, doc, getDoc, increment, limit, onSnapsho
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { COIN_ICON } from '../constants';
+import { useGame } from '../context/GameContext';
+import type { User } from '../types';
 
 export type LiveCommunityStory = {
   id: string;
@@ -69,6 +71,11 @@ const storyBadgeClass: Record<string, string> = {
 const formatStoryCount = (count: number) => `${count} ${count === 1 ? 'story' : 'stories'}`;
 
 
+const getSubmissionUsername = (user: User): string => {
+  const rawName = user.username || user.displayName || user.name || user.email?.split('@')[0] || '';
+  return rawName.trim().replace(/^@+/, '');
+};
+
 
 const toMillis = (value: unknown): number => {
   if (value && typeof value === 'object' && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
@@ -92,6 +99,7 @@ const formatStoryTimeLabel = (story: LiveCommunityStory): string => {
   return `${days}d`;
 };
 export const LiveCommunitySection: React.FC = () => {
+  const { user, isAuthenticated, openAuthModal } = useGame();
   const sectionRef = useRef<HTMLElement | null>(null);
   const storyRailRef = useRef<HTMLDivElement | null>(null);
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
@@ -109,6 +117,12 @@ export const LiveCommunitySection: React.FC = () => {
   const [submitPreviewUrl, setSubmitPreviewUrl] = useState<string | null>(null);
   const [submitNotice, setSubmitNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const [isSubmittingPull, setIsSubmittingPull] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || submitUsername.trim()) return;
+    const accountUsername = getSubmissionUsername(user);
+    if (accountUsername) setSubmitUsername(accountUsername);
+  }, [isAuthenticated, submitUsername, user]);
 
   const scrollStoryRail = (direction: 'previous' | 'next') => {
     const rail = storyRailRef.current;
@@ -303,6 +317,13 @@ export const LiveCommunitySection: React.FC = () => {
   };
 
   const openSubmitPull = () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+
+    const accountUsername = getSubmissionUsername(user);
+    if (accountUsername) setSubmitUsername(accountUsername);
     setSubmitNotice(null);
     setIsSubmitOpen(true);
   };
@@ -321,6 +342,12 @@ export const LiveCommunitySection: React.FC = () => {
   const handleSubmitPull = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isSubmittingPull) return;
+
+    if (!isAuthenticated) {
+      setIsSubmitOpen(false);
+      openAuthModal('login');
+      return;
+    }
 
     const trimmedUsername = submitUsername.trim();
     if (trimmedUsername.length < 2) {
