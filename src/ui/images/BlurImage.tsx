@@ -7,6 +7,12 @@ type BlurImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   ratioClassName?: string;
   priority?: boolean;
   showPlaceholder?: boolean;
+  /** Disable placeholder/fade state work for dense mobile grids and reels. */
+  staticRender?: boolean;
+  /** Browser fetch priority for true above-the-fold images. */
+  fetchPriority?: 'high' | 'low' | 'auto';
+  /** Avoid cache-busting retries when a simple fallback is cheaper. */
+  retryOnError?: boolean;
 };
 
 const BlurImageComponent: React.FC<BlurImageProps> = ({
@@ -18,6 +24,9 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
   ratioClassName,
   priority = false,
   showPlaceholder = true,
+  staticRender = false,
+  fetchPriority,
+  retryOnError = true,
   loading,
   width,
   height,
@@ -25,39 +34,40 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
   style,
   ...rest
 }) => {
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(staticRender);
   const [currentSrc, setCurrentSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
   const [hasRetried, setHasRetried] = useState(false);
   const imageRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    setLoaded(false);
+    setLoaded(staticRender);
     setHasError(false);
     setHasRetried(false);
     setCurrentSrc(src);
-  }, [src]);
+  }, [src, staticRender]);
 
   useEffect(() => {
     const imageElement = imageRef.current;
-    if (!imageElement || !src) return;
+    if (staticRender || !imageElement || !src) return;
     if (imageElement.complete && imageElement.naturalWidth > 0) {
-      setLoaded(true);
+      if (!staticRender) setLoaded(true);
     }
-  }, [src]);
+  }, [src, staticRender]);
 
   const intrinsicWidth = width ?? 320;
   const intrinsicHeight = height ?? intrinsicWidth;
+  const shouldShowPlaceholder = showPlaceholder && !staticRender;
 
   const handleLoad: React.ReactEventHandler<HTMLImageElement> = (event) => {
-    setLoaded(true);
+    if (!staticRender) setLoaded(true);
     setHasError(false);
     rest.onLoad?.(event);
   };
 
   const handleError: React.ReactEventHandler<HTMLImageElement> = (event) => {
     const source = typeof currentSrc === 'string' ? currentSrc : '';
-    if (!hasRetried && source) {
+    if (retryOnError && !hasRetried && source) {
       const separator = source.includes('?') ? '&' : '?';
       setHasRetried(true);
       setCurrentSrc(`${source}${separator}retry=${Date.now()}`);
@@ -74,7 +84,7 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
 
   return (
     <div className={`pullz-blur-wrap ${ratioClassName ?? ''}`}>
-      {showPlaceholder ? (
+      {shouldShowPlaceholder ? (
         placeholderSrc ? (
           <img src={placeholderSrc} alt="" aria-hidden="true" className={`pullz-blur-placeholder ${loaded ? 'is-hidden' : ''}`} width={intrinsicWidth} height={intrinsicHeight} decoding="async" />
         ) : (
@@ -85,9 +95,10 @@ const BlurImageComponent: React.FC<BlurImageProps> = ({
         ref={imageRef}
         src={currentSrc}
         alt={alt}
-        className={`pullz-blur-full ${(loaded && !hasError) ? 'is-loaded' : ''} ${className ?? ''}`}
+        className={`pullz-blur-full ${(staticRender || (loaded && !hasError)) ? 'is-loaded' : ''} ${staticRender ? 'is-static' : ''} ${className ?? ''}`}
         loading={priority ? 'eager' : (loading ?? 'lazy')}
         decoding={decoding ?? 'async'}
+        fetchPriority={fetchPriority}
         width={intrinsicWidth}
         height={intrinsicHeight}
         style={style}

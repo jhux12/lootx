@@ -9,6 +9,7 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { LiveCommunitySection } from './LiveCommunitySection';
 import { HomeBanners } from './HomeBanners';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
+import { usePerformanceMode } from '../src/lib/performance';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -321,11 +322,14 @@ SocialProofNotifications.displayName = 'SocialProofNotifications';
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { user, isAuthenticated, setShowTopUpModal, setTopUpModalIntent } = useGame();
+  const performanceMode = usePerformanceMode();
   const [showBelowFold, setShowBelowFold] = useState(false);
   const [startTickerAnimation, setStartTickerAnimation] = useState(false);
+  const [showSocialProof, setShowSocialProof] = useState(false);
   const [depositBannerDismissed, setDepositBannerDismissed] = useState(false);
-  const featuredBoxes = boxes.slice(0, 8);
-  const liveWins = useMemo(() => buildLiveWins(boxes), [boxes]);
+  const featuredBoxes = useMemo(() => boxes.slice(0, 8), [boxes]);
+  const liveWinSourceBoxes = useMemo(() => boxes.slice(0, performanceMode.isMobile ? 10 : 18), [boxes, performanceMode.isMobile]);
+  const liveWins = useMemo(() => buildLiveWins(liveWinSourceBoxes), [liveWinSourceBoxes]);
   const canShowConversionPrompts = !isAuthenticated || !hasUserMadeDeposit(user);
   const showFirstDepositBanner = isAuthenticated && !hasUserMadeDeposit(user) && !depositBannerDismissed;
 
@@ -339,8 +343,14 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    return runHomeWorkAfterIdleOrInteraction(() => setStartTickerAnimation(true), 1800);
-  }, []);
+    return runHomeWorkAfterIdleOrInteraction(() => setStartTickerAnimation(true), performanceMode.isMobile ? 2400 : 1800);
+  }, [performanceMode.isMobile]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!canShowConversionPrompts) return;
+    return runHomeWorkAfterIdleOrInteraction(() => setShowSocialProof(true), performanceMode.isMobile ? 5200 : 3600);
+  }, [canShowConversionPrompts, performanceMode.isMobile]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !isAuthenticated) return;
@@ -366,7 +376,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-4 py-5 sm:space-y-8 sm:px-6 sm:py-6">
-        {canShowConversionPrompts && <SocialProofNotifications />}
+        {canShowConversionPrompts && showSocialProof && <SocialProofNotifications />}
         {showFirstDepositBanner && (
           <FirstDepositBanner onClaim={handleClaimFirstDepositBonus} onDismiss={handleDismissFirstDepositBanner} />
         )}
@@ -389,7 +399,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
                 {index < 2 && <span className="absolute left-3 top-3 z-10 rounded-full bg-gradient-to-r from-[#7C5CFF] to-sky-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-lg">Most Popular</span>}
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_22%,rgba(124,92,255,0.16),transparent_42%),radial-gradient(circle_at_50%_100%,rgba(56,189,248,0.10),transparent_34%)] opacity-80" />
                 <div className="relative flex h-[168px] items-center justify-center p-2 sm:h-[205px] lg:h-[220px]">
-                  <BlurImage src={box.image} alt={box.name} className="mx-auto max-h-full w-auto object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-105" loading="lazy" showPlaceholder={false} width={260} height={260} />
+                  <BlurImage src={box.image} alt={box.name} className="mx-auto max-h-full w-auto object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-105" loading={index < 2 ? 'eager' : 'lazy'} fetchPriority={index < 2 ? 'high' : 'low'} showPlaceholder={false} staticRender={performanceMode.isMobile || performanceMode.isLowPower} width={260} height={260} />
                 </div>
                 <div className="relative mt-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2">
                   <p className="min-w-0 truncate text-left text-xs font-bold text-slate-200 sm:text-sm">{box.name}</p>

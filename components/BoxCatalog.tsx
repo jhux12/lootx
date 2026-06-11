@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -9,7 +9,8 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import { BlurImage } from '../src/ui/images/BlurImage';
-import type { MysteryBox } from '../types';
+import { usePerformanceMode } from '../src/lib/performance';
+import type { CaseItem, MysteryBox } from '../types';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
@@ -35,39 +36,133 @@ const TAG_STYLES: Record<string, string> = {
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
-const scoreTrending = (box: MysteryBox) => {
-  const itemValue = [...box.items]
+type CatalogItemPreview = Pick<CaseItem, 'id' | 'name' | 'image'>;
+
+type CatalogBoxModel = {
+  box: MysteryBox;
+  id: string;
+  name: string;
+  searchName: string;
+  priceCoins: number;
+  createdAt?: number;
+  tags: string[];
+  primaryTag: string | null;
+  tagClass: string;
+  featuredScore: number;
+  trendingScore: number;
+  topItemPreviews: CatalogItemPreview[];
+};
+
+const getTopItemPreviews = (items: CaseItem[]): CatalogItemPreview[] =>
+  [...items]
     .sort((a, b) => b.price - a.price)
     .slice(0, 3)
-    .reduce((sum, item) => sum + item.price, 0);
-  const freshness = box.createdAt ?? 0;
-  const tagBonus = getBoxTags(box).includes('trending') ? 400_000 : 0;
-  return itemValue + freshness / 1000 + tagBonus;
-};
+    .map((item) => ({ id: item.id, name: item.name, image: item.image }));
 
-const scoreFeatured = (box: MysteryBox) => {
-  const topItem = box.items.reduce((max, item) => Math.max(max, item.price), 0);
+const getCatalogScores = (box: MysteryBox, tags: string[]) => {
+  const topPrices = [...box.items].sort((a, b) => b.price - a.price).slice(0, 3);
+  const itemValue = topPrices.reduce((sum, item) => sum + item.price, 0);
+  const topItem = topPrices[0]?.price ?? 0;
   const rarityDepth = box.items.filter((item) => item.rarity === 'legendary' || item.rarity === 'epic').length;
-  const tagBonus = getBoxTags(box).includes('featured') ? 250_000 : 0;
-  return topItem + rarityDepth * 5_000 + tagBonus;
+  const freshness = box.createdAt ?? 0;
+  const tagBonusTrending = tags.includes('trending') ? 400_000 : 0;
+  const tagBonusFeatured = tags.includes('featured') ? 250_000 : 0;
+
+  return {
+    trendingScore: itemValue + freshness / 1000 + tagBonusTrending,
+    featuredScore: topItem + rarityDepth * 5_000 + tagBonusFeatured
+  };
 };
 
-const getSortedBoxes = (boxes: MysteryBox[], sortOption: SortOption) => {
+const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
+  const tags = getBoxTags(box);
+  const primaryTag = tags.find((tag) => TAG_STYLES[tag]) ?? null;
+  const scores = getCatalogScores(box, tags);
+
+  return {
+    box,
+    id: box.id,
+    name: box.name,
+    searchName: box.name.toLowerCase(),
+    priceCoins: getBoxPrice(box),
+    createdAt: box.createdAt,
+    tags,
+    primaryTag,
+    tagClass: primaryTag ? (TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white') : '',
+    topItemPreviews: getTopItemPreviews(box.items),
+    ...scores
+  };
+};
+
+const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
+  model: CatalogBoxModel;
+  index: number;
+  staticImages: boolean;
+  onOpen: (boxId: string) => void;
+}) => {
+  const { box, primaryTag, tagClass, topItemPreviews } = model;
+  const isPriority = index < 4;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(box.id)}
+      className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35 [content-visibility:auto] [contain-intrinsic-size:260px]"
+    >
+      <div className="relative px-2 pb-2 pt-3">
+        {primaryTag && (
+          <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
+        )}
+        <div className="mx-auto aspect-[1.35] w-full">
+          <BlurImage
+            src={box.image}
+            fallbackSrc="/preview.png"
+            alt={box.name}
+            loading={isPriority ? 'eager' : 'lazy'}
+            fetchPriority={isPriority ? 'high' : 'low'}
+            decoding="async"
+            width={360}
+            height={230}
+            ratioClassName="h-full w-full"
+            className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+            staticRender={staticImages}
+            retryOnError={!staticImages}
+          />
+        </div>
+      </div>
+      <div className="border-t border-white/10 px-3 pb-3 pt-2">
+        <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
+        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
+        <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
+        <div className="mt-1 grid grid-cols-3 gap-1.5">
+          {topItemPreviews.map((item) => (
+            <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
+              <BlurImage src={item.image} fallbackSrc="/preview.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </button>
+  );
+});
+CatalogBoxCard.displayName = 'CatalogBoxCard';
+
+const getSortedBoxes = (boxes: CatalogBoxModel[], sortOption: SortOption) => {
   const sorted = [...boxes];
 
   sorted.sort((left, right) => {
     switch (sortOption) {
       case 'price-asc':
-        return getBoxPrice(left) - getBoxPrice(right) || left.name.localeCompare(right.name);
+        return left.priceCoins - right.priceCoins || left.name.localeCompare(right.name);
       case 'price-desc':
-        return getBoxPrice(right) - getBoxPrice(left) || left.name.localeCompare(right.name);
+        return right.priceCoins - left.priceCoins || left.name.localeCompare(right.name);
       case 'newest':
         return (right.createdAt ?? 0) - (left.createdAt ?? 0) || left.name.localeCompare(right.name);
       case 'trending':
-        return scoreTrending(right) - scoreTrending(left) || left.name.localeCompare(right.name);
+        return right.trendingScore - left.trendingScore || left.name.localeCompare(right.name);
       case 'featured':
       default:
-        return scoreFeatured(right) - scoreFeatured(left) || scoreTrending(right) - scoreTrending(left) || left.name.localeCompare(right.name);
+        return right.featuredScore - left.featuredScore || right.trendingScore - left.trendingScore || left.name.localeCompare(right.name);
     }
   });
 
@@ -100,6 +195,7 @@ const isCategoryIconUrl = (value: string) => {
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { boxes, setView, stripeSettings, balance, user, isAuthenticated } = useGame();
   const { playSound } = useSound();
+  const performanceMode = usePerformanceMode();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
@@ -108,6 +204,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [isHowItWorksAnimatingIn, setIsHowItWorksAnimatingIn] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [visibleBoxCount, setVisibleBoxCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 30));
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
   const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
@@ -116,8 +213,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     activeCategory !== 'all' ||
     searchQuery.trim().length > 0;
 
-  const displayBoxes = useMemo(
-    () => boxes.filter((box) => !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
+  const catalogModels = useMemo(
+    () => boxes
+      .filter((box) => !box.isDaily && !box.isUserCreated && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .map(createCatalogModel),
     [boxes]
   );
 
@@ -125,13 +224,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
-    displayBoxes
-      .filter((box) => !box.isUserCreated)
-      .forEach((box) => {
-        getBoxTags(box).forEach((tag) => {
-          counts.set(tag, (counts.get(tag) ?? 0) + 1);
-        });
+    catalogModels.forEach((model) => {
+      model.tags.forEach((tag) => {
+        counts.set(tag, (counts.get(tag) ?? 0) + 1);
       });
+    });
 
     return Array.from(counts.entries())
       .map(([id, count]) => ({
@@ -144,22 +241,30 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         count
       }))
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
-  }, [displayBoxes, stripeSettings.boxTagIcons]);
+  }, [catalogModels, stripeSettings.boxTagIcons]);
+
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const normalizedSearchQuery = deferredSearchQuery.toLowerCase().trim();
 
   const filteredBoxes = useMemo(() => {
-    return displayBoxes.filter((box) => {
-      if (box.isUserCreated) return false;
-      const tags = getBoxTags(box);
-      const matchesCategory = activeCategory === 'all' || tags.includes(normalizeBoxTag(activeCategory));
-      const matchesSearch = box.name.toLowerCase().includes(searchQuery.toLowerCase().trim());
-      const matchesAffordability = !showAffordableOnly || getBoxPrice(box) <= balance;
+    return catalogModels.filter((model) => {
+      const matchesCategory = activeCategory === 'all' || model.tags.includes(normalizeBoxTag(activeCategory));
+      const matchesSearch = model.searchName.includes(normalizedSearchQuery);
+      const matchesAffordability = !showAffordableOnly || model.priceCoins <= balance;
       return matchesCategory && matchesSearch && matchesAffordability;
     });
-  }, [activeCategory, balance, displayBoxes, searchQuery, showAffordableOnly]);
+  }, [activeCategory, balance, catalogModels, normalizedSearchQuery, showAffordableOnly]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
   const groupedBoxes = useMemo(() => sortedFilteredBoxes, [sortedFilteredBoxes]);
+  const visibleBoxes = useMemo(() => groupedBoxes.slice(0, visibleBoxCount), [groupedBoxes, visibleBoxCount]);
+  const hasMoreBoxes = visibleBoxCount < groupedBoxes.length;
+  const staticCatalogImages = performanceMode.isMobile || performanceMode.isLowPower;
+
+  useEffect(() => {
+    setVisibleBoxCount(performanceMode.isMobile ? 12 : 30);
+  }, [activeCategory, normalizedSearchQuery, performanceMode.isMobile, showAffordableOnly, sortOption]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -202,6 +307,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     if (!resolvedUserId) return;
 
     let cancelled = false;
+    let idleId: number | null = null;
+    let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
     const loadPreference = async () => {
       try {
         const userSnap = await getDoc(doc(db, 'users', resolvedUserId));
@@ -220,9 +327,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       }
     };
 
-    void loadPreference();
+    const start = () => { void loadPreference(); };
+    if ('requestIdleCallback' in window) idleId = window.requestIdleCallback(start, { timeout: 2800 }) as unknown as number;
+    else timeoutId = globalThis.setTimeout(start, 1600);
+
     return () => {
       cancelled = true;
+      if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId);
+      if (timeoutId !== null) globalThis.clearTimeout(timeoutId);
     };
   }, [isAuthenticated, user]);
 
@@ -259,16 +371,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return () => window.cancelAnimationFrame(frameId);
   }, [showHowItWorksModal]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setActiveCategory('all');
     setSearchQuery('');
     setSortOption('featured');
-  };
+  }, []);
 
-  const openBox = (boxId: string) => {
+  const openBox = useCallback((boxId: string) => {
     playSound('click');
     setView({ type: 'CASE_OPENING', boxId });
-  };
+  }, [playSound, setView]);
 
   return (
     <div className="w-full bg-[#1b2024] pb-20 text-white">
@@ -383,7 +495,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   alt="Box catalog hero"
                   className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
                   loading="eager"
+                  fetchPriority="high"
                   decoding="async"
+                  width={460}
+                  height={256}
                 />
               ) : null}
             </div>
@@ -447,7 +562,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         src={cat.iconClass}
                         alt={cat.title}
                         className="h-4 w-4 shrink-0 object-contain"
-                        loading="eager"
+                        loading="lazy"
                         decoding="async"
                       />
                       <span>{cat.title}</span>
@@ -480,52 +595,26 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
           {!isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {groupedBoxes.map((box, index) => (
-                (() => {
-                  const boxTags = getBoxTags(box);
-                  const primaryTag = boxTags.find((tag) => TAG_STYLES[tag]) ?? null;
-                  const tagClass = primaryTag ? (TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white') : '';
-                  return (
-                <button
-                  key={box.id}
-                  type="button"
-                  onClick={() => openBox(box.id)}
-                  className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35"
-                >
-                  <div className="relative px-2 pb-2 pt-3">
-                    {primaryTag && (
-                      <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
-                    )}
-                    <div className="mx-auto aspect-[1.35] w-full">
-                      <BlurImage
-                        src={box.image}
-                        fallbackSrc="/preview.png"
-                        alt={box.name}
-                        loading="lazy"
-                        decoding="async"
-                        width={360}
-                        height={230}
-                        ratioClassName="h-full w-full"
-                        className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
-                      />
-                    </div>
-                  </div>
-                  <div className="border-t border-white/10 px-3 pb-3 pt-2">
-                    <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
-                    <CoinAmount amount={Math.round(getBoxPrice(box))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
-                    <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
-                    <div className="mt-1 grid grid-cols-3 gap-1.5">
-                      {[...box.items].sort((a, b) => b.price - a.price).slice(0, 3).map((item) => (
-                        <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
-                          <BlurImage src={item.image} fallbackSrc="/preview.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </button>
-                  );
-                })()
+              {visibleBoxes.map((model, index) => (
+                <CatalogBoxCard
+                  key={model.id}
+                  model={model}
+                  index={index}
+                  staticImages={staticCatalogImages}
+                  onOpen={openBox}
+                />
               ))}
+            </div>
+          )}
+          {!isLoadingBoxes && hasMoreBoxes && groupedBoxes.length > 0 && (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={() => setVisibleBoxCount((count) => count + (performanceMode.isMobile ? 10 : 20))}
+                className="min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
+              >
+                Load more boxes
+              </button>
             </div>
           )}
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
