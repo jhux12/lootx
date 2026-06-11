@@ -22,9 +22,10 @@ const DESKTOP_REEL_LENGTH = 40;
 const MOBILE_REEL_LENGTH = 34;
 const DESKTOP_STOP_INDEX = 32;
 const MOBILE_STOP_INDEX = 27;
-const CARD_WIDTH = 128;
+const DESKTOP_CARD_WIDTH = 128;
+const MOBILE_CARD_WIDTH = 112;
 const CARD_GAP = 12;
-const STEP = CARD_WIDTH + CARD_GAP;
+const LANDING_EDGE_PADDING = 18;
 
 const fallbackItem: ReelItem = {
   itemId: 'placeholder-item',
@@ -111,8 +112,11 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
   const performanceMode = usePerformanceMode();
-  const reelLength = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
-  const stopIndex = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
+  const useCompactReel = performanceMode.isMobile || performanceMode.isLowPower;
+  const reelLength = useCompactReel ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
+  const stopIndex = useCompactReel ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
+  const cardWidth = performanceMode.isMobile ? MOBILE_CARD_WIDTH : DESKTOP_CARD_WIDTH;
+  const step = cardWidth + CARD_GAP;
 
   const pool = useMemo(() => (items.length ? items : [fallbackItem]), [items]);
 
@@ -134,8 +138,12 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
     });
   }, [performanceMode.isLowPower, performanceMode.isMobile, reelItems]);
 
-  const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
-  const targetTranslateX = useMemo(() => -(stopIndex * STEP), [stopIndex]);
+  const centerOffset = useMemo(() => `calc(50% - ${cardWidth / 2}px)`, [cardWidth]);
+  const landingOffset = useMemo(() => {
+    const safeLandingRange = Math.max(0, (cardWidth / 2) - LANDING_EDGE_PADDING);
+    return (seededUnitValue(hashSeed(`${spinKey}:landing-offset`), stopIndex) * 2 - 1) * safeLandingRange;
+  }, [cardWidth, spinKey, stopIndex]);
+  const targetTranslateX = useMemo(() => -(stopIndex * step) + landingOffset, [landingOffset, step, stopIndex]);
 
   useEffect(() => {
     if (state === 'IDLE') {
@@ -187,7 +195,8 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                style={{ width: cardWidth }}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
