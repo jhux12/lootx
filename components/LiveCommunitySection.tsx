@@ -241,6 +241,13 @@ export const LiveCommunitySection: React.FC = () => {
   };
 
   const handleStoryTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length > 1) {
+      holdRef.current = false;
+      touchStartRef.current = null;
+      setStoryDragOffset(0);
+      return;
+    }
+
     const touch = event.touches[0];
     if (!touch) return;
     holdRef.current = true;
@@ -249,6 +256,13 @@ export const LiveCommunitySection: React.FC = () => {
   };
 
   const handleStoryTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length > 1) {
+      holdRef.current = false;
+      touchStartRef.current = null;
+      setStoryDragOffset(0);
+      return;
+    }
+
     const start = touchStartRef.current;
     const touch = event.touches[0];
     if (!start || !touch) return;
@@ -430,14 +444,14 @@ export const LiveCommunitySection: React.FC = () => {
         <div className="pointer-events-none absolute inset-y-2 right-0 z-10 w-8 bg-gradient-to-l from-[#20262b] to-transparent sm:hidden" aria-hidden="true" />
         <div
           ref={storyRailRef}
-          className="scrollbar-hide flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain px-4 py-1.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x] sm:gap-3 sm:px-0.5"
+          className="scrollbar-hide flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain px-4 py-1.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pinch-zoom] sm:gap-3 sm:px-0.5"
           aria-label="Community Pullz stories. Swipe horizontally to browse."
         >
           <button
             type="button"
             onClick={openSubmitPull}
             data-community-story-card
-            className="group flex w-[96px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[112px] lg:w-[120px]"
+            className="group flex w-[96px] shrink-0 snap-start flex-col items-center text-center [touch-action:pan-x_pinch-zoom] sm:w-[112px] lg:w-[120px]"
           >
             <div className="relative grid h-[86px] w-[86px] place-items-center overflow-hidden rounded-full border border-amber-200/35 bg-gradient-to-br from-amber-300/95 via-lime-300/90 to-emerald-300/90 p-[2px] shadow-[0_0_20px_rgba(250,204,21,0.28)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]">
               <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#0b1010]/92 px-2 text-center">
@@ -457,7 +471,7 @@ export const LiveCommunitySection: React.FC = () => {
             key={story.id}
             onClick={() => { void handleOpenStory(index); }}
             data-community-story-card
-            className="group flex w-[96px] shrink-0 snap-start touch-pan-x flex-col items-center text-center sm:w-[112px] lg:w-[120px]"
+            className="group flex w-[96px] shrink-0 snap-start flex-col items-center text-center [touch-action:pan-x_pinch-zoom] sm:w-[112px] lg:w-[120px]"
           >
             <div className={`relative h-[86px] w-[86px] overflow-hidden rounded-full bg-gradient-to-br ${rarityRing[story.rarity] ?? 'from-fuchsia-500 via-violet-500 to-sky-500'} p-[2px] shadow-[0_0_18px_rgba(92,101,255,0.38)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]`}>
               <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#080a12]">
@@ -555,7 +569,7 @@ export const LiveCommunitySection: React.FC = () => {
     {activeIndex !== null && stories[activeIndex] && (
       <div className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-sm" onClick={closeStory}>
         <div
-          className="mx-auto flex h-[100dvh] w-full max-w-3xl flex-col px-3 py-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-5"
+          className="mx-auto flex h-[100dvh] w-full max-w-3xl flex-col px-3 py-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] [touch-action:pan-y_pinch-zoom] sm:px-5 sm:py-5"
           onClick={(e) => e.stopPropagation()}
           onTouchStart={handleStoryTouchStart}
           onTouchMove={handleStoryTouchMove}

@@ -115,6 +115,13 @@ export const HomeBanners: React.FC = () => {
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.touches.length > 1) {
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      suppressNextClickRef.current = false;
+      return;
+    }
+
     const touch = event.touches[0];
     touchStartXRef.current = touch.clientX;
     touchStartYRef.current = touch.clientY;
@@ -123,6 +130,13 @@ export const HomeBanners: React.FC = () => {
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.changedTouches.length > 1) {
+      touchStartXRef.current = null;
+      touchStartYRef.current = null;
+      setIsPaused(false);
+      return;
+    }
+
     const startX = touchStartXRef.current;
     const startY = touchStartYRef.current;
     touchStartXRef.current = null;
@@ -172,7 +186,7 @@ export const HomeBanners: React.FC = () => {
   return (
     <section aria-label="Pullz feature highlights" className="relative">
       <div
-        className="group relative overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_14px_34px_rgba(5,8,12,0.24)] touch-pan-y select-none sm:rounded-[1.25rem] sm:shadow-[0_16px_38px_rgba(5,8,12,0.26)]"
+        className="group relative overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-[#20262b]/72 shadow-[0_14px_34px_rgba(5,8,12,0.24)] select-none [touch-action:pan-y_pinch-zoom] sm:rounded-[1.25rem] sm:shadow-[0_16px_38px_rgba(5,8,12,0.26)]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onFocus={() => setIsPaused(true)}
