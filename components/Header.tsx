@@ -390,7 +390,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
   return (
     <>
-    <div className={`relative z-[140] transition-[opacity,transform] duration-200 ease-out ${isSuppressed ? 'pointer-events-none -translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`} aria-hidden={isSuppressed}>
+    <div className={`relative z-[260] transition-[opacity,transform] duration-200 ease-out ${isSuppressed ? 'pointer-events-none -translate-y-full opacity-0' : 'opacity-100'}`} aria-hidden={isSuppressed}>
       <header
         ref={headerRef}
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
@@ -631,14 +631,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-40 bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
       <div
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
