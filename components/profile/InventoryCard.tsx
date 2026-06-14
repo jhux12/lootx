@@ -1,8 +1,7 @@
 import React from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { CheckCircle2, Plane } from 'lucide-react';
 import { InventoryItem } from '../../types';
 import { BlurImage } from '../../src/ui/images/BlurImage';
-import { CoinAmount } from '../CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 
 interface InventoryCardProps {
@@ -18,31 +17,17 @@ interface InventoryCardProps {
   onSecondaryAction?: () => void;
 }
 
-const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string }> = {
-  common: {
-    card: 'border-gray-400/30 bg-gradient-to-b from-gray-500/20 to-gray-900/40',
-    badge: 'border-gray-300/40 bg-gray-500/20 text-gray-100'
-  },
-  uncommon: {
-    card: 'border-green-400/40 bg-gradient-to-b from-green-500/20 to-green-950/40',
-    badge: 'border-green-300/50 bg-green-500/20 text-green-100'
-  },
-  rare: {
-    card: 'border-blue-400/45 bg-gradient-to-b from-blue-500/20 to-blue-950/40',
-    badge: 'border-blue-300/50 bg-blue-500/20 text-blue-100'
-  },
-  epic: {
-    card: 'border-purple-400/45 bg-gradient-to-b from-purple-500/20 to-purple-950/45',
-    badge: 'border-purple-300/50 bg-purple-500/20 text-purple-100'
-  },
-  legendary: {
-    card: 'border-amber-400/55 bg-gradient-to-b from-amber-400/25 to-amber-950/45',
-    badge: 'border-amber-300/60 bg-amber-500/20 text-amber-100'
-  }
+const gradeForItem = (item: InventoryItem) => {
+  const text = `${item.name} ${item.rarity}`.toLowerCase();
+  if (text.includes('psa 9')) return 'PSA 9';
+  if (text.includes('psa') || text.includes('card') || text.includes('charizard') || text.includes('pikachu') || text.includes('lugia')) return 'PSA 10';
+  return null;
 };
 
 export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction }) => {
-  const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
+  const grade = gradeForItem(item);
+  const isTransit = item.status === 'shipping' || item.status === 'shipping_requested';
+  const subtitle = item.size ? `Size: ${item.size}` : item.rarity.charAt(0).toUpperCase() + item.rarity.slice(1);
 
   return (
     <div
@@ -55,55 +40,18 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group rounded-2xl border p-3 transition ${rarityStyle.card} ${
-        selected ? 'ring-2 ring-blue-400/60 shadow-[0_0_18px_rgba(32,93,215,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
-      } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group relative rounded-2xl border border-white/10 bg-[#080b15] p-3 transition ${selected ? 'ring-2 ring-purple-400/70 shadow-[0_0_18px_rgba(139,92,246,0.35)]' : 'hover:border-white/20'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${rarityStyle.badge}`}>{item.rarity}</span>
-        <button type="button" className="rounded-md p-1 text-gray-300 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal className="h-4 w-4" />
-        </button>
+      {grade && <span className="absolute right-3 top-3 rounded-lg bg-purple-700/45 px-3 py-1.5 text-xs font-black text-white">{grade}</span>}
+      <div className="mb-3 flex h-32 items-center justify-center rounded-xl bg-transparent p-2 sm:h-40">
+        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.4)]" width={220} height={220} />
       </div>
-      <div className="mb-3 aspect-square rounded-xl bg-[#2a323b] p-3">
-        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" width={220} height={220} />
+      <p className="line-clamp-1 text-base font-black text-white">{item.name}</p>
+      <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-400">{subtitle}</p>
+      <p className="mt-1 text-lg font-black text-white">${toCoins(item.price, PRICE_UNIT_MODE).toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
+      <div className="mt-2 border-t border-white/10 pt-2 text-sm font-bold">
+        {isTransit ? <span className="inline-flex items-center gap-2 text-blue-300"><Plane className="h-4 w-4" />In Transit</span> : <span className="inline-flex items-center gap-2 text-lime-300"><CheckCircle2 className="h-4 w-4" />In Inventory</span>}
       </div>
-      <p className="line-clamp-1 text-sm font-semibold text-white">{item.name}</p>
-      <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-sm font-bold text-gray-100" iconClassName="h-4 w-4" />
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onAction();
-        }}
-        disabled={actionDisabled}
-        className={`mt-3 w-full rounded-xl px-2 py-2 text-xs font-bold ${
-          actionDisabled
-            ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
-            : 'border border-blue-400/40 bg-blue-500/15 text-blue-100 hover:bg-blue-500/25'
-        }`}
-      >
-        {actionLabel}
-      </button>
-
-      {secondaryActionLabel && onSecondaryAction && (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onSecondaryAction();
-          }}
-          disabled={secondaryActionDisabled}
-          className={`mt-2 w-full rounded-xl px-2 py-2 text-xs font-bold ${
-            secondaryActionDisabled
-              ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
-              : 'border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
-          }`}
-        >
-          {secondaryActionLabel}
-        </button>
-      )}
-
     </div>
   );
 };

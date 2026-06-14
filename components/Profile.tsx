@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, Copy, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
+import { ArrowRightLeft, Check, Coins, Copy, CreditCard, Info, Package, PackageCheck, Plus, ShieldCheck, ShoppingCart, Tag, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -176,7 +176,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
+  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo, setShowTopUpModal } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -247,14 +247,14 @@ export const Profile: React.FC = () => {
 
   const normalizedInventory = useMemo(() => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt), [inventory]);
   const activeInventory = useMemo(
-    () => normalizedInventory.filter((item) => item.status !== 'sold' && item.status !== 'shipping' && item.status !== 'shipping_requested' && item.status !== 'shipped'),
+    () => normalizedInventory.filter((item) => item.status !== 'shipped'),
     [normalizedInventory]
   );
 
   const filteredInventory = useMemo(() => {
     const term = search.trim().toLowerCase();
     const byFilters = activeInventory.filter((item) => {
-      const itemType = item.status === 'shipping' || item.status === 'shipping_requested' ? 'shipping' : item.status === 'shipped' ? 'shipped' : 'available';
+      const itemType = item.status === 'shipping' || item.status === 'shipping_requested' ? 'shipping' : item.status === 'sold' ? 'sold' : item.status === 'shipped' ? 'shipped' : 'available';
       return (!term || item.name.toLowerCase().includes(term))
         && (rarity === 'all' || item.rarity === rarity)
         && (type === 'all' || itemType === type);
@@ -609,8 +609,13 @@ export const Profile: React.FC = () => {
     { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
   ];
 
-  const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+  const inventoryTotalValue = activeInventory.filter((item) => item.status !== 'sold').reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+  const totalSoldValue = normalizedInventory.filter((item) => item.status === 'sold').reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+  const totalWithdrawnValue = orders.reduce((sum, order) => sum + order.value, 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
+  const xpGoal = Math.max(10000, Math.ceil((xp || 0) / 10000) * 10000 || 10000);
+  const xpLevel = Math.max(1, Math.floor(xp / 250) + 1);
+  const avatarLetter = (displayUsername || 'P').trim().charAt(0).toUpperCase();
 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
@@ -641,8 +646,8 @@ export const Profile: React.FC = () => {
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
 
   return (
-    <div className="min-h-screen bg-[#1b2024] px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto flex max-w-[1280px] gap-6 pb-20 md:pb-4">
+    <div className="min-h-screen bg-[#02040d] px-3 py-4 text-white sm:px-4 md:px-6 md:py-6">
+      <div className="mx-auto flex max-w-[1280px] gap-6 pb-24 md:pb-4">
         <AccountSidebar
           user={user}
           username={displayUsername}
@@ -657,11 +662,40 @@ export const Profile: React.FC = () => {
           }}
         />
 
-        <div className="flex-1">
-          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#1f252c] p-1 [scrollbar-width:none] md:max-w-md [&::-webkit-scrollbar]:hidden">
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
+        <div className="min-w-0 flex-1">
+          <section className="mb-4 rounded-[1.65rem] border border-white/10 bg-[#080b15]/95 p-4 shadow-[0_18px_70px_rgba(0,0,0,0.35)] sm:p-5">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#9b5cff] to-[#2d126f] text-5xl font-black shadow-[0_0_28px_rgba(139,92,246,0.45)] sm:h-24 sm:w-24">{avatarLetter}</div>
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-2xl font-black text-white sm:text-3xl">{displayUsername}</h1>
+                <p className="mt-1 text-sm font-medium text-slate-400 sm:text-base">Member since {joinedDate}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-xl bg-purple-500/20 px-3 py-2 text-sm font-bold text-purple-100"><Package className="h-4 w-4" />Lvl {xpLevel}</span>
+                  <span className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-sm font-bold text-lime-300"><ShieldCheck className="h-4 w-4" />Verified</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <span className="shrink-0 text-sm font-semibold text-slate-300 sm:text-base">{Math.round(xp).toLocaleString()} / {xpGoal.toLocaleString()} XP</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-[#7847ff] to-[#ad63ff]" style={{ width: `${Math.min(100, (xp / xpGoal) * 100)}%` }} /></div>
+            </div>
+            <p className="mt-3 text-sm font-medium text-slate-300 sm:text-base">Collector and gamer. Pulling heat and chasing grails.</p>
+          </section>
+
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+            {[{label:'Total Value',value:`$${inventoryTotalValue.toLocaleString(undefined,{maximumFractionDigits:2})}`,icon:Package,glow:'text-lime-300 bg-lime-500/10'},{label:'Items Owned',value:activeInventory.filter((item)=>item.status !== 'sold').length.toString(),icon:ShoppingCart,glow:'text-blue-300 bg-blue-500/10'},{label:'Total Sold',value:`$${totalSoldValue.toLocaleString(undefined,{maximumFractionDigits:2})}`,icon:Tag,glow:'text-lime-300 bg-lime-500/10'},{label:'Total Withdrawn',value:`$${totalWithdrawnValue.toLocaleString(undefined,{maximumFractionDigits:2})}`,icon:ArrowRightLeft,glow:'text-purple-300 bg-purple-500/10'}].map((stat)=>{ const Icon=stat.icon; return <div key={stat.label} className="rounded-2xl border border-white/10 bg-[#080b15] p-3 sm:p-4"><div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${stat.glow}`}><Icon className="h-5 w-5" /></div><p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{stat.label}</p><p className="mt-1 text-xl font-black text-white sm:text-2xl">{stat.value}</p></div>;})}
+          </div>
+
+          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <button onClick={() => setShowTopUpModal(true)} className="inline-flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#7a45ff] to-[#8f5bff] px-5 py-4 text-base font-black text-white shadow-[0_16px_35px_rgba(122,69,255,0.28)]"><Plus className="h-6 w-6" />Add Funds</button>
+            <button onClick={() => setActiveTab('inventory')} className="inline-flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#080b15] px-5 py-4 text-base font-black text-white"><ShoppingCart className="h-6 w-6" />Sell Items</button>
+            <button onClick={() => selectedShipments.length ? handleOpenShippingReview(selectedShipments) : setActiveTab('inventory')} className="inline-flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#080b15] px-5 py-4 text-base font-black text-white"><ArrowRightLeft className="h-6 w-6" />Withdraw</button>
+          </div>
+
+          <div className="mb-4 flex w-full max-w-full gap-1 overflow-x-auto border-b border-white/10 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'text-white border-b-2 border-[#8b5cf6]' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'orders' ? 'text-white border-b-2 border-[#8b5cf6]' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
+            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'account' ? 'text-white border-b-2 border-[#8b5cf6]' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
             {hasDailyFreeBoxAvailable ? (
               <button
                 className="shrink-0 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-200"
