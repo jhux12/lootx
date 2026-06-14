@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Crown, Flame, MoreVertical } from 'lucide-react';
+import { ArrowLeft, Crown, Flame } from 'lucide-react';
 import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -241,21 +241,8 @@ export const Leaderboard: React.FC = () => {
             <ArrowLeft className="h-7 w-7" strokeWidth={2.5} />
           </button>
           <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">Leaderboard</h1>
-          <button type="button" className="grid h-11 w-11 grid-cols-2 place-items-center gap-1 rounded-full p-2 text-[#79a7ff] transition-colors hover:bg-white/5 hover:text-white" aria-label="Leaderboard options">
-            <span className="h-2 w-2 rounded-full bg-current" /><span className="h-2 w-2 rounded-full bg-current" /><span className="h-2 w-2 rounded-full bg-current" /><span className="h-2 w-2 rounded-full bg-current" />
-          </button>
+          <div className="h-11 w-11" aria-hidden="true" />
         </header>
-
-        <div className="px-5 sm:px-8">
-          <div className="grid grid-cols-3 rounded-xl bg-[#1d2138] p-1 text-sm font-semibold text-white shadow-[0_18px_40px_rgba(5,8,24,0.18)] sm:text-base">
-            {['Region', 'National', 'Global'].map((tab, index) => (
-              <button key={tab} type="button" className={`relative rounded-lg px-2 py-3 transition-colors ${index === 0 ? 'text-white' : 'text-white/95 hover:bg-white/5'}`}>
-                {tab}
-                {index === 0 && <span className="absolute bottom-0 left-1/2 h-0.5 w-11 -translate-x-1/2 rounded-full bg-[#6d9cff]" />}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {settingsLoaded && !hasActiveLeaderboard ? (
           <section className="mx-5 mt-10 rounded-[28px] bg-[#20243b] px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
@@ -264,7 +251,7 @@ export const Leaderboard: React.FC = () => {
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/65">There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.</p>
           </section>
         ) : (
-          <div className="mt-6">
+          <div className="mt-5">
             {timeLeft && (
               <section className="mx-5 mb-5 rounded-2xl bg-[#1d2138] p-3 sm:mx-8">
                 <div className="grid grid-cols-4 gap-2 text-center">
@@ -286,7 +273,7 @@ export const Leaderboard: React.FC = () => {
                   const isFirst = actualRank === 1;
                   const isSecond = actualRank === 2;
                   const frame = isFirst ? 'from-[#ffb600] to-[#16d67b]' : isSecond ? 'from-[#00b8ff] to-[#0274ff]' : 'from-[#12e66f] to-[#00b8ff]';
-                  const cardHeight = isFirst ? 'h-[146px] sm:h-[174px]' : 'h-[116px] sm:h-[140px]';
+                  const cardHeight = isFirst ? 'h-[136px] sm:h-[168px]' : 'h-[112px] sm:h-[136px]';
                   const avatarSize = isFirst ? 'h-[74px] w-[74px] sm:h-24 sm:w-24' : 'h-[62px] w-[62px] sm:h-20 sm:w-20';
                   const rankColor = isFirst ? 'bg-[#ffb600]' : isSecond ? 'bg-[#00b8ff]' : 'bg-[#10dc72]';
                   const pointColor = isFirst ? 'text-[#ffc019]' : isSecond ? 'text-[#00b8ff]' : 'text-[#13df72]';
@@ -298,10 +285,9 @@ export const Leaderboard: React.FC = () => {
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
                       </div>
-                      <div className={`absolute left-1/2 top-8 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white sm:top-11`}>{actualRank}</div>
+                      <div className={`absolute left-1/2 top-1 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] sm:top-2`}>{actualRank}</div>
                       <div className="mt-auto w-full truncate text-xs font-semibold text-white sm:text-base">{entry.displayName}</div>
                       <div className={`mt-1 text-base font-black ${pointColor} sm:text-xl`}>{entry.points.toLocaleString()}</div>
-                      <div className="mt-1 truncate text-[9px] text-white/45 sm:text-xs">@username</div>
                     </article>
                   );
                 })}
@@ -321,7 +307,7 @@ export const Leaderboard: React.FC = () => {
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#111326] text-lg font-black text-white sm:h-14 sm:w-14">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
-                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div><div className="mt-1 text-[10px] text-white/45 sm:text-xs">@username</div></div>
+                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div></div>
                         <div className="text-right"><div className="text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div><div className={`mt-1 text-[10px] font-black ${directionUp ? 'text-[#10dc72]' : 'text-[#ff4d86]'}`}>{directionUp ? '▲' : '▼'}</div></div>
                       </div>
                     );
@@ -331,7 +317,7 @@ export const Leaderboard: React.FC = () => {
             </section>
 
             <section className="mx-5 mt-5 rounded-2xl bg-[#1d2138] p-4 text-sm text-white/70 sm:mx-8">
-              <div className="flex items-center justify-between gap-3"><div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1">{myPoints.toLocaleString()} points · Reward {myReward.label}</div></div><MoreVertical className="h-5 w-5 text-[#79a7ff]" /></div>
+              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1">{myPoints.toLocaleString()} points · Reward {myReward.label}</div></div>
             </section>
           </div>
         )}
