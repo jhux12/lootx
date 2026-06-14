@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Flame } from 'lucide-react';
+import { ArrowLeft, Crown, Flame, Info } from 'lucide-react';
 import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -107,6 +107,7 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     const pathLabel = 'settings/rewards';
@@ -219,7 +220,11 @@ export const Leaderboard: React.FC = () => {
     };
   }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
 
-  const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
+  const myReward = useMemo(() => {
+    if (myRank && myRank >= 4 && myRank <= 10) return { label: '100', coins: 100 };
+    if (myRank && myRank <= 3) return rewardByRule(settings, myRank, myPoints);
+    return null;
+  }, [settings, myRank, myPoints]);
   const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
 
   const topThree = useMemo(() => {
@@ -230,145 +235,121 @@ export const Leaderboard: React.FC = () => {
 
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
-  const rewardLabelForRank = (rank: number, points: number) => {
-    if (rank >= 4 && rank <= 10) return '100';
-    return rewardByRule(settings, rank, points).label;
-  };
-
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
-      <main className="pb-10 pt-6 sm:pt-8">
-        <div className="mx-auto mb-4 w-full max-w-[1280px] px-3 sm:px-5">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#1b2024] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
+        <header className="flex items-center justify-between px-5 pb-5 pt-6 sm:px-8 sm:pt-8">
           <button
             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
-            className="inline-flex min-h-10 items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-300 transition-colors hover:text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[#79a7ff] transition-colors hover:bg-white/5 hover:text-white"
             aria-label="Back"
           >
-            <ArrowLeft className="h-4 w-4" /> Back
+            <ArrowLeft className="h-7 w-7" strokeWidth={2.5} />
           </button>
-        </div>
-        <section className="mx-auto mb-6 w-full max-w-[1280px] px-3 sm:mb-8 sm:px-5">
-          <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#161b1f] px-5 py-8 sm:px-8 sm:py-10">
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
-              <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl sm:h-80 sm:w-80" />
-            </div>
-            <div className="relative z-10 max-w-3xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Rewards Competition</p>
-              <h1 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">Leaderboard</h1>
-              <p className="mt-3 text-sm leading-6 text-[#d3dafc] sm:text-base">
-                Climb the rankings each season by earning points and lock in bigger rewards before the timer runs out.
-              </p>
+          <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">Leaderboard</h1>
+          <button
+            type="button"
+            onClick={() => { playSound('click'); setShowInfo(true); }}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[#79a7ff] transition-colors hover:bg-white/5 hover:text-white"
+            aria-label="How leaderboard works"
+          >
+            <Info className="h-6 w-6" strokeWidth={2.4} />
+          </button>
+        </header>
+
+        {showInfo && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 backdrop-blur-sm sm:items-center sm:pb-0" role="dialog" aria-modal="true" aria-labelledby="leaderboard-info-title">
+            <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-[#20262b] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]">
+                  <Info className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 id="leaderboard-info-title" className="text-base font-black text-white">How leaderboard works</h2>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    Every coin spent earns 1 leaderboard point. Keep playing to climb the rankings before the season ends.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { playSound('click'); setShowInfo(false); }}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition hover:brightness-110"
+              >
+                Got it
+              </button>
             </div>
           </div>
-        </section>
-        <div className="mx-auto w-full max-w-[1280px] px-3 sm:px-5">
-          {settingsLoaded && !hasActiveLeaderboard ? (
-            <section className="mx-auto max-w-3xl rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,23,37,0.96)_0%,rgba(13,17,27,0.96)_100%)] px-5 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-14">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#7f74ff]/35 bg-[#7f74ff]/12 text-[#b9b2ff] sm:h-20 sm:w-20">
-                <Flame className="h-8 w-8 sm:h-10 sm:w-10" />
-              </div>
-              <h2 className="mt-5 text-3xl font-black uppercase tracking-[0.16em] text-white sm:text-4xl">
-                Starting Soon
-              </h2>
-              <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#cdd3f5] sm:text-base">
-                There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.
-              </p>
-            </section>
-          ) : (
-            <div className="space-y-8">
-              {timeLeft && (
-                <section className="mx-auto w-full max-w-2xl rounded-2xl border border-white/10 bg-[#161b1f] p-4 sm:p-5">
-                  <div className="flex items-center justify-center gap-3 sm:gap-5">
-                    <div className="hidden items-center gap-2 text-sm font-semibold text-gray-400 sm:flex">
-                      <Flame className="h-4 w-4 text-[#8f7dff]" /> Ends in:
+        )}
+
+        {settingsLoaded && !hasActiveLeaderboard ? (
+          <section className="mx-5 mt-10 rounded-[28px] bg-[#20262b]/72 px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]"><Flame className="h-8 w-8" /></div>
+            <h2 className="mt-5 text-2xl font-black text-white">Starting Soon</h2>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/65">There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.</p>
+          </section>
+        ) : (
+          <div className="mt-5">
+            {timeLeft && (
+              <section className="mx-5 mb-5 rounded-2xl bg-[#20262b]/72 p-3 sm:mx-8">
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
+                    <div key={String(label)} className="rounded-xl bg-[#1b2024]/70 px-2 py-2">
+                      <div className="text-base font-black text-[#79a7ff] sm:text-xl">{String(value).padStart(2, '0')}</div>
+                      <div className="text-[9px] font-bold tracking-wider text-white/45 sm:text-[10px]">{label}</div>
                     </div>
-                    {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
-                      <div key={String(label)} className="w-16 rounded-xl border border-[#7f74ff]/40 bg-gradient-to-b from-[#7f74ff]/25 to-[#1a2132] px-2 py-2 text-center shadow-[inset_0_2px_12px_rgba(162,154,255,0.3)] sm:w-20 sm:py-3">
-                        <div className="text-lg font-black text-[#b9b2ff] sm:text-2xl">{String(value).padStart(2, '0')}</div>
-                        <div className="text-[10px] font-bold tracking-wider text-gray-300 sm:text-xs">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-            <section>
-              <h2 className="mb-4 text-center text-3xl font-bold">My Stats</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Rank: <span className="font-black">{myRank ? `#${myRank}` : 'Unranked'}</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold">Points: <span className="font-black text-[#8f7dff]">{myPoints.toLocaleString()} pts</span></div>
-                <div className="rounded-xl bg-[#15171d] px-4 py-4 text-lg font-semibold flex items-center gap-2">Reward: <img src={COIN_ICON} alt="Coins" className="h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /><span className="font-black">{myReward.label}</span></div>
-              </div>
-            </section>
-
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
-                if (!entry) {
-                  return <div key={`loading-${idx}`} className="h-[280px] rounded-[26px] border border-white/10 bg-white/5 animate-pulse" />;
-                }
-
-                const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
-                const badge = actualRank === 1 ? '1' : actualRank === 2 ? '2' : '3';
-                const highlight = actualRank === 1
-                  ? 'from-[#6b60ff]/35 via-[#6b60ff]/12 to-transparent border-[#6b60ff]/45'
-                  : actualRank === 2
-                    ? 'from-[#58d5b3]/20 via-[#58d5b3]/10 to-transparent border-[#58d5b3]/40'
-                    : 'from-[#ec68c8]/24 via-[#ec68c8]/10 to-transparent border-[#ec68c8]/38';
-
-                return (
-                  <article key={entry.uid} className={`relative overflow-hidden rounded-[26px] border bg-gradient-to-b p-5 text-center sm:p-6 ${highlight}`}>
-                    <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-6xl font-black text-white">
-                      {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
-                    </div>
-                    <div className="absolute left-1/2 top-[126px] -translate-x-1/2 rounded-xl bg-[#5a55ff] px-4 py-2 text-xl font-black text-white">#{badge}</div>
-                    <div className="mt-8 truncate text-3xl font-bold text-white sm:text-4xl">{entry.displayName}</div>
-                    <div className="mt-2 flex items-center justify-center gap-2 text-lg font-black text-[#a89fff] sm:text-xl"> 
-                      <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
-                      <span>{rewardByRule(settings, actualRank, entry.points).label}</span>
-                    </div>
-                    <div className="mt-2 text-2xl font-black text-[#58d5b3] sm:text-3xl">{entry.points.toLocaleString()} pts</div>
-                  </article>
-                );
-              })}
-            </section>
-
-            <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f]">
-              <div className="grid grid-cols-[70px_1fr_120px] gap-2 border-b border-white/10 px-3 py-3 text-sm font-bold text-gray-400 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6 sm:text-[28px]">
-                <div>Rank</div>
-                <div>Player</div>
-                <div className="hidden sm:block">Points</div>
-                <div className="text-right">Reward</div>
-              </div>
-
-              {loading ? (
-                <div className="space-y-2 p-3 sm:p-4">
-                  {Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-[72px] rounded-2xl bg-white/5 animate-pulse" />)}
+                  ))}
                 </div>
+              </section>
+            )}
+
+            <section className="px-5 sm:px-8">
+              <div className="grid min-h-[262px] grid-cols-3 items-end gap-0 sm:min-h-[310px] sm:gap-3">
+                {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
+                  if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#20262b]/72 sm:max-w-[150px]" />;
+                  const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
+                  const isFirst = actualRank === 1;
+                  const isSecond = actualRank === 2;
+                  const frame = isFirst ? 'from-[#ffb600] to-[#16d67b]' : isSecond ? 'from-[#00b8ff] to-[#0274ff]' : 'from-[#12e66f] to-[#00b8ff]';
+                  const cardHeight = isFirst ? 'h-[184px] sm:h-[212px]' : 'h-[158px] sm:h-[186px]';
+                  const avatarSize = isFirst ? 'h-[74px] w-[74px] sm:h-24 sm:w-24' : 'h-[62px] w-[62px] sm:h-20 sm:w-20';
+                  const rankColor = isFirst ? 'bg-[#ffb600]' : isSecond ? 'bg-[#00b8ff]' : 'bg-[#10dc72]';
+                  const pointColor = isFirst ? 'text-[#ffc019]' : isSecond ? 'text-[#00b8ff]' : 'text-[#13df72]';
+                  const rewardLabel = rewardByRule(settings, actualRank, entry.points).label;
+                  return (
+                    <article key={entry.uid} className={`relative flex ${cardHeight} flex-col items-center rounded-t-[26px] border border-white/[0.06] bg-[#20262b]/72 px-2 pb-4 pt-10 text-center shadow-[0_16px_35px_rgba(5,8,12,0.22)] sm:px-4 sm:pt-12`}>
+                      {isFirst && <Crown className="absolute -top-[84px] h-12 w-12 rotate-[-10deg] fill-[#ffb600] text-[#ffb600] sm:-top-[98px] sm:h-14 sm:w-14" />}
+                      <div className={`absolute left-1/2 top-0 flex ${avatarSize} -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br ${frame} p-[3px] shadow-[0_10px_20px_rgba(0,0,0,0.25)]`}>
+                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#1b2024] text-2xl font-black text-white">
+                          {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
+                        </div>
+                      </div>
+                      <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)]`}>{actualRank}</div>
+                      <div className="mt-2 w-full truncate text-xs font-semibold text-white sm:text-base">{entry.displayName}</div>
+                      <div className={`mt-1 text-base font-black ${pointColor} sm:text-xl`}>{entry.points.toLocaleString()}</div>
+                      <div className="mt-1 flex w-full items-center justify-center gap-1 truncate text-[10px] font-semibold text-white/55 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rewardLabel}</span></div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="mt-7 rounded-t-[34px] border border-white/[0.06] bg-[#20262b]/72 px-5 pb-8 pt-5 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:mx-8 sm:rounded-[34px] sm:px-8">
+              {loading ? (
+                <div className="space-y-4">{Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-[62px] animate-pulse rounded-2xl bg-white/5" />)}</div>
               ) : (
-                <div className="space-y-2 p-3 sm:p-4">
-                  {lowerRows.map((entry, index) => {
+                <div className="divide-y divide-white/10">
+                  {lowerRows.slice(0, 20).map((entry, index) => {
                     const rank = index + 4;
-                    const rowRewardLabel = rewardLabelForRank(rank, entry.points);
+                    const rowRewardLabel = rank >= 4 && rank <= 10 ? '100' : null;
                     return (
-                      <div key={entry.uid} className="grid grid-cols-[70px_1fr_120px] items-center gap-2 rounded-2xl border border-white/10 bg-[#1b2228] px-3 py-4 sm:grid-cols-[100px_1fr_220px_220px] sm:px-6">
-                        <div className="text-2xl font-black text-white">{rank}</div>
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-lg font-black text-white">
-                            {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full rounded-full object-cover" loading="lazy" decoding="async" width={48} height={48} /> : avatarFallback(entry.displayName)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="truncate text-lg font-extrabold text-white sm:text-2xl">{entry.displayName}</div>
-                            <div className="mt-0.5 text-sm font-bold text-[#8f7dff]">
-                              {entry.points.toLocaleString()} pts
-                            </div>
-                          </div>
+                      <div key={entry.uid} className="grid grid-cols-[2rem_3.5rem_1fr_auto] items-center gap-2 py-4 sm:grid-cols-[2.5rem_4rem_1fr_auto] sm:gap-3">
+                        <div className="text-sm font-black text-white/70 sm:text-base">#{rank}</div>
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-white sm:h-14 sm:w-14">
+                          {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
-                        <div className="hidden text-2xl font-black text-[#8f7dff] sm:block">{entry.points.toLocaleString()} <span className="text-[#8f7dff]">pts</span></div>
-                        <div className="ml-auto flex items-center justify-end gap-1.5 text-lg font-black sm:gap-2 sm:text-2xl">
-                          <img src={COIN_ICON} alt="Coins" className="h-5 w-5 object-contain" loading="lazy" decoding="async" width={20} height={20} />
-                          <span>{rowRewardLabel}</span>
-                        </div>
+                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div>{rowRewardLabel && <div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-white/50 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 shrink-0 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rowRewardLabel}</span></div>}</div>
+                        <div className="text-right text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div>
                       </div>
                     );
                   })}
@@ -376,13 +357,11 @@ export const Leaderboard: React.FC = () => {
               )}
             </section>
 
-            <section className="rounded-2xl border border-[#6b60ff]/30 bg-gradient-to-r from-[#151a31] via-[#121829] to-[#0d111b] p-4 sm:p-6">
-              <div className="text-2xl font-black">Rank 11-100</div>
-              <p className="mt-1 text-base text-[#d9ddf0] sm:text-lg">5 lucky users in ranks 11-100 will randomly be selected to receive <img src={COIN_ICON} alt="Coins" className="inline h-4 w-4 object-contain" loading="lazy" decoding="async" width={16} height={16} /> 100</p>
+            <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 text-sm text-white/70 sm:mx-8">
+              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1 flex flex-wrap items-center gap-1"><span>{myPoints.toLocaleString()} points</span>{myReward && <><span>· Reward</span><img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" loading="lazy" decoding="async" /><span>{myReward.label}</span></>}</div></div>
             </section>
           </div>
-          )}
-        </div>
+        )}
       </main>
     </div>
   );
