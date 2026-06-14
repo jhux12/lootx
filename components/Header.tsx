@@ -84,6 +84,7 @@ const HeaderSkeleton: React.FC = memo(() => (
 HeaderSkeleton.displayName = 'HeaderSkeleton';
 
 const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unreadChatCount: _unreadChatCount, isSticky = true }) => {
+  const [isSuppressed, setIsSuppressed] = useState(false);
   const {
     user,
     authInitialized,
@@ -205,6 +206,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
     return lockPageScroll({ preserveScrollPosition: true });
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleHeaderVisibility = (event: Event) => {
+      const detail = (event as CustomEvent<{ hidden: boolean }>).detail;
+      setIsSuppressed(Boolean(detail?.hidden));
+    };
+
+    window.addEventListener('pullz:header-visibility', handleHeaderVisibility);
+    return () => window.removeEventListener('pullz:header-visibility', handleHeaderVisibility);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -377,7 +390,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
   return (
     <>
-    <div className="relative z-[140]">
+    <div className={`relative z-[140] transition-[opacity,transform] duration-200 ease-out ${isSuppressed ? 'pointer-events-none -translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`} aria-hidden={isSuppressed}>
       <header
         ref={headerRef}
         className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}

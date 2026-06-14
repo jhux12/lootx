@@ -683,7 +683,7 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
-  shipItem: (instanceId: string | string[]) => Promise<{ shipmentId?: string; shipmentBatchId?: string } | void>;
+  shipItem: (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => Promise<{ shipmentId?: string; shipmentBatchId?: string } | void>;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
@@ -2956,7 +2956,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const shipItem = async (instanceId: string | string[]) => {
+  const shipItem = async (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => {
     if (!auth.currentUser) {
       openAuthModal('login');
       return;
@@ -2976,7 +2976,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         body: JSON.stringify({
           inventoryIds: uniqueInstanceIds,
           inventoryId: uniqueInstanceIds[0],
-          shippingInfo: user.shippingAddress
+          shippingInfo: user.shippingAddress,
+          shippingProtection: options?.shippingProtection === true,
+          signatureRequired: options?.signatureRequired === true
         })
       });
 
