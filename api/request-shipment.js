@@ -1,7 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { getShipmentShippingRate } from './_lib/shippingRates.js';
+import { SIGNATURE_REQUIRED_CENTS, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
@@ -42,6 +42,8 @@ export default async function handler(req, res) {
         ? [body.inventoryId.trim()]
         : [];
     const shippingInfo = body?.shippingInfo;
+    const wantsShippingProtection = body?.shippingProtection === true;
+    const wantsSignatureRequired = body?.signatureRequired === true;
 
     if (inventoryIds.length === 0) {
       return sendJson(res, 400, { error: 'No items selected' });
@@ -98,7 +100,10 @@ export default async function handler(req, res) {
       const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
       const paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
       const rate = getShipmentShippingRate(paidShipmentValueCoins);
-      const effectiveShippingCost = paidShipmentItems.length > 0 ? rate.coinCost : 0;
+      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins);
+      const shippingProtectionCost = paidShipmentItems.length > 0 && wantsShippingProtection ? protectionRate.coinCost : 0;
+      const signatureRequiredCost = paidShipmentItems.length > 0 && wantsSignatureRequired ? SIGNATURE_REQUIRED_CENTS : 0;
+      const effectiveShippingCost = paidShipmentItems.length > 0 ? rate.coinCost + shippingProtectionCost + signatureRequiredCost : 0;
       const shippingPaymentMethod = effectiveShippingCost > 0 ? 'coins' : 'FREE_XP';
       const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? primaryShipmentId;
       primaryShipmentId = firstPaidShipmentId;
@@ -155,6 +160,14 @@ export default async function handler(req, res) {
           shippingCost: receivesBatchCharge ? effectiveShippingCost : 0,
           shippingBatchCost: effectiveShippingCost,
           shippingBatchValueCoins: paidShipmentValueCoins,
+          shippingProtection: wantsShippingProtection && paidShipmentItems.length > 0,
+          shippingProtectionCost: receivesBatchCharge ? shippingProtectionCost : 0,
+          shippingProtectionBatchCost: shippingProtectionCost,
+          shippingProtectionRateTier: shippingProtectionCost > 0 ? protectionRate.tierLabel : null,
+          signatureRequired: wantsSignatureRequired && paidShipmentItems.length > 0,
+          signatureRequiredCost: receivesBatchCharge ? signatureRequiredCost : 0,
+          signatureRequiredBatchCost: signatureRequiredCost,
+          baseShippingCost: receivesBatchCharge ? rate.coinCost : 0,
           shippingRateTier: paidShipmentItems.length > 0 ? rate.tierLabel : 'Free',
           shippingPaid: true,
           shippingPaymentMethod: freeShipping && effectiveShippingCost === 0 ? 'FREE_XP' : shippingPaymentMethod,
