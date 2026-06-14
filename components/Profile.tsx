@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, Coins, Copy, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
+import { Check, ChevronDown, Coins, Copy, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -189,6 +189,8 @@ export const Profile: React.FC = () => {
   const [shippingPaymentMethod, setShippingPaymentMethod] = useState<'coins' | 'cash'>('coins');
   const [shippingProtectionSelected, setShippingProtectionSelected] = useState(false);
   const [signatureRequiredSelected, setSignatureRequiredSelected] = useState(false);
+  const [showShippingProtectionInfo, setShowShippingProtectionInfo] = useState(false);
+  const [showSignatureRequiredInfo, setShowSignatureRequiredInfo] = useState(false);
   const [withdrawLockedModalOpen, setWithdrawLockedModalOpen] = useState(false);
   const [tradeInModalItemId, setTradeInModalItemId] = useState<string | null>(null);
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
@@ -449,6 +451,8 @@ export const Profile: React.FC = () => {
     setShowShippingRateTooltip(false);
     setShippingProtectionSelected(false);
     setSignatureRequiredSelected(false);
+    setShowShippingProtectionInfo(false);
+    setShowSignatureRequiredInfo(false);
     setShowShippingReview(true);
   };
 
@@ -843,22 +847,38 @@ export const Profile: React.FC = () => {
             )}
 
             {!isFreeOnlySelection && (
-              <div className="mt-4 space-y-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Optional add-ons</p>
-                <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition ${shippingProtectionSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_18px_rgba(32,93,215,0.24)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
-                  <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-blue-500" checked={shippingProtectionSelected} onChange={(event) => setShippingProtectionSelected(event.target.checked)} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2 text-sm font-black text-white">Shipping protection <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-200">{formatShippingAddOnPrice(protectionRate.cashCents, activeShippingMethod)}</span></span>
-                    <span className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" />Covers lost packages and damage in transit. Optional and never pre-selected.</span>
-                  </span>
-                </label>
-                <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3 transition ${signatureRequiredSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_18px_rgba(32,93,215,0.24)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
-                  <input type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-blue-500" checked={signatureRequiredSelected} onChange={(event) => setSignatureRequiredSelected(event.target.checked)} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2 text-sm font-black text-white">Signature required <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-xs text-blue-200">{formatShippingAddOnPrice(SIGNATURE_REQUIRED_CENTS, activeShippingMethod)}</span></span>
-                    <span className="mt-1 flex items-start gap-1.5 text-xs leading-relaxed text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" />Requires a delivery signature for extra handoff security.</span>
-                  </span>
-                </label>
+              <div className="mt-4 space-y-1.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Add-ons</p>
+                <div className={`rounded-xl border transition ${shippingProtectionSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                  <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
+                    <input id="shipping-protection-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={shippingProtectionSelected} onChange={(event) => setShippingProtectionSelected(event.target.checked)} />
+                    <label htmlFor="shipping-protection-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Shipping protection</label>
+                    <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(protectionRate.cashCents, activeShippingMethod)}</span>
+                    <button type="button" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white" aria-label="Toggle shipping protection details" aria-expanded={showShippingProtectionInfo} onClick={() => setShowShippingProtectionInfo((open) => !open)}>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showShippingProtectionInfo ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                  {showShippingProtectionInfo && (
+                    <div className="border-t border-white/10 px-2.5 pb-2 pt-1.5 text-xs leading-relaxed text-slate-400">
+                      <span className="flex items-start gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" />Covers lost packages and damage in transit.</span>
+                    </div>
+                  )}
+                </div>
+                <div className={`rounded-xl border transition ${signatureRequiredSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                  <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
+                    <input id="signature-required-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={signatureRequiredSelected} onChange={(event) => setSignatureRequiredSelected(event.target.checked)} />
+                    <label htmlFor="signature-required-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Signature required</label>
+                    <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(SIGNATURE_REQUIRED_CENTS, activeShippingMethod)}</span>
+                    <button type="button" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white" aria-label="Toggle signature required details" aria-expanded={showSignatureRequiredInfo} onClick={() => setShowSignatureRequiredInfo((open) => !open)}>
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showSignatureRequiredInfo ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                  {showSignatureRequiredInfo && (
+                    <div className="border-t border-white/10 px-2.5 pb-2 pt-1.5 text-xs leading-relaxed text-slate-400">
+                      <span className="flex items-start gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-300" />Requires a delivery signature for extra handoff security.</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
