@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { getShipmentShippingRate } from './_lib/shippingRates.js';
+import { SIGNATURE_REQUIRED_CENTS, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -43,6 +43,8 @@ export default async function handler(req, res) {
       : typeof body?.inventoryId === 'string' && body.inventoryId.trim()
         ? [body.inventoryId.trim()]
         : [];
+    const wantsShippingProtection = body?.shippingProtection === true;
+    const wantsSignatureRequired = body?.signatureRequired === true;
 
     if (inventoryIds.length === 0) {
       return sendJson(res, 400, { error: 'No items selected' });
@@ -115,7 +117,10 @@ export default async function handler(req, res) {
       const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
       paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
       const rate = getShipmentShippingRate(paidShipmentValueCoins);
-      shippingTotalCents = paidShipmentItems.length > 0 ? rate.cashCents : 0;
+      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins);
+      const shippingProtectionCostCents = paidShipmentItems.length > 0 && wantsShippingProtection ? protectionRate.cashCents : 0;
+      const signatureRequiredCostCents = paidShipmentItems.length > 0 && wantsSignatureRequired ? SIGNATURE_REQUIRED_CENTS : 0;
+      shippingTotalCents = paidShipmentItems.length > 0 ? rate.cashCents + shippingProtectionCostCents + signatureRequiredCostCents : 0;
       shippingRateTier = paidShipmentItems.length > 0 ? rate.tierLabel : 'Free';
       const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? shipmentRefs[0]?.id;
 
@@ -140,6 +145,14 @@ export default async function handler(req, res) {
           shippingCost: receivesBatchCharge ? shippingTotalCents : 0,
           shippingBatchCostCents: shippingTotalCents,
           shippingBatchValueCoins: paidShipmentValueCoins,
+          shippingProtection: wantsShippingProtection && paidShipmentItems.length > 0,
+          shippingProtectionCostCents: receivesBatchCharge ? shippingProtectionCostCents : 0,
+          shippingProtectionBatchCostCents: shippingProtectionCostCents,
+          shippingProtectionRateTier: shippingProtectionCostCents > 0 ? protectionRate.tierLabel : null,
+          signatureRequired: wantsSignatureRequired && paidShipmentItems.length > 0,
+          signatureRequiredCostCents: receivesBatchCharge ? signatureRequiredCostCents : 0,
+          signatureRequiredBatchCostCents: signatureRequiredCostCents,
+          baseShippingCostCents: receivesBatchCharge ? rate.cashCents : 0,
           shippingRateTier,
           shippingPaid: !hasOutstandingPayment,
           shippingPaymentMethod: hasOutstandingPayment ? 'cash' : 'FREE_XP',
@@ -176,7 +189,7 @@ export default async function handler(req, res) {
           currency: 'usd',
           ...(usesProductId
             ? { product: stripeShippingProductId }
-            : { product_data: { name: `Shipping & Handling (${shippingRateTier})` } }),
+            : { product_data: { name: `Shipping & Handling${wantsShippingProtection ? ' + Protection' : ''}${wantsSignatureRequired ? ' + Signature' : ''} (${shippingRateTier})` } }),
           unit_amount: shippingTotalCents
         },
         quantity: 1
@@ -195,7 +208,9 @@ export default async function handler(req, res) {
         shipmentCount: '1',
         itemCount: String(inventoryIds.length),
         shippingRateTier,
-        paidShipmentValueCoins: String(paidShipmentValueCoins)
+        paidShipmentValueCoins: String(paidShipmentValueCoins),
+        shippingProtection: String(wantsShippingProtection),
+        signatureRequired: String(wantsSignatureRequired)
       }
     });
 
