@@ -215,7 +215,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                   <p className="truncate text-sm font-bold text-white">{entry.name}</p>
                   <p className="text-xs text-slate-400">Current season points</p>
                 </div>
-                <CoinAmount amount={entry.points} className="shrink-0 text-sm font-black text-slate-100" iconClassName="h-4 w-4" animated={false} />
+                <div className="shrink-0 text-right text-sm font-black text-slate-100 tabular-nums">{entry.points.toLocaleString()}</div>
               </div>
             )) : (
               <div className="rounded-xl border border-white/[0.06] bg-[#1b2024]/70 px-4 py-5 text-center">
