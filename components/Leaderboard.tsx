@@ -220,7 +220,11 @@ export const Leaderboard: React.FC = () => {
     };
   }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
 
-  const myReward = useMemo(() => rewardByRule(settings, myRank, myPoints), [settings, myRank, myPoints]);
+  const myReward = useMemo(() => {
+    if (myRank && myRank >= 4 && myRank <= 10) return { label: '100', coins: 100 };
+    if (myRank && myRank <= 3) return rewardByRule(settings, myRank, myPoints);
+    return null;
+  }, [settings, myRank, myPoints]);
   const hasActiveLeaderboard = settings.enabled && (!settings.seasonEndsAt || Date.now() < settings.seasonEndsAt);
 
   const topThree = useMemo(() => {
@@ -337,14 +341,14 @@ export const Leaderboard: React.FC = () => {
                 <div className="divide-y divide-white/10">
                   {lowerRows.slice(0, 20).map((entry, index) => {
                     const rank = index + 4;
-                    const rowRewardLabel = rewardByRule(settings, rank, entry.points).label;
+                    const rowRewardLabel = rank >= 4 && rank <= 10 ? '100' : null;
                     return (
                       <div key={entry.uid} className="grid grid-cols-[2rem_3.5rem_1fr_auto] items-center gap-2 py-4 sm:grid-cols-[2.5rem_4rem_1fr_auto] sm:gap-3">
                         <div className="text-sm font-black text-white/70 sm:text-base">#{rank}</div>
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-white sm:h-14 sm:w-14">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
-                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div><div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-white/50 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 shrink-0 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rowRewardLabel}</span></div></div>
+                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div>{rowRewardLabel && <div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-white/50 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 shrink-0 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rowRewardLabel}</span></div>}</div>
                         <div className="text-right text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div>
                       </div>
                     );
@@ -354,7 +358,7 @@ export const Leaderboard: React.FC = () => {
             </section>
 
             <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 text-sm text-white/70 sm:mx-8">
-              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1 flex flex-wrap items-center gap-1"><span>{myPoints.toLocaleString()} points · Reward</span><img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" loading="lazy" decoding="async" /><span>{myReward.label}</span></div></div>
+              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1 flex flex-wrap items-center gap-1"><span>{myPoints.toLocaleString()} points</span>{myReward && <><span>· Reward</span><img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" loading="lazy" decoding="async" /><span>{myReward.label}</span></>}</div></div>
             </section>
           </div>
         )}
