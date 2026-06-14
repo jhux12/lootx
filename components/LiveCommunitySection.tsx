@@ -428,7 +428,6 @@ export const LiveCommunitySection: React.FC = () => {
       <div className="mb-2.5 flex items-end justify-between gap-2 px-0.5">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/85">Community Pullz</p>
-          <h2 className="mt-0.5 text-xl font-black tracking-tight text-white sm:text-2xl">Real wins &amp; deliveries</h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
@@ -453,16 +452,17 @@ export const LiveCommunitySection: React.FC = () => {
             data-community-story-card
             className="group flex w-[96px] shrink-0 snap-start flex-col items-center text-center [touch-action:pan-x_pinch-zoom] sm:w-[112px] lg:w-[120px]"
           >
-            <div className="relative grid h-[86px] w-[86px] place-items-center overflow-hidden rounded-full border border-amber-200/35 bg-gradient-to-br from-amber-300/95 via-lime-300/90 to-emerald-300/90 p-[2px] shadow-[0_0_20px_rgba(250,204,21,0.28)] transition-transform duration-200 group-hover:scale-105 group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]">
-              <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-[#0b1010]/92 px-2 text-center">
-                <img src={COIN_ICON} alt="" aria-hidden="true" className="mb-1 h-6 w-6 object-contain drop-shadow sm:h-7 sm:w-7" loading="lazy" decoding="async" />
-                <span className="text-[9px] font-black uppercase leading-tight tracking-wide text-white sm:text-[10px]">Submit Pull</span>
-                <span className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black text-black">
+            <div className="relative grid h-[86px] w-[86px] place-items-center rounded-full border border-white/12 bg-white/[0.035] p-[3px] shadow-[0_10px_28px_rgba(0,0,0,0.18)] transition duration-200 group-hover:border-emerald-200/35 group-hover:bg-white/[0.06] group-hover:shadow-[0_14px_34px_rgba(16,185,129,0.14)] group-active:scale-[0.98] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/18 via-transparent to-emerald-300/12 opacity-80" aria-hidden="true" />
+              <div className="relative flex h-full w-full flex-col items-center justify-center rounded-full border border-white/[0.07] bg-[#11171c]/95 px-2 text-center">
+                <span className="mb-1 grid h-7 w-7 place-items-center rounded-full border border-emerald-200/25 bg-emerald-300/10 text-lg font-light leading-none text-emerald-100 sm:h-8 sm:w-8">+</span>
+                <span className="text-[9px] font-black uppercase leading-tight tracking-[0.14em] text-white sm:text-[10px]">Submit</span>
+                <span className="mt-1 rounded-full border border-emerald-200/20 bg-emerald-300/10 px-1.5 py-0.5 text-[8px] font-black text-emerald-100">
                   +1,000
                 </span>
               </div>
             </div>
-            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-amber-100">Get 1,000 coins</span>
+            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-slate-200">Submit pull</span>
           </button>
         {stories.length ? stories.map((story, index) => {
           const badge = getStoryBadge(story);
