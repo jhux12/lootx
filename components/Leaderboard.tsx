@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } f
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
+import { COIN_ICON } from '../constants';
 
 interface RewardsSettings {
   enabled: boolean;
@@ -266,14 +267,14 @@ export const Leaderboard: React.FC = () => {
             )}
 
             <section className="px-5 sm:px-8">
-              <div className="grid min-h-[238px] grid-cols-3 items-end gap-0 sm:min-h-[280px] sm:gap-3">
+              <div className="grid min-h-[262px] grid-cols-3 items-end gap-0 sm:min-h-[310px] sm:gap-3">
                 {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
                   if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#20262b]/72 sm:max-w-[150px]" />;
                   const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
                   const isFirst = actualRank === 1;
                   const isSecond = actualRank === 2;
                   const frame = isFirst ? 'from-[#ffb600] to-[#16d67b]' : isSecond ? 'from-[#00b8ff] to-[#0274ff]' : 'from-[#12e66f] to-[#00b8ff]';
-                  const cardHeight = isFirst ? 'h-[164px] sm:h-[190px]' : 'h-[138px] sm:h-[164px]';
+                  const cardHeight = isFirst ? 'h-[184px] sm:h-[212px]' : 'h-[158px] sm:h-[186px]';
                   const avatarSize = isFirst ? 'h-[74px] w-[74px] sm:h-24 sm:w-24' : 'h-[62px] w-[62px] sm:h-20 sm:w-20';
                   const rankColor = isFirst ? 'bg-[#ffb600]' : isSecond ? 'bg-[#00b8ff]' : 'bg-[#10dc72]';
                   const pointColor = isFirst ? 'text-[#ffc019]' : isSecond ? 'text-[#00b8ff]' : 'text-[#13df72]';
@@ -289,7 +290,7 @@ export const Leaderboard: React.FC = () => {
                       <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)]`}>{actualRank}</div>
                       <div className="mt-2 w-full truncate text-xs font-semibold text-white sm:text-base">{entry.displayName}</div>
                       <div className={`mt-1 text-base font-black ${pointColor} sm:text-xl`}>{entry.points.toLocaleString()}</div>
-                      <div className="mt-1 w-full truncate text-[10px] font-semibold text-white/55 sm:text-xs">Reward {rewardLabel}</div>
+                      <div className="mt-1 flex w-full items-center justify-center gap-1 truncate text-[10px] font-semibold text-white/55 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rewardLabel}</span></div>
                     </article>
                   );
                 })}
@@ -310,7 +311,7 @@ export const Leaderboard: React.FC = () => {
                         <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-white sm:h-14 sm:w-14">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
-                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div><div className="mt-1 truncate text-[10px] font-semibold text-white/50 sm:text-xs">Reward {rowRewardLabel}</div></div>
+                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div><div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-white/50 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 shrink-0 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rowRewardLabel}</span></div></div>
                         <div className="text-right text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div>
                       </div>
                     );
@@ -320,7 +321,7 @@ export const Leaderboard: React.FC = () => {
             </section>
 
             <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 text-sm text-white/70 sm:mx-8">
-              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1">{myPoints.toLocaleString()} points · Reward {myReward.label}</div></div>
+              <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1 flex flex-wrap items-center gap-1"><span>{myPoints.toLocaleString()} points · Reward</span><img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" loading="lazy" decoding="async" /><span>{myReward.label}</span></div></div>
             </section>
           </div>
         )}
