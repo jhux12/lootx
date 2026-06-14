@@ -230,8 +230,8 @@ export const Leaderboard: React.FC = () => {
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
   return (
-    <div className="min-h-screen bg-[#111326] text-white">
-      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#111326] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
+    <div className="min-h-screen bg-[#1b2024] text-white">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#1b2024] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
         <header className="flex items-center justify-between px-5 pb-5 pt-6 sm:px-8 sm:pt-8">
           <button
             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
@@ -245,18 +245,18 @@ export const Leaderboard: React.FC = () => {
         </header>
 
         {settingsLoaded && !hasActiveLeaderboard ? (
-          <section className="mx-5 mt-10 rounded-[28px] bg-[#20243b] px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#111326] text-[#79a7ff]"><Flame className="h-8 w-8" /></div>
+          <section className="mx-5 mt-10 rounded-[28px] bg-[#20262b]/72 px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]"><Flame className="h-8 w-8" /></div>
             <h2 className="mt-5 text-2xl font-black text-white">Starting Soon</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/65">There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.</p>
           </section>
         ) : (
           <div className="mt-5">
             {timeLeft && (
-              <section className="mx-5 mb-5 rounded-2xl bg-[#1d2138] p-3 sm:mx-8">
+              <section className="mx-5 mb-5 rounded-2xl bg-[#20262b]/72 p-3 sm:mx-8">
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
-                    <div key={String(label)} className="rounded-xl bg-[#111326]/70 px-2 py-2">
+                    <div key={String(label)} className="rounded-xl bg-[#1b2024]/70 px-2 py-2">
                       <div className="text-base font-black text-[#79a7ff] sm:text-xl">{String(value).padStart(2, '0')}</div>
                       <div className="text-[9px] font-bold tracking-wider text-white/45 sm:text-[10px]">{label}</div>
                     </div>
@@ -268,47 +268,50 @@ export const Leaderboard: React.FC = () => {
             <section className="px-5 sm:px-8">
               <div className="grid min-h-[238px] grid-cols-3 items-end gap-0 sm:min-h-[280px] sm:gap-3">
                 {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
-                  if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#20243b] sm:max-w-[150px]" />;
+                  if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#20262b]/72 sm:max-w-[150px]" />;
                   const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
                   const isFirst = actualRank === 1;
                   const isSecond = actualRank === 2;
                   const frame = isFirst ? 'from-[#ffb600] to-[#16d67b]' : isSecond ? 'from-[#00b8ff] to-[#0274ff]' : 'from-[#12e66f] to-[#00b8ff]';
-                  const cardHeight = isFirst ? 'h-[136px] sm:h-[168px]' : 'h-[112px] sm:h-[136px]';
+                  const cardHeight = isFirst ? 'h-[164px] sm:h-[190px]' : 'h-[138px] sm:h-[164px]';
                   const avatarSize = isFirst ? 'h-[74px] w-[74px] sm:h-24 sm:w-24' : 'h-[62px] w-[62px] sm:h-20 sm:w-20';
                   const rankColor = isFirst ? 'bg-[#ffb600]' : isSecond ? 'bg-[#00b8ff]' : 'bg-[#10dc72]';
                   const pointColor = isFirst ? 'text-[#ffc019]' : isSecond ? 'text-[#00b8ff]' : 'text-[#13df72]';
+                  const rewardLabel = rewardByRule(settings, actualRank, entry.points).label;
                   return (
-                    <article key={entry.uid} className={`relative flex ${cardHeight} flex-col items-center rounded-t-[26px] bg-[#20243b] px-2 pb-4 pt-10 text-center shadow-[0_16px_35px_rgba(6,9,28,0.2)] sm:px-4 sm:pt-12`}>
+                    <article key={entry.uid} className={`relative flex ${cardHeight} flex-col items-center rounded-t-[26px] border border-white/[0.06] bg-[#20262b]/72 px-2 pb-4 pt-10 text-center shadow-[0_16px_35px_rgba(5,8,12,0.22)] sm:px-4 sm:pt-12`}>
                       {isFirst && <Crown className="absolute -top-[84px] h-12 w-12 rotate-[-10deg] fill-[#ffb600] text-[#ffb600] sm:-top-[98px] sm:h-14 sm:w-14" />}
                       <div className={`absolute left-1/2 top-0 flex ${avatarSize} -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br ${frame} p-[3px] shadow-[0_10px_20px_rgba(0,0,0,0.25)]`}>
-                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#111326] text-2xl font-black text-white">
+                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#1b2024] text-2xl font-black text-white">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
                       </div>
-                      <div className={`absolute left-1/2 top-1 flex h-6 w-6 -translate-x-1/2 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)] sm:top-2`}>{actualRank}</div>
-                      <div className="mt-auto w-full truncate text-xs font-semibold text-white sm:text-base">{entry.displayName}</div>
+                      <div className={`mt-1 flex h-6 w-6 items-center justify-center rounded-full ${rankColor} text-[11px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.25)]`}>{actualRank}</div>
+                      <div className="mt-2 w-full truncate text-xs font-semibold text-white sm:text-base">{entry.displayName}</div>
                       <div className={`mt-1 text-base font-black ${pointColor} sm:text-xl`}>{entry.points.toLocaleString()}</div>
+                      <div className="mt-1 w-full truncate text-[10px] font-semibold text-white/55 sm:text-xs">Reward {rewardLabel}</div>
                     </article>
                   );
                 })}
               </div>
             </section>
 
-            <section className="mt-7 rounded-t-[34px] bg-[#20243b] px-5 pb-8 pt-5 sm:mx-8 sm:rounded-[34px] sm:px-8">
+            <section className="mt-7 rounded-t-[34px] border border-white/[0.06] bg-[#20262b]/72 px-5 pb-8 pt-5 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:mx-8 sm:rounded-[34px] sm:px-8">
               {loading ? (
                 <div className="space-y-4">{Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-[62px] animate-pulse rounded-2xl bg-white/5" />)}</div>
               ) : (
                 <div className="divide-y divide-white/10">
                   {lowerRows.slice(0, 20).map((entry, index) => {
                     const rank = index + 4;
-                    const directionUp = rank % 2 === 0;
+                    const rowRewardLabel = rewardByRule(settings, rank, entry.points).label;
                     return (
-                      <div key={entry.uid} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 py-4 sm:grid-cols-[4rem_1fr_auto]">
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#111326] text-lg font-black text-white sm:h-14 sm:w-14">
+                      <div key={entry.uid} className="grid grid-cols-[2rem_3.5rem_1fr_auto] items-center gap-2 py-4 sm:grid-cols-[2.5rem_4rem_1fr_auto] sm:gap-3">
+                        <div className="text-sm font-black text-white/70 sm:text-base">#{rank}</div>
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-white sm:h-14 sm:w-14">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
-                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div></div>
-                        <div className="text-right"><div className="text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div><div className={`mt-1 text-[10px] font-black ${directionUp ? 'text-[#10dc72]' : 'text-[#ff4d86]'}`}>{directionUp ? '▲' : '▼'}</div></div>
+                        <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div><div className="mt-1 truncate text-[10px] font-semibold text-white/50 sm:text-xs">Reward {rowRewardLabel}</div></div>
+                        <div className="text-right text-sm font-black text-white sm:text-base">{entry.points.toLocaleString()}</div>
                       </div>
                     );
                   })}
@@ -316,7 +319,7 @@ export const Leaderboard: React.FC = () => {
               )}
             </section>
 
-            <section className="mx-5 mt-5 rounded-2xl bg-[#1d2138] p-4 text-sm text-white/70 sm:mx-8">
+            <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 text-sm text-white/70 sm:mx-8">
               <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1">{myPoints.toLocaleString()} points · Reward {myReward.label}</div></div>
             </section>
           </div>
