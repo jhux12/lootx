@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Crown, Flame } from 'lucide-react';
+import { ArrowLeft, Crown, Flame, Info } from 'lucide-react';
 import { collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -107,6 +107,7 @@ export const Leaderboard: React.FC = () => {
   const [myRank, setMyRank] = useState<number | null>(null);
   const [myPoints, setMyPoints] = useState(0);
   const [timeLeft, setTimeLeft] = useState(getTimeLeft(DEFAULT_SETTINGS.seasonEndsAt));
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     const pathLabel = 'settings/rewards';
@@ -242,8 +243,40 @@ export const Leaderboard: React.FC = () => {
             <ArrowLeft className="h-7 w-7" strokeWidth={2.5} />
           </button>
           <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">Leaderboard</h1>
-          <div className="h-11 w-11" aria-hidden="true" />
+          <button
+            type="button"
+            onClick={() => { playSound('click'); setShowInfo(true); }}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-[#79a7ff] transition-colors hover:bg-white/5 hover:text-white"
+            aria-label="How leaderboard works"
+          >
+            <Info className="h-6 w-6" strokeWidth={2.4} />
+          </button>
         </header>
+
+        {showInfo && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 backdrop-blur-sm sm:items-center sm:pb-0" role="dialog" aria-modal="true" aria-labelledby="leaderboard-info-title">
+            <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-[#20262b] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]">
+                  <Info className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 id="leaderboard-info-title" className="text-base font-black text-white">How leaderboard works</h2>
+                  <p className="mt-2 text-sm leading-6 text-white/70">
+                    Every coin spent earns 1 leaderboard point. Keep playing to climb the rankings before the season ends.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { playSound('click'); setShowInfo(false); }}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition hover:brightness-110"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
 
         {settingsLoaded && !hasActiveLeaderboard ? (
           <section className="mx-5 mt-10 rounded-[28px] bg-[#20262b]/72 px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
