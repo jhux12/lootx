@@ -275,8 +275,8 @@ export const Leaderboard: React.FC = () => {
         </header>
 
         {showInfo && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-4 pb-4 backdrop-blur-sm sm:items-center sm:pb-0" role="dialog" aria-modal="true" aria-labelledby="leaderboard-info-title">
-            <div className="w-full max-w-sm rounded-3xl border border-white/[0.08] bg-[#20262b] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm sm:py-0" role="dialog" aria-modal="true" aria-labelledby="leaderboard-info-title">
+            <div className="max-h-[calc(100dvh-3rem)] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/[0.08] bg-[#20262b] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]">
                   <Info className="h-5 w-5" />
