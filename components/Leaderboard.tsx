@@ -98,7 +98,7 @@ const getTimeLeft = (seasonEndsAt: number | null) => {
 const avatarFallback = (name: string) => name.trim().charAt(0).toUpperCase() || 'P';
 
 export const Leaderboard: React.FC = () => {
-  const { user, setView } = useGame();
+  const { user, isAuthenticated, authInitialized, setView } = useGame();
   const { playSound } = useSound();
   const [settings, setSettings] = useState<RewardsSettings>(DEFAULT_SETTINGS);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
@@ -126,6 +126,8 @@ export const Leaderboard: React.FC = () => {
         message: error?.message,
         error
       });
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsLoaded(true);
     });
     return () => unsub();
   }, []);
@@ -177,40 +179,55 @@ export const Leaderboard: React.FC = () => {
       }
 
       setLoading(true);
-      const topQuery = query(
-        collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
-        orderBy('points', 'desc'),
-        orderBy('updatedAt', 'asc'),
-        limit(500)
-      );
-      const topSnap = await getDocs(topQuery);
-      const rankedEntries = topSnap.docs
-        .map((d) => ({
-          uid: d.id,
-          displayName: String(d.data().displayName ?? 'Player'),
-          avatarUrl: String(d.data().avatarUrl ?? ''),
-          points: Number(d.data().points ?? 0),
-          hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true
-        }))
-        .filter((entry) => !entry.hiddenFromLeaderboard);
-      const top = rankedEntries.slice(0, 100);
+      try {
+        const topQuery = query(
+          collection(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users'),
+          orderBy('points', 'desc'),
+          orderBy('updatedAt', 'asc'),
+          limit(500)
+        );
+        const topSnap = await getDocs(topQuery);
+        const rankedEntries = topSnap.docs
+          .map((d) => ({
+            uid: d.id,
+            displayName: String(d.data().displayName ?? 'Player'),
+            avatarUrl: String(d.data().avatarUrl ?? ''),
+            points: Number(d.data().points ?? 0),
+            hiddenFromLeaderboard: d.data().hiddenFromLeaderboard === true
+          }))
+          .filter((entry) => !entry.hiddenFromLeaderboard);
+        const top = rankedEntries.slice(0, 100);
 
-      const myDoc = await getDoc(doc(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users', user.id));
-      const myData = myDoc.data();
-      const isCurrentUserHidden = user.hiddenFromLeaderboard === true || user.hiddenFromPublicDisplay === true || myData?.hiddenFromLeaderboard === true;
-      const points = myDoc.exists() && !isCurrentUserHidden ? Number(myData?.points ?? 0) : 0;
+        const canLoadCurrentUser = authInitialized && isAuthenticated && user.id && user.id !== 'guest' && user.id !== 'loading';
+        let points = 0;
+        let rank: number | null = null;
 
-      let rank: number | null = null;
-      if (points > 0) {
-        const currentUserIndex = rankedEntries.findIndex((entry) => entry.uid === user.id);
-        rank = currentUserIndex >= 0 ? currentUserIndex + 1 : null;
-      }
+        if (canLoadCurrentUser) {
+          const myDoc = await getDoc(doc(db, 'leaderboards', `rewardsSeason_${settings.seasonId}`, 'users', user.id));
+          const myData = myDoc.data();
+          const isCurrentUserHidden = user.hiddenFromLeaderboard === true || user.hiddenFromPublicDisplay === true || myData?.hiddenFromLeaderboard === true;
+          points = myDoc.exists() && !isCurrentUserHidden ? Number(myData?.points ?? 0) : 0;
 
-      if (mounted) {
-        setLeaders(top);
-        setMyPoints(points);
-        setMyRank(rank);
-        setLoading(false);
+          if (points > 0) {
+            const currentUserIndex = rankedEntries.findIndex((entry) => entry.uid === user.id);
+            rank = currentUserIndex >= 0 ? currentUserIndex + 1 : null;
+          }
+        }
+
+        if (mounted) {
+          setLeaders(top);
+          setMyPoints(points);
+          setMyRank(rank);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to load leaderboard', error);
+        if (mounted) {
+          setLeaders([]);
+          setMyPoints(0);
+          setMyRank(null);
+          setLoading(false);
+        }
       }
     };
 
@@ -218,7 +235,7 @@ export const Leaderboard: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
+  }, [authInitialized, isAuthenticated, settings.enabled, settings.seasonEndsAt, settings.seasonId, user.hiddenFromLeaderboard, user.hiddenFromPublicDisplay, user.id]);
 
   const myReward = useMemo(() => {
     if (myRank && myRank >= 4 && myRank <= 10) return { label: '100', coins: 100 };
