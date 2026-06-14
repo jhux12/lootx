@@ -1,7 +1,6 @@
 import React from 'react';
 import { InventoryItem } from '../../types';
-import { CoinAmount } from '../CoinAmount';
-import { InventoryStats } from './InventoryStats';
+
 import { InventoryFilters } from './InventoryFilters';
 import { InventoryCard } from './InventoryCard';
 
@@ -46,12 +45,19 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 }) => {
   return (
     <section className="flex-1 space-y-4">
-      <header>
-        <h2 className="text-2xl font-bold text-white">Inventory</h2>
-        <p className="text-sm text-gray-400">Manage your items, ship rewards, or sell them back for coins.</p>
-      </header>
 
-      <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
+      <div className="flex overflow-x-auto border-b border-white/10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {[{ label: 'Inventory', value: 'all' }, { label: 'In Inventory', value: 'available' }, { label: 'In Transit', value: 'shipping' }, { label: 'Sold', value: 'sold' }].map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            onClick={() => setType(tab.value)}
+            className={`shrink-0 px-6 py-3 text-sm font-bold sm:text-base ${type === tab.value ? 'border-b-2 border-[#8b5cf6] text-white' : 'text-slate-400'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       <InventoryFilters
         search={search}
@@ -70,7 +76,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {items.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {items.map((item) => {
             const action = getAction(item);
             return (
