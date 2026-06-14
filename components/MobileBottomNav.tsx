@@ -111,7 +111,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-white/10 bg-[#05080d]/95 px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_40px_rgba(0,0,0,0.42)] backdrop-blur transition-[transform,opacity] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-[#3a4146]/70 bg-[#1b2024] px-2.5 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.24)] transition-[transform,opacity] duration-200 ease-out lg:hidden ${
         isSuppressed ? 'pointer-events-none translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}
       aria-label="Primary navigation"
@@ -171,7 +171,7 @@ export const MobileBottomNav: React.FC = () => {
                   <span className="relative">
                     <Icon className={item.iconClassName ?? iconClassName} />
                     {item.id === 'INVENTORY' && hasFreeSignupBox && (
-                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#05080d]" aria-hidden="true" />
+                      <span className="absolute -right-1 -top-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#1b2024]" aria-hidden="true" />
                     )}
                   </span>
                 ) : null}

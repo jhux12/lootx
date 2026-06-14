@@ -380,10 +380,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className="relative z-[140]">
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-white/10 bg-[#05080d]/95 shadow-[0_12px_50px_rgba(0,0,0,0.36)] backdrop-blur-2xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2 lg:shadow-none`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#20283a]/95 lg:bg-[#080d16]/76 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
+          <nav className="mx-auto flex h-[62px] max-w-7xl items-center justify-between px-3 sm:h-[66px] sm:px-5 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
             <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
             <button
               type="button"
@@ -625,7 +625,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
       />
 
       <div
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain border-t border-white/10 bg-[#090f16]/95 px-4 pb-4 pt-3 shadow-[0_-24px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-50 w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
