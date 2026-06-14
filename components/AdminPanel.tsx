@@ -235,6 +235,7 @@ type AdminSentNotification = {
 
 type DashboardTransaction = {
     id: string;
+    userId: string;
     userLabel: string;
     type: LedgerEntryType;
     amount: number;
@@ -1006,6 +1007,7 @@ export const AdminPanel: React.FC = () => {
                   if (entry.amount === 0) return;
                   nextTransactions.push({
                       id: `${docSnap.id}-${entry.id ?? index}-${entry.createdAt}`,
+                      userId: docSnap.id,
                       userLabel,
                       type: entry.type,
                       amount: entry.amount,
@@ -1066,6 +1068,17 @@ export const AdminPanel: React.FC = () => {
       () => dashboardTransactions.slice(0, 8),
       [dashboardTransactions]
   );
+
+
+  const openDashboardTransactionUser = (userId: string) => {
+      setSelectedUserId(userId);
+      setActiveTab('users');
+      if (typeof window !== 'undefined') {
+          window.requestAnimationFrame(() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+      }
+  };
 
   useEffect(() => {
       if (users.length === 0) return;
@@ -3452,11 +3465,17 @@ export const AdminPanel: React.FC = () => {
                         <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
                         <div className="space-y-4">
                             {liveTransactions.map((entry) => (
-                                <div key={entry.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-800 last:border-0">
+                                <button
+                                  type="button"
+                                  key={entry.id}
+                                  onClick={() => openDashboardTransactionUser(entry.userId)}
+                                  className="group flex w-full flex-col gap-2 border-b border-gray-800 py-3 text-left transition-colors last:border-0 hover:bg-[#182033]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 sm:flex-row sm:items-center sm:justify-between sm:rounded-lg sm:px-3"
+                                  aria-label={`View ${entry.userLabel} from recent ${entry.type.replace(/_/g, ' ')}`}
+                                >
                                     <div className="flex items-center gap-3 min-w-0">
                                         <div className={`w-2 h-2 rounded-full shrink-0 ${entry.amount > 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
                                         <div>
-                                            <div className="text-sm font-bold text-gray-200">
+                                            <div className="text-sm font-bold text-gray-200 group-hover:text-white">
                                                 {entry.type.replace(/_/g, ' ')}
                                             </div>
                                             <div className="text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
@@ -3470,9 +3489,9 @@ export const AdminPanel: React.FC = () => {
                                           className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-400' : 'text-white'}`}
                                           iconClassName="w-3.5 h-3.5"
                                         />
-                                        <div className="text-xs text-gray-500 truncate max-w-[180px]">{entry.userLabel}</div>
+                                        <div className="text-xs text-blue-300 truncate max-w-full sm:max-w-[180px]">{entry.userLabel}</div>
                                     </div>
-                                </div>
+                                </button>
                             ))}
                             {liveTransactions.length === 0 && (
                                 <div className="text-sm text-gray-400">No recent transactions yet.</div>
