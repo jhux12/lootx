@@ -1069,6 +1069,10 @@ export const AdminPanel: React.FC = () => {
       [dashboardTransactions]
   );
 
+  const recentCoinTopUps = useMemo(
+      () => dashboardTransactions.filter((entry) => entry.type === 'deposit' && entry.amount > 0).slice(0, 6),
+      [dashboardTransactions]
+  );
 
   const openDashboardTransactionUser = (userId: string) => {
       setSelectedUserId(userId);
@@ -3460,42 +3464,76 @@ export const AdminPanel: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Recent Activity Mock */}
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
-                        <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
-                        <div className="space-y-4">
-                            {liveTransactions.map((entry) => (
-                                <button
-                                  type="button"
-                                  key={entry.id}
-                                  onClick={() => openDashboardTransactionUser(entry.userId)}
-                                  className="group flex w-full flex-col gap-2 border-b border-gray-800 py-3 text-left transition-colors last:border-0 hover:bg-[#182033]/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 sm:flex-row sm:items-center sm:justify-between sm:rounded-lg sm:px-3"
-                                  aria-label={`View ${entry.userLabel} from recent ${entry.type.replace(/_/g, ' ')}`}
-                                >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`w-2 h-2 rounded-full shrink-0 ${entry.amount > 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-                                        <div>
-                                            <div className="text-sm font-bold text-gray-200 group-hover:text-white">
-                                                {entry.type.replace(/_/g, ' ')}
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
+                            <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Recent Coin Top Ups</h3>
+                                    <p className="text-xs text-gray-500">Tap a user to open their admin profile.</p>
+                                </div>
+                                <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">Deposits</span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                {recentCoinTopUps.map((entry) => (
+                                    <button
+                                      type="button"
+                                      key={entry.id}
+                                      onClick={() => openDashboardTransactionUser(entry.userId)}
+                                      className="group rounded-xl border border-gray-800 bg-[#0b0e14] p-4 text-left transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+                                      aria-label={`View ${entry.userLabel} from recent coin top up`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm font-bold text-white group-hover:text-emerald-100">{entry.userLabel}</div>
+                                                <div className="mt-1 text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
                                             </div>
-                                            <div className="text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
+                                            <CoinAmount
+                                              amount={entry.amount}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              showSign
+                                              className="shrink-0 text-sm font-bold text-emerald-400"
+                                              iconClassName="w-3.5 h-3.5"
+                                            />
+                                        </div>
+                                        <div className="mt-3 text-xs font-semibold text-blue-300">View user →</div>
+                                    </button>
+                                ))}
+                                {recentCoinTopUps.length === 0 && (
+                                    <div className="rounded-xl border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-sm text-gray-400 sm:col-span-2">No recent coin top ups yet.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
+                            <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
+                            <div className="space-y-4">
+                                {liveTransactions.map((entry) => (
+                                    <div key={entry.id} className="flex flex-col gap-2 border-b border-gray-800 py-3 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className={`w-2 h-2 rounded-full shrink-0 ${entry.amount > 0 ? 'bg-green-500' : 'bg-blue-500'}`}></div>
+                                            <div>
+                                                <div className="text-sm font-bold text-gray-200">
+                                                    {entry.type.replace(/_/g, ' ')}
+                                                </div>
+                                                <div className="text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="text-left sm:text-right">
+                                            <CoinAmount
+                                              amount={entry.amount}
+                                              formatOptions={{ maximumFractionDigits: 0 }}
+                                              showSign
+                                              className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-400' : 'text-white'}`}
+                                              iconClassName="w-3.5 h-3.5"
+                                            />
+                                            <div className="text-xs text-gray-500 truncate max-w-full sm:max-w-[180px]">{entry.userLabel}</div>
                                         </div>
                                     </div>
-                                    <div className="text-left sm:text-right">
-                                        <CoinAmount
-                                          amount={entry.amount}
-                                          formatOptions={{ maximumFractionDigits: 0 }}
-                                          showSign
-                                          className={`text-sm font-bold ${entry.amount > 0 ? 'text-green-400' : 'text-white'}`}
-                                          iconClassName="w-3.5 h-3.5"
-                                        />
-                                        <div className="text-xs text-blue-300 truncate max-w-full sm:max-w-[180px]">{entry.userLabel}</div>
-                                    </div>
-                                </button>
-                            ))}
-                            {liveTransactions.length === 0 && (
-                                <div className="text-sm text-gray-400">No recent transactions yet.</div>
-                            )}
+                                ))}
+                                {liveTransactions.length === 0 && (
+                                    <div className="text-sm text-gray-400">No recent transactions yet.</div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </>
