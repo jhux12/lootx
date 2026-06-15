@@ -1,5 +1,4 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import {
   Flame,
   AtSign,
@@ -30,7 +29,6 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { BrandLockup } from './BrandLockup';
-import { XP_ICON } from '../constants';
 import { useBalanceFeedback } from '../src/ui/feedback/useBalanceFeedback';
 import { useUnreadActivityCount } from '../src/lib/activity/useActivity';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -115,7 +113,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
   const headerRef = useRef<HTMLElement | null>(null);
   const gamesMenuRef = useRef<HTMLDivElement | null>(null);
   const rewardsMenuRef = useRef<HTMLDivElement | null>(null);
-  const targetXp = useMemo(() => Math.floor(user.xpBalance ?? user.xp ?? 0), [user.xp, user.xpBalance]);
   const resolvedDisplayName = useMemo(() => (authInitialized ? resolveUserDisplayName(user) : ''), [authInitialized, user]);
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const unreadCount = useUnreadActivityCount();
@@ -494,10 +491,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
             ) : isAuthenticated ? (
               <>
                 <div className="hidden items-center gap-2 lg:flex xl:gap-3">
-                  <div className="flex h-11 min-w-[88px] xl:min-w-[112px] items-center justify-center gap-2 rounded-[12px] border border-[#263046]/80 bg-[#0c121e]/72 px-4">
-                    <img src={XP_ICON} alt="XP" className="h-5 w-5 object-contain" width={24} height={24} />
-                    <span className="min-w-[38px] text-[14px] xl:min-w-[48px] xl:text-[15px] font-semibold tabular-nums text-white"><AnimatedNumber value={targetXp} /></span>
-                  </div>
                   <div className={`relative min-w-[126px] xl:min-w-[142px] shrink-0 overflow-hidden rounded-[12px] border border-[#263046]/80 bg-[#0c121e]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === 'up' ? 'ring-1 ring-emerald-400/35' : balanceTone === 'down' ? 'ring-1 ring-red-400/35' : ''}`}>
                     <span
                       aria-hidden="true"
@@ -599,10 +592,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
             {authInitialized && isAuthenticated && (
               <div className="flex min-h-[40px] min-w-0 items-center gap-1.5 lg:hidden">
-                <div className="flex h-9 min-w-[58px] items-center gap-1 rounded-xl border border-amber-300/15 bg-white/[0.045] px-2 py-1.5 sm:min-w-[70px] sm:gap-1.5 sm:px-2.5">
-                  <img src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" width={16} height={16} />
-                  <span className="min-w-[24px] text-xs font-bold tabular-nums text-white sm:min-w-[30px] sm:text-sm"><AnimatedNumber value={targetXp} /></span>
-                </div>
                 <div className="relative min-w-[110px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] sm:min-w-[126px]">
                   <span
                     aria-hidden="true"
