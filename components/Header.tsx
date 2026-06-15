@@ -23,7 +23,8 @@ import {
   Twitter,
   User as UserIcon,
   Users,
-  X
+  X,
+  Menu
 } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -68,6 +69,9 @@ const desktopMenuItemClass =
 
 const utilityButtonClass =
   'relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60';
+
+const mobileMenuButtonClass =
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 active:scale-[0.98] lg:hidden';
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -379,6 +383,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     setOpenMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }, []);
 
+  const toggleMobileMenu = useCallback(() => {
+    playSound('click');
+    setIsMobileMenuOpen((prev) => !prev);
+  }, [playSound]);
+
   const dismissFreeBoxTooltip = useCallback(() => {
     if (typeof window !== 'undefined') {
       window.sessionStorage.setItem('pullz:free-box-tooltip-dismissed', '1');
@@ -588,6 +597,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                   <LogIn className="h-4 w-4" />
                 </button>
                 {startPullingButton}
+                <button
+                  type="button"
+                  onClick={toggleMobileMenu}
+                  className={mobileMenuButtonClass}
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="mobile-navigation-menu"
+                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                  {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
               </div>
             )}
 
@@ -610,6 +629,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                     </button>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={toggleMobileMenu}
+                  className={mobileMenuButtonClass}
+                  aria-expanded={isMobileMenuOpen}
+                  aria-controls="mobile-navigation-menu"
+                  aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+                >
+                  {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
               </div>
             )}
 
@@ -621,18 +650,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
       <button
         type="button"
         onClick={() => setIsMobileMenuOpen(false)}
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
       <div
-        className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
           isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
+        id="mobile-navigation-menu"
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation menu"
