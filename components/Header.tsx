@@ -91,6 +91,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     setView,
     isAuthenticated,
     openAuthModal,
+    showTopUpModal,
     setShowTopUpModal,
     logout,
     boxes
@@ -162,10 +163,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     };
   }, [isGamesMenuOpen, isRewardsMenuOpen]);
 
+
+  useEffect(() => {
+    if (!showTopUpModal) return;
+    setIsMobileMenuOpen(false);
+    setIsGamesMenuOpen(false);
+    setIsRewardsMenuOpen(false);
+  }, [showTopUpModal]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
     const openMobileMenu = () => {
+      if (showTopUpModal) return;
       setIsMobileMenuOpen(true);
     };
 
@@ -174,6 +184,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     };
 
     const toggleMobileMenu = () => {
+      if (showTopUpModal) return;
       setIsMobileMenuOpen((prev) => !prev);
     };
 
@@ -193,16 +204,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
       window.removeEventListener('pullz:toggle-mobile-menu', toggleMobileMenu);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [showTopUpModal]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
 
-    window.dispatchEvent(new CustomEvent('pullz:mobile-menu-state', { detail: { isOpen: isMobileMenuOpen } }));
-    if (!isMobileMenuOpen) return undefined;
+    const effectiveMobileMenuOpen = isMobileMenuOpen && !showTopUpModal;
+    window.dispatchEvent(new CustomEvent('pullz:mobile-menu-state', { detail: { isOpen: effectiveMobileMenuOpen } }));
+    if (!effectiveMobileMenuOpen) return undefined;
 
     return lockPageScroll({ preserveScrollPosition: true });
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, showTopUpModal]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -324,6 +336,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
 
   const openTopUp = useCallback(() => {
     playSound('click');
+    setIsMobileMenuOpen(false);
+    setIsGamesMenuOpen(false);
+    setIsRewardsMenuOpen(false);
     setShowTopUpModal(true);
   }, [playSound, setShowTopUpModal]);
 
@@ -409,11 +424,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 ref={gamesMenuRef}
                 className="relative"
                 onMouseEnter={() => {
+                  if (showTopUpModal) return;
                   setIsGamesMenuOpen(true);
                   setIsRewardsMenuOpen(false);
                 }}
                 onMouseLeave={() => setIsGamesMenuOpen(false)}
                 onFocusCapture={() => {
+                  if (showTopUpModal) return;
                   setIsGamesMenuOpen(true);
                   setIsRewardsMenuOpen(false);
                 }}
@@ -421,18 +438,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 <button
                   type="button"
                   onClick={() => {
+                    if (showTopUpModal) return;
                     setIsGamesMenuOpen(true);
                     setIsRewardsMenuOpen(false);
                   }}
                   className={activeDesktopSection === 'games' ? desktopActiveNavButtonClass : desktopNavButtonClass}
-                  aria-expanded={isGamesMenuOpen}
+                  aria-expanded={isGamesMenuOpen && !showTopUpModal}
                   aria-haspopup="menu"
                 >
                   Games
                 </button>
                 <div
                   className={`${desktopMenuPanelClass} w-48 ${
-                    isGamesMenuOpen ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'
+                    isGamesMenuOpen && !showTopUpModal ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'
                   }`}
                   role="menu"
                 >
@@ -450,24 +468,27 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
                 ref={rewardsMenuRef}
                 className="relative"
                 onMouseEnter={() => {
+                  if (showTopUpModal) return;
                   setIsRewardsMenuOpen(true);
                   setIsGamesMenuOpen(false);
                 }}
                 onMouseLeave={() => setIsRewardsMenuOpen(false)}
                 onFocusCapture={() => {
+                  if (showTopUpModal) return;
                   setIsRewardsMenuOpen(true);
                   setIsGamesMenuOpen(false);
                 }}
               >
                 <button type="button" onClick={() => {
+                  if (showTopUpModal) return;
                   setIsRewardsMenuOpen(true);
                   setIsGamesMenuOpen(false);
-                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen} aria-haspopup="menu">
+                }} className={rewardsDesktopTabClass} aria-expanded={isRewardsMenuOpen && !showTopUpModal} aria-haspopup="menu">
                   {showDailySpinReady ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]" /> : null}
                   <span className="relative z-10">Rewards</span>
                   {questReadyCount > 0 ? <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">{questReadyCount}</span> : null}
                 </button>
-                <div className={`${desktopMenuPanelClass} w-56 ${isRewardsMenuOpen ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'}`} role="menu">
+                <div className={`${desktopMenuPanelClass} w-56 ${isRewardsMenuOpen && !showTopUpModal ? 'visible translate-y-0 opacity-100 pointer-events-auto' : 'invisible -translate-y-1 opacity-0 pointer-events-none'}`} role="menu">
                   <button type="button" onClick={() => navigate('BONUSES')} className={dailySpinDesktopClass} role="menuitem">
                     <RefreshCw className="h-4 w-4 text-blue-500" />
                     Daily Spin
@@ -638,7 +659,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         onClick={() => setIsMobileMenuOpen(false)}
         className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
-        } ${isMobileMenuOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+        } ${isMobileMenuOpen && !showTopUpModal ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-label="Close menu overlay"
       />
 
@@ -646,7 +667,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
         className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
           isSticky ? 'top-[var(--pullz-header-height)]' : 'top-0'
         } ${
-          isMobileMenuOpen ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
+          isMobileMenuOpen && !showTopUpModal ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-full opacity-0'
         }`}
         role="dialog"
         aria-modal="true"
