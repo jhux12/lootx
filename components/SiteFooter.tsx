@@ -2,6 +2,8 @@ import React from 'react';
 import { BrandLockup } from './BrandLockup';
 import { AtSign, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useGame } from '../context/GameContext';
+import { PaymentMethodIcons } from './PaymentMethodIcons';
+
 
 const socialLinks = [
   {
@@ -32,6 +34,7 @@ export const SiteFooter: React.FC = () => {
   return (
     <footer className="mt-20 border-t border-cyan-400/15 bg-transparent py-10 text-sm text-slate-300">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
+        <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <BrandLockup
             className="justify-start"

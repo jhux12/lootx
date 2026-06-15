@@ -5,6 +5,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
+import { PaymentMethodIcons } from './PaymentMethodIcons';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
@@ -403,6 +404,7 @@ export const TopUpModal: React.FC = () => {
                     )}
                   </button>
                   <p className="mt-2 text-center text-[11px] text-white/60">Secure checkout • Instant delivery</p>
+                  <PaymentMethodIcons className="mt-2 gap-1.5 opacity-85" iconClassName="h-3.5 sm:h-4" />
                 </div>
             </>
         )}
