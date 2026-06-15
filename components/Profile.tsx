@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, ChevronDown, Coins, Copy, CreditCard, Info, PackageCheck, Truck, X } from 'lucide-react';
+import { Check, ChevronDown, Coins, Copy, CreditCard, Info, PackageCheck, Plus, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -456,6 +456,12 @@ export const Profile: React.FC = () => {
     setShowShippingReview(true);
   };
 
+  const handleAddMoreShipmentItems = () => {
+    setShowShippingRateTooltip(false);
+    setShowShippingReview(false);
+    setActiveTab('inventory');
+  };
+
   const handleSaveAddress = async () => {
     setIsSavingAddress(true);
     try {
@@ -794,6 +800,14 @@ export const Profile: React.FC = () => {
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141821]/90">
               <div className="px-3 py-3 sm:px-4" aria-label={`${selectedShipmentItems.length} shipment items selected`}>
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <button
+                    type="button"
+                    aria-label="Go back to inventory to add more shipment items"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed border-blue-300/45 bg-blue-500/5 text-blue-100 transition hover:border-blue-200/70 hover:bg-blue-500/15 focus:outline-none focus:ring-2 focus:ring-blue-300/60 sm:h-14 sm:w-14"
+                    onClick={handleAddMoreShipmentItems}
+                  >
+                    <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
+                  </button>
                   {shipmentPreviewItems.map((item) => (
                     <div
                       key={item.instanceId}

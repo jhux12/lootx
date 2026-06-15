@@ -65,8 +65,8 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
-      <div className="mb-3 aspect-square rounded-xl bg-[#2a323b] p-3">
-        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" width={220} height={220} />
+      <div className="mb-3 aspect-square rounded-xl bg-transparent p-2 sm:p-3">
+        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain" width={220} height={220} showPlaceholder={false} />
       </div>
       <p className="line-clamp-1 text-sm font-semibold text-white">{item.name}</p>
       <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 text-sm font-bold text-gray-100" iconClassName="h-4 w-4" />
