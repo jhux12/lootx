@@ -271,7 +271,7 @@ export const TopUpModal: React.FC = () => {
         onClick={handleClose}
       ></div>
       
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[380px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[18px]">
+      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[390px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[min(680px,calc(100dvh-2rem))] sm:rounded-[18px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -281,13 +281,13 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="flex items-start justify-between border-b border-white/10 px-5 py-5">
+                <div className="flex items-start justify-between border-b border-white/10 px-4 py-3.5 sm:px-5">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
                         <Wallet className="h-5 w-5 text-amber-300" />
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-white">Add Coins</h2>
+                        <h2 className="text-lg font-semibold text-white">Add Coins</h2>
                         <p className="mt-1 text-xs text-slate-400">Select a coin package</p>
                       </div>
                     </div>
@@ -299,7 +299,7 @@ export const TopUpModal: React.FC = () => {
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 [-webkit-overflow-scrolling:touch]">
+                <div className="flex-1 min-h-0 px-4 py-3 sm:px-5">
                     {isPostFreeBoxFlow && (
                       <p className="mb-3 rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
                         Covers your first box + extra spins
@@ -314,7 +314,7 @@ export const TopUpModal: React.FC = () => {
                           autoSelectAppliedRef.current = false;
                           playSound('click');
                         }}
-                        className={`mb-4 flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition-all sm:px-4 ${
+                        className={`mb-3 flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
                           showFirstDepositPackages
                             ? 'border-amber-300/60 bg-[linear-gradient(135deg,rgba(247,183,51,0.22),rgba(124,92,255,0.18))] shadow-[0_0_24px_rgba(247,183,51,0.16)]'
                             : 'border-white/10 bg-white/[0.04] hover:border-amber-300/35 hover:bg-white/[0.07]'
@@ -336,8 +336,9 @@ export const TopUpModal: React.FC = () => {
                       </button>
                     )}
                     {/* Amount Selector */}
-                    <label className="mb-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
-                    <div className="mb-4 flex flex-col gap-3">
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
+                    <div className="mb-3 max-h-[min(44dvh,320px)] overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+                    <div className="flex flex-col gap-2.5">
                         {displayedPackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             {showFirstDepositPackages ? 'No first-time deposit packages available right now.' : 'No packages available right now.'}
@@ -356,7 +357,7 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
+                                  className={`relative flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
                                     ${isSelected ? 'scale-[1.02] border-[#7C5CFF] shadow-[0_0_12px_rgba(124,92,255,0.4)]' : 'border-white/10'}`}
                               >
                                   {badgeText && (
@@ -376,6 +377,7 @@ export const TopUpModal: React.FC = () => {
                           })
                         )}
                     </div>
+                    </div>
 
                     {errorMessage && (
                       <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
@@ -384,11 +386,11 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-5">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || !selectedPackage}
-                    className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>
@@ -400,7 +402,7 @@ export const TopUpModal: React.FC = () => {
                       </span>
                     )}
                   </button>
-                  <p className="mt-3 text-center text-xs text-white/60">Secure checkout • Instant delivery</p>
+                  <p className="mt-2 text-center text-[11px] text-white/60">Secure checkout • Instant delivery</p>
                 </div>
             </>
         )}

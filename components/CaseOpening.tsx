@@ -1960,12 +1960,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     setShowXpConfirmSheet(true);
                   }}
                   disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                  className="inline-flex min-h-9 items-center rounded-md p-[1.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60"
-                  style={{ background: `conic-gradient(from -90deg, rgba(34, 211, 238, 0.9) ${xpProgress * 360}deg, rgba(255, 255, 255, 0.18) ${xpProgress * 360}deg 360deg)` }}
+                  className={`relative inline-flex min-h-9 items-center overflow-hidden rounded-md p-[1.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60 ${canOpenWithXp ? 'shadow-[0_0_18px_rgba(34,211,238,0.28)] ring-1 ring-cyan-200/30' : ''}`}
+                  style={{ background: canOpenWithXp ? 'linear-gradient(135deg, rgba(103, 232, 249, 0.95), rgba(255, 255, 255, 0.28), rgba(34, 211, 238, 0.95))' : `conic-gradient(from -90deg, rgba(34, 211, 238, 0.9) ${xpProgress * 360}deg, rgba(255, 255, 255, 0.18) ${xpProgress * 360}deg 360deg)` }}
                   aria-label={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                   title={`Open with XP: ${currentXpBalance.toLocaleString()} / ${xpCostForCoinCase.toLocaleString()}`}
                 >
-                  <span className={`inline-flex min-h-[32px] items-center rounded-[5px] px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap sm:text-xs ${canOpenWithXp ? 'bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15' : 'bg-black/35 text-gray-200'}`}>
+                  {canOpenWithXp ? (
+                    <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(255,255,255,0.45)_50%,transparent_82%)] motion-safe:animate-[pulse_2.4s_ease-in-out_infinite]" />
+                  ) : null}
+                  <span className={`relative inline-flex min-h-[32px] items-center rounded-[5px] px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap sm:text-xs ${canOpenWithXp ? 'bg-[#071018]/95 text-cyan-50 hover:bg-[#0a1721]' : 'bg-black/35 text-gray-200'}`}>
                     XP
                   </span>
                 </button>
