@@ -14,34 +14,34 @@ type HomeReplicaBelowFoldProps = {
 
 const faqs = [
   {
-    id: 'what-is-pullz',
-    question: 'What is Pullz.gg?',
-    answer: 'Pullz.gg is a social unboxing game where you open virtual boxes, collect item skins, and use coins to play modes like upgrades and battles.'
+    id: 'how-pullz-works',
+    question: 'How does Pullz.gg work?',
+    answer: 'Choose a box, open it instantly, and reveal a random collectible. Keep your item and ship it to your door, or sell it back for coins to continue opening boxes.'
   },
   {
-    id: 'how-to-deposit',
-    question: 'How do I deposit?',
-    answer: 'Sign in, open the Top Up page, choose a coin package, and complete checkout. Your coins are added automatically once payment is confirmed.'
+    id: 'real-cards',
+    question: 'Are these real cards?',
+    answer: 'Yes. All cards and collectibles featured on Pullz.gg are authentic physical items that can be shipped directly to you.'
   },
   {
-    id: 'fair-and-safe',
-    question: 'Is Pullz.gg fair and safe?',
-    answer: 'Yes. Pullz.gg uses provably fair systems so outcomes can be verified. Always protect your account with a strong password and secure email.'
+    id: 'shipping',
+    question: 'How does shipping work?',
+    answer: "Add items from your inventory to a shipment request, and we'll carefully package and ship them with tracking information once processed."
   },
   {
-    id: 'open-box',
-    question: 'How do I open a box?',
-    answer: 'Browse Available Boxes, pick one you like, and press Open. The result is revealed instantly and the item appears in your inventory.'
+    id: 'sell-items-back',
+    question: 'Can I sell items back?',
+    answer: "Yes. If you don't want to ship an item, you can instantly sell it back for coins and use those coins to open more boxes."
   },
   {
-    id: 'cash-out-ship',
-    question: 'How do I cash out or ship?',
-    answer: 'Open your inventory/profile and choose withdraw or shipping options when eligible. Requirements can depend on account and regional rules.'
+    id: 'random-results',
+    question: 'Are the box results random?',
+    answer: 'Yes. Pullz.gg uses a provably fair system so box outcomes cannot be manipulated. You can verify each result using the provided fairness information.'
   },
   {
-    id: 'contact-support',
-    question: 'How can I contact support?',
-    answer: 'Use the support/contact option in the app and include your username plus relevant transaction details so the team can help faster.'
+    id: 'what-can-i-win',
+    question: 'What can I win?',
+    answer: 'Boxes may contain Pokémon cards, graded cards, sealed products, collectibles, and other featured items depending on the box you choose.'
   }
 ];
 
@@ -247,11 +247,11 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                 <button
                   type="button"
                   onClick={() => setOpenFaqId((prev) => (prev === faq.id ? null : faq.id))}
-                  className="flex min-h-[52px] w-full items-center justify-between gap-3 px-4 py-4 text-left text-sm font-bold sm:text-base"
+                  className="flex min-h-[52px] w-full items-start justify-between gap-3 px-4 py-4 text-left text-sm font-bold sm:items-center sm:text-base"
                   aria-expanded={isOpen}
                 >
-                  <span>{faq.question}</span>
-                  <span className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
+                  <span className="min-w-0 flex-1 leading-6">{faq.question}</span>
+                  <span className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>⌄</span>
                 </button>
                 {isOpen && <p className="border-t border-white/10 px-4 py-4 text-sm leading-6 text-slate-300">{faq.answer}</p>}
               </div>
