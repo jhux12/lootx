@@ -2314,7 +2314,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     <button
                       type="button"
                       onClick={() => setIsWinImageZoomed((zoomed) => !zoomed)}
-                      className="relative z-10 mx-auto rounded-2xl p-2 transition-transform duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-black/40 active:scale-[0.98]"
+                      className="relative z-10 mx-auto touch-manipulation appearance-none rounded-2xl bg-transparent p-0 transition-transform duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 active:scale-[0.98]"
                       aria-label={isWinImageZoomed ? `Shrink ${wonItem.name} image` : `Zoom ${wonItem.name} image`}
                       aria-pressed={isWinImageZoomed}
                     >
@@ -2559,7 +2559,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 <button
                   type="button"
                   onClick={() => setIsItemImageZoomed((zoomed) => !zoomed)}
-                  className="relative z-10 rounded-2xl p-2 transition-transform duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-black/40 active:scale-[0.98]"
+                  className="relative z-10 touch-manipulation appearance-none rounded-2xl bg-transparent p-0 transition-transform duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 active:scale-[0.98]"
                   aria-label={isItemImageZoomed ? `Shrink ${selectedCaseItem.name} image` : `Zoom ${selectedCaseItem.name} image`}
                   aria-pressed={isItemImageZoomed}
                 >
