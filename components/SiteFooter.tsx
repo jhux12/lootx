@@ -2,26 +2,8 @@ import React from 'react';
 import { BrandLockup } from './BrandLockup';
 import { AtSign, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useGame } from '../context/GameContext';
-import applePayIcon from '../assets/svgicons/Size=lg, Payment method=ApplePay.png';
-import discoverIcon from '../assets/svgicons/Size=lg, Payment method=Discover.png';
-import googlePayIcon from '../assets/svgicons/Size=lg, Payment method=GooglePay.png';
-import klarnaIcon from '../assets/svgicons/Size=lg, Payment method=Klarna.png';
-import mastercardIcon from '../assets/svgicons/Size=lg, Payment method=Mastercard.png';
-import shopPayIcon from '../assets/svgicons/Size=lg, Payment method=Shop Pay.png';
-import stripeIcon from '../assets/svgicons/Size=lg, Payment method=Stripe.png';
-import visaIcon from '../assets/svgicons/Size=lg, Payment method=Visa.png';
+import { PaymentMethodIcons } from './PaymentMethodIcons';
 
-
-const paymentMethods = [
-  { src: visaIcon, label: 'Visa' },
-  { src: mastercardIcon, label: 'Mastercard' },
-  { src: applePayIcon, label: 'Apple Pay' },
-  { src: googlePayIcon, label: 'Google Pay' },
-  { src: shopPayIcon, label: 'Shop Pay' },
-  { src: discoverIcon, label: 'Discover' },
-  { src: stripeIcon, label: 'Stripe' },
-  { src: klarnaIcon, label: 'Klarna' }
-];
 
 const socialLinks = [
   {
@@ -52,30 +34,7 @@ export const SiteFooter: React.FC = () => {
   return (
     <footer className="mt-20 border-t border-cyan-400/15 bg-transparent py-10 text-sm text-slate-300">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
-        <section
-          className="rounded-[1.75rem] border border-white/10 bg-white/[0.035] p-4 shadow-[0_18px_60px_rgba(8,13,20,0.18)] backdrop-blur-sm sm:p-5"
-          aria-labelledby="accepted-payments-heading"
-        >
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 id="accepted-payments-heading" className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/80">
-                Accepted payments
-              </h2>
-              <p className="mt-1 text-xs text-slate-400 sm:text-sm">Fast, secure checkout options for every device.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-4 sm:flex sm:flex-wrap sm:justify-end" aria-label="Accepted payment methods">
-              {paymentMethods.map(({ src, label }) => (
-                <div
-                  key={label}
-                  className="flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white px-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/30 hover:shadow-cyan-950/20 sm:h-11 sm:min-w-[5.35rem]"
-                  title={label}
-                >
-                  <img src={src} alt={label} className="max-h-5 w-auto object-contain" loading="lazy" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
           <BrandLockup
             className="justify-start"
