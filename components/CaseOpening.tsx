@@ -385,6 +385,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [itemModalActive, setItemModalActive] = useState(false);
+  const [isItemImageZoomed, setIsItemImageZoomed] = useState(false);
+  const [isWinImageZoomed, setIsWinImageZoomed] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
@@ -714,6 +716,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   useEffect(() => {
     if (!selectedCaseItem) {
       setItemModalActive(false);
+      setIsItemImageZoomed(false);
       setAnimatedModalCoins(0);
       if (itemModalRevealFrameRef.current) {
         window.cancelAnimationFrame(itemModalRevealFrameRef.current);
@@ -727,6 +730,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     }
 
     setItemModalActive(false);
+    setIsItemImageZoomed(false);
     setAnimatedModalCoins(0);
     itemModalRevealFrameRef.current = window.requestAnimationFrame(() => {
       setItemModalActive(true);
@@ -1746,6 +1750,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
   const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
     setIsSellingItem(false);
+    setIsWinImageZoomed(false);
     if (!rewardResolved) {
       setRewardResolved(true);
     }
@@ -2295,7 +2300,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
                   style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
                 >
-                  <div className="win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4">
+                  <div className={`win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4 transition-all duration-300 ${isWinImageZoomed ? 'py-6 sm:py-8' : ''}`}>
                     <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
                     <button
                       type="button"
@@ -2306,21 +2311,33 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                     >
                       <ShieldCheck className="h-4 w-4" />
                     </button>
-                    <img
-                      src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
-                      alt={wonItem.name}
-                      className="relative z-10 mb-3 mx-auto h-32 w-32 shrink-0 object-contain sm:h-36 sm:w-36"
-                      loading="eager"
-                      decoding="async"
-                      draggable={false}
-                    />
-                    <h4 className="relative z-10 text-lg font-bold text-white">{wonItem.name}</h4>
-                    <CoinAmount
-                      amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                      formatOptions={{ maximumFractionDigits: 0 }}
-                      className="relative z-10 mt-2 font-semibold text-gray-200"
-                      iconClassName="w-4 h-4"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsWinImageZoomed((zoomed) => !zoomed)}
+                      className="relative z-10 mx-auto rounded-2xl p-2 transition-transform duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-black/40 active:scale-[0.98]"
+                      aria-label={isWinImageZoomed ? `Shrink ${wonItem.name} image` : `Zoom ${wonItem.name} image`}
+                      aria-pressed={isWinImageZoomed}
+                    >
+                      <img
+                        src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
+                        alt={wonItem.name}
+                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-56 w-56 sm:h-72 sm:w-72' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
+                        loading="eager"
+                        decoding="async"
+                        draggable={false}
+                      />
+                    </button>
+                    <div className={`relative z-10 grid transition-all duration-300 ease-out ${isWinImageZoomed ? 'mt-0 grid-rows-[0fr] opacity-0' : 'mt-1 grid-rows-[1fr] opacity-100'}`} aria-hidden={isWinImageZoomed}>
+                      <div className="min-h-0 overflow-hidden">
+                        <h4 className="text-lg font-bold text-white">{wonItem.name}</h4>
+                        <CoinAmount
+                          amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="mt-2 font-semibold text-gray-200"
+                          iconClassName="w-4 h-4"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2527,7 +2544,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
 
         {selectedCaseItem && (
             <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}>
-              <div className="item-modal-hero relative flex h-64 sm:h-72 items-center justify-center overflow-hidden px-3" style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
+              <div className={`item-modal-hero relative flex items-center justify-center overflow-hidden px-3 transition-[height] duration-300 ${isItemImageZoomed ? 'h-[22rem] sm:h-[26rem]' : 'h-64 sm:h-72'}`} style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
                 <div className={`item-modal-rarity-bg item-modal-rarity-bg--${String(selectedCaseItem.rarity ?? 'common').toLowerCase().replace(/\s+/g, '-')} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
                 <div className={`item-modal-rarity-glow ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" style={{ background: `radial-gradient(circle at center, ${selectedCaseItem.color}55 0%, transparent 70%)` }} />
                 <button
@@ -2539,9 +2556,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className="item-modal-image relative z-10 h-48 w-48 object-contain drop-shadow-2xl sm:h-56 sm:w-56" />
+                <button
+                  type="button"
+                  onClick={() => setIsItemImageZoomed((zoomed) => !zoomed)}
+                  className="relative z-10 rounded-2xl p-2 transition-transform duration-300 ease-out focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-black/40 active:scale-[0.98]"
+                  aria-label={isItemImageZoomed ? `Shrink ${selectedCaseItem.name} image` : `Zoom ${selectedCaseItem.name} image`}
+                  aria-pressed={isItemImageZoomed}
+                >
+                  <img src={selectedCaseItem.image} alt={selectedCaseItem.name} className={`item-modal-image h-48 w-48 object-contain drop-shadow-2xl sm:h-56 sm:w-56 ${isItemImageZoomed ? 'is-zoomed' : ''}`} />
+                </button>
               </div>
-              <div className="space-y-5 px-5 py-6 sm:px-6">
+              <div className={`grid transition-all duration-300 ease-out ${isItemImageZoomed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}`} aria-hidden={isItemImageZoomed}>
+                <div className="min-h-0 overflow-hidden space-y-5 px-5 py-6 sm:px-6">
                 <div className="text-center">
                   <h3 id="item-details-title" className="text-balance text-xl font-bold text-white sm:text-2xl">{selectedCaseItem.name}</h3>
                   <div className="mt-2">
@@ -2561,6 +2587,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                   </div>
                 </div>
                 <button type="button" onClick={() => setSelectedCaseItem(null)} className="h-12 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">Close</button>
+                </div>
               </div>
             </div>
           )}
@@ -2658,6 +2685,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
           }
           .modal-container.active .item-modal-image {
             transform: scale(1);
+          }
+          .modal-container.active .item-modal-image.is-zoomed {
+            transform: scale(1.35);
+          }
+          @media (max-width: 640px) {
+            .modal-container.active .item-modal-image.is-zoomed {
+              transform: scale(1.22);
+            }
           }
           .item-modal-rarity-bg,
           .item-modal-rarity-glow {
