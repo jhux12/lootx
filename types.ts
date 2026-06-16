@@ -41,6 +41,7 @@ export interface User {
   shippingAddress?: ShippingAddress;
   inventory?: InventoryItem[];
   isAdmin?: boolean;
+  testSpinsEnabled?: boolean;
   termsFlagged?: boolean;
   status?: UserStatus;
   locks?: UserLocks;
