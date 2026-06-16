@@ -135,8 +135,11 @@
         left: 0 !important;
         right: 0 !important;
         top: auto !important;
-        bottom: 0 !important;
+        bottom: var(--pullz-mobile-bottom-nav-bottom, 0px) !important;
         width: 100%;
+        margin: 0 !important;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {

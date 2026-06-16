@@ -1405,6 +1405,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     let rollNonce = nonce;
     let rollServerHash = serverSeedHash;
     let rollClientSeed = clientSeed;
+    let isTestSpin = false;
 
     if (isDemo) {
       winner = getDemoWinningItem(rollValue);
@@ -1442,6 +1443,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
             roll: number;
             rollHash: string;
             message: string;
+            testSpin?: boolean;
           };
         }>('/api/open-case', {
           method: 'POST',
@@ -1520,6 +1522,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
         rollNonce = data.provablyFair.nonce;
         rollServerHash = data.provablyFair.serverSeedHash;
         rollClientSeed = data.provablyFair.clientSeed;
+        isTestSpin = data.provablyFair.testSpin === true;
 
         setServerSeedHash(data.provablyFair.serverSeedHash);
         setClientSeed(data.provablyFair.clientSeed);
@@ -1591,7 +1594,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
     const isGoldEligible = winner.rarity === 'legendary';
     const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
     const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
+    const triggerGold = !isTestSpin && ((forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5));
 
     if (triggerGold) {
         // --- GOLD SPIN FLOW ---
