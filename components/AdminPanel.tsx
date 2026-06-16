@@ -2318,9 +2318,7 @@ export const AdminPanel: React.FC = () => {
 
   const handleTestSpinsToggle = (targetUserId: string) => {
       const targetUser = users.find((profile) => profile.id === targetUserId);
-      if (targetUser?.isAdmin !== true) return;
-
-      const previousEnabled = targetUser.testSpinsEnabled === true;
+      const previousEnabled = targetUser?.testSpinsEnabled === true;
       const nextEnabled = !previousEnabled;
       void updateUserAdminData(targetUserId, { testSpinsEnabled: nextEnabled });
       logAdminAction(
@@ -4786,8 +4784,7 @@ export const AdminPanel: React.FC = () => {
                                                         <span className="mt-1 block text-xs leading-5 text-gray-400">Removes this account from public leaderboards and live public win displays. Use for test, staff, or privacy-sensitive accounts.</span>
                                                     </span>
                                                 </label>
-                                                {selectedUser.isAdmin === true && (
-                                                    <label className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100 sm:flex-row sm:items-start">
+                                                <label className="flex flex-col gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100 sm:flex-row sm:items-start">
                                                         <Checkbox
                                                             checked={selectedUser.testSpinsEnabled === true}
                                                             onChange={() => handleTestSpinsToggle(selectedUser.id)}
@@ -4795,10 +4792,9 @@ export const AdminPanel: React.FC = () => {
                                                         />
                                                         <span className="min-w-0">
                                                             <span className="block font-semibold text-white">Enable legendary test spins</span>
-                                                            <span className="mt-1 block text-xs leading-5 text-amber-100/80">Admin-only test mode: while enabled, this admin account's case spinner will resolve to legendary prizes when the opened case has legendary items.</span>
+                                                            <span className="mt-1 block text-xs leading-5 text-amber-100/80">Test mode: while enabled, this account's case spinner will resolve to legendary prizes when the opened case has legendary items.</span>
                                                         </span>
-                                                    </label>
-                                                )}
+                                                </label>
                                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                                     {Object.entries(LOCK_LABELS).map(([key, label]) => {
                                                         const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];

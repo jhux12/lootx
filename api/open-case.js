@@ -253,7 +253,7 @@ export default async function handler(req, res) {
       }
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
-      const testSpinsEnabled = decoded.admin === true && userData.testSpinsEnabled === true;
+      const testSpinsEnabled = userData.testSpinsEnabled === true;
       const testSpinPrize = testSpinsEnabled ? pickLegendaryPrize(prizes, roll) : null;
       const prize = testSpinPrize ?? pickPrizeByWeight(prizes, roll);
       const prizeForcesFullSellBack = prize?.forceFullSellBack === true;
