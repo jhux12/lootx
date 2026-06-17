@@ -41,6 +41,15 @@ const fail = (status, error, message, details = {}) => {
   throw { status, error, message, ...details };
 };
 
+
+const isLegendaryPrize = (prize) => String(prize?.rarity ?? '').toLowerCase().includes('legend');
+
+const pickLegendaryPrize = (prizes, roll) => {
+  const legendaryPrizes = prizes.filter(isLegendaryPrize);
+  if (!legendaryPrizes.length) return null;
+  return pickPrizeByWeight(legendaryPrizes, roll);
+};
+
 function sanitizeForFirestore(obj) {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined)
@@ -307,7 +316,9 @@ export default async function handler(req, res) {
       }
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
-      const prize = pickPrizeByWeight(prizes, roll);
+      const testSpinsEnabled = userData.testSpinsEnabled === true;
+      const testSpinPrize = testSpinsEnabled ? pickLegendaryPrize(prizes, roll) : null;
+      const prize = testSpinPrize ?? pickPrizeByWeight(prizes, roll);
       const prizeForcesFullSellBack = prize?.forceFullSellBack === true;
       const appliedSellBackRate = isFree || prizeForcesFullSellBack ? 1 : sellBackRate;
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
@@ -485,7 +496,8 @@ export default async function handler(req, res) {
         obtainedAt,
         sellBackRate: appliedSellBackRate,
         redeemable: prize.redeemable ?? true,
-        forceFullSellBack: prizeForcesFullSellBack
+        forceFullSellBack: prizeForcesFullSellBack,
+        testSpin: testSpinsEnabled
       };
       if (selectedSize) {
         inventoryPayload.size = selectedSize;
@@ -540,7 +552,8 @@ export default async function handler(req, res) {
           serverSeedHash,
           clientSeed,
           nonce,
-          roll
+          roll,
+          testSpin: testSpinsEnabled
         }
       };
       transaction.set(openRef, openPayload);
@@ -606,7 +619,8 @@ export default async function handler(req, res) {
           nonce,
           roll,
           rollHash,
-          message
+          message,
+          testSpin: testSpinsEnabled
         }
       };
 

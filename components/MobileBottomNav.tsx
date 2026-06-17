@@ -49,9 +49,29 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
+    let rafId = 0;
+
+    const syncBottomAnchor = () => {
+      if (typeof window === 'undefined' || rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        root.style.setProperty('--pullz-mobile-viewport-height', `${Math.round(window.innerHeight)}px`);
+      });
+    };
+
     root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
+    syncBottomAnchor();
+    window.addEventListener('resize', syncBottomAnchor, { passive: true });
+    window.visualViewport?.addEventListener('resize', syncBottomAnchor, { passive: true });
+    window.visualViewport?.addEventListener('scroll', syncBottomAnchor, { passive: true });
+
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', syncBottomAnchor);
+      window.visualViewport?.removeEventListener('resize', syncBottomAnchor);
+      window.visualViewport?.removeEventListener('scroll', syncBottomAnchor);
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
+      root.style.removeProperty('--pullz-mobile-viewport-height');
     };
   }, []);
 

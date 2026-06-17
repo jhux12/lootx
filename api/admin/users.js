@@ -40,6 +40,7 @@ export default async function handler(req, res) {
         photoURL: entry.photoURL ?? '',
         provider: primaryProvider ?? undefined,
         disabled: entry.disabled === true,
+        customClaims: entry.customClaims ?? {},
         createdAt: entry.metadata?.creationTime ? Date.parse(entry.metadata.creationTime) : undefined,
         firestoreData: firestoreUsersById.get(entry.uid) ?? {}
       };

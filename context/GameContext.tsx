@@ -1003,6 +1003,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: false,
+    testSpinsEnabled: data.testSpinsEnabled === true,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -1075,6 +1076,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     followers: followerIds,
     shippingAddress: data.shippingAddress,
     isAdmin: false,
+    testSpinsEnabled: data.testSpinsEnabled === true,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
     locks: data.locks ?? DEFAULT_LOCKS,
@@ -1098,6 +1100,7 @@ type AdminDirectoryUserRecord = {
   photoURL?: string;
   provider?: string;
   disabled?: boolean;
+  customClaims?: Record<string, any>;
   createdAt?: number;
   firestoreData?: Record<string, any>;
 };
@@ -1119,7 +1122,8 @@ const buildUserProfileFromAdminDirectory = (record: AdminDirectoryUserRecord) =>
     avatar: fallbackAvatar,
     provider: data.provider ?? record.provider,
     createdAt: data.createdAt ?? record.createdAt ?? Date.now(),
-    status: data.status ?? (record.disabled ? 'suspended' : 'active')
+    status: data.status ?? (record.disabled ? 'suspended' : 'active'),
+    isAdmin: data.isAdmin === true || record.customClaims?.admin === true
   });
 
   return {
