@@ -735,35 +735,6 @@ const AppShell = () => {
   const previousNavigationScrollKey = useRef(navigationScrollKey);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
-    let rafId = 0;
-    let lastViewportHeight = 0;
-
-    const setAppHeight = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = 0;
-        const viewportHeight = Math.round(window.visualViewport?.height ?? window.innerHeight);
-        if (viewportHeight === lastViewportHeight) return;
-        lastViewportHeight = viewportHeight;
-        document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
-      });
-    };
-
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    window.visualViewport?.addEventListener('resize', setAppHeight);
-    window.visualViewport?.addEventListener('scroll', setAppHeight);
-
-    return () => {
-      if (rafId) window.cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', setAppHeight);
-      window.visualViewport?.removeEventListener('resize', setAppHeight);
-      window.visualViewport?.removeEventListener('scroll', setAppHeight);
-    };
-  }, []);
-
-  useEffect(() => {
     // Keep native mobile zoom behavior enabled (pinch + browser-level accessibility zoom).
     // Do not register gesture/touch preventDefault handlers here.
   }, []);
@@ -785,7 +756,7 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <div className="min-h-[var(--app-height,100vh)] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
       <Header
         onOpenInbox={() => undefined}
