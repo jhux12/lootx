@@ -2,21 +2,27 @@ import React from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
 
 const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
+const PULL_PASS_BOX_IMAGES = {
+  bronze: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fbronze.png?alt=media&token=2074648a-5fc0-42bd-8fd6-776bbd716fed',
+  silver: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fsilver.png?alt=media&token=60df1026-45da-41a6-b572-0fe5bbb9399e',
+  gold: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fgold.png?alt=media&token=29316f1c-3d13-46c9-ab6c-5b1fb5823daa',
+} as const;
 
 type RewardStatus = 'claimed' | 'active' | 'locked';
+type RewardType = 'coins' | 'xp' | keyof typeof PULL_PASS_BOX_IMAGES;
 
 const currentTier = 12;
 
-const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: 'coins' | 'box' | 'xp' }> = [
-  { tier: 9, name: '100 Coins', status: 'claimed', type: 'coins' },
-  { tier: 10, name: 'Silver Box', status: 'claimed', type: 'box' },
+const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: RewardType }> = [
+  { tier: 9, name: 'Bronze Box', status: 'claimed', type: 'bronze' },
+  { tier: 10, name: 'Silver Box', status: 'claimed', type: 'silver' },
   { tier: 11, name: '250 XP', status: 'claimed', type: 'xp' },
-  { tier: 12, name: 'Silver Box', status: 'active', type: 'box' },
-  { tier: 13, name: '150 Coins', status: 'locked', type: 'coins' },
-  { tier: 14, name: 'Gold Box', status: 'locked', type: 'box' },
+  { tier: 12, name: 'Silver Box', status: 'active', type: 'silver' },
+  { tier: 13, name: 'Bronze Box', status: 'locked', type: 'bronze' },
+  { tier: 14, name: 'Gold Box', status: 'locked', type: 'gold' },
   { tier: 15, name: '300 XP', status: 'locked', type: 'xp' },
-  { tier: 20, name: '500 Coins', status: 'locked', type: 'coins' },
-  { tier: 50, name: 'Collector Box', status: 'locked', type: 'box' },
+  { tier: 20, name: 'Gold Box', status: 'locked', type: 'gold' },
+  { tier: 50, name: 'Gold Collector Box', status: 'locked', type: 'gold' },
 ];
 
 const activeRewardIndex = rewards.findIndex((reward) => reward.tier === currentTier);
@@ -29,7 +35,7 @@ const missions = [
   { icon: WalletCards, title: 'Make A Deposit', description: 'Deposit any amount', progress: '0 / 1', xp: '50 XP', fill: '0%' },
 ];
 
-const MiniRewardArt: React.FC<{ type: 'coins' | 'box' | 'xp'; compact?: boolean }> = ({ type, compact }) => {
+const MiniRewardArt: React.FC<{ type: RewardType; compact?: boolean }> = ({ type, compact }) => {
   if (type === 'coins') {
     return (
       <div className={`relative ${compact ? 'h-12 w-16' : 'h-20 w-24'}`} aria-hidden="true">
@@ -54,9 +60,13 @@ const MiniRewardArt: React.FC<{ type: 'coins' | 'box' | 'xp'; compact?: boolean 
 
   return (
     <div className={`${compact ? 'h-12 w-16' : 'h-20 w-24'} relative grid place-items-center`} aria-hidden="true">
-      <div className="h-9 w-14 -skew-x-6 rounded-md border border-sky-200/35 bg-[linear-gradient(145deg,#d8ecff_0%,#356086_42%,#071225_100%)] shadow-[0_0_22px_rgba(111,168,255,0.22)] sm:h-11 sm:w-16">
-        <div className="mx-auto mt-2 h-3 w-8 rounded bg-[#091323]/70 text-center text-[6px] font-black leading-3 text-white">PULLZ</div>
-      </div>
+      <img
+        src={PULL_PASS_BOX_IMAGES[type]}
+        alt=""
+        className={`${compact ? 'h-12 w-16' : 'h-20 w-24'} object-contain drop-shadow-[0_10px_20px_rgba(124,58,237,0.22)]`}
+        loading="lazy"
+        decoding="async"
+      />
     </div>
   );
 };
@@ -78,7 +88,7 @@ const PullPassIcon = () => (
 
 const PullPassHeroArt = () => (
   <div className="relative mx-auto h-[210px] w-full max-w-[360px] lg:h-[330px] lg:max-w-[520px]" aria-hidden="true">
-    <div className="absolute inset-x-8 bottom-2 top-8 rounded-full bg-purple-600/25 blur-3xl" />
+    <div className="absolute inset-x-0 bottom-0 top-2 bg-[radial-gradient(circle_at_50%_48%,rgba(124,58,237,0.42)_0%,rgba(88,28,135,0.24)_34%,rgba(9,9,11,0)_72%)] blur-2xl" />
     {[0, 1, 2, 3].map((card) => (
       <div
         key={card}
@@ -136,7 +146,7 @@ export const PullPassPage: React.FC = () => (
             <p className="text-base font-bold text-white">Silver Box</p>
             <p className="text-xs font-semibold text-slate-400">80 XP away</p>
           </div>
-          <div className="flex items-center gap-2"><MiniRewardArt type="box" compact /><ChevronRight className="h-5 w-5 text-slate-500" /></div>
+          <div className="flex items-center gap-2"><MiniRewardArt type="silver" compact /><ChevronRight className="h-5 w-5 text-slate-500" /></div>
         </div>
       </section>
 
