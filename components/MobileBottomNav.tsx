@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, User, X } from 'lucide-react';
+import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'PLINKO' | 'PULL_PASS' | 'PROFILE';
+  id: 'HOME' | 'BOXES' | 'PLINKO' | 'LEADERBOARD' | 'PULL_PASS' | 'PROFILE';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   iconClassName?: string;
@@ -33,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
+  { id: 'LEADERBOARD', label: 'Leaderboard', icon: Trophy },
   { id: 'PULL_PASS', label: 'Rewards', icon: PullPassTabIcon },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];
@@ -105,6 +106,7 @@ export const MobileBottomNav: React.FC = () => {
     if (view.type === 'CASE_OPENING') return 'BOXES';
     if (view.type === 'INVENTORY' || view.type === 'PROFILE') return 'PROFILE';
     if (view.type === 'PULL_PASS' || view.type === 'BONUSES') return 'PULL_PASS';
+    if (view.type === 'LEADERBOARD') return 'LEADERBOARD';
     if (view.type === 'PLINKO') return 'PLINKO';
     if (view.type === 'BOXES') return 'BOXES';
     return 'HOME';
@@ -114,7 +116,7 @@ export const MobileBottomNav: React.FC = () => {
     isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim
   ), [boxes, isAuthenticated, user.lastFreeBoxClaim]);
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
-  const iconClassName = 'h-5 w-5 [stroke-width:1.6]';
+  const iconClassName = 'h-4.5 w-4.5 [stroke-width:1.6] sm:h-5 sm:w-5';
 
   const dismissFreeBoxTooltip = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -132,7 +134,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
+      <nav className="grid h-full grid-cols-6 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
@@ -157,7 +159,7 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
+                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
                   isActive ? 'text-purple-300' : 'text-slate-500 hover:text-slate-300'
                 }`}
                 aria-current={isActive ? 'page' : undefined}

@@ -242,11 +242,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const activeDesktopSection = useMemo<
-    "home" | "cases" | "upgrader" | "rewards" | "profile" | null
+    "home" | "cases" | "upgrader" | "leaderboard" | "rewards" | "profile" | null
   >(() => {
     if (view.type === "HOME") return "home";
     if (view.type === "BOXES" || view.type === "CASE_OPENING") return "cases";
     if (view.type === "PLINKO") return "upgrader";
+    if (view.type === "LEADERBOARD") return "leaderboard";
     if (
       view.type === "PULL_PASS" ||
       view.type === "BONUSES" ||
@@ -740,6 +741,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   </button>
                   <button
                     type="button"
+                    onClick={() => navigate("LEADERBOARD")}
+                    className={
+                      activeDesktopSection === "leaderboard"
+                        ? desktopActiveNavButtonClass
+                        : desktopNavButtonClass
+                    }
+                  >
+                    Leaderboard
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => navigate("PULL_PASS")}
                     className={`${activeDesktopSection === "rewards" ? desktopActiveNavButtonClass : desktopNavButtonClass} gap-2`}
                   >
@@ -1022,6 +1034,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <UpgraderIcon className="h-5 w-5 text-purple-300" />
                 Upgrader
+              </button>
+              <button
+                onClick={() => navigate("LEADERBOARD")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <Trophy className="h-5 w-5 text-purple-300" />
+                Leaderboard
               </button>
               <button
                 onClick={() => navigate("PULL_PASS")}
