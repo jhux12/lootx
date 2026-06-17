@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { toast } from '../src/ui/toast/toast';
+import { authedFetch } from '../utils/authedFetch';
 
 const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
 const PULL_PASS_COIN_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567';
@@ -166,7 +167,7 @@ const PullPassHeroArt = () => (
 );
 
 export const PullPassPage: React.FC = () => {
-  const { user, isAuthenticated, openAuthModal, boxes, balance, updateUserBalance, addNotification } = useGame();
+  const { user, isAuthenticated, openAuthModal, addNotification, syncBalance } = useGame();
   const [settings, setSettings] = useState<PullPassSettings>(DEFAULT_PULL_PASS_SETTINGS);
   const [claimingTier, setClaimingTier] = useState<number | null>(null);
 
@@ -255,21 +256,6 @@ export const PullPassPage: React.FC = () => {
   const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
   const nextReward = configuredRewards.find((reward) => reward.tier > displayedTier) ?? configuredRewards[configuredRewards.length - 1];
   const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
-  const getBoxTypeForReward = (reward: { name: string; type: RewardType }) => {
-    if (reward.type !== 'coins' && reward.type !== 'xp') return reward.type;
-    const normalized = reward.name.toLowerCase();
-    if (normalized.includes('bronze')) return 'bronze';
-    if (normalized.includes('silver')) return 'silver';
-    if (normalized.includes('gold collector')) return 'collector';
-    if (normalized.includes('gold')) return 'gold';
-    if (normalized.includes('elite')) return 'elite';
-    if (normalized.includes('master')) return 'master';
-    return null;
-  };
-  const getCoinAmount = (rewardName: string) => {
-    const match = rewardName.match(/([0-9,]+)\s*coins?/i);
-    return match ? Math.max(0, Number(match[1].replace(/,/g, '')) || 0) : 0;
-  };
   const handleClaimReward = async (reward: { tier: number; name: string; type: RewardType }) => {
     if (!isAuthenticated || !user.id) {
       openAuthModal('login');
@@ -278,57 +264,24 @@ export const PullPassPage: React.FC = () => {
     if (claimedTiers[String(reward.tier)] || claimingTier !== null) return;
     setClaimingTier(reward.tier);
     try {
-      const boxType = getBoxTypeForReward(reward);
-      const coinAmount = getCoinAmount(reward.name);
-      const pullPassBox = boxType
-        ? boxes.find((box) => box.isPullPassBox && box.pullPassBoxType === boxType)
-        : undefined;
-      const pullPassRewardInventoryId = pullPassBox ? `pull-pass-tier-${reward.tier}` : null;
-      const claimedAt = Date.now();
-      if (pullPassBox && pullPassRewardInventoryId) {
-        await setDoc(doc(db, 'users', user.id, 'inventory', pullPassRewardInventoryId), {
-          id: pullPassRewardInventoryId,
-          instanceId: pullPassRewardInventoryId,
-          boxId: pullPassBox.id,
-          name: reward.name,
-          price: 0,
-          image: pullPassBox.image,
-          rarity: 'epic',
-          chance: 100,
-          color: pullPassBox.accentColor ?? '#7c3aed',
-          status: 'available',
-          source: 'pullPassBoxReward',
-          sourceItemId: pullPassBox.id,
-          pullPassTier: reward.tier,
-          pullPassBoxType: pullPassBox.pullPassBoxType ?? boxType,
-          obtainedAt: claimedAt,
-          redeemable: false,
-          shippable: false,
-          locked: false,
-        });
+      const result = await authedFetch<{
+        ok: boolean;
+        coinAmount?: number;
+        newCoinBalance?: number | null;
+        boxId?: string | null;
+        inventoryId?: string | null;
+      }>('/api/claim-pull-pass', {
+        method: 'POST',
+        body: JSON.stringify({ tier: reward.tier })
+      });
+      if (typeof result.newCoinBalance === 'number') {
+        syncBalance(result.newCoinBalance);
       }
-      await setDoc(doc(db, 'users', user.id), {
-        pullPassClaims: {
-          ...claimedTiers,
-          [String(reward.tier)]: {
-            rewardName: reward.name,
-            rewardType: reward.type,
-            boxId: pullPassBox?.id ?? null,
-            inventoryId: pullPassRewardInventoryId,
-            coinAmount,
-            claimedAt,
-            opened: false,
-          },
-        },
-        updatedAt: Date.now(),
-      }, { merge: true });
-      if (coinAmount > 0) {
-        await updateUserBalance(user.id, Math.max(0, Number(balance) + coinAmount));
-      }
-      if (pullPassBox) {
+      if (result.inventoryId) {
         toast.success('Reward has been added to inventory.');
         addNotification({ message: 'Reward has been added to inventory.', type: 'admin' });
-      } else if (coinAmount > 0) {
+      } else if ((result.coinAmount ?? 0) > 0) {
+        const coinAmount = Math.max(0, Number(result.coinAmount) || 0);
         toast.success(`${coinAmount.toLocaleString()} coins added to your account.`);
         addNotification({ message: `${coinAmount.toLocaleString()} coins added to your account.`, type: 'admin' });
       }
