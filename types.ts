@@ -154,6 +154,8 @@ export interface MysteryBox {
   riskLevel?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
+  isPullPassBox?: boolean;
+  pullPassBoxType?: 'bronze' | 'silver' | 'gold' | 'elite' | 'master' | 'collector';
   sellBackRate?: number;
   createdAt?: number;
   marketValueAudit?: BoxMarketValueAudit;

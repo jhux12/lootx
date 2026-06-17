@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
 
@@ -163,8 +163,9 @@ const PullPassHeroArt = () => (
 );
 
 export const PullPassPage: React.FC = () => {
-  const { user } = useGame();
+  const { user, isAuthenticated, openAuthModal, boxes, setView, balance, updateUserBalance } = useGame();
   const [settings, setSettings] = useState<PullPassSettings>(DEFAULT_PULL_PASS_SETTINGS);
+  const [claimingTier, setClaimingTier] = useState<number | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'pullPass'), (snapshot) => {
@@ -212,8 +213,8 @@ export const PullPassPage: React.FC = () => {
     const tierNumber = Math.max(1, Number(tier.tier ?? current) || current);
     const xpRequired = Math.max(0, Number(tier.xpRequired ?? 0) || 0);
     return seasonXpEarnedAfterStart >= xpRequired ? Math.max(current, tierNumber) : current;
-  }, 1);
-  const displayedTier = hasEnded && settings.resetOnEnd ? 1 : earnedTier;
+  }, 0);
+  const displayedTier = hasEnded && settings.resetOnEnd ? 0 : earnedTier;
   const nextTier = tierDefinitions.find((tier) => Math.max(1, Number(tier.tier ?? 0) || 0) > displayedTier);
   const previousTierXp = Math.max(0, Number(tierDefinitions.find((tier) => Number(tier.tier) === displayedTier)?.xpRequired ?? 0) || 0);
   const nextTierXp = Math.max(previousTierXp + 1, Number(nextTier?.xpRequired ?? previousTierXp + 1000) || previousTierXp + 1000);
@@ -235,6 +236,60 @@ export const PullPassPage: React.FC = () => {
   }, [displayedTier, tierDefinitions]);
   const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
   const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
+
+  const claimedTiers = (user as Record<string, any>).pullPassClaims ?? {};
+  const getBoxTypeForReward = (reward: { name: string; type: RewardType }) => {
+    if (reward.type !== 'coins' && reward.type !== 'xp') return reward.type;
+    const normalized = reward.name.toLowerCase();
+    if (normalized.includes('bronze')) return 'bronze';
+    if (normalized.includes('silver')) return 'silver';
+    if (normalized.includes('gold collector')) return 'collector';
+    if (normalized.includes('gold')) return 'gold';
+    if (normalized.includes('elite')) return 'elite';
+    if (normalized.includes('master')) return 'master';
+    return null;
+  };
+  const getCoinAmount = (rewardName: string) => {
+    const match = rewardName.match(/([0-9,]+)\s*coins?/i);
+    return match ? Math.max(0, Number(match[1].replace(/,/g, '')) || 0) : 0;
+  };
+  const handleClaimReward = async (reward: { tier: number; name: string; type: RewardType }) => {
+    if (!isAuthenticated || !user.id) {
+      openAuthModal('login');
+      return;
+    }
+    if (claimedTiers[String(reward.tier)] || claimingTier !== null) return;
+    setClaimingTier(reward.tier);
+    try {
+      const boxType = getBoxTypeForReward(reward);
+      const coinAmount = getCoinAmount(reward.name);
+      const pullPassBox = boxType
+        ? boxes.find((box) => box.isPullPassBox && box.pullPassBoxType === boxType)
+        : undefined;
+      await setDoc(doc(db, 'users', user.id), {
+        pullPassClaims: {
+          ...claimedTiers,
+          [String(reward.tier)]: {
+            rewardName: reward.name,
+            rewardType: reward.type,
+            boxId: pullPassBox?.id ?? null,
+            coinAmount,
+            claimedAt: Date.now(),
+            opened: Boolean(pullPassBox),
+          },
+        },
+        updatedAt: Date.now(),
+      }, { merge: true });
+      if (coinAmount > 0) {
+        await updateUserBalance(user.id, Math.max(0, Number(balance) + coinAmount));
+      }
+      if (pullPassBox) {
+        setView({ type: 'CASE_OPENING', boxId: pullPassBox.id });
+      }
+    } finally {
+      setClaimingTier(null);
+    }
+  };
 
   return (
   <div className="min-h-screen overflow-x-hidden bg-[#09090B] px-4 py-6 text-white sm:py-8 lg:px-8 lg:py-12">
@@ -305,8 +360,19 @@ export const PullPassPage: React.FC = () => {
                   </div>
                   <div className="grid flex-1 place-items-center"><MiniRewardArt type={reward.type} /></div>
                   <h3 className="text-center text-sm font-bold text-white">{reward.name}</h3>
-                  <div className="mt-3 grid h-5 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
-                    {reward.status === 'claimed' ? 'Claimed' : reward.status === 'locked' ? 'Locked' : 'Current Tier'}
+                  <div className="mt-3 grid min-h-8 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    {claimedTiers[String(reward.tier)] ? (
+                      <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-300">Claimed</span>
+                    ) : reward.status === 'claimed' || reward.status === 'active' ? (
+                      <button
+                        type="button"
+                        onClick={() => { void handleClaimReward(reward); }}
+                        disabled={claimingTier !== null}
+                        className="rounded-full border border-purple-300/35 bg-purple-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-purple-100 transition-colors hover:bg-purple-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {claimingTier === reward.tier ? 'Claiming…' : 'Claim'}
+                      </button>
+                    ) : 'Locked'}
                   </div>
                 </article>
               ))}

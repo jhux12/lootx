@@ -412,6 +412,8 @@ export const AdminPanel: React.FC = () => {
       spinnerBackgroundImage: '',
       accentColor: '#3b82f6',
       isDaily: false,
+      isPullPassBox: false,
+      pullPassBoxType: 'bronze',
       tags: [],
       sellBackRate: 0.82
   });
@@ -2847,6 +2849,8 @@ export const AdminPanel: React.FC = () => {
           image: 'https://picsum.photos/300',
           accentColor: '#3b82f6',
           isDaily: false,
+          isPullPassBox: false,
+          pullPassBoxType: 'bronze',
           tags: [],
           sellBackRate: 0.82
       });
@@ -2919,6 +2923,8 @@ export const AdminPanel: React.FC = () => {
           tag: box.tag,
           tags: normalizeBoxTagList(box.tags ?? (box.tag ? [box.tag] : [])),
           isDaily: box.isDaily,
+          isPullPassBox: box.isPullPassBox ?? false,
+          pullPassBoxType: box.pullPassBoxType ?? 'bronze',
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
@@ -3132,6 +3138,8 @@ export const AdminPanel: React.FC = () => {
       tag: newBox.tag,
       tags: normalizeBoxTagList(newBox.tags ?? []),
       isDaily: newBox.isDaily,
+      isPullPassBox: newBox.isPullPassBox === true,
+      pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
       sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
@@ -4271,6 +4279,33 @@ export const AdminPanel: React.FC = () => {
                                 <p className="text-[10px] text-gray-500">
                                     Daily free boxes can be saved with a price of 0.
                                 </p>
+                                <div className="mt-3 rounded-lg border border-purple-400/20 bg-purple-500/5 p-3">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="pull-pass-case"
+                                            checked={newBox.isPullPassBox || false}
+                                            onChange={e => setNewBox({...newBox, isPullPassBox: e.target.checked, pullPassBoxType: e.target.checked ? (newBox.pullPassBoxType ?? 'bronze') : newBox.pullPassBoxType})}
+                                            className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
+                                        />
+                                        <label htmlFor="pull-pass-case" className="text-sm text-gray-300">Set as Pull Pass Box</label>
+                                    </div>
+                                    {newBox.isPullPassBox && (
+                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Pull Pass box type
+                                            <Select
+                                                value={newBox.pullPassBoxType ?? 'bronze'}
+                                                onChange={(event) => setNewBox((prev) => ({ ...prev, pullPassBoxType: event.target.value as any }))}
+                                                className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            >
+                                                <option value="bronze">Bronze</option>
+                                                <option value="silver">Silver</option>
+                                                <option value="gold">Gold</option>
+                                                <option value="elite">Elite</option>
+                                                <option value="master">Master</option>
+                                                <option value="collector">Collector</option>
+                                            </Select>
+                                        </label>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -4481,6 +4516,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="text-white flex items-center gap-2">
                                                     {box.name}
                                                     {box.isDaily && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">DAILY</span>}
+                                                    {box.isPullPassBox && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1 rounded">PULL PASS {box.pullPassBoxType?.toUpperCase()}</span>}
                                                 </div>
                                             </div>
                                         </td>
