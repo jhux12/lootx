@@ -112,6 +112,7 @@ const DEFAULT_PULL_PASS_SETTINGS = {
     endsAt: '',
     coinsPerXp: 10,
     totalTiers: 50,
+    resetOnEnd: true,
     tiersText: '[{"tier":1,"xpRequired":100,"freeReward":"Bronze Box","premiumReward":"100 Coins"},{"tier":10,"xpRequired":1000,"freeReward":"Silver Box","premiumReward":"250 Coins"},{"tier":25,"xpRequired":2500,"freeReward":"Gold Box","premiumReward":"500 Coins"},{"tier":50,"xpRequired":5000,"freeReward":"Gold Collector Box","premiumReward":"1000 Coins"}]'
 };
 
@@ -1207,7 +1208,10 @@ export const AdminPanel: React.FC = () => {
               endsAt: pullPassDraft.endsAt,
               coinsPerXp: Math.max(1, Math.floor(Number(pullPassDraft.coinsPerXp) || DEFAULT_PULL_PASS_SETTINGS.coinsPerXp)),
               totalTiers: Math.max(1, Math.floor(Number(pullPassDraft.totalTiers) || DEFAULT_PULL_PASS_SETTINGS.totalTiers)),
-              tiers: parsedTiers
+              resetOnEnd: pullPassDraft.resetOnEnd !== false,
+              tiers: parsedTiers,
+              tiersText: JSON.stringify(parsedTiers, null, 2),
+              updatedAt: Date.now()
           }, { merge: true });
           setPullPassSettingsNotice(true);
           window.setTimeout(() => setPullPassSettingsNotice(false), 2200);
@@ -5409,6 +5413,10 @@ export const AdminPanel: React.FC = () => {
                             <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
                                 Pull Pass enabled
                                 <Checkbox checked={pullPassDraft.enabled} onChange={(event) => setPullPassDraft((prev) => ({ ...prev, enabled: event.target.checked }))} />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300 md:col-span-2 xl:col-span-1">
+                                Restart users after pass ends
+                                <Checkbox checked={pullPassDraft.resetOnEnd !== false} onChange={(event) => setPullPassDraft((prev) => ({ ...prev, resetOnEnd: event.target.checked }))} />
                             </label>
                         </div>
 

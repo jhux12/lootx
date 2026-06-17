@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
 const PULL_PASS_COIN_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567';
@@ -11,6 +13,54 @@ const PULL_PASS_BOX_IMAGES = {
 
 type RewardStatus = 'claimed' | 'active' | 'locked';
 type RewardType = 'coins' | 'xp' | keyof typeof PULL_PASS_BOX_IMAGES;
+
+type PullPassTierSetting = {
+  tier?: number;
+  xpRequired?: number;
+  freeReward?: string;
+  premiumReward?: string;
+  rewardType?: RewardType;
+  imageUrl?: string;
+};
+
+type PullPassSettings = {
+  enabled: boolean;
+  seasonName: string;
+  startsAt: string;
+  endsAt: string;
+  coinsPerXp: number;
+  totalTiers: number;
+  resetOnEnd: boolean;
+  tiers: PullPassTierSetting[];
+};
+
+const DEFAULT_PULL_PASS_SETTINGS: PullPassSettings = {
+  enabled: true,
+  seasonName: 'Season 1: The Collector',
+  startsAt: '',
+  endsAt: '',
+  coinsPerXp: 10,
+  totalTiers: 50,
+  resetOnEnd: true,
+  tiers: [],
+};
+
+const getLocalDateValueTime = (value: string) => {
+  if (!value) return null;
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const inferRewardType = (name: string, fallback: RewardType = 'coins'): RewardType => {
+  const normalized = name.toLowerCase();
+  if (normalized.includes('bronze')) return 'bronze';
+  if (normalized.includes('silver')) return 'silver';
+  if (normalized.includes('gold')) return 'gold';
+  if (normalized.includes('xp')) return 'xp';
+  if (normalized.includes('coin')) return 'coins';
+  return fallback;
+};
+
 
 const currentTier = 12;
 
@@ -25,9 +75,6 @@ const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: R
   { tier: 20, name: '500 Coins', status: 'locked', type: 'coins' },
   { tier: 50, name: 'Gold Collector Box', status: 'locked', type: 'gold' },
 ];
-
-const activeRewardIndex = rewards.findIndex((reward) => reward.tier === currentTier);
-const timelineProgress = `${(activeRewardIndex / Math.max(rewards.length - 1, 1)) * 100}%`;
 
 const missions = [
   { icon: PackageOpen, title: 'Open Cases', description: 'Open any case', progress: '0 / 5', xp: '250 XP', fill: '0%' },
@@ -114,7 +161,66 @@ const PullPassHeroArt = () => (
   </div>
 );
 
-export const PullPassPage: React.FC = () => (
+export const PullPassPage: React.FC = () => {
+  const [settings, setSettings] = useState<PullPassSettings>(DEFAULT_PULL_PASS_SETTINGS);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'pullPass'), (snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.data() as Partial<PullPassSettings> & { tiersText?: string };
+      let tiers = Array.isArray(data.tiers) ? data.tiers : DEFAULT_PULL_PASS_SETTINGS.tiers;
+      if (!tiers.length && typeof data.tiersText === 'string') {
+        try {
+          const parsed = JSON.parse(data.tiersText);
+          tiers = Array.isArray(parsed) ? parsed : tiers;
+        } catch {
+          tiers = DEFAULT_PULL_PASS_SETTINGS.tiers;
+        }
+      }
+      setSettings({
+        ...DEFAULT_PULL_PASS_SETTINGS,
+        ...data,
+        coinsPerXp: Math.max(1, Number(data.coinsPerXp ?? DEFAULT_PULL_PASS_SETTINGS.coinsPerXp) || DEFAULT_PULL_PASS_SETTINGS.coinsPerXp),
+        totalTiers: Math.max(1, Number(data.totalTiers ?? DEFAULT_PULL_PASS_SETTINGS.totalTiers) || DEFAULT_PULL_PASS_SETTINGS.totalTiers),
+        resetOnEnd: data.resetOnEnd !== false,
+        tiers,
+      });
+    }, (error) => {
+      console.warn('Unable to load Pull Pass settings', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const now = Date.now();
+  const startsAt = getLocalDateValueTime(settings.startsAt);
+  const endsAt = getLocalDateValueTime(settings.endsAt);
+  const hasStarted = startsAt === null || now >= startsAt;
+  const hasEnded = endsAt !== null && now > endsAt;
+  const isLive = settings.enabled && hasStarted && !hasEnded;
+  const displayedXp = isLive ? 620 : 0;
+  const displayedTier = hasEnded && settings.resetOnEnd ? 1 : currentTier;
+  const progressPercent = isLive ? 62 : 0;
+  const statusLabel = !settings.enabled ? 'DISABLED' : !hasStarted ? 'STARTING SOON' : hasEnded ? 'SEASON ENDED' : 'LIVE NOW';
+  const heroSubheading = hasEnded && settings.resetOnEnd ? 'Season ended. Progress resets for the next Pull Pass.' : 'Level up, Earn Rewards.';
+  const configuredRewards = useMemo(() => {
+    if (!settings.tiers.length) return rewards;
+    return settings.tiers.slice(0, 9).map((tier, index) => {
+      const freeReward = typeof tier.freeReward === 'string' && tier.freeReward.trim() ? tier.freeReward.trim() : `Tier ${tier.tier ?? index + 1} Reward`;
+      const rewardType = tier.rewardType && ['coins', 'xp', 'bronze', 'silver', 'gold'].includes(tier.rewardType) ? tier.rewardType : inferRewardType(freeReward);
+      const tierNumber = Math.max(1, Number(tier.tier ?? index + 1) || index + 1);
+      return {
+        tier: tierNumber,
+        name: freeReward,
+        status: tierNumber < displayedTier ? 'claimed' as RewardStatus : tierNumber === displayedTier ? 'active' as RewardStatus : 'locked' as RewardStatus,
+        type: rewardType,
+      };
+    });
+  }, [displayedTier, settings.tiers]);
+  const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
+  const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
+
+  return (
   <div className="min-h-screen overflow-x-hidden bg-[#09090B] px-4 py-6 text-white sm:py-8 lg:px-8 lg:py-12">
     <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 sm:gap-5 lg:gap-8">
       <section className="grid items-center gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(440px,1fr)] lg:gap-10">
@@ -126,21 +232,21 @@ export const PullPassPage: React.FC = () => (
             <h1 className="text-[42px] font-black italic leading-none tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">PULL PASS</h1>
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <p className="text-base font-extrabold text-white/90 sm:text-lg">Level up, Earn Rewards.</p>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-400/30 bg-purple-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-purple-200"><ClockDot />LIVE NOW</span>
+            <p className="text-base font-extrabold text-white/90 sm:text-lg">{heroSubheading}</p>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-400/30 bg-purple-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-purple-200"><ClockDot />{statusLabel}</span>
           </div>
-          <p className="max-w-md text-sm leading-6 text-slate-400 sm:text-base">Earn XP by opening boxes and completing missions to unlock exclusive rewards.</p>
+          <p className="max-w-md text-sm leading-6 text-slate-400 sm:text-base">Earn XP after the Pull Pass starts. Progress resets when the pass ends.</p>
         </div>
         <PullPassHeroArt />
       </section>
 
       <section className="rounded-2xl border border-white/10 bg-[#0b1220]/86 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] lg:ml-auto lg:w-[720px] lg:p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-2xl font-black tracking-tight text-white">TIER <span className="text-purple-300">12</span> <span className="text-slate-500">/ 50</span></h2>
+          <h2 className="text-2xl font-black tracking-tight text-white">TIER <span className="text-purple-300">{displayedTier}</span> <span className="text-slate-500">/ {settings.totalTiers}</span></h2>
           <button className="inline-flex items-center gap-1 text-xs font-extrabold uppercase text-purple-300 transition-colors hover:text-purple-100">View All Tiers <ChevronRight className="h-4 w-4" /></button>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full w-[62%] rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_18px_rgba(147,51,234,0.45)]" /></div>
-        <p className="mt-2 text-xs font-semibold text-slate-300">620 / 1000 XP</p>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_18px_rgba(147,51,234,0.45)]" style={{ width: `${progressPercent}%` }} /></div>
+        <p className="mt-2 text-xs font-semibold text-slate-300">{displayedXp} / 1000 XP</p>
         <div className="mt-4 flex items-center justify-between rounded-xl border border-white/7 bg-white/[0.03] p-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Next Reward</p>
@@ -157,9 +263,9 @@ export const PullPassPage: React.FC = () => (
           <div className="mb-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Pull Pass tier timeline">
             <div className="relative flex min-w-max gap-2.5 px-1 pt-3 sm:gap-3">
               <div className="absolute left-[47px] right-[47px] top-[46px] h-2 overflow-hidden rounded-full bg-slate-800/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:left-[55px] sm:right-[55px]" aria-hidden="true">
-                <div className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_14px_rgba(147,51,234,0.5)]" style={{ width: timelineProgress }} />
+                <div className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_14px_rgba(147,51,234,0.5)]" style={{ width: displayedTimelineProgress }} />
               </div>
-              {rewards.map((reward) => (
+              {configuredRewards.map((reward) => (
                 <div key={reward.tier} className="relative z-10 flex w-[92px] shrink-0 flex-col items-center sm:w-[108px]">
                   <p className={`mb-2 text-[11px] font-black leading-none ${reward.status === 'active' ? 'text-purple-200' : 'text-white'}`}>{reward.tier}</p>
                   <div className={`grid place-items-center rounded-full border-2 transition-all duration-200 ${reward.status === 'active' ? 'h-8 w-8 border-purple-200 bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.7)]' : reward.status === 'claimed' ? 'h-5 w-5 border-purple-300 bg-purple-500 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)]' : 'h-5 w-5 border-slate-700 bg-[#09090B]'}`}>
@@ -175,7 +281,7 @@ export const PullPassPage: React.FC = () => (
           </div>
           <div className="overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Pull Pass rewards">
             <div className="flex min-w-max gap-2.5 sm:gap-3">
-              {rewards.map((reward) => (
+              {configuredRewards.map((reward) => (
                 <article key={reward.tier} className={`group flex h-[220px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 ${reward.status === 'active' ? 'border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]' : 'border-white/10 bg-white/[0.035]'}`}>
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">Tier <span className="text-white">{reward.tier}</span></p>
@@ -202,7 +308,8 @@ export const PullPassPage: React.FC = () => (
       </section>
     </div>
   </div>
-);
+  );
+};
 
 const ClockDot = () => <span className="h-2 w-2 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(192,132,252,0.85)]" aria-hidden="true" />;
 
