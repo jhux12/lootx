@@ -33,6 +33,7 @@ type PullPassSettings = {
   coinsPerXp: number;
   totalTiers: number;
   resetOnEnd: boolean;
+  lastResetAt: number;
   tiers: PullPassTierSetting[];
 };
 
@@ -44,6 +45,7 @@ const DEFAULT_PULL_PASS_SETTINGS: PullPassSettings = {
   coinsPerXp: 10,
   totalTiers: 50,
   resetOnEnd: true,
+  lastResetAt: 0,
   tiers: [],
 };
 
@@ -187,6 +189,7 @@ export const PullPassPage: React.FC = () => {
         coinsPerXp: Math.max(1, Number(data.coinsPerXp ?? DEFAULT_PULL_PASS_SETTINGS.coinsPerXp) || DEFAULT_PULL_PASS_SETTINGS.coinsPerXp),
         totalTiers: Math.max(1, Number(data.totalTiers ?? DEFAULT_PULL_PASS_SETTINGS.totalTiers) || DEFAULT_PULL_PASS_SETTINGS.totalTiers),
         resetOnEnd: data.resetOnEnd !== false,
+        lastResetAt: Math.max(0, Number(data.lastResetAt ?? 0) || 0),
         tiers,
       });
     }, (error) => {
@@ -222,6 +225,16 @@ export const PullPassPage: React.FC = () => {
   const progressPercent = isLive ? Math.min(100, Math.max(0, ((seasonXpEarnedAfterStart - previousTierXp) / Math.max(1, nextTierXp - previousTierXp)) * 100)) : 0;
   const statusLabel = !settings.enabled ? 'DISABLED' : !hasStarted ? 'STARTING SOON' : hasEnded ? 'SEASON ENDED' : 'LIVE NOW';
   const heroSubheading = hasEnded && settings.resetOnEnd ? 'Season ended. Progress resets for the next Pull Pass.' : 'Level up, Earn Rewards.';
+  const claimedTiers = useMemo(() => {
+    const rawClaims = (user as Record<string, any>).pullPassClaims ?? {};
+    if (!rawClaims || typeof rawClaims !== 'object') return {};
+    return Object.fromEntries(
+      Object.entries(rawClaims).filter(([, claim]) => {
+        const claimedAt = Number((claim as Record<string, any> | undefined)?.claimedAt ?? 0);
+        return claimedAt > Math.max(0, Number(settings.lastResetAt) || 0);
+      })
+    );
+  }, [settings.lastResetAt, user]);
   const configuredRewards = useMemo(() => {
     return tierDefinitions.map((tier, index) => {
       const freeReward = typeof tier.freeReward === 'string' && tier.freeReward.trim() ? tier.freeReward.trim() : `Tier ${tier.tier ?? index + 1} Reward`;
@@ -230,7 +243,7 @@ export const PullPassPage: React.FC = () => {
       return {
         tier: tierNumber,
         name: freeReward,
-        status: tierNumber < displayedTier ? 'claimed' as RewardStatus : tierNumber === displayedTier ? 'active' as RewardStatus : 'locked' as RewardStatus,
+        status: tierNumber <= displayedTier ? 'active' as RewardStatus : 'locked' as RewardStatus,
         type: rewardType,
       };
     });
@@ -238,8 +251,6 @@ export const PullPassPage: React.FC = () => {
   const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
   const nextReward = configuredRewards.find((reward) => reward.tier > displayedTier) ?? configuredRewards[configuredRewards.length - 1];
   const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
-
-  const claimedTiers = (user as Record<string, any>).pullPassClaims ?? {};
   const getBoxTypeForReward = (reward: { name: string; type: RewardType }) => {
     if (reward.type !== 'coins' && reward.type !== 'xp') return reward.type;
     const normalized = reward.name.toLowerCase();
@@ -369,11 +380,11 @@ export const PullPassPage: React.FC = () => {
               </div>
               {configuredRewards.map((reward) => (
                 <div key={reward.tier} className="relative z-10 flex w-[92px] shrink-0 flex-col items-center sm:w-[108px]">
-                  <p className={`mb-2 text-[11px] font-black leading-none ${reward.status === 'active' ? 'text-purple-200' : 'text-white'}`}>{reward.tier}</p>
-                  <div className={`grid place-items-center rounded-full border-2 transition-all duration-200 ${reward.status === 'active' ? 'h-8 w-8 border-purple-200 bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.7)]' : reward.status === 'claimed' ? 'h-5 w-5 border-purple-300 bg-purple-500 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)]' : 'h-5 w-5 border-slate-700 bg-[#09090B]'}`}>
-                    {reward.status === 'claimed' ? <Check className="h-3.5 w-3.5" /> : reward.status === 'active' ? <span className="text-[10px] font-black">{reward.tier}</span> : <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />}
+                  <p className={`mb-2 text-[11px] font-black leading-none ${reward.tier === displayedTier ? 'text-purple-200' : 'text-white'}`}>{reward.tier}</p>
+                  <div className={`grid place-items-center rounded-full border-2 transition-all duration-200 ${reward.tier === displayedTier ? 'h-8 w-8 border-purple-200 bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.7)]' : claimedTiers[String(reward.tier)] ? 'h-5 w-5 border-purple-300 bg-purple-500 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)]' : reward.status === 'active' ? 'h-5 w-5 border-purple-400 bg-purple-500/60 text-white' : 'h-5 w-5 border-slate-700 bg-[#09090B]'}`}>
+                    {claimedTiers[String(reward.tier)] ? <Check className="h-3.5 w-3.5" /> : reward.tier === displayedTier ? <span className="text-[10px] font-black">{reward.tier}</span> : <span className={`h-1.5 w-1.5 rounded-full ${reward.status === 'active' ? 'bg-purple-100' : 'bg-slate-600'}`} />}
                   </div>
-                  <div className={`mt-3 w-full rounded-xl border px-2 py-2 text-center ${reward.status === 'active' ? 'border-purple-400/80 bg-purple-500/15' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div className={`mt-3 w-full rounded-xl border px-2 py-2 text-center ${reward.tier === displayedTier ? 'border-purple-400/80 bg-purple-500/15' : 'border-white/10 bg-white/[0.03]'}`}>
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tier {reward.tier}</p>
                     <p className="truncate text-xs font-bold text-white">{reward.name}</p>
                   </div>
@@ -387,14 +398,14 @@ export const PullPassPage: React.FC = () => {
                 <article key={reward.tier} className={`group flex h-[220px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 ${reward.status === 'active' ? 'border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]' : 'border-white/10 bg-white/[0.035]'}`}>
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">Tier <span className="text-white">{reward.tier}</span></p>
-                    {reward.status === 'claimed' ? <Check className="h-4 w-4 text-emerald-400" /> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-black text-white">Active</span>}
+                    {claimedTiers[String(reward.tier)] ? <Check className="h-4 w-4 text-emerald-400" /> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-black text-white">Unlocked</span>}
                   </div>
                   <div className="grid flex-1 place-items-center"><MiniRewardArt type={reward.type} /></div>
                   <h3 className="text-center text-sm font-bold text-white">{reward.name}</h3>
                   <div className="mt-3 grid min-h-8 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
                     {claimedTiers[String(reward.tier)] ? (
                       <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-300">Claimed</span>
-                    ) : reward.status === 'claimed' || reward.status === 'active' ? (
+                    ) : reward.status === 'active' ? (
                       <button
                         type="button"
                         onClick={() => { void handleClaimReward(reward); }}

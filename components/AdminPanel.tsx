@@ -1307,6 +1307,7 @@ export const AdminPanel: React.FC = () => {
                   pullPassSeasonXp: 0,
                   pullPassXp: 0,
                   pullPassClaims: {},
+                  pullPass: deleteField(),
                   pullPassLastXpAwardAt: deleteField(),
                   pullPassResetAt: resetAt,
               }, { merge: true });
@@ -1321,6 +1322,10 @@ export const AdminPanel: React.FC = () => {
           }
 
           await commitIfNeeded(true);
+          await setDoc(doc(db, 'settings', 'pullPass'), {
+              lastResetAt: resetAt,
+              updatedAt: resetAt,
+          }, { merge: true });
           setPullPassResetNotice(`Pull Pass reset complete for ${usersSnapshot.size.toLocaleString()} users. Removed ${pullPassInventorySnapshot.size.toLocaleString()} reward box inventory entries.`);
       } catch (error) {
           console.error('Failed to reset Pull Pass', error);
