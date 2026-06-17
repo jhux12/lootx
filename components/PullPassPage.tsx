@@ -191,35 +191,119 @@ const PullPassIcon = () => (
   </svg>
 );
 
-const PullPassHeroArt = () => (
-  <div
-    className="relative mx-auto h-[210px] w-full max-w-[360px] lg:h-[330px] lg:max-w-[520px]"
-    aria-hidden="true"
-  >
-    <div className="absolute inset-x-0 bottom-0 top-2 bg-[radial-gradient(circle_at_50%_48%,rgba(124,58,237,0.42)_0%,rgba(88,28,135,0.24)_34%,rgba(9,9,11,0)_72%)] blur-2xl" />
-    {[0, 1, 2, 3].map((card) => (
-      <div
-        key={card}
-        className="absolute h-24 w-16 rounded-lg border border-purple-200/15 bg-[linear-gradient(145deg,rgba(107,33,168,0.4),rgba(9,9,11,0.92))] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-        style={{
-          left: `${card * 21 + 16}%`,
-          top: `${card % 2 ? 16 : 40}px`,
-          transform: `rotate(${[-18, -8, 12, 22][card]}deg)`,
-        }}
-      >
-        <div className="m-2 h-10 rounded-md bg-purple-400/10" />
-        <Sparkles className="mx-auto h-5 w-5 text-purple-200/60" />
+const PullPassHeroArt = () => {
+  const rain = [
+    {
+      kind: "coin",
+      left: "10%",
+      delay: "0s",
+      duration: "7s",
+      size: "h-7 w-7 lg:h-10 lg:w-10",
+    },
+    {
+      kind: "xp",
+      left: "20%",
+      delay: "-2.5s",
+      duration: "8.5s",
+      size: "text-sm lg:text-lg",
+    },
+    {
+      kind: "coin",
+      left: "32%",
+      delay: "-4s",
+      duration: "7.8s",
+      size: "h-6 w-6 lg:h-9 lg:w-9",
+    },
+    {
+      kind: "xp",
+      left: "47%",
+      delay: "-1.2s",
+      duration: "9s",
+      size: "text-xs lg:text-base",
+    },
+    {
+      kind: "coin",
+      left: "62%",
+      delay: "-3.1s",
+      duration: "7.4s",
+      size: "h-8 w-8 lg:h-11 lg:w-11",
+    },
+    {
+      kind: "xp",
+      left: "75%",
+      delay: "-5s",
+      duration: "8.8s",
+      size: "text-sm lg:text-lg",
+    },
+    {
+      kind: "coin",
+      left: "88%",
+      delay: "-1.8s",
+      duration: "7.2s",
+      size: "h-6 w-6 lg:h-9 lg:w-9",
+    },
+  ];
+
+  return (
+    <div
+      className="relative mx-auto h-[210px] w-full max-w-[360px] overflow-hidden lg:h-[330px] lg:max-w-[520px]"
+      aria-hidden="true"
+    >
+      <div className="absolute inset-x-0 bottom-0 top-2 bg-[radial-gradient(circle_at_50%_48%,rgba(124,58,237,0.42)_0%,rgba(88,28,135,0.24)_34%,rgba(9,9,11,0)_72%)] blur-2xl" />
+      <div className="absolute inset-0 z-0 opacity-75 [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_82%,transparent)]">
+        {rain.map((drop, index) => (
+          <div
+            key={`${drop.kind}-${index}`}
+            className="absolute -top-12 will-change-transform motion-safe:animate-[pull-pass-rain_var(--rain-duration)_linear_infinite]"
+            style={{
+              left: drop.left,
+              animationDelay: drop.delay,
+              ["--rain-duration" as string]: drop.duration,
+            }}
+          >
+            {drop.kind === "coin" ? (
+              <img
+                src={PULL_PASS_COIN_IMAGE}
+                alt=""
+                className={`${drop.size} object-contain opacity-80 drop-shadow-[0_0_14px_rgba(250,204,21,0.3)]`}
+                loading="lazy"
+                decoding="async"
+              />
+            ) : (
+              <span
+                className={`${drop.size} rounded-lg border border-purple-300/25 bg-purple-500/15 px-2 py-1 font-black text-purple-100 shadow-[0_0_18px_rgba(168,85,247,0.22)]`}
+              >
+                XP
+              </span>
+            )}
+          </div>
+        ))}
       </div>
-    ))}
-    <img
-      src={PULL_PASS_HERO_IMAGE}
-      alt="Pull Pass mystery box"
-      className="absolute bottom-1 left-1/2 h-[170px] w-[270px] -translate-x-1/2 object-contain drop-shadow-[0_24px_58px_rgba(88,28,135,0.45)] lg:bottom-0 lg:h-[280px] lg:w-[440px]"
-      loading="eager"
-      decoding="async"
-    />
-  </div>
-);
+      {[0, 1, 2, 3].map((card) => (
+        <div
+          key={card}
+          className="absolute z-10 h-24 w-16 rounded-lg border border-purple-200/15 bg-[linear-gradient(145deg,rgba(107,33,168,0.4),rgba(9,9,11,0.92))] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
+          style={{
+            left: `${card * 21 + 16}%`,
+            top: `${card % 2 ? 16 : 40}px`,
+            transform: `rotate(${[-18, -8, 12, 22][card]}deg)`,
+          }}
+        >
+          <div className="m-2 h-10 rounded-md bg-purple-400/10" />
+          <Sparkles className="mx-auto h-5 w-5 text-purple-200/60" />
+        </div>
+      ))}
+      <img
+        src={PULL_PASS_HERO_IMAGE}
+        alt="Pull Pass mystery box"
+        className="absolute bottom-1 left-1/2 z-20 h-[170px] w-[270px] -translate-x-1/2 object-contain drop-shadow-[0_24px_58px_rgba(88,28,135,0.45)] lg:bottom-0 lg:h-[280px] lg:w-[440px]"
+        loading="eager"
+        decoding="async"
+      />
+      <style>{`@keyframes pull-pass-rain { 0% { transform: translate3d(0,-24px,0) rotate(-8deg); opacity: 0; } 12% { opacity: 0.9; } 100% { transform: translate3d(18px,390px,0) rotate(18deg); opacity: 0; } }`}</style>
+    </div>
+  );
+};
 
 export const PullPassPage: React.FC = () => {
   const {
