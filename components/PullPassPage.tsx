@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, Trophy, WalletCards } from 'lucide-react';
-import pullzLogo from '../assets/pullz-p.PNG';
+import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
+
+const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
 
 type RewardStatus = 'claimed' | 'active' | 'locked';
 
@@ -60,6 +61,21 @@ const MiniRewardArt: React.FC<{ type: 'coins' | 'box' | 'xp'; compact?: boolean 
   );
 };
 
+const PullPassIcon = () => (
+  <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-11 w-11 sm:h-12 sm:w-12" aria-hidden="true">
+    <path d="M32 4L55 17V47L32 60L9 47V17L32 4Z" fill="#111827" stroke="#7C3AED" strokeWidth="3" />
+    <path d="M32 9L50 19.5V44.5L32 55L14 44.5V19.5L32 9Z" fill="url(#pull-pass-icon-gradient)" stroke="#A855F7" strokeWidth="1.5" />
+    <path d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5L23.3 43.5L25.3 33.8L18 27.2L27.8 26.1L32 17Z" fill="#FACC15" stroke="#FEF3C7" strokeWidth="1.5" />
+    <path d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5V17Z" fill="#F59E0B" opacity="0.65" />
+    <defs>
+      <linearGradient id="pull-pass-icon-gradient" x1="32" y1="9" x2="32" y2="55" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#312E81" />
+        <stop offset="1" stopColor="#09090B" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 const PullPassHeroArt = () => (
   <div className="relative mx-auto h-[210px] w-full max-w-[360px] lg:h-[330px] lg:max-w-[520px]" aria-hidden="true">
     <div className="absolute inset-x-8 bottom-2 top-8 rounded-full bg-purple-600/25 blur-3xl" />
@@ -77,12 +93,13 @@ const PullPassHeroArt = () => (
         <Sparkles className="mx-auto h-5 w-5 text-purple-200/60" />
       </div>
     ))}
-    <div className="absolute bottom-5 left-1/2 h-28 w-48 -translate-x-1/2 rounded-[22px] border border-purple-200/25 bg-[linear-gradient(145deg,#25103e_0%,#6d28d9_42%,#0b0d16_100%)] shadow-[0_22px_70px_rgba(88,28,135,0.45)] lg:h-40 lg:w-72 lg:rounded-[28px]">
-      <div className="absolute -top-5 left-5 right-5 h-10 rounded-t-2xl border border-purple-200/20 bg-[linear-gradient(180deg,#7c3aed,#20113a)]" />
-      <div className="absolute inset-x-5 top-9 h-1 rounded-full bg-purple-200/25" />
-      <img src={pullzLogo} alt="" className="absolute left-1/2 top-1/2 h-14 w-28 -translate-x-1/2 -translate-y-1/2 object-contain opacity-90 lg:h-20 lg:w-40" />
-      <div className="absolute -right-2 top-9 h-12 w-3 rounded-full bg-purple-300/70 blur-sm" />
-    </div>
+    <img
+      src={PULL_PASS_HERO_IMAGE}
+      alt="Pull Pass mystery box"
+      className="absolute bottom-1 left-1/2 h-[170px] w-[270px] -translate-x-1/2 object-contain drop-shadow-[0_24px_58px_rgba(88,28,135,0.45)] lg:bottom-0 lg:h-[280px] lg:w-[440px]"
+      loading="eager"
+      decoding="async"
+    />
   </div>
 );
 
@@ -92,14 +109,14 @@ export const PullPassPage: React.FC = () => (
       <section className="grid items-center gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(440px,1fr)] lg:gap-10">
         <div className="relative z-10 pt-2 lg:pt-0">
           <div className="mb-4 flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl border border-purple-300/30 bg-purple-500/10 shadow-[0_0_24px_rgba(124,58,237,0.18)]">
-              <Trophy className="h-7 w-7 text-amber-300" />
+            <div className="grid h-12 w-12 place-items-center rounded-2xl border border-purple-300/30 bg-purple-500/10 shadow-[0_0_24px_rgba(124,58,237,0.18)] sm:h-14 sm:w-14">
+              <PullPassIcon />
             </div>
             <h1 className="text-[42px] font-black italic leading-none tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">PULL PASS</h1>
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <p className="text-base font-extrabold text-white/90 sm:text-lg">Season 1: The Collector</p>
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-400/30 bg-purple-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-purple-200"><ClockDot />42 DAYS LEFT</span>
+            <p className="text-base font-extrabold text-white/90 sm:text-lg">Level up, Earn Rewards.</p>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-400/30 bg-purple-500/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-purple-200"><ClockDot />LIVE NOW</span>
           </div>
           <p className="max-w-md text-sm leading-6 text-slate-400 sm:text-base">Earn XP by opening boxes and completing missions to unlock exclusive rewards.</p>
         </div>
