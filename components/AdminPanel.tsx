@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, collectionGroup, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
@@ -595,6 +595,8 @@ export const AdminPanel: React.FC = () => {
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
   const [pullPassDraft, setPullPassDraft] = useState(DEFAULT_PULL_PASS_SETTINGS);
   const [pullPassSettingsNotice, setPullPassSettingsNotice] = useState(false);
+  const [isResettingPullPass, setIsResettingPullPass] = useState(false);
+  const [pullPassResetNotice, setPullPassResetNotice] = useState<string | null>(null);
   const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
   const [leaderboardApprovals, setLeaderboardApprovals] = useState<LeaderboardApprovalEntry[]>([]);
   const [selectedLeaderboardWinnerIds, setSelectedLeaderboardWinnerIds] = useState<string[]>([]);
@@ -1273,6 +1275,58 @@ export const AdminPanel: React.FC = () => {
       } catch (error) {
           console.error('Failed to save Pull Pass settings', error);
           window.alert('Unable to save Pull Pass settings. Check the tier JSON and try again.');
+      }
+  };
+
+  const handleResetCurrentPullPass = async () => {
+      const confirmed = window.confirm(
+          `Reset "${pullPassDraft.seasonName || DEFAULT_PULL_PASS_SETTINGS.seasonName}" for every user?\n\nThis clears Pull Pass XP, claims, and un/opened Pull Pass reward-box inventory entries. This cannot be undone.`
+      );
+      if (!confirmed || isResettingPullPass) return;
+
+      setIsResettingPullPass(true);
+      setPullPassResetNotice(null);
+      try {
+          const resetAt = Date.now();
+          const [usersSnapshot, pullPassInventorySnapshot] = await Promise.all([
+              getDocs(collection(db, 'users')),
+              getDocs(query(collectionGroup(db, 'inventory'), where('source', '==', 'pullPassBoxReward')))
+          ]);
+
+          let batch = writeBatch(db);
+          let operationCount = 0;
+          const commitIfNeeded = async (force = false) => {
+              if (operationCount === 0 || (!force && operationCount < 450)) return;
+              await batch.commit();
+              batch = writeBatch(db);
+              operationCount = 0;
+          };
+
+          for (const userDoc of usersSnapshot.docs) {
+              batch.set(userDoc.ref, {
+                  pullPassSeasonXp: 0,
+                  pullPassXp: 0,
+                  pullPassClaims: {},
+                  pullPassLastXpAwardAt: deleteField(),
+                  pullPassResetAt: resetAt,
+              }, { merge: true });
+              operationCount += 1;
+              await commitIfNeeded();
+          }
+
+          for (const inventoryDoc of pullPassInventorySnapshot.docs) {
+              batch.delete(inventoryDoc.ref);
+              operationCount += 1;
+              await commitIfNeeded();
+          }
+
+          await commitIfNeeded(true);
+          setPullPassResetNotice(`Pull Pass reset complete for ${usersSnapshot.size.toLocaleString()} users. Removed ${pullPassInventorySnapshot.size.toLocaleString()} reward box inventory entries.`);
+      } catch (error) {
+          console.error('Failed to reset Pull Pass', error);
+          window.alert('Unable to reset Pull Pass. Please try again.');
+      } finally {
+          setIsResettingPullPass(false);
       }
   };
 
@@ -5566,6 +5620,30 @@ export const AdminPanel: React.FC = () => {
                                 Save Pull Pass settings
                             </button>
                             {pullPassSettingsNotice && <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Pull Pass settings saved.</div>}
+                        </div>
+
+                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-red-200">Reset current Pull Pass</p>
+                                    <p className="mt-1 text-xs leading-5 text-gray-400">
+                                        Clears every user&apos;s Pull Pass XP and claims, then removes Pull Pass reward-box inventory entries so the current season starts fresh.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { void handleResetCurrentPullPass(); }}
+                                    disabled={isResettingPullPass}
+                                    className="w-full rounded-lg border border-red-400/40 bg-red-500/15 px-5 py-2 text-sm font-bold text-red-100 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                >
+                                    {isResettingPullPass ? 'Resetting…' : 'Reset Pull Pass'}
+                                </button>
+                            </div>
+                            {pullPassResetNotice && (
+                                <div className="mt-3 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-2 text-xs text-green-300">
+                                    {pullPassResetNotice}
+                                </div>
+                            )}
                         </div>
                     </div>
 
