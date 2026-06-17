@@ -49,7 +49,7 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(env(safe-area-inset-bottom) + 72px)');
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(64px + max(env(safe-area-inset-bottom), 8px))');
     return () => {
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -126,9 +126,16 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[transform,opacity] duration-200 ease-out lg:hidden ${
-        isSuppressed || showTopUpModal ? 'pointer-events-none translate-y-full opacity-0' : 'translate-y-0 opacity-100'
+      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-opacity duration-200 ease-out lg:hidden ${
+        isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
+      style={{
+        height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateZ(0)',
+        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateZ(0)',
+        willChange: 'transform'
+      }}
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
