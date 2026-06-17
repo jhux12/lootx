@@ -105,6 +105,59 @@ const DEFAULT_REWARDS_SETTINGS = {
 };
 
 
+const DEFAULT_PULL_PASS_TIERS = [
+    { xpRequired: 50, tier: 1, premiumReward: '100 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 100, tier: 2, premiumReward: '125 Coins', freeReward: '50 Coins' },
+    { xpRequired: 160, tier: 3, premiumReward: '150 Coins', freeReward: '75 Coins' },
+    { xpRequired: 230, tier: 4, premiumReward: '175 Coins', freeReward: '100 Coins' },
+    { xpRequired: 310, tier: 5, premiumReward: '200 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 400, tier: 6, premiumReward: '225 Coins', freeReward: '125 Coins' },
+    { xpRequired: 500, tier: 7, premiumReward: '250 Coins', freeReward: '150 Coins' },
+    { xpRequired: 610, tier: 8, premiumReward: '275 Coins', freeReward: '175 Coins' },
+    { xpRequired: 730, tier: 9, premiumReward: '300 Coins', freeReward: '200 Coins' },
+    { xpRequired: 860, tier: 10, premiumReward: '350 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 1000, tier: 11, premiumReward: '375 Coins', freeReward: '225 Coins' },
+    { xpRequired: 1150, tier: 12, premiumReward: '400 Coins', freeReward: '250 Coins' },
+    { xpRequired: 1310, tier: 13, premiumReward: '425 Coins', freeReward: '275 Coins' },
+    { xpRequired: 1480, tier: 14, premiumReward: '450 Coins', freeReward: '300 Coins' },
+    { xpRequired: 1660, tier: 15, premiumReward: '500 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 1850, tier: 16, premiumReward: '525 Coins', freeReward: '325 Coins' },
+    { xpRequired: 2050, tier: 17, premiumReward: '550 Coins', freeReward: '350 Coins' },
+    { xpRequired: 2260, tier: 18, premiumReward: '575 Coins', freeReward: '375 Coins' },
+    { xpRequired: 2480, tier: 19, premiumReward: '600 Coins', freeReward: '400 Coins' },
+    { xpRequired: 2710, tier: 20, premiumReward: '700 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 2950, tier: 21, premiumReward: '725 Coins', freeReward: '425 Coins' },
+    { xpRequired: 3200, tier: 22, premiumReward: '750 Coins', freeReward: '450 Coins' },
+    { xpRequired: 3460, tier: 23, premiumReward: '775 Coins', freeReward: '475 Coins' },
+    { xpRequired: 3730, tier: 24, premiumReward: '800 Coins', freeReward: '500 Coins' },
+    { xpRequired: 4010, tier: 25, premiumReward: '900 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 4300, tier: 26, premiumReward: '925 Coins', freeReward: '525 Coins' },
+    { xpRequired: 4600, tier: 27, premiumReward: '950 Coins', freeReward: '550 Coins' },
+    { xpRequired: 4910, tier: 28, premiumReward: '975 Coins', freeReward: '575 Coins' },
+    { xpRequired: 5230, tier: 29, premiumReward: '1000 Coins', freeReward: '600 Coins' },
+    { xpRequired: 5560, tier: 30, premiumReward: '1250 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 5900, tier: 31, premiumReward: '1050 Coins', freeReward: '650 Coins' },
+    { xpRequired: 6250, tier: 32, premiumReward: '1100 Coins', freeReward: '700 Coins' },
+    { xpRequired: 6610, tier: 33, premiumReward: '1150 Coins', freeReward: '750 Coins' },
+    { xpRequired: 6980, tier: 34, premiumReward: '1200 Coins', freeReward: '800 Coins' },
+    { xpRequired: 7360, tier: 35, premiumReward: '1500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 7750, tier: 36, premiumReward: '1250 Coins', freeReward: '850 Coins' },
+    { xpRequired: 8150, tier: 37, premiumReward: '1300 Coins', freeReward: '900 Coins' },
+    { xpRequired: 8560, tier: 38, premiumReward: '1350 Coins', freeReward: '950 Coins' },
+    { xpRequired: 8980, tier: 39, premiumReward: '1400 Coins', freeReward: '1000 Coins' },
+    { xpRequired: 9410, tier: 40, premiumReward: '2000 Coins', freeReward: 'Master Box' },
+    { xpRequired: 9850, tier: 41, premiumReward: '1450 Coins', freeReward: '1050 Coins' },
+    { xpRequired: 10300, tier: 42, premiumReward: '1500 Coins', freeReward: '1100 Coins' },
+    { xpRequired: 10760, tier: 43, premiumReward: '1600 Coins', freeReward: '1150 Coins' },
+    { xpRequired: 11230, tier: 44, premiumReward: '1700 Coins', freeReward: '1200 Coins' },
+    { xpRequired: 11710, tier: 45, premiumReward: '2500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 12200, tier: 46, premiumReward: '1800 Coins', freeReward: '1250 Coins' },
+    { xpRequired: 12700, tier: 47, premiumReward: '1900 Coins', freeReward: '1300 Coins' },
+    { xpRequired: 13210, tier: 48, premiumReward: '2000 Coins', freeReward: '1350 Coins' },
+    { xpRequired: 13730, tier: 49, premiumReward: '2500 Coins', freeReward: '1500 Coins' },
+    { xpRequired: 14260, tier: 50, premiumReward: '5000 Coins', freeReward: 'Gold Collector Box' },
+];
+
 const DEFAULT_PULL_PASS_SETTINGS = {
     enabled: true,
     seasonName: 'Season 1: The Collector',
@@ -113,7 +166,7 @@ const DEFAULT_PULL_PASS_SETTINGS = {
     coinsPerXp: 10,
     totalTiers: 50,
     resetOnEnd: true,
-    tiersText: '[{"tier":1,"xpRequired":100,"freeReward":"Bronze Box","premiumReward":"100 Coins"},{"tier":10,"xpRequired":1000,"freeReward":"Silver Box","premiumReward":"250 Coins"},{"tier":25,"xpRequired":2500,"freeReward":"Gold Box","premiumReward":"500 Coins"},{"tier":50,"xpRequired":5000,"freeReward":"Gold Collector Box","premiumReward":"1000 Coins"}]'
+    tiersText: JSON.stringify(DEFAULT_PULL_PASS_TIERS, null, 2)
 };
 
 const DEFAULT_LOCKS: UserLocks = {

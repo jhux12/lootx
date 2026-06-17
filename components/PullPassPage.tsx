@@ -65,15 +65,15 @@ const inferRewardType = (name: string, fallback: RewardType = 'coins'): RewardTy
 const currentTier = 12;
 
 const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: RewardType }> = [
-  { tier: 9, name: 'Bronze Box', status: 'claimed', type: 'bronze' },
-  { tier: 10, name: 'Silver Box', status: 'claimed', type: 'silver' },
-  { tier: 11, name: '250 XP', status: 'claimed', type: 'xp' },
-  { tier: 12, name: 'Silver Box', status: 'active', type: 'silver' },
-  { tier: 13, name: '150 Coins', status: 'locked', type: 'coins' },
-  { tier: 14, name: 'Gold Box', status: 'locked', type: 'gold' },
-  { tier: 15, name: '300 XP', status: 'locked', type: 'xp' },
-  { tier: 20, name: '500 Coins', status: 'locked', type: 'coins' },
-  { tier: 50, name: 'Gold Collector Box', status: 'locked', type: 'gold' },
+  { tier: 1, name: 'Bronze Box', status: 'claimed', type: 'bronze' },
+  { tier: 2, name: '50 Coins', status: 'claimed', type: 'coins' },
+  { tier: 3, name: '75 Coins', status: 'claimed', type: 'coins' },
+  { tier: 4, name: '100 Coins', status: 'claimed', type: 'coins' },
+  { tier: 5, name: 'Bronze Box', status: 'claimed', type: 'bronze' },
+  { tier: 6, name: '125 Coins', status: 'locked', type: 'coins' },
+  { tier: 7, name: '150 Coins', status: 'locked', type: 'coins' },
+  { tier: 8, name: '175 Coins', status: 'locked', type: 'coins' },
+  { tier: 10, name: 'Silver Box', status: 'locked', type: 'silver' },
 ];
 
 const missions = [
@@ -198,7 +198,8 @@ export const PullPassPage: React.FC = () => {
   const hasStarted = startsAt === null || now >= startsAt;
   const hasEnded = endsAt !== null && now > endsAt;
   const isLive = settings.enabled && hasStarted && !hasEnded;
-  const displayedXp = isLive ? 620 : 0;
+  const seasonXpEarnedAfterStart = isLive ? 620 : 0;
+  const displayedXp = seasonXpEarnedAfterStart;
   const displayedTier = hasEnded && settings.resetOnEnd ? 1 : currentTier;
   const progressPercent = isLive ? 62 : 0;
   const statusLabel = !settings.enabled ? 'DISABLED' : !hasStarted ? 'STARTING SOON' : hasEnded ? 'SEASON ENDED' : 'LIVE NOW';
