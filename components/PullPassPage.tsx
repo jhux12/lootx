@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, Crown, Lock, Sparkles } from "lucide-react";
+import { Check, ChevronRight, Crown, Lock } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useGame } from "../context/GameContext";
@@ -9,7 +9,7 @@ import { Bonuses } from "./Bonuses";
 import { Quests } from "./Quests";
 
 const PULL_PASS_HERO_IMAGE =
-  "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4";
+  "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fmain.png?alt=media&token=42168665-2b77-4fc0-a6d4-128e62deac4a";
 const PULL_PASS_COIN_IMAGE =
   "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567";
 const PULL_PASS_BOX_IMAGES = {
@@ -271,7 +271,7 @@ const PullPassHeroArt = () => {
               />
             ) : (
               <span
-                className={`${drop.size} rounded-lg border border-purple-300/25 bg-purple-500/15 px-2 py-1 font-black text-purple-100 shadow-[0_0_18px_rgba(168,85,247,0.22)]`}
+                className={`${drop.size} rounded-lg bg-purple-500/15 px-2 py-1 font-black text-purple-100 shadow-[0_0_18px_rgba(168,85,247,0.22)]`}
               >
                 XP
               </span>
@@ -279,20 +279,6 @@ const PullPassHeroArt = () => {
           </div>
         ))}
       </div>
-      {[0, 1, 2, 3].map((card) => (
-        <div
-          key={card}
-          className="absolute z-10 h-24 w-16 rounded-lg border border-purple-200/15 bg-[linear-gradient(145deg,rgba(107,33,168,0.4),rgba(9,9,11,0.92))] shadow-[0_12px_28px_rgba(0,0,0,0.35)]"
-          style={{
-            left: `${card * 21 + 16}%`,
-            top: `${card % 2 ? 16 : 40}px`,
-            transform: `rotate(${[-18, -8, 12, 22][card]}deg)`,
-          }}
-        >
-          <div className="m-2 h-10 rounded-md bg-purple-400/10" />
-          <Sparkles className="mx-auto h-5 w-5 text-purple-200/60" />
-        </div>
-      ))}
       <img
         src={PULL_PASS_HERO_IMAGE}
         alt="Pull Pass mystery box"
