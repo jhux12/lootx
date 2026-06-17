@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useGame } from '../context/GameContext';
 
 const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
 const PULL_PASS_COIN_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567';
@@ -162,6 +163,7 @@ const PullPassHeroArt = () => (
 );
 
 export const PullPassPage: React.FC = () => {
+  const { user } = useGame();
   const [settings, setSettings] = useState<PullPassSettings>(DEFAULT_PULL_PASS_SETTINGS);
 
   useEffect(() => {
@@ -198,15 +200,28 @@ export const PullPassPage: React.FC = () => {
   const hasStarted = startsAt === null || now >= startsAt;
   const hasEnded = endsAt !== null && now > endsAt;
   const isLive = settings.enabled && hasStarted && !hasEnded;
-  const seasonXpEarnedAfterStart = isLive ? 620 : 0;
+  const seasonXpEarnedAfterStart = isLive
+    ? Math.max(0, Number((user as Record<string, any>).pullPassSeasonXp ?? (user as Record<string, any>).pullPassXp ?? (user as Record<string, any>).pullPass?.xp ?? 0) || 0)
+    : 0;
   const displayedXp = seasonXpEarnedAfterStart;
-  const displayedTier = hasEnded && settings.resetOnEnd ? 1 : currentTier;
-  const progressPercent = isLive ? 62 : 0;
+  const tierDefinitions = useMemo<PullPassTierSetting[]>(() => {
+    if (settings.tiers.length) return settings.tiers;
+    return rewards.map((reward) => ({ tier: reward.tier, freeReward: reward.name, rewardType: reward.type, xpRequired: reward.tier * 50 }));
+  }, [settings.tiers]);
+  const earnedTier = tierDefinitions.reduce((current, tier) => {
+    const tierNumber = Math.max(1, Number(tier.tier ?? current) || current);
+    const xpRequired = Math.max(0, Number(tier.xpRequired ?? 0) || 0);
+    return seasonXpEarnedAfterStart >= xpRequired ? Math.max(current, tierNumber) : current;
+  }, 1);
+  const displayedTier = hasEnded && settings.resetOnEnd ? 1 : earnedTier;
+  const nextTier = tierDefinitions.find((tier) => Math.max(1, Number(tier.tier ?? 0) || 0) > displayedTier);
+  const previousTierXp = Math.max(0, Number(tierDefinitions.find((tier) => Number(tier.tier) === displayedTier)?.xpRequired ?? 0) || 0);
+  const nextTierXp = Math.max(previousTierXp + 1, Number(nextTier?.xpRequired ?? previousTierXp + 1000) || previousTierXp + 1000);
+  const progressPercent = isLive ? Math.min(100, Math.max(0, ((seasonXpEarnedAfterStart - previousTierXp) / Math.max(1, nextTierXp - previousTierXp)) * 100)) : 0;
   const statusLabel = !settings.enabled ? 'DISABLED' : !hasStarted ? 'STARTING SOON' : hasEnded ? 'SEASON ENDED' : 'LIVE NOW';
   const heroSubheading = hasEnded && settings.resetOnEnd ? 'Season ended. Progress resets for the next Pull Pass.' : 'Level up, Earn Rewards.';
   const configuredRewards = useMemo(() => {
-    if (!settings.tiers.length) return rewards;
-    return settings.tiers.slice(0, 9).map((tier, index) => {
+    return tierDefinitions.map((tier, index) => {
       const freeReward = typeof tier.freeReward === 'string' && tier.freeReward.trim() ? tier.freeReward.trim() : `Tier ${tier.tier ?? index + 1} Reward`;
       const rewardType = tier.rewardType && ['coins', 'xp', 'bronze', 'silver', 'gold'].includes(tier.rewardType) ? tier.rewardType : inferRewardType(freeReward);
       const tierNumber = Math.max(1, Number(tier.tier ?? index + 1) || index + 1);
@@ -217,7 +232,7 @@ export const PullPassPage: React.FC = () => {
         type: rewardType,
       };
     });
-  }, [displayedTier, settings.tiers]);
+  }, [displayedTier, tierDefinitions]);
   const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
   const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
 
@@ -247,12 +262,12 @@ export const PullPassPage: React.FC = () => {
           <button className="inline-flex items-center gap-1 text-xs font-extrabold uppercase text-purple-300 transition-colors hover:text-purple-100">View All Tiers <ChevronRight className="h-4 w-4" /></button>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_18px_rgba(147,51,234,0.45)]" style={{ width: `${progressPercent}%` }} /></div>
-        <p className="mt-2 text-xs font-semibold text-slate-300">{displayedXp} / 1000 XP</p>
+        <p className="mt-2 text-xs font-semibold text-slate-300">{displayedXp} / {nextTierXp} XP</p>
         <div className="mt-4 flex items-center justify-between rounded-xl border border-white/7 bg-white/[0.03] p-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Next Reward</p>
             <p className="text-base font-bold text-white">Silver Box</p>
-            <p className="text-xs font-semibold text-slate-400">80 XP away</p>
+            <p className="text-xs font-semibold text-slate-400">{Math.max(0, nextTierXp - displayedXp)} XP away</p>
           </div>
           <div className="flex items-center gap-2"><MiniRewardArt type="silver" compact /><ChevronRight className="h-5 w-5 text-slate-500" /></div>
         </div>
