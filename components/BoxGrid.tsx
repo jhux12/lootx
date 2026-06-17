@@ -36,7 +36,7 @@ export const BoxGrid: React.FC<BoxGridProps> = ({
   const [visibleCount, setVisibleCount] = useState(initialVisibleCount);
 
   const displayBoxes = useMemo(
-    () => (boxesOverride ?? allBoxes).filter((box) => !box.isUserCreated && !box.isDaily),
+    () => (boxesOverride ?? allBoxes).filter((box) => !box.isUserCreated && !box.isDaily && !box.isPullPassBox),
     [allBoxes, boxesOverride]
   );
   const visibleBoxes = useMemo(() => displayBoxes.slice(0, visibleCount), [displayBoxes, visibleCount]);

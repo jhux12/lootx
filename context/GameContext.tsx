@@ -2058,6 +2058,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tag: data.tag as MysteryBox['tag'],
             tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,
             isDaily: data.isDaily ?? false,
+            isPullPassBox: data.isPullPassBox === true,
+            pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items,

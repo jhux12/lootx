@@ -445,7 +445,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [isAuthenticated, user?.id]);
 
   const baseHomeBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
+    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
 
