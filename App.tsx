@@ -642,6 +642,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           <CaseOpening 
             boxId={view.boxId} 
             isFree={view.isFree}
+            inventoryId={view.inventoryId}
           />
         </div>
       )}

@@ -203,7 +203,7 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
+  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   size?: string;
@@ -215,6 +215,10 @@ export interface InventoryItem extends CaseItem {
   sourceRedemptionId?: string;
   acquisitionCurrencyType?: 'COIN' | 'XP';
   openCurrencyType?: 'COIN' | 'XP';
+  boxId?: string;
+  pullPassTier?: number;
+  pullPassBoxType?: MysteryBox['pullPassBoxType'];
+  openedAt?: number;
   freeShipping?: boolean;
   shippingCostOverrideCoins?: number;
   shippingCostOverrideCents?: number;
@@ -378,7 +382,7 @@ export type ViewState =
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }
   | { type: 'PROVABLY_FAIR' }
-  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean }
+  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean; inventoryId?: string }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' }
   | { type: 'PLINKO' }

@@ -76,6 +76,9 @@ export default async function handler(req, res) {
     const body = await readJsonBody(req);
     const boxId = typeof body?.boxId === 'string' ? body.boxId : (typeof body?.caseId === 'string' ? body.caseId : null);
     const requestedPaymentMethod = body?.paymentMethod === 'xp' ? 'xp' : 'coins';
+    const pullPassInventoryId = typeof body?.inventoryId === 'string' && body.inventoryId.trim().length
+      ? body.inventoryId.trim()
+      : null;
     requestBoxId = boxId;
     const isFree = body?.isFree === true;
     if (!boxId || typeof boxId !== 'string') {
@@ -90,6 +93,7 @@ export default async function handler(req, res) {
     const economySettingsRef = firestore.collection('settings').doc('economy');
     const pullPassSettingsRef = firestore.collection('settings').doc('pullPass');
     const inventoryRef = userRef.collection('inventory').doc();
+    const pullPassInventoryRef = pullPassInventoryId ? userRef.collection('inventory').doc(pullPassInventoryId) : null;
     const openRef = firestore.collection('opens').doc();
     const operationId = typeof body?.operationId === 'string' && body.operationId.trim().length
       ? body.operationId.trim()
@@ -100,14 +104,15 @@ export default async function handler(req, res) {
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, pullPassSettingsSnap, processedOpSnap] = await Promise.all([
+      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, pullPassSettingsSnap, processedOpSnap, pullPassInventorySnap] = await Promise.all([
         transaction.get(boxRef),
         transaction.get(userRef),
         transaction.get(provablyRef),
         transaction.get(bonusSettingsRef),
         transaction.get(economySettingsRef),
         transaction.get(pullPassSettingsRef),
-        transaction.get(processedOpRef)
+        transaction.get(processedOpRef),
+        pullPassInventoryRef ? transaction.get(pullPassInventoryRef) : Promise.resolve(null)
       ]);
 
       if (processedOpSnap.exists) {
@@ -119,6 +124,19 @@ export default async function handler(req, res) {
       }
 
       const boxData = boxSnap.data() ?? {};
+      const pullPassInventoryData = pullPassInventorySnap?.exists ? pullPassInventorySnap.data() ?? {} : null;
+      const isPullPassInventoryOpen = Boolean(pullPassInventoryRef);
+      if (isPullPassInventoryOpen) {
+        if (!pullPassInventoryData) {
+          fail(404, 'PULL_PASS_REWARD_NOT_FOUND', 'Pull Pass reward box not found in inventory.', { inventoryId: pullPassInventoryId });
+        }
+        if (pullPassInventoryData.status !== 'available' || pullPassInventoryData.openedAt) {
+          fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward box has already been opened.', { inventoryId: pullPassInventoryId });
+        }
+        if (pullPassInventoryData.source !== 'pullPassBoxReward' || pullPassInventoryData.boxId !== boxId) {
+          fail(403, 'INVALID_PULL_PASS_REWARD', 'This inventory item cannot open the requested Pull Pass box.', { inventoryId: pullPassInventoryId, caseId: boxId });
+        }
+      }
       if (boxData.isUserCreated && boxData.createdAt) {
         const createdAt = typeof boxData.createdAt.toMillis === 'function'
           ? boxData.createdAt.toMillis()
@@ -147,7 +165,7 @@ export default async function handler(req, res) {
         fail(400, 'INVALID_REQUEST', 'This case has no configured prizes.', { caseId: boxId });
       }
 
-      if (currencyType === 'COIN' && !isFree && (!Number.isFinite(price) || price <= 0)) {
+      if (currencyType === 'COIN' && !isFree && !isPullPassInventoryOpen && (!Number.isFinite(price) || price <= 0)) {
         fail(400, 'INVALID_REQUEST', 'This case does not have a valid coin price.', { caseId: boxId });
       }
 
@@ -185,8 +203,8 @@ export default async function handler(req, res) {
         transaction.set(economySettingsRef, normalizedEconomy, { merge: true });
       }
       const xpCostForCoinCase = getXpCost(price, normalizedEconomy);
-      const shouldUseXpForOpen = !isFree && currencyType === 'COIN' && requestedPaymentMethod === 'xp';
-      const paidWithXp = currencyType === 'XP' || shouldUseXpForOpen;
+      const shouldUseXpForOpen = !isPullPassInventoryOpen && !isFree && currencyType === 'COIN' && requestedPaymentMethod === 'xp';
+      const paidWithXp = !isPullPassInventoryOpen && (currencyType === 'XP' || shouldUseXpForOpen);
       if (shouldUseXpForOpen && normalizedEconomy.xpOpenEnabled !== true) {
         fail(403, 'XP_OPEN_DISABLED', 'Opening cases with XP is currently disabled.');
       }
@@ -210,7 +228,7 @@ export default async function handler(req, res) {
       const allowXpCaseAward = bonusSettings.awardXpForXpCases === true
         || openCaseRule.allowXpCurrency === true;
 
-      const coinsSpent = !isFree && currencyType === 'COIN' && !shouldUseXpForOpen ? price : 0;
+      const coinsSpent = !isPullPassInventoryOpen && !isFree && currencyType === 'COIN' && !shouldUseXpForOpen ? price : 0;
       if (!Number.isFinite(coinsSpent)) {
         fail(400, 'INVALID_REQUEST', 'Invalid case price for XP calculation.', { caseId: boxId });
       }
@@ -235,7 +253,7 @@ export default async function handler(req, res) {
         ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
         : 0;
 
-      if (currencyType === 'XP' || shouldUseXpForOpen) {
+      if (!isPullPassInventoryOpen && (currencyType === 'XP' || shouldUseXpForOpen)) {
         const requiredXp = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
         if (!Number.isInteger(priceXP) || priceXP <= 0) {
           if (currencyType === 'XP') {
@@ -250,7 +268,7 @@ export default async function handler(req, res) {
             priceXP: requiredXp
           });
         }
-      } else if (!isFree && currentCoins < price) {
+      } else if (!isPullPassInventoryOpen && !isFree && currentCoins < price) {
         fail(402, 'INSUFFICIENT_FUNDS', 'Not enough coins to open this case.', {
           currencyType: paidWithXp ? 'XP' : currencyType,
           caseId: boxId,
@@ -267,7 +285,7 @@ export default async function handler(req, res) {
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
       const prizeValue = Number(prize.value ?? prize.price ?? 0);
       const resolvedXpCost = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
-      const coinCost = currencyType === 'COIN' && !isFree && !shouldUseXpForOpen ? price : 0;
+      const coinCost = currencyType === 'COIN' && !isPullPassInventoryOpen && !isFree && !shouldUseXpForOpen ? price : 0;
       let newCoins = currentCoins;
       let newXpBalance = currentXp;
       let balanceState = {
@@ -433,6 +451,15 @@ export default async function handler(req, res) {
         inventoryPayload.size = selectedSize;
       }
       transaction.set(inventoryRef, inventoryPayload);
+      if (pullPassInventoryRef) {
+        transaction.set(pullPassInventoryRef, {
+          status: 'opened',
+          openedAt: obtainedAt,
+          openedCaseId: boxId,
+          openedInventoryId: inventoryRef.id,
+          updatedAt: obtainedAt
+        }, { merge: true });
+      }
 
       const openPayload = {
         uid: decoded.uid,

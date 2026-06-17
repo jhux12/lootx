@@ -417,7 +417,8 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
       return {
         type: 'CASE_OPENING',
         boxId: secondary,
-        isFree: parseBooleanSearchParam(params.get('free'))
+        isFree: parseBooleanSearchParam(params.get('free')),
+        inventoryId: params.get('inventoryId') ?? undefined
       };
     }
     return { type: 'HOME' };
@@ -569,7 +570,11 @@ const getPathFromView = (view: ViewState): string => {
     case 'VERIFY_EMAIL':
       return '/verify';
     case 'CASE_OPENING': {
-      const search = view.isFree ? '?free=true' : '';
+      const params = new URLSearchParams();
+      if (view.isFree) params.set('free', 'true');
+      if (view.inventoryId) params.set('inventoryId', view.inventoryId);
+      const query = params.toString();
+      const search = query ? `?${query}` : '';
       return `/cases/${view.boxId}${search}`;
     }
     case 'BATTLE_ARENA':
@@ -1172,6 +1177,10 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     sourceRedemptionId: typeof data.sourceRedemptionId === 'string' ? data.sourceRedemptionId : undefined,
     acquisitionCurrencyType: data.acquisitionCurrencyType === 'XP' ? 'XP' : data.acquisitionCurrencyType === 'COIN' ? 'COIN' : undefined,
     openCurrencyType: data.openCurrencyType === 'XP' ? 'XP' : data.openCurrencyType === 'COIN' ? 'COIN' : undefined,
+    boxId: typeof data.boxId === 'string' ? data.boxId : undefined,
+    pullPassTier: data.pullPassTier == null ? undefined : Number(data.pullPassTier),
+    pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as InventoryItem['pullPassBoxType'] : undefined,
+    openedAt: data.openedAt == null ? undefined : normalizeTimestamp(data.openedAt, 0),
     freeShipping: data.freeShipping === true,
     shippingCostOverrideCoins: data.shippingCostOverrideCoins == null ? undefined : Number(data.shippingCostOverrideCoins),
     shippingCostOverrideCents: data.shippingCostOverrideCents == null ? undefined : Number(data.shippingCostOverrideCents)
