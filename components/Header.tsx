@@ -392,15 +392,15 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
     <div className={`relative z-[260] transition-[opacity,transform] duration-200 ease-out ${isSuppressed || showTopUpModal ? 'pointer-events-none -translate-y-full opacity-0' : 'opacity-100'}`} aria-hidden={isSuppressed || showTopUpModal}>
       <header
         ref={headerRef}
-        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-[#101827] bg-[#020713]/98 lg:bg-[#1b2024] lg:px-4 lg:py-2`}
+        className={`${isSticky ? 'fixed inset-x-0 top-0' : 'relative'} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
       >
         <div className="pt-[env(safe-area-inset-top,0px)]">
-          <nav className="relative mx-auto flex h-[44px] max-w-7xl items-center justify-between px-2.5 sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
+          <nav className="relative mx-auto flex h-[52px] max-w-7xl items-center justify-between px-3 sm:h-[56px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
             <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((open) => !open)}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#1b2638] bg-[#07101d] text-slate-300 transition-colors hover:text-white lg:hidden"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#3a4146]/70 bg-[#242b31] text-slate-300 transition-colors hover:text-white lg:hidden"
               aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMobileMenuOpen}
             >
@@ -412,7 +412,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({ onOpenInbox: _onOpenInbox, unr
               className="absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 shrink-0 items-center rounded-2xl p-1 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 lg:static lg:-ml-1 lg:translate-x-0 lg:translate-y-0"
               aria-label="Go home"
             >
-              <BrandLockup showText={false} logoClassName="h-7 w-auto lg:h-[42px]" />
+              <BrandLockup showText={false} logoClassName="h-8 w-auto sm:h-9 lg:h-[42px]" />
             </button>
 
             <div className="hidden items-center gap-3 lg:flex xl:gap-7">

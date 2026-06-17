@@ -126,7 +126,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-[#121827] bg-[#020713]/98 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[transform,opacity] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed inset-x-0 bottom-0 z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[transform,opacity] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none translate-y-full opacity-0' : 'translate-y-0 opacity-100'
       }`}
       aria-label="Primary navigation"
@@ -172,10 +172,10 @@ export const MobileBottomNav: React.FC = () => {
                       </span>
                     )}
                     {isAuthenticated && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-purple-500 ring-1 ring-[#020713]" aria-hidden="true" />
+                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-purple-500 ring-1 ring-[#1b2024]" aria-hidden="true" />
                     )}
                     {hasFreeSignupBox && (
-                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#020713]" aria-hidden="true" />
+                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#1b2024]" aria-hidden="true" />
                     )}
                   </span>
                 ) : Icon ? (
