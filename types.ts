@@ -383,7 +383,7 @@ export type ViewState =
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }
   | { type: 'PROVABLY_FAIR' }
-  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean; inventoryId?: string }
+  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean; inventoryId?: string; pullPassClaimTier?: number }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' }
   | { type: 'PLINKO' }

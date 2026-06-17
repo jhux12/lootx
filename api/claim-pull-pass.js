@@ -49,15 +49,13 @@ export default async function handler(req, res) {
 
     const settingsRef = firestore.collection('settings').doc('pullPass');
     const userRef = firestore.collection('users').doc(decoded.uid);
-    const inventoryRef = userRef.collection('inventory').doc(`pull-pass-tier-${requestedTier}`);
 
     let responsePayload = null;
 
     await firestore.runTransaction(async (transaction) => {
-      const [settingsSnap, userSnap, inventorySnap] = await Promise.all([
+      const [settingsSnap, userSnap] = await Promise.all([
         transaction.get(settingsRef),
-        transaction.get(userRef),
-        transaction.get(inventoryRef)
+        transaction.get(userRef)
       ]);
 
       const settings = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
@@ -106,9 +104,6 @@ export default async function handler(req, res) {
         const boxSnapshot = await transaction.get(boxQuery);
         pullPassBox = boxSnapshot.docs[0] ? { id: boxSnapshot.docs[0].id, ...boxSnapshot.docs[0].data() } : null;
         if (!pullPassBox) fail(404, 'PULL_PASS_BOX_NOT_FOUND', 'No Pull Pass reward box is configured for this reward.', { tier: requestedTier, boxType });
-        if (inventorySnap.exists && inventorySnap.data()?.status !== 'opened') {
-          fail(409, 'REWARD_INVENTORY_EXISTS', 'This Pull Pass reward is already in your inventory.', { tier: requestedTier });
-        }
       }
 
       const claimedAt = Date.now();
@@ -116,34 +111,11 @@ export default async function handler(req, res) {
         rewardName,
         rewardType: boxType || (coinAmount > 0 ? 'coins' : 'xp'),
         boxId: pullPassBox?.id ?? null,
-        inventoryId: pullPassBox ? inventoryRef.id : null,
+        inventoryId: null,
         coinAmount,
         claimedAt,
         opened: false
       };
-
-      if (pullPassBox) {
-        transaction.set(inventoryRef, {
-          id: inventoryRef.id,
-          instanceId: inventoryRef.id,
-          boxId: pullPassBox.id,
-          name: rewardName,
-          price: 0,
-          image: pullPassBox.image ?? '',
-          rarity: 'epic',
-          chance: 100,
-          color: pullPassBox.accentColor ?? '#7c3aed',
-          status: 'available',
-          source: 'pullPassBoxReward',
-          sourceItemId: pullPassBox.id,
-          pullPassTier: requestedTier,
-          pullPassBoxType: pullPassBox.pullPassBoxType ?? boxType,
-          obtainedAt: claimedAt,
-          redeemable: false,
-          shippable: false,
-          locked: false
-        });
-      }
 
       let newCoinBalance = null;
       if (coinAmount > 0) {
@@ -183,7 +155,7 @@ export default async function handler(req, res) {
         coinAmount,
         newCoinBalance,
         boxId: pullPassBox?.id ?? null,
-        inventoryId: pullPassBox ? inventoryRef.id : null
+        pullPassClaimTier: pullPassBox ? requestedTier : null
       };
     });
 

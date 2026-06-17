@@ -643,6 +643,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             boxId={view.boxId} 
             isFree={view.isFree}
             inventoryId={view.inventoryId}
+            pullPassClaimTier={view.pullPassClaimTier}
           />
         </div>
       )}

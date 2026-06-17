@@ -418,7 +418,8 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
         type: 'CASE_OPENING',
         boxId: secondary,
         isFree: parseBooleanSearchParam(params.get('free')),
-        inventoryId: params.get('inventoryId') ?? undefined
+        inventoryId: params.get('inventoryId') ?? undefined,
+        pullPassClaimTier: params.get('pullPassClaimTier') ? Math.max(1, Math.floor(Number(params.get('pullPassClaimTier')) || 0)) : undefined
       };
     }
     return { type: 'HOME' };
@@ -573,6 +574,7 @@ const getPathFromView = (view: ViewState): string => {
       const params = new URLSearchParams();
       if (view.isFree) params.set('free', 'true');
       if (view.inventoryId) params.set('inventoryId', view.inventoryId);
+      if (view.pullPassClaimTier) params.set('pullPassClaimTier', String(view.pullPassClaimTier));
       const query = params.toString();
       const search = query ? `?${query}` : '';
       return `/cases/${view.boxId}${search}`;

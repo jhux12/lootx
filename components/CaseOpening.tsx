@@ -27,6 +27,7 @@ interface CaseOpeningProps {
   boxId: string;
   isFree?: boolean;
   inventoryId?: string;
+  pullPassClaimTier?: number;
 }
 
 interface RollData {
@@ -291,7 +292,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
 const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
 
 
-export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false, inventoryId }) => {
+export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false, inventoryId, pullPassClaimTier }) => {
   const {
     user,
     balance,
@@ -443,7 +444,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
   const hasMoreDropItems = visibleDropItemCount < displayItems.length;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
-  const isInventoryRewardOpen = Boolean(inventoryId);
+  const isRewardOpen = Boolean(inventoryId || pullPassClaimTier);
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
   const [pullPassCoinsPerXp, setPullPassCoinsPerXp] = useState(10);
@@ -456,7 +457,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, []);
   const xpPer100Coins = Math.max(0, Number(bonusSettings?.xpPer100Coins ?? bonusSettings?.xpPer100CoinsWagered ?? 0));
   const xpPerCaseOpened = Math.max(0, Number(bonusSettings?.xpPerCaseOpened ?? bonusSettings?.xpPerCaseOpen ?? 0));
-  const xpPreviewCoinsSpent = !isInventoryRewardOpen && caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
+  const xpPreviewCoinsSpent = !isRewardOpen && caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
   const previewXpFromSpend = Math.floor(xpPreviewCoinsSpent / pullPassCoinsPerXp);
   const previewXpFromOpen = 0;
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
@@ -468,8 +469,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (!Number.isFinite(xpCostForCoinCase) || xpCostForCoinCase <= 0) return 0;
     return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
   }, [currentXpBalance, xpCostForCoinCase]);
-  const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && !isInventoryRewardOpen && (currentXpBalance > 0 || xpProgress > 0);
-  const canOpenMain = isInventoryRewardOpen || isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
+  const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && !isRewardOpen && (currentXpBalance > 0 || xpProgress > 0);
+  const canOpenMain = isRewardOpen || isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
   const spinnerCardWidth = DESKTOP_CARD_WIDTH;
   const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
@@ -1332,7 +1333,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       return;
     }
 
-    if (!isDemo && !isFree && !isInventoryRewardOpen) {
+    if (!isDemo && !isFree && !isRewardOpen) {
       if (isBalanceLoading) {
         spinRequestLockRef.current = false;
         return;
@@ -1455,7 +1456,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           };
         }>('/api/open-case', {
           method: 'POST',
-          body: JSON.stringify({ boxId: box.id, isFree, inventoryId, operationId, paymentMethod })
+          body: JSON.stringify({ boxId: box.id, isFree, inventoryId, pullPassClaimTier, operationId, paymentMethod })
         });
 
         trackEvent('OpenBox', {
@@ -2123,7 +2124,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
                       ) : isBalanceLoading ? (
                         'Loading balance...'
-                      ) : isInventoryRewardOpen ? (
+                      ) : isRewardOpen ? (
                         'Open Reward Box'
                       ) : isFree ? (
                         'Free Spin'
@@ -2154,7 +2155,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       )}
                     </span>
                  </button>
-                {!isFree && !isInventoryRewardOpen && (
+                {!isFree && !isRewardOpen && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleTryFree}

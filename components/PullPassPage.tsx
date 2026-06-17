@@ -167,7 +167,7 @@ const PullPassHeroArt = () => (
 );
 
 export const PullPassPage: React.FC = () => {
-  const { user, isAuthenticated, openAuthModal, addNotification, syncBalance } = useGame();
+  const { user, isAuthenticated, openAuthModal, addNotification, syncBalance, setView } = useGame();
   const [settings, setSettings] = useState<PullPassSettings>(DEFAULT_PULL_PASS_SETTINGS);
   const [claimingTier, setClaimingTier] = useState<number | null>(null);
 
@@ -269,7 +269,7 @@ export const PullPassPage: React.FC = () => {
         coinAmount?: number;
         newCoinBalance?: number | null;
         boxId?: string | null;
-        inventoryId?: string | null;
+        pullPassClaimTier?: number | null;
       }>('/api/claim-pull-pass', {
         method: 'POST',
         body: JSON.stringify({ tier: reward.tier })
@@ -277,9 +277,9 @@ export const PullPassPage: React.FC = () => {
       if (typeof result.newCoinBalance === 'number') {
         syncBalance(result.newCoinBalance);
       }
-      if (result.inventoryId) {
-        toast.success('Reward has been added to inventory.');
-        addNotification({ message: 'Reward has been added to inventory.', type: 'admin' });
+      if (result.boxId && result.pullPassClaimTier) {
+        toast.success('Reward box unlocked. Opening now...');
+        setView({ type: 'CASE_OPENING', boxId: result.boxId, pullPassClaimTier: result.pullPassClaimTier });
       } else if ((result.coinAmount ?? 0) > 0) {
         const coinAmount = Math.max(0, Number(result.coinAmount) || 0);
         toast.success(`${coinAmount.toLocaleString()} coins added to your account.`);
@@ -361,7 +361,17 @@ export const PullPassPage: React.FC = () => {
                   <h3 className="text-center text-sm font-bold text-white">{reward.name}</h3>
                   <div className="mt-3 grid min-h-8 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
                     {claimedTiers[String(reward.tier)] ? (
-                      <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-300">Claimed</span>
+                      claimedTiers[String(reward.tier)]?.boxId && claimedTiers[String(reward.tier)]?.opened !== true ? (
+                        <button
+                          type="button"
+                          onClick={() => setView({ type: 'CASE_OPENING', boxId: claimedTiers[String(reward.tier)].boxId, pullPassClaimTier: reward.tier })}
+                          className="rounded-full border border-purple-300/35 bg-purple-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-purple-100 transition-colors hover:bg-purple-500/30"
+                        >
+                          Open Box
+                        </button>
+                      ) : (
+                        <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-emerald-300">Claimed</span>
+                      )
                     ) : reward.status === 'active' ? (
                       <button
                         type="button"
