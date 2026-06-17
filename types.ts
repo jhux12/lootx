@@ -25,6 +25,7 @@ export interface User {
   pullPassSeasonXp?: number;
   pullPassXp?: number;
   pullPassClaims?: Record<string, any>;
+  pullPassResetAt?: number;
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;

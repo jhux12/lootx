@@ -244,6 +244,9 @@ export default async function handler(req, res) {
       const pullPassIsActive = pullPassSettings.enabled !== false
         && (!Number.isFinite(pullPassStartsAt) || Date.now() >= pullPassStartsAt)
         && (!Number.isFinite(pullPassEndsAt) || Date.now() <= pullPassEndsAt);
+      const pullPassLastResetAt = Math.max(0, Math.floor(toSafeNonNegativeNumber(pullPassSettings.lastResetAt, 0)) || 0);
+      const userPullPassResetAt = Math.max(0, Math.floor(toSafeNonNegativeNumber(userData.pullPassResetAt, 0)) || 0);
+      const shouldResetUserPullPassBeforeAward = pullPassLastResetAt > userPullPassResetAt;
       const pullPassCoinsPerXp = Math.max(1, Math.floor(toSafeNonNegativeNumber(pullPassSettings.coinsPerXp, 10)) || 10);
       const pullPassXpAward = pullPassIsActive && coinsSpent > 0
         ? Math.floor(Math.max(0, coinsSpent) / pullPassCoinsPerXp)
@@ -417,11 +420,21 @@ export default async function handler(req, res) {
       }
 
       if (pullPassXpAward > 0) {
-        transaction.set(userRef, {
-          pullPassSeasonXp: admin.firestore.FieldValue.increment(pullPassXpAward),
-          pullPassXp: admin.firestore.FieldValue.increment(pullPassXpAward),
-          pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const pullPassAwardPatch = shouldResetUserPullPassBeforeAward
+          ? {
+              pullPassSeasonXp: pullPassXpAward,
+              pullPassXp: pullPassXpAward,
+              pullPassClaims: {},
+              pullPass: admin.firestore.FieldValue.delete(),
+              pullPassResetAt: pullPassLastResetAt,
+              pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
+            }
+          : {
+              pullPassSeasonXp: admin.firestore.FieldValue.increment(pullPassXpAward),
+              pullPassXp: admin.firestore.FieldValue.increment(pullPassXpAward),
+              pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
+            };
+        transaction.set(userRef, pullPassAwardPatch, { merge: true });
       }
 
       transaction.set(provablyRef, {

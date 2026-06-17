@@ -205,8 +205,12 @@ export const PullPassPage: React.FC = () => {
   const hasStarted = startsAt === null || now >= startsAt;
   const hasEnded = endsAt !== null && now > endsAt;
   const isLive = settings.enabled && hasStarted && !hasEnded;
+  const userPullPassResetAt = Math.max(0, Number((user as Record<string, any>).pullPassResetAt ?? 0) || 0);
+  const isUserSyncedToCurrentPass = userPullPassResetAt >= Math.max(0, Number(settings.lastResetAt) || 0);
   const seasonXpEarnedAfterStart = isLive
-    ? Math.max(0, Number((user as Record<string, any>).pullPassSeasonXp ?? (user as Record<string, any>).pullPassXp ?? (user as Record<string, any>).pullPass?.xp ?? 0) || 0)
+    ? (isUserSyncedToCurrentPass
+      ? Math.max(0, Number((user as Record<string, any>).pullPassSeasonXp ?? (user as Record<string, any>).pullPassXp ?? (user as Record<string, any>).pullPass?.xp ?? 0) || 0)
+      : 0)
     : 0;
   const displayedXp = seasonXpEarnedAfterStart;
   const tierDefinitions = useMemo<PullPassTierSetting[]>(() => {
