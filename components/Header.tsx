@@ -135,6 +135,16 @@ const utilityButtonClass =
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
+type PullPassHeaderTier = {
+  tier?: number;
+  xpRequired?: number;
+  freeReward?: string;
+};
+
+type PullPassHeaderSettings = {
+  tiers: PullPassHeaderTier[];
+};
+
 const HeaderSkeleton: React.FC = memo(() => (
   <div className="flex min-h-[44px] items-center gap-2" aria-hidden="true">
     <div className="hidden h-8 w-[72px] rounded-lg border border-amber-500/10 bg-white/[0.06] lg:block" />
@@ -225,6 +235,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     return null;
   }, [view.type]);
   const [rewardsSettings, setRewardsSettings] = useState<RewardsSettingsData>();
+  const [pullPassSettings, setPullPassSettings] =
+    useState<PullPassHeaderSettings>({ tiers: [] });
   const [enableRewardsRealtime, setEnableRewardsRealtime] = useState(false);
 
   useEffect(() => {
@@ -398,6 +410,31 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   }, [enableRewardsRealtime, isAuthenticated]);
 
   useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, "settings", "pullPass"),
+      (snap) => {
+        const data = snap.data() as Record<string, unknown> | undefined;
+        let tiers = Array.isArray(data?.tiers)
+          ? (data?.tiers as PullPassHeaderTier[])
+          : [];
+        if (!tiers.length && typeof data?.tiersText === "string") {
+          try {
+            const parsed = JSON.parse(data.tiersText);
+            tiers = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            tiers = [];
+          }
+        }
+        setPullPassSettings({ tiers });
+      },
+      (error) => {
+        console.error("Pull Pass settings snapshot failed", error);
+      },
+    );
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     if (!isAuthenticated) {
       setQuestReadyCount((current) => (current === 0 ? current : 0));
       setClaimedTodayCount((current) => (current === 0 ? current : 0));
@@ -426,6 +463,41 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     user.challengeStatsDay,
     user.questClaims,
   ]);
+
+  const nextPullPassReward = useMemo(() => {
+    const tiers = pullPassSettings.tiers
+      .map((tier, index) => ({
+        tier: Math.max(1, Number(tier.tier ?? index + 1) || index + 1),
+        xpRequired: Math.max(0, Number(tier.xpRequired ?? 0) || 0),
+        freeReward:
+          typeof tier.freeReward === "string" && tier.freeReward.trim()
+            ? tier.freeReward.trim()
+            : `Tier ${tier.tier ?? index + 1} Reward`,
+      }))
+      .sort((a, b) => a.tier - b.tier);
+    const currentXp = isAuthenticated
+      ? Math.max(
+          0,
+          Number(
+            (user as Record<string, unknown>).pullPassSeasonXp ??
+              (user as Record<string, unknown>).pullPassXp ??
+              0,
+          ) || 0,
+        )
+      : 0;
+    const nextTier =
+      tiers.find((tier) => tier.xpRequired > currentXp) ?? tiers[0];
+    if (!nextTier) {
+      return {
+        title: "Pull Pass Rewards",
+        meta: isAuthenticated ? "Open boxes to earn XP" : "Sign in to track XP",
+      };
+    }
+    return {
+      title: nextTier.freeReward,
+      meta: `${Math.max(0, nextTier.xpRequired - currentXp).toLocaleString()} XP away`,
+    };
+  }, [isAuthenticated, pullPassSettings.tiers, user]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -857,7 +929,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-label="Mobile navigation menu"
         >
           <div className="flex min-h-full flex-col pb-4 pt-1">
-            <div className="mb-7 flex items-center gap-3 px-1">
+            <button
+              type="button"
+              onClick={() => navigate("PROFILE")}
+              className="mb-7 flex w-full items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.045]"
+            >
               {isAuthenticated ? (
                 <UserAvatar
                   user={user}
@@ -875,13 +951,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     ? resolvedDisplayName || "Pullz Player"
                     : "Welcome to Pullz"}
                 </p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-400">
-                  {isAuthenticated
-                    ? "Manage your rewards"
-                    : "Sign in to view your profile"}
-                </p>
               </div>
-            </div>
+            </button>
 
             <nav className="space-y-2" aria-label="Mobile menu links">
               <button
@@ -918,6 +989,24 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <UserIcon className="h-5 w-5 text-purple-300" />
                 Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("PULL_PASS")}
+                className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.06]"
+              >
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Next Reward
+                  </p>
+                  <p className="truncate text-sm font-bold text-white">
+                    {nextPullPassReward.title}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-400">
+                    {nextPullPassReward.meta}
+                  </p>
+                </div>
+                <PullPassNavIcon className="h-8 w-8 shrink-0 text-purple-300" />
               </button>
             </nav>
 
