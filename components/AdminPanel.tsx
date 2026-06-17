@@ -2858,7 +2858,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleSaveBox = () => {
-      const allowsZeroPrice = Boolean(newBox.isDaily);
+      const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
           return;
@@ -2868,7 +2868,7 @@ export const AdminPanel: React.FC = () => {
           return;
       }
       if (effectiveBoxPrice === 0 && !allowsZeroPrice) {
-          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily box.' : 'Boxes require a positive coin price unless marked as a free daily box.');
+          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily or Pull Pass box.' : 'Boxes require a positive coin price unless marked as a free daily or Pull Pass box.');
           return;
       }
 
@@ -3129,8 +3129,8 @@ export const AdminPanel: React.FC = () => {
   const buildEditableBoxPayload = (items: CaseItem[]): MysteryBox => ({
       id: editingBoxId || '', // Empty ID tells createBox to addDoc
       name: newBox.name || '',
-      price: isXpBox ? 0 : Number(newBox.price),
-      priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
+      price: isXpBox ? 0 : Math.max(0, Number(newBox.price ?? 0) || 0),
+      priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0) || 0)) : undefined,
       currencyType: isXpBox ? 'XP' : 'COIN',
       image: newBox.image || 'https://picsum.photos/300',
       spinnerBackgroundImage: (newBox.spinnerBackgroundImage ?? '').trim(),
