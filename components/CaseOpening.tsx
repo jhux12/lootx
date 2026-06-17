@@ -444,11 +444,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
+  const [pullPassCoinsPerXp, setPullPassCoinsPerXp] = useState(10);
+  useEffect(() => {
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'pullPass'), (snapshot) => {
+      const data = snapshot.exists() ? snapshot.data() ?? {} : {};
+      setPullPassCoinsPerXp(Math.max(1, Math.floor(Number(data.coinsPerXp ?? 10) || 10)));
+    });
+    return () => unsubscribe();
+  }, []);
   const xpPer100Coins = Math.max(0, Number(bonusSettings?.xpPer100Coins ?? bonusSettings?.xpPer100CoinsWagered ?? 0));
   const xpPerCaseOpened = Math.max(0, Number(bonusSettings?.xpPerCaseOpened ?? bonusSettings?.xpPerCaseOpen ?? 0));
   const xpPreviewCoinsSpent = caseCurrencyType === 'COIN' ? Math.max(0, Number(box?.price ?? 0)) : 0;
-  const previewXpFromSpend = Math.floor((xpPreviewCoinsSpent / 100) * xpPer100Coins);
-  const previewXpFromOpen = isFree ? 0 : xpPerCaseOpened;
+  const previewXpFromSpend = Math.floor(xpPreviewCoinsSpent / pullPassCoinsPerXp);
+  const previewXpFromOpen = 0;
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const [economySettings, setEconomySettings] = useState(DEFAULT_ECONOMY_SETTINGS);
@@ -2135,7 +2143,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false 
                           </span>
                           {previewTotalXp > 0 && (
                             <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
-                              +{previewTotalXp.toLocaleString()} XP
+                              +{previewTotalXp.toLocaleString()} Pull Pass XP
                             </span>
                           )}
                         </span>

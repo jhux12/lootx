@@ -88,6 +88,7 @@ export default async function handler(req, res) {
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
     const bonusSettingsRef = firestore.collection('settings').doc('bonus-settings');
     const economySettingsRef = firestore.collection('settings').doc('economy');
+    const pullPassSettingsRef = firestore.collection('settings').doc('pullPass');
     const inventoryRef = userRef.collection('inventory').doc();
     const openRef = firestore.collection('opens').doc();
     const operationId = typeof body?.operationId === 'string' && body.operationId.trim().length
@@ -99,12 +100,13 @@ export default async function handler(req, res) {
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, processedOpSnap] = await Promise.all([
+      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, pullPassSettingsSnap, processedOpSnap] = await Promise.all([
         transaction.get(boxRef),
         transaction.get(userRef),
         transaction.get(provablyRef),
         transaction.get(bonusSettingsRef),
         transaction.get(economySettingsRef),
+        transaction.get(pullPassSettingsRef),
         transaction.get(processedOpRef)
       ]);
 
@@ -214,6 +216,20 @@ export default async function handler(req, res) {
       }
       const xpFromSpend = Math.floor((Math.max(0, coinsSpent) / 100) * xpPer100CoinsWagered);
       const shouldAwardForOpenType = !paidWithXp || allowXpCaseAward;
+      const pullPassSettings = pullPassSettingsSnap.exists ? pullPassSettingsSnap.data() ?? {} : {};
+      const pullPassStartsAt = typeof pullPassSettings.startsAt === 'string' && pullPassSettings.startsAt
+        ? new Date(pullPassSettings.startsAt).getTime()
+        : null;
+      const pullPassEndsAt = typeof pullPassSettings.endsAt === 'string' && pullPassSettings.endsAt
+        ? new Date(pullPassSettings.endsAt).getTime()
+        : null;
+      const pullPassIsActive = pullPassSettings.enabled !== false
+        && (!Number.isFinite(pullPassStartsAt) || Date.now() >= pullPassStartsAt)
+        && (!Number.isFinite(pullPassEndsAt) || Date.now() <= pullPassEndsAt);
+      const pullPassCoinsPerXp = Math.max(1, Math.floor(toSafeNonNegativeNumber(pullPassSettings.coinsPerXp, 10)) || 10);
+      const pullPassXpAward = pullPassIsActive && coinsSpent > 0
+        ? Math.floor(Math.max(0, coinsSpent) / pullPassCoinsPerXp)
+        : 0;
       const xpFromOpen = !isFree && shouldAwardForOpenType ? xpPerCaseOpened : 0;
       const totalXpAward = xpSystemEnabled && shouldAwardForOpenType
         ? Math.max(0, Math.floor((xpFromSpend + xpFromOpen + baseXpBonus) * xpMultiplier))
@@ -382,6 +398,14 @@ export default async function handler(req, res) {
         });
       }
 
+      if (pullPassXpAward > 0) {
+        transaction.set(userRef, {
+          pullPassSeasonXp: admin.firestore.FieldValue.increment(pullPassXpAward),
+          pullPassXp: admin.firestore.FieldValue.increment(pullPassXpAward),
+          pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+
       transaction.set(provablyRef, {
         serverSeed,
         serverSeedHash,
@@ -482,6 +506,7 @@ export default async function handler(req, res) {
         newCoins,
         newXpBalance,
         xpAwarded: totalXpAward,
+        pullPassXpAwarded: pullPassXpAward,
         xpSettingsUsed: {
           xpPer100: xpPer100CoinsWagered,
           xpPerOpen: xpPerCaseOpened,
@@ -528,6 +553,8 @@ export default async function handler(req, res) {
         coinsSpent,
         xpPer100CoinsWagered,
         xpPerCaseOpened,
+        pullPassCoinsPerXp,
+        pullPassXpAward,
         baseXpBonus,
         xpMultiplier,
         xpSystemEnabled,
