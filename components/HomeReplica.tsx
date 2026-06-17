@@ -89,7 +89,7 @@ const pickWeightedItem = <T extends { weight: number }>(pool: T[]) => {
 
 const buildLiveWins = (boxes: MysteryBox[]): HomeTickerWin[] => {
   const weightedPool = boxes
-    .filter((box) => !box.isUserCreated)
+    .filter((box) => !box.isUserCreated && !box.isPullPassBox)
     .flatMap((box) =>
       box.items
         .filter((item) => item.image && item.name)

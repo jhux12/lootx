@@ -417,7 +417,9 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
       return {
         type: 'CASE_OPENING',
         boxId: secondary,
-        isFree: parseBooleanSearchParam(params.get('free'))
+        isFree: parseBooleanSearchParam(params.get('free')),
+        inventoryId: params.get('inventoryId') ?? undefined,
+        pullPassClaimTier: params.get('pullPassClaimTier') ? Math.max(1, Math.floor(Number(params.get('pullPassClaimTier')) || 0)) : undefined
       };
     }
     return { type: 'HOME' };
@@ -467,6 +469,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
 
   if (primary === 'quests') {
     return { type: 'QUESTS' };
+  }
+
+  if (primary === 'pull-pass' || primary === 'pullpass') {
+    return { type: 'PULL_PASS' };
   }
 
   if (primary === 'polls') {
@@ -538,6 +544,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/bonuses';
     case 'QUESTS':
       return '/quests';
+    case 'PULL_PASS':
+      return '/pull-pass';
     case 'POLLS':
       return '/polls';
     case 'REFERRALS':
@@ -563,7 +571,12 @@ const getPathFromView = (view: ViewState): string => {
     case 'VERIFY_EMAIL':
       return '/verify';
     case 'CASE_OPENING': {
-      const search = view.isFree ? '?free=true' : '';
+      const params = new URLSearchParams();
+      if (view.isFree) params.set('free', 'true');
+      if (view.inventoryId) params.set('inventoryId', view.inventoryId);
+      if (view.pullPassClaimTier) params.set('pullPassClaimTier', String(view.pullPassClaimTier));
+      const query = params.toString();
+      const search = query ? `?${query}` : '';
       return `/cases/${view.boxId}${search}`;
     }
     case 'BATTLE_ARENA':
@@ -968,6 +981,11 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     xpBalance: xp,
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
+    pullPassSeasonXp: Number(data.pullPassSeasonXp ?? 0),
+    pullPassXp: Number(data.pullPassXp ?? 0),
+    pullPassClaims: data.pullPassClaims ?? undefined,
+    pullPassResetAt: Number(data.pullPassResetAt ?? 0),
+    activePullPassBoxClaim: data.activePullPassBoxClaim ?? undefined,
     lastDailyClaim,
     lastFreeBoxClaim,
     totalSpent: normalizeNonNegativeNumber(data.totalSpent),
@@ -1035,6 +1053,11 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     xpBalance: xp,
     xpEarnedLifetime: Number(data.xpEarnedLifetime ?? 0),
     xpSpentLifetime: Number(data.xpSpentLifetime ?? 0),
+    pullPassSeasonXp: Number(data.pullPassSeasonXp ?? 0),
+    pullPassXp: Number(data.pullPassXp ?? 0),
+    pullPassClaims: data.pullPassClaims ?? undefined,
+    pullPassResetAt: Number(data.pullPassResetAt ?? 0),
+    activePullPassBoxClaim: data.activePullPassBoxClaim ?? undefined,
     lastDailyClaim,
     lastFreeBoxClaim,
     totalSpent: normalizeNonNegativeNumber(data.totalSpent),
@@ -1160,6 +1183,10 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     sourceRedemptionId: typeof data.sourceRedemptionId === 'string' ? data.sourceRedemptionId : undefined,
     acquisitionCurrencyType: data.acquisitionCurrencyType === 'XP' ? 'XP' : data.acquisitionCurrencyType === 'COIN' ? 'COIN' : undefined,
     openCurrencyType: data.openCurrencyType === 'XP' ? 'XP' : data.openCurrencyType === 'COIN' ? 'COIN' : undefined,
+    boxId: typeof data.boxId === 'string' ? data.boxId : undefined,
+    pullPassTier: data.pullPassTier == null ? undefined : Number(data.pullPassTier),
+    pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as InventoryItem['pullPassBoxType'] : undefined,
+    openedAt: data.openedAt == null ? undefined : normalizeTimestamp(data.openedAt, 0),
     freeShipping: data.freeShipping === true,
     shippingCostOverrideCoins: data.shippingCostOverrideCoins == null ? undefined : Number(data.shippingCostOverrideCoins),
     shippingCostOverrideCents: data.shippingCostOverrideCents == null ? undefined : Number(data.shippingCostOverrideCents)
@@ -2052,6 +2079,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tag: data.tag as MysteryBox['tag'],
             tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,
             isDaily: data.isDaily ?? false,
+            isPullPassBox: data.isPullPassBox === true,
+            pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items,

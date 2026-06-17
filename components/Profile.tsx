@@ -315,7 +315,8 @@ export const Profile: React.FC = () => {
 
   const isFreeShippingItem = (item: InventoryItem) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? NaN) === 0 || Number(item.shippingCostOverrideCents ?? NaN) === 0 || isXpPurchasedItem(item);
 
-  const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false;
+  const isPullPassBoxReward = (item: InventoryItem) => item.source === 'pullPassBoxReward' && Boolean(item.boxId);
+  const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false && !isPullPassBoxReward(item);
   const canSelectShipment = (item: InventoryItem) => isItemShippable(item);
 
   useEffect(() => {
@@ -643,6 +644,17 @@ export const Profile: React.FC = () => {
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
     const isLocked = !!item.locked;
+    if (isPullPassBoxReward(item)) {
+      return {
+        label: item.status === 'opened' ? 'Opened' : 'Open Box',
+        disabled: item.status !== 'available' || !item.boxId,
+        onClick: () => {
+          if (item.boxId) {
+            setView({ type: 'CASE_OPENING', boxId: item.boxId, inventoryId: item.instanceId });
+          }
+        }
+      };
+    }
     const canShip = isItemShippable(item);
     const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
 

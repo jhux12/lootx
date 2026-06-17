@@ -22,6 +22,11 @@ export interface User {
   xpBalance?: number;
   xpEarnedLifetime?: number;
   xpSpentLifetime?: number;
+  pullPassSeasonXp?: number;
+  pullPassXp?: number;
+  pullPassClaims?: Record<string, any>;
+  pullPassResetAt?: number;
+  activePullPassBoxClaim?: { tier: number; boxId: string; claimedAt?: number; rewardName?: string };
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;
@@ -154,6 +159,8 @@ export interface MysteryBox {
   riskLevel?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
+  isPullPassBox?: boolean;
+  pullPassBoxType?: 'bronze' | 'silver' | 'gold' | 'elite' | 'master' | 'collector';
   sellBackRate?: number;
   createdAt?: number;
   marketValueAudit?: BoxMarketValueAudit;
@@ -198,7 +205,7 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
+  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   size?: string;
@@ -210,6 +217,10 @@ export interface InventoryItem extends CaseItem {
   sourceRedemptionId?: string;
   acquisitionCurrencyType?: 'COIN' | 'XP';
   openCurrencyType?: 'COIN' | 'XP';
+  boxId?: string;
+  pullPassTier?: number;
+  pullPassBoxType?: MysteryBox['pullPassBoxType'];
+  openedAt?: number;
   freeShipping?: boolean;
   shippingCostOverrideCoins?: number;
   shippingCostOverrideCents?: number;
@@ -365,6 +376,7 @@ export type ViewState =
   | { type: 'POLLS' }
   | { type: 'REFERRALS' }
   | { type: 'QUESTS' }
+  | { type: 'PULL_PASS' }
   | { type: 'CONTACT' }
   | { type: 'TERMS' }
   | { type: 'PRIVACY' }
@@ -372,7 +384,7 @@ export type ViewState =
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }
   | { type: 'PROVABLY_FAIR' }
-  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean }
+  | { type: 'CASE_OPENING'; boxId: string; isFree?: boolean; inventoryId?: string; pullPassClaimTier?: number }
   | { type: 'BATTLE_ARENA'; battleId: string }
   | { type: 'BATTLES' }
   | { type: 'PLINKO' }

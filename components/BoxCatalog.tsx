@@ -215,7 +215,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const catalogModels = useMemo(
     () => boxes
-      .filter((box) => !box.isDaily && !box.isUserCreated && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .filter((box) => !box.isDaily && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
       .map(createCatalogModel),
     [boxes]
   );

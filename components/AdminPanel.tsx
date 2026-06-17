@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
@@ -102,6 +102,71 @@ const DEFAULT_REWARDS_SETTINGS = {
     top3CoinReward: 2000,
     heroImageUrl: '',
     questRulesText: '[{"id":"open-3-boxes","title":"Unboxing mission","description":"Open 3 boxes today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"upgrade-3-times","title":"Upgrader mission","description":"Use upgrader 3 times today","type":"upgrader_uses","target":3,"rewardCoins":70,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
+};
+
+
+const DEFAULT_PULL_PASS_TIERS = [
+    { xpRequired: 50, tier: 1, premiumReward: '100 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 100, tier: 2, premiumReward: '125 Coins', freeReward: '50 Coins' },
+    { xpRequired: 160, tier: 3, premiumReward: '150 Coins', freeReward: '75 Coins' },
+    { xpRequired: 230, tier: 4, premiumReward: '175 Coins', freeReward: '100 Coins' },
+    { xpRequired: 310, tier: 5, premiumReward: '200 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 400, tier: 6, premiumReward: '225 Coins', freeReward: '125 Coins' },
+    { xpRequired: 500, tier: 7, premiumReward: '250 Coins', freeReward: '150 Coins' },
+    { xpRequired: 610, tier: 8, premiumReward: '275 Coins', freeReward: '175 Coins' },
+    { xpRequired: 730, tier: 9, premiumReward: '300 Coins', freeReward: '200 Coins' },
+    { xpRequired: 860, tier: 10, premiumReward: '350 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 1000, tier: 11, premiumReward: '375 Coins', freeReward: '225 Coins' },
+    { xpRequired: 1150, tier: 12, premiumReward: '400 Coins', freeReward: '250 Coins' },
+    { xpRequired: 1310, tier: 13, premiumReward: '425 Coins', freeReward: '275 Coins' },
+    { xpRequired: 1480, tier: 14, premiumReward: '450 Coins', freeReward: '300 Coins' },
+    { xpRequired: 1660, tier: 15, premiumReward: '500 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 1850, tier: 16, premiumReward: '525 Coins', freeReward: '325 Coins' },
+    { xpRequired: 2050, tier: 17, premiumReward: '550 Coins', freeReward: '350 Coins' },
+    { xpRequired: 2260, tier: 18, premiumReward: '575 Coins', freeReward: '375 Coins' },
+    { xpRequired: 2480, tier: 19, premiumReward: '600 Coins', freeReward: '400 Coins' },
+    { xpRequired: 2710, tier: 20, premiumReward: '700 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 2950, tier: 21, premiumReward: '725 Coins', freeReward: '425 Coins' },
+    { xpRequired: 3200, tier: 22, premiumReward: '750 Coins', freeReward: '450 Coins' },
+    { xpRequired: 3460, tier: 23, premiumReward: '775 Coins', freeReward: '475 Coins' },
+    { xpRequired: 3730, tier: 24, premiumReward: '800 Coins', freeReward: '500 Coins' },
+    { xpRequired: 4010, tier: 25, premiumReward: '900 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 4300, tier: 26, premiumReward: '925 Coins', freeReward: '525 Coins' },
+    { xpRequired: 4600, tier: 27, premiumReward: '950 Coins', freeReward: '550 Coins' },
+    { xpRequired: 4910, tier: 28, premiumReward: '975 Coins', freeReward: '575 Coins' },
+    { xpRequired: 5230, tier: 29, premiumReward: '1000 Coins', freeReward: '600 Coins' },
+    { xpRequired: 5560, tier: 30, premiumReward: '1250 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 5900, tier: 31, premiumReward: '1050 Coins', freeReward: '650 Coins' },
+    { xpRequired: 6250, tier: 32, premiumReward: '1100 Coins', freeReward: '700 Coins' },
+    { xpRequired: 6610, tier: 33, premiumReward: '1150 Coins', freeReward: '750 Coins' },
+    { xpRequired: 6980, tier: 34, premiumReward: '1200 Coins', freeReward: '800 Coins' },
+    { xpRequired: 7360, tier: 35, premiumReward: '1500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 7750, tier: 36, premiumReward: '1250 Coins', freeReward: '850 Coins' },
+    { xpRequired: 8150, tier: 37, premiumReward: '1300 Coins', freeReward: '900 Coins' },
+    { xpRequired: 8560, tier: 38, premiumReward: '1350 Coins', freeReward: '950 Coins' },
+    { xpRequired: 8980, tier: 39, premiumReward: '1400 Coins', freeReward: '1000 Coins' },
+    { xpRequired: 9410, tier: 40, premiumReward: '2000 Coins', freeReward: 'Master Box' },
+    { xpRequired: 9850, tier: 41, premiumReward: '1450 Coins', freeReward: '1050 Coins' },
+    { xpRequired: 10300, tier: 42, premiumReward: '1500 Coins', freeReward: '1100 Coins' },
+    { xpRequired: 10760, tier: 43, premiumReward: '1600 Coins', freeReward: '1150 Coins' },
+    { xpRequired: 11230, tier: 44, premiumReward: '1700 Coins', freeReward: '1200 Coins' },
+    { xpRequired: 11710, tier: 45, premiumReward: '2500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 12200, tier: 46, premiumReward: '1800 Coins', freeReward: '1250 Coins' },
+    { xpRequired: 12700, tier: 47, premiumReward: '1900 Coins', freeReward: '1300 Coins' },
+    { xpRequired: 13210, tier: 48, premiumReward: '2000 Coins', freeReward: '1350 Coins' },
+    { xpRequired: 13730, tier: 49, premiumReward: '2500 Coins', freeReward: '1500 Coins' },
+    { xpRequired: 14260, tier: 50, premiumReward: '5000 Coins', freeReward: 'Gold Collector Box' },
+];
+
+const DEFAULT_PULL_PASS_SETTINGS = {
+    enabled: true,
+    seasonName: 'Season 1: The Collector',
+    startsAt: '',
+    endsAt: '',
+    coinsPerXp: 10,
+    totalTiers: 50,
+    resetOnEnd: true,
+    tiersText: JSON.stringify(DEFAULT_PULL_PASS_TIERS, null, 2)
 };
 
 const DEFAULT_LOCKS: UserLocks = {
@@ -347,6 +412,8 @@ export const AdminPanel: React.FC = () => {
       spinnerBackgroundImage: '',
       accentColor: '#3b82f6',
       isDaily: false,
+      isPullPassBox: false,
+      pullPassBoxType: 'bronze',
       tags: [],
       sellBackRate: 0.82
   });
@@ -526,6 +593,10 @@ export const AdminPanel: React.FC = () => {
   const [expandedAuditRows, setExpandedAuditRows] = useState<Record<string, boolean>>({});
   const [bonusDraft, setBonusDraft] = useState(bonusSettings);
   const [rewardsDraft, setRewardsDraft] = useState(DEFAULT_REWARDS_SETTINGS);
+  const [pullPassDraft, setPullPassDraft] = useState(DEFAULT_PULL_PASS_SETTINGS);
+  const [pullPassSettingsNotice, setPullPassSettingsNotice] = useState(false);
+  const [isResettingPullPass, setIsResettingPullPass] = useState(false);
+  const [pullPassResetNotice, setPullPassResetNotice] = useState<string | null>(null);
   const [rewardsSettingsNotice, setRewardsSettingsNotice] = useState(false);
   const [leaderboardApprovals, setLeaderboardApprovals] = useState<LeaderboardApprovalEntry[]>([]);
   const [selectedLeaderboardWinnerIds, setSelectedLeaderboardWinnerIds] = useState<string[]>([]);
@@ -1158,6 +1229,103 @@ export const AdminPanel: React.FC = () => {
       });
       return () => unsubscribe();
   }, []);
+
+
+  useEffect(() => {
+      const pullPassPathLabel = 'settings/pullPass';
+      console.log('READING FIRESTORE PATH', pullPassPathLabel);
+      const pullPassRef = doc(db, 'settings', 'pullPass');
+      const unsubscribe = onSnapshot(pullPassRef, (snapshot) => {
+          if (!snapshot.exists()) return;
+          const data = snapshot.data() as Partial<typeof DEFAULT_PULL_PASS_SETTINGS> & { tiers?: unknown[] };
+          setPullPassDraft({
+              ...DEFAULT_PULL_PASS_SETTINGS,
+              ...data,
+              startsAt: typeof data.startsAt === 'string' ? data.startsAt : '',
+              endsAt: typeof data.endsAt === 'string' ? data.endsAt : '',
+              tiersText: Array.isArray(data.tiers) ? JSON.stringify(data.tiers, null, 2) : (typeof data.tiersText === 'string' ? data.tiersText : DEFAULT_PULL_PASS_SETTINGS.tiersText)
+          });
+      }, (error) => {
+          console.error('Failed to subscribe to Pull Pass settings', error);
+      });
+      return () => unsubscribe();
+  }, []);
+
+  const handleSavePullPassSettings = async () => {
+      try {
+          const parsedTiers = JSON.parse(pullPassDraft.tiersText || '[]');
+          if (!Array.isArray(parsedTiers)) {
+              window.alert('Pull Pass tiers must be a JSON array.');
+              return;
+          }
+          await setDoc(doc(db, 'settings', 'pullPass'), {
+              enabled: pullPassDraft.enabled,
+              seasonName: pullPassDraft.seasonName.trim() || DEFAULT_PULL_PASS_SETTINGS.seasonName,
+              startsAt: pullPassDraft.startsAt,
+              endsAt: pullPassDraft.endsAt,
+              coinsPerXp: Math.max(1, Math.floor(Number(pullPassDraft.coinsPerXp) || DEFAULT_PULL_PASS_SETTINGS.coinsPerXp)),
+              totalTiers: Math.max(1, Math.floor(Number(pullPassDraft.totalTiers) || DEFAULT_PULL_PASS_SETTINGS.totalTiers)),
+              resetOnEnd: pullPassDraft.resetOnEnd !== false,
+              tiers: parsedTiers,
+              tiersText: JSON.stringify(parsedTiers, null, 2),
+              updatedAt: Date.now()
+          }, { merge: true });
+          setPullPassSettingsNotice(true);
+          window.setTimeout(() => setPullPassSettingsNotice(false), 2200);
+      } catch (error) {
+          console.error('Failed to save Pull Pass settings', error);
+          window.alert('Unable to save Pull Pass settings. Check the tier JSON and try again.');
+      }
+  };
+
+  const handleResetCurrentPullPass = async () => {
+      const confirmed = window.confirm(
+          `Reset "${pullPassDraft.seasonName || DEFAULT_PULL_PASS_SETTINGS.seasonName}" for every user?\n\nThis clears Pull Pass XP, claims, and active reward-box claim flags. This cannot be undone.`
+      );
+      if (!confirmed || isResettingPullPass) return;
+
+      setIsResettingPullPass(true);
+      setPullPassResetNotice(null);
+      try {
+          const resetAt = Date.now();
+          const usersSnapshot = await getDocs(collection(db, 'users'));
+
+          let batch = writeBatch(db);
+          let operationCount = 0;
+          const commitIfNeeded = async (force = false) => {
+              if (operationCount === 0 || (!force && operationCount < 450)) return;
+              await batch.commit();
+              batch = writeBatch(db);
+              operationCount = 0;
+          };
+
+          for (const userDoc of usersSnapshot.docs) {
+              batch.set(userDoc.ref, {
+                  pullPassSeasonXp: 0,
+                  pullPassXp: 0,
+                  pullPassClaims: {},
+                  activePullPassBoxClaim: deleteField(),
+                  pullPass: deleteField(),
+                  pullPassLastXpAwardAt: deleteField(),
+                  pullPassResetAt: resetAt,
+              }, { merge: true });
+              operationCount += 1;
+              await commitIfNeeded();
+          }
+
+          await commitIfNeeded(true);
+          await setDoc(doc(db, 'settings', 'pullPass'), {
+              lastResetAt: resetAt,
+              updatedAt: resetAt,
+          }, { merge: true });
+          setPullPassResetNotice(`Pull Pass reset complete for ${usersSnapshot.size.toLocaleString()} users. Cleared Pull Pass XP, claims, and active reward-box flags.`);
+      } catch (error) {
+          console.error('Failed to reset Pull Pass', error);
+          window.alert('Unable to reset Pull Pass. Please try again.');
+      } finally {
+          setIsResettingPullPass(false);
+      }
+  };
 
   const handleSaveRewardsSettings = async () => {
       try {
@@ -2732,6 +2900,8 @@ export const AdminPanel: React.FC = () => {
           image: 'https://picsum.photos/300',
           accentColor: '#3b82f6',
           isDaily: false,
+          isPullPassBox: false,
+          pullPassBoxType: 'bronze',
           tags: [],
           sellBackRate: 0.82
       });
@@ -2739,7 +2909,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleSaveBox = () => {
-      const allowsZeroPrice = Boolean(newBox.isDaily);
+      const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
           return;
@@ -2749,7 +2919,7 @@ export const AdminPanel: React.FC = () => {
           return;
       }
       if (effectiveBoxPrice === 0 && !allowsZeroPrice) {
-          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily box.' : 'Boxes require a positive coin price unless marked as a free daily box.');
+          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily or Pull Pass box.' : 'Boxes require a positive coin price unless marked as a free daily or Pull Pass box.');
           return;
       }
 
@@ -2804,6 +2974,8 @@ export const AdminPanel: React.FC = () => {
           tag: box.tag,
           tags: normalizeBoxTagList(box.tags ?? (box.tag ? [box.tag] : [])),
           isDaily: box.isDaily,
+          isPullPassBox: box.isPullPassBox ?? false,
+          pullPassBoxType: box.pullPassBoxType ?? 'bronze',
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
@@ -3008,8 +3180,8 @@ export const AdminPanel: React.FC = () => {
   const buildEditableBoxPayload = (items: CaseItem[]): MysteryBox => ({
       id: editingBoxId || '', // Empty ID tells createBox to addDoc
       name: newBox.name || '',
-      price: isXpBox ? 0 : Number(newBox.price),
-      priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0))) : undefined,
+      price: isXpBox ? 0 : Math.max(0, Number(newBox.price ?? 0) || 0),
+      priceXP: isXpBox ? Math.max(0, Math.floor(Number(newBox.priceXP ?? 0) || 0)) : undefined,
       currencyType: isXpBox ? 'XP' : 'COIN',
       image: newBox.image || 'https://picsum.photos/300',
       spinnerBackgroundImage: (newBox.spinnerBackgroundImage ?? '').trim(),
@@ -3017,6 +3189,8 @@ export const AdminPanel: React.FC = () => {
       tag: newBox.tag,
       tags: normalizeBoxTagList(newBox.tags ?? []),
       isDaily: newBox.isDaily,
+      isPullPassBox: newBox.isPullPassBox === true,
+      pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
       sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
@@ -3404,7 +3578,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'support' && 'Support Inbox'}
-                    {activeTab === 'bonuses' && 'Bonuses & XP'}
+                    {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
                     {activeTab === 'referrals' && 'Referral Program'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
                     {activeTab === 'homepage' && 'Homepage Showcase'}
@@ -4156,6 +4330,33 @@ export const AdminPanel: React.FC = () => {
                                 <p className="text-[10px] text-gray-500">
                                     Daily free boxes can be saved with a price of 0.
                                 </p>
+                                <div className="mt-3 rounded-lg border border-purple-400/20 bg-purple-500/5 p-3">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="pull-pass-case"
+                                            checked={newBox.isPullPassBox || false}
+                                            onChange={e => setNewBox({...newBox, isPullPassBox: e.target.checked, pullPassBoxType: e.target.checked ? (newBox.pullPassBoxType ?? 'bronze') : newBox.pullPassBoxType})}
+                                            className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
+                                        />
+                                        <label htmlFor="pull-pass-case" className="text-sm text-gray-300">Set as Pull Pass Box</label>
+                                    </div>
+                                    {newBox.isPullPassBox && (
+                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Pull Pass box type
+                                            <Select
+                                                value={newBox.pullPassBoxType ?? 'bronze'}
+                                                onChange={(event) => setNewBox((prev) => ({ ...prev, pullPassBoxType: event.target.value as any }))}
+                                                className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            >
+                                                <option value="bronze">Bronze</option>
+                                                <option value="silver">Silver</option>
+                                                <option value="gold">Gold</option>
+                                                <option value="elite">Elite</option>
+                                                <option value="master">Master</option>
+                                                <option value="collector">Collector</option>
+                                            </Select>
+                                        </label>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -4366,6 +4567,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="text-white flex items-center gap-2">
                                                     {box.name}
                                                     {box.isDaily && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">DAILY</span>}
+                                                    {box.isPullPassBox && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1 rounded">PULL PASS {box.pullPassBoxType?.toUpperCase()}</span>}
                                                 </div>
                                             </div>
                                         </td>
@@ -5305,76 +5507,140 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: BONUSES */}
             {activeTab === 'bonuses' && (
                 <div className="space-y-6">
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
-                                <h3 className="text-lg font-bold text-white">XP Earn & Bonuses</h3>
+                                <h3 className="text-lg font-bold text-white">Pull Pass</h3>
                                 <p className="text-sm text-gray-400">
-                                    Tune how players earn XP points and configure reward modifiers. All values are admin-controlled.
+                                    Manage season timing, tier count, and XP earning. Default earning is 10 coins spent = 1 XP.
                                 </p>
                             </div>
-                            <div className="text-xs text-gray-500 bg-[#0b0e14] border border-gray-800 rounded-lg px-3 py-2">
-                                XP reward rules
+                            <div className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${pullPassDraft.enabled ? 'bg-purple-500/15 text-purple-200 border border-purple-400/30' : 'bg-gray-800 text-gray-400 border border-gray-700'}`}>
+                                {pullPassDraft.enabled ? 'Live / Enabled' : 'Disabled'}
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                            <div className="space-y-4">
+
+                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <label className="text-sm text-gray-300 md:col-span-2 xl:col-span-1">Season name
+                                <Input
+                                    type="text"
+                                    value={pullPassDraft.seasonName}
+                                    onChange={(event) => setPullPassDraft((prev) => ({ ...prev, seasonName: event.target.value }))}
+                                    className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </label>
+                            <label className="text-sm text-gray-300">Coins spent per 1 XP
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={pullPassDraft.coinsPerXp}
+                                    onChange={(event) => setPullPassDraft((prev) => ({ ...prev, coinsPerXp: Math.max(1, Number(event.target.value) || 1) }))}
+                                    className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </label>
+                            <label className="text-sm text-gray-300">Total tiers
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={200}
+                                    step={1}
+                                    value={pullPassDraft.totalTiers}
+                                    onChange={(event) => setPullPassDraft((prev) => ({ ...prev, totalTiers: Math.max(1, Math.floor(Number(event.target.value) || 1)) }))}
+                                    className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
+                                Pull Pass enabled
+                                <Checkbox checked={pullPassDraft.enabled} onChange={(event) => setPullPassDraft((prev) => ({ ...prev, enabled: event.target.checked }))} />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300 md:col-span-2 xl:col-span-1">
+                                Restart users after pass ends
+                                <Checkbox checked={pullPassDraft.resetOnEnd !== false} onChange={(event) => setPullPassDraft((prev) => ({ ...prev, resetOnEnd: event.target.checked }))} />
+                            </label>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <label className="text-sm text-gray-300">Season starts
+                                <Input
+                                    type="datetime-local"
+                                    value={pullPassDraft.startsAt}
+                                    onChange={(event) => setPullPassDraft((prev) => ({ ...prev, startsAt: event.target.value }))}
+                                    className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </label>
+                            <label className="text-sm text-gray-300">Season ends
+                                <Input
+                                    type="datetime-local"
+                                    value={pullPassDraft.endsAt}
+                                    onChange={(event) => setPullPassDraft((prev) => ({ ...prev, endsAt: event.target.value }))}
+                                    className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                                />
+                            </label>
+                        </div>
+
+                        <div className="mt-4 rounded-xl border border-purple-400/20 bg-purple-500/10 p-4">
+                            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per 100 coins wagered</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={1}
-                                        value={bonusDraft.xpPer100CoinsWagered}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPer100CoinsWagered: Number(event.target.value), xpPer100Coins: Number(event.target.value) }))}
-                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        Current distribution: {bonusDraft.xpPer100CoinsWagered} XP for every 100 coins wagered.
-                                    </p>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-purple-200/80">XP Rate</p>
+                                    <p className="mt-1 text-white"><span className="font-black">{pullPassDraft.coinsPerXp}</span> coins spent = 1 XP</p>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP per box opened</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={1}
-                                        value={bonusDraft.xpPerCaseOpened}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpPerCaseOpened: Number(event.target.value), xpPerCaseOpen: Number(event.target.value) }))}
-                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        Bonus XP for engagement loops and streaks.
-                                    </p>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-purple-200/80">Tier Count</p>
+                                    <p className="mt-1 text-white"><span className="font-black">{pullPassDraft.totalTiers}</span> total tiers</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-purple-200/80">Rewards</p>
+                                    <p className="mt-1 text-white">Bronze, Silver, Gold, coins, and XP entries</p>
                                 </div>
                             </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Base XP bonus</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={10}
-                                        value={bonusDraft.baseXpBonus}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, baseXpBonus: Number(event.target.value) }))}
-                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP multiplier</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={0.01}
-                                        value={bonusDraft.xpMultiplier}
-                                        onChange={(event) => setBonusDraft((prev) => ({ ...prev, xpMultiplier: Number(event.target.value) }))}
-                                        className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
-                                    />
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        Multiplies box-open XP rewards after wager/open/base values are combined.
+                        </div>
+
+                        <div className="mt-4">
+                            <label className="block text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Tier rewards JSON</label>
+                            <Textarea
+                                rows={8}
+                                value={pullPassDraft.tiersText}
+                                onChange={(event) => setPullPassDraft((prev) => ({ ...prev, tiersText: event.target.value }))}
+                                className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono"
+                            />
+                            <p className="mt-2 text-xs text-gray-500">Use an array of tier objects. Example fields: tier, xpRequired, freeReward, premiumReward, rewardType, imageUrl.</p>
+                        </div>
+
+                        <div className="mt-4 flex flex-col gap-3 border-t border-gray-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-gray-500">Saved to settings/pullPass for later frontend and backend integration.</p>
+                            <button
+                                type="button"
+                                onClick={() => { void handleSavePullPassSettings(); }}
+                                className="w-full rounded-lg border border-purple-400/35 bg-purple-500/15 px-5 py-2 text-sm font-bold text-purple-100 transition-colors hover:bg-purple-500/25 sm:w-auto"
+                            >
+                                Save Pull Pass settings
+                            </button>
+                            {pullPassSettingsNotice && <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Pull Pass settings saved.</div>}
+                        </div>
+
+                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-4">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-red-200">Reset current Pull Pass</p>
+                                    <p className="mt-1 text-xs leading-5 text-gray-400">
+                                        Clears every user&apos;s Pull Pass XP, claims, and active reward-box claim flags so the current season starts fresh.
                                     </p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={() => { void handleResetCurrentPullPass(); }}
+                                    disabled={isResettingPullPass}
+                                    className="w-full rounded-lg border border-red-400/40 bg-red-500/15 px-5 py-2 text-sm font-bold text-red-100 transition-colors hover:bg-red-500/25 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                >
+                                    {isResettingPullPass ? 'Resetting…' : 'Reset Pull Pass'}
+                                </button>
                             </div>
+                            {pullPassResetNotice && (
+                                <div className="mt-3 rounded-lg border border-green-500/20 bg-green-500/10 px-3 py-2 text-xs text-green-300">
+                                    {pullPassResetNotice}
+                                </div>
+                            )}
                         </div>
                     </div>
 

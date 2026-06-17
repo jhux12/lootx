@@ -96,6 +96,7 @@ const Profile = lazy(() => import('./components/Profile').then((module) => ({ de
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
 const Quests = lazy(() => import('./components/Quests').then((module) => ({ default: module.Quests })));
+const PullPassPage = lazy(() => import('./components/PullPassPage'));
 
 const LoadingSpinner = React.memo(() => (
   <div className="flex min-h-[40vh] items-center justify-center" aria-live="polite" aria-busy="true">
@@ -444,7 +445,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [isAuthenticated, user?.id]);
 
   const baseHomeBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
+    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
     [boxes]
   );
 
@@ -567,6 +568,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
+      {view.type === 'PULL_PASS' && (
+        <div className="w-full">
+          <PullPassPage />
+        </div>
+      )}
+
       {view.type === 'POLLS' && (
         <div className="w-full">
           <PollsPage />
@@ -635,6 +642,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           <CaseOpening 
             boxId={view.boxId} 
             isFree={view.isFree}
+            inventoryId={view.inventoryId}
+            pullPassClaimTier={view.pullPassClaimTier}
           />
         </div>
       )}
