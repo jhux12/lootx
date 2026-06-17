@@ -127,16 +127,17 @@ export const PullPassPage: React.FC = () => (
         <div className="grid grid-cols-2 border-b border-white/10 text-xs font-extrabold uppercase"><button className="border-b-2 border-purple-500 py-4 text-purple-200">Rewards</button><button className="py-4 text-slate-400">XP Missions</button></div>
         <div className="px-3 py-4 sm:px-5">
           <div className="mb-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Pull Pass tier timeline">
-            <div className="relative flex min-w-max gap-2.5 px-1 pt-5 sm:gap-3">
-              <div className="absolute left-12 right-12 top-[64px] h-1.5 rounded-full bg-slate-800" aria-hidden="true">
-                <div className="h-full rounded-full bg-purple-600 shadow-[0_0_16px_rgba(147,51,234,0.55)]" style={{ width: timelineProgress }} />
+            <div className="relative flex min-w-max gap-2.5 px-1 pt-3 sm:gap-3">
+              <div className="absolute left-[47px] right-[47px] top-[46px] h-2 overflow-hidden rounded-full bg-slate-800/95 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:left-[55px] sm:right-[55px]" aria-hidden="true">
+                <div className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#9333ea)] shadow-[0_0_14px_rgba(147,51,234,0.5)]" style={{ width: timelineProgress }} />
               </div>
               {rewards.map((reward) => (
-                <div key={reward.tier} className="relative z-10 flex w-[92px] shrink-0 flex-col items-center gap-2 sm:w-[108px]">
-                  <div className={`grid h-12 w-12 place-items-center rounded-2xl border transition-all duration-200 ${reward.status === 'active' ? 'border-purple-300 bg-purple-500/20 shadow-[0_0_22px_rgba(147,51,234,0.55)]' : reward.status === 'claimed' ? 'border-purple-300/30 bg-purple-500/10' : 'border-white/10 bg-[#09090B]'}`}>
-                    {reward.status === 'claimed' ? <Check className="h-5 w-5 text-emerald-400" /> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="text-sm font-black text-white">{reward.tier}</span>}
+                <div key={reward.tier} className="relative z-10 flex w-[92px] shrink-0 flex-col items-center sm:w-[108px]">
+                  <p className={`mb-2 text-[11px] font-black leading-none ${reward.status === 'active' ? 'text-purple-200' : 'text-white'}`}>{reward.tier}</p>
+                  <div className={`grid place-items-center rounded-full border-2 transition-all duration-200 ${reward.status === 'active' ? 'h-8 w-8 border-purple-200 bg-purple-600 text-white shadow-[0_0_20px_rgba(147,51,234,0.7)]' : reward.status === 'claimed' ? 'h-5 w-5 border-purple-300 bg-purple-500 text-white shadow-[0_0_10px_rgba(147,51,234,0.3)]' : 'h-5 w-5 border-slate-700 bg-[#09090B]'}`}>
+                    {reward.status === 'claimed' ? <Check className="h-3.5 w-3.5" /> : reward.status === 'active' ? <span className="text-[10px] font-black">{reward.tier}</span> : <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />}
                   </div>
-                  <div className={`w-full rounded-xl border px-2 py-2 text-center ${reward.status === 'active' ? 'border-purple-400/80 bg-purple-500/15' : 'border-white/10 bg-white/[0.03]'}`}>
+                  <div className={`mt-3 w-full rounded-xl border px-2 py-2 text-center ${reward.status === 'active' ? 'border-purple-400/80 bg-purple-500/15' : 'border-white/10 bg-white/[0.03]'}`}>
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tier {reward.tier}</p>
                     <p className="truncate text-xs font-bold text-white">{reward.name}</p>
                   </div>
