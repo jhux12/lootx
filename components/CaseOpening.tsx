@@ -469,8 +469,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (!Number.isFinite(xpCostForCoinCase) || xpCostForCoinCase <= 0) return 0;
     return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
   }, [currentXpBalance, xpCostForCoinCase]);
-  const showXpOpenUi = economySettings.xpOpenEnabled && caseCurrencyType === 'COIN' && !isFree && !isRewardOpen && (currentXpBalance > 0 || xpProgress > 0);
-  const canOpenMain = isRewardOpen || isFree || caseCurrencyType === 'XP' || balance >= currentCasePrice;
+  const showXpOpenUi = false;
+  const canOpenMain = isRewardOpen || isFree || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
   const spinnerCardWidth = DESKTOP_CARD_WIDTH;
   const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
@@ -1341,12 +1341,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       const usesXpPayment = caseCurrencyType === 'XP' || paymentMethod === 'xp';
       if (usesXpPayment) {
-        const requiredXp = caseCurrencyType === 'XP' ? currentCaseXpPrice : xpCostForCoinCase;
-        if (!Number.isFinite(requiredXp) || requiredXp <= 0 || currentXpBalance < requiredXp) {
-          spinRequestLockRef.current = false;
-          setSpinFeedbackMessage('Not enough XP to open this box.');
-          return;
-        }
+        spinRequestLockRef.current = false;
+        setSpinFeedbackMessage('XP opens are not available.');
+        return;
       } else {
         if (!Number.isFinite(currentCasePrice) || currentCasePrice <= 0) {
           spinRequestLockRef.current = false;
@@ -2148,7 +2145,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           </span>
                           {previewTotalXp > 0 && (
                             <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
-                              +{previewTotalXp.toLocaleString()} Pull Pass XP
+                              +{previewTotalXp.toLocaleString()} XP
                             </span>
                           )}
                         </span>

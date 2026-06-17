@@ -31,7 +31,7 @@ const PullPassTabIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
-  { id: 'BOXES', label: 'Cases', icon: Box },
+  { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
   { id: 'PULL_PASS', label: 'Rewards', icon: PullPassTabIcon },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }

@@ -725,7 +725,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         : desktopNavButtonClass
                     }
                   >
-                    Cases
+                    Boxes
                   </button>
                   <button
                     type="button"
@@ -1014,7 +1014,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
               >
                 <Package className="h-5 w-5 text-purple-300" />
-                Cases
+                Boxes
               </button>
               <button
                 onClick={() => navigate("PLINKO")}
