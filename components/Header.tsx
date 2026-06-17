@@ -145,6 +145,30 @@ type PullPassHeaderSettings = {
   tiers: PullPassHeaderTier[];
 };
 
+const PULL_PASS_HEADER_COIN_IMAGE =
+  "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567";
+const PULL_PASS_HEADER_BOX_IMAGES = {
+  bronze:
+    "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fbronze.png?alt=media&token=2074648a-5fc0-42bd-8fd6-776bbd716fed",
+  silver:
+    "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fsilver.png?alt=media&token=60df1026-45da-41a6-b572-0fe5bbb9399e",
+  gold: "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fgold.png?alt=media&token=29316f1c-3d13-46c9-ab6c-5b1fb5823daa",
+};
+
+const getPullPassRewardImage = (rewardName: string) => {
+  const normalized = rewardName.toLowerCase();
+  if (normalized.includes("bronze")) return PULL_PASS_HEADER_BOX_IMAGES.bronze;
+  if (normalized.includes("silver")) return PULL_PASS_HEADER_BOX_IMAGES.silver;
+  if (
+    normalized.includes("gold") ||
+    normalized.includes("elite") ||
+    normalized.includes("master")
+  )
+    return PULL_PASS_HEADER_BOX_IMAGES.gold;
+  if (normalized.includes("coin")) return PULL_PASS_HEADER_COIN_IMAGE;
+  return null;
+};
+
 const HeaderSkeleton: React.FC = memo(() => (
   <div className="flex min-h-[44px] items-center gap-2" aria-hidden="true">
     <div className="hidden h-8 w-[72px] rounded-lg border border-amber-500/10 bg-white/[0.06] lg:block" />
@@ -475,29 +499,29 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             : `Tier ${tier.tier ?? index + 1} Reward`,
       }))
       .sort((a, b) => a.tier - b.tier);
-    const currentXp = isAuthenticated
-      ? Math.max(
+    const currentXp = Math.max(
+      0,
+      Number(
+        (user as Record<string, unknown>).pullPassSeasonXp ??
+          (user as Record<string, unknown>).pullPassXp ??
           0,
-          Number(
-            (user as Record<string, unknown>).pullPassSeasonXp ??
-              (user as Record<string, unknown>).pullPassXp ??
-              0,
-          ) || 0,
-        )
-      : 0;
-    const nextTier =
-      tiers.find((tier) => tier.xpRequired > currentXp) ?? tiers[0];
-    if (!nextTier) {
-      return {
-        title: "Pull Pass Rewards",
-        meta: isAuthenticated ? "Open boxes to earn XP" : "Sign in to track XP",
-      };
-    }
+      ) || 0,
+    );
+    const nextTier = tiers.find((tier) => tier.xpRequired > currentXp);
+    if (!nextTier) return null;
+    const xpAway = Math.max(0, nextTier.xpRequired - currentXp);
     return {
       title: nextTier.freeReward,
-      meta: `${Math.max(0, nextTier.xpRequired - currentXp).toLocaleString()} XP away`,
+      meta: `${xpAway.toLocaleString()} XP away`,
+      imageUrl: getPullPassRewardImage(nextTier.freeReward),
+      progress: Math.min(
+        100,
+        Math.max(0, (currentXp / Math.max(1, nextTier.xpRequired)) * 100),
+      ),
+      currentXp,
+      xpRequired: nextTier.xpRequired,
     };
-  }, [isAuthenticated, pullPassSettings.tiers, user]);
+  }, [pullPassSettings.tiers, user]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -671,7 +695,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => navigate("HOME")}
-                  className="absolute left-1/2 top-1/2 inline-flex -translate-x-1/2 -translate-y-1/2 shrink-0 items-center rounded-2xl p-1 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 lg:static lg:-ml-1 lg:translate-x-0 lg:translate-y-0"
+                  className="inline-flex shrink-0 items-center rounded-2xl p-1 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 lg:-ml-1"
                   aria-label="Go home"
                 >
                   <BrandLockup
@@ -929,30 +953,53 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-label="Mobile navigation menu"
         >
           <div className="flex min-h-full flex-col pb-4 pt-1">
-            <button
-              type="button"
-              onClick={() => navigate("PROFILE")}
-              className="mb-7 flex w-full items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.045]"
-            >
-              {isAuthenticated ? (
-                <UserAvatar
-                  user={user}
-                  className="h-14 w-14 rounded-full object-cover ring-1 ring-purple-300/25"
-                  initialsClassName="text-base"
-                />
-              ) : (
-                <div className="grid h-14 w-14 place-items-center rounded-full border border-purple-300/25 bg-purple-500/10 text-base font-black text-purple-100">
-                  <UserIcon className="h-6 w-6" />
+            <div className="mb-7 flex w-full items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("PROFILE")}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.045]"
+              >
+                {isAuthenticated ? (
+                  <UserAvatar
+                    user={user}
+                    className="h-14 w-14 rounded-full object-cover ring-1 ring-purple-300/25"
+                    initialsClassName="text-base"
+                  />
+                ) : (
+                  <div className="grid h-14 w-14 place-items-center rounded-full border border-purple-300/25 bg-purple-500/10 text-base font-black text-purple-100">
+                    <UserIcon className="h-6 w-6" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black text-white">
+                    {isAuthenticated
+                      ? resolvedDisplayName || "Pullz Player"
+                      : "Welcome to Pullz"}
+                  </p>
                 </div>
+              </button>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    playSound("click");
+                    setIsMobileMenuOpen(false);
+                    void logout();
+                  }}
+                  className="shrink-0 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-white/[0.075]"
+                >
+                  Sign out
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSignIn}
+                  className="shrink-0 rounded-xl border border-purple-300/25 bg-purple-500/15 px-3 py-2 text-xs font-black uppercase text-purple-100 transition-colors hover:bg-purple-500/25"
+                >
+                  Sign in
+                </button>
               )}
-              <div className="min-w-0">
-                <p className="truncate text-lg font-black text-white">
-                  {isAuthenticated
-                    ? resolvedDisplayName || "Pullz Player"
-                    : "Welcome to Pullz"}
-                </p>
-              </div>
-            </button>
+            </div>
 
             <nav className="space-y-2" aria-label="Mobile menu links">
               <button
@@ -990,24 +1037,46 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <UserIcon className="h-5 w-5 text-purple-300" />
                 Profile
               </button>
-              <button
-                type="button"
-                onClick={() => navigate("PULL_PASS")}
-                className="mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.06]"
-              >
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                    Next Reward
-                  </p>
-                  <p className="truncate text-sm font-bold text-white">
-                    {nextPullPassReward.title}
-                  </p>
-                  <p className="text-xs font-semibold text-slate-400">
-                    {nextPullPassReward.meta}
-                  </p>
-                </div>
-                <PullPassNavIcon className="h-8 w-8 shrink-0 text-purple-300" />
-              </button>
+              {isAuthenticated && nextPullPassReward ? (
+                <button
+                  type="button"
+                  onClick={() => navigate("PULL_PASS")}
+                  className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.06]"
+                >
+                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-purple-500/10">
+                    {nextPullPassReward.imageUrl ? (
+                      <img
+                        src={nextPullPassReward.imageUrl}
+                        alt=""
+                        className="h-12 w-12 object-contain"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <span className="text-sm font-black text-purple-100">
+                        XP
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                      Next Reward
+                    </p>
+                    <p className="truncate text-sm font-bold text-white">
+                      {nextPullPassReward.title}
+                    </p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#a855f7)]"
+                        style={{ width: `${nextPullPassReward.progress}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      {nextPullPassReward.meta}
+                    </p>
+                  </div>
+                </button>
+              ) : null}
             </nav>
 
             <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
