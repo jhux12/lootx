@@ -96,6 +96,7 @@ const Profile = lazy(() => import('./components/Profile').then((module) => ({ de
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
 const Quests = lazy(() => import('./components/Quests').then((module) => ({ default: module.Quests })));
+const PullPassPage = lazy(() => import('./components/PullPassPage'));
 
 const LoadingSpinner = React.memo(() => (
   <div className="flex min-h-[40vh] items-center justify-center" aria-live="polite" aria-busy="true">
@@ -564,6 +565,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {view.type === 'PULL_PASS' && (
+        <div className="w-full">
+          <PullPassPage />
         </div>
       )}
 
