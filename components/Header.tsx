@@ -856,359 +856,87 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
-          <div className="flex flex-col gap-6 pb-4 pt-1">
-            {isAuthenticated ? (
-              <div className="grid grid-cols-2 gap-3">
-                <>
-                  <button
-                    onClick={() => navigate("PROFILE")}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-blue-300/20 bg-[#205DD7]/85 py-3.5 font-bold text-white shadow-[0_10px_30px_rgba(32,93,215,0.20)] transition-all hover:bg-[#205DD7]"
-                  >
-                    <UserIcon className="h-5 w-5" />
-                    Account
-                  </button>
-                  <button
-                    onClick={() => {
-                      playSound("click");
-                      setIsMobileMenuOpen(false);
-                      void logout();
-                    }}
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] py-3.5 font-bold text-white transition-colors hover:bg-white/[0.07]"
-                  >
-                    <LogOut className="h-5 w-5 text-neutral-400" />
-                    Log out
-                  </button>
-                </>
-              </div>
-            ) : (
-              <button
-                onClick={handleSignIn}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-300/20 bg-[#205DD7]/85 py-3.5 font-bold text-white shadow-[0_10px_30px_rgba(32,93,215,0.20)] transition-all hover:bg-[#205DD7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
-              >
-                <LogIn className="h-5 w-5" />
-                Sign in
-              </button>
-            )}
-
-            {user.isAdmin && (
-              <button
-                onClick={() => navigate("ADMIN")}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/25 bg-blue-500/10 py-3 font-bold text-blue-200 transition-colors hover:bg-blue-500/20"
-              >
-                <ShieldCheck className="h-5 w-5" />
-                Access Admin Panel
-              </button>
-            )}
-
-            <section className="rounded-2xl border border-[#3a4146]/70 bg-[#1b2024] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => navigate("HOME")}
-                  className={drawerCardClass}
-                >
-                  <HomeIcon className="h-5 w-5 text-slate-300" />
-                  <span className="text-sm font-bold text-white">Home</span>
-                </button>
-                <button
-                  onClick={() => navigate("BOXES")}
-                  className={drawerCardClass}
-                >
-                  <Package className="h-5 w-5 text-slate-300" />
-                  <span className="text-sm font-bold text-white">Cases</span>
-                </button>
-                <button
-                  onClick={() => navigate("PLINKO")}
-                  className={drawerCardClass}
-                >
-                  <UpgraderIcon className="h-5 w-5 text-slate-300" />
-                  <span className="text-sm font-bold text-white">Upgrader</span>
-                </button>
-                <button
-                  onClick={() => navigate("PULL_PASS")}
-                  className={drawerCardClass}
-                >
-                  <PullPassNavIcon className="h-5 w-5 text-purple-300" />
-                  <span className="text-sm font-bold text-white">Rewards</span>
-                </button>
-                <button
-                  onClick={() => navigate("PROFILE")}
-                  className={`${drawerCardClass} col-span-2`}
-                >
-                  <UserIcon className="h-5 w-5 text-slate-300" />
-                  <span className="text-sm font-bold text-white">Profile</span>
-                </button>
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <button
-                type="button"
-                onClick={() => toggleMobileSection("games")}
-                className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.07]"
-              >
-                <h3 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
-                  <GamesIcon className="h-4 w-4 text-white" />
-                  Games
-                </h3>
-                <ChevronDown
-                  className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.games ? "rotate-180" : ""}`}
+          <div className="flex min-h-full flex-col pb-4 pt-1">
+            <div className="mb-7 flex items-center gap-3 px-1">
+              {isAuthenticated ? (
+                <UserAvatar
+                  user={user}
+                  className="h-14 w-14 rounded-full object-cover ring-1 ring-purple-300/25"
+                  initialsClassName="text-base"
                 />
-              </button>
-              {openMobileSections.games ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => navigate("BOXES")}
-                    className={drawerCardClass}
-                  >
-                    <Package className="h-5 w-5 text-orange-500" />
-                    <span className="text-sm font-bold text-white">Boxes</span>
-                  </button>
-                  <button
-                    onClick={() => navigate("PLINKO")}
-                    className={drawerCardClass}
-                  >
-                    <UpgraderIcon className="h-5 w-5 text-emerald-400" />
-                    <span className="text-sm font-bold text-white">
-                      Upgrader
-                    </span>
-                  </button>
+              ) : (
+                <div className="grid h-14 w-14 place-items-center rounded-full border border-purple-300/25 bg-purple-500/10 text-base font-black text-purple-100">
+                  <UserIcon className="h-6 w-6" />
                 </div>
-              ) : null}
-            </section>
-
-            <section className="space-y-3">
-              <button
-                type="button"
-                onClick={() => toggleMobileSection("rewards")}
-                className={rewardsMobileTabClass}
-              >
-                {showDailySpinReady ? (
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_20%,rgba(96,165,250,0.25)_50%,transparent_82%)] motion-safe:animate-[pulse_2.2s_ease-in-out_infinite]"
-                  />
-                ) : null}
-                <h3
-                  className={`relative z-10 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${showDailySpinReady ? "text-blue-100" : "text-white"}`}
-                >
-                  <RewardsIcon
-                    className={`h-4 w-4 ${showDailySpinReady ? "text-blue-200" : "text-white"}`}
-                  />
-                  Rewards
-                </h3>
-                <div className="relative z-10 flex items-center gap-2">
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${openMobileSections.rewards ? "rotate-180" : ""} ${showDailySpinReady ? "text-blue-200" : "text-neutral-400"}`}
-                  />
-                </div>
-              </button>
-              {openMobileSections.rewards ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => navigate("BONUSES")}
-                    className={dailySpinMobileClass}
-                  >
-                    <RefreshCw className="h-5 w-5 text-blue-500" />
-                    <span className="text-sm font-bold text-white">
-                      Daily Spin
-                    </span>
-                    {showDailySpinReady ? (
-                      <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-extrabold text-white">
-                        Ready
-                      </span>
-                    ) : null}
-                  </button>
-                  <button
-                    onClick={() => navigate("POLLS")}
-                    className={drawerCardClass}
-                  >
-                    <BarChart3 className="h-5 w-5 text-cyan-300" />
-                    <span className="text-sm font-bold text-white">Polls</span>
-                  </button>
-                  <button
-                    onClick={() => navigate("REFERRALS")}
-                    className={drawerCardClass}
-                  >
-                    <Users className="h-5 w-5 text-blue-300" />
-                    <span className="text-sm font-bold text-white">
-                      Referrals
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => navigate("LEADERBOARD")}
-                    className={drawerCardClass}
-                  >
-                    <Trophy className="h-5 w-5 text-white" />
-                    <span className="text-sm font-bold text-white">
-                      Leaderboard
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => navigate("QUESTS")}
-                    className={`${drawerCardClass} relative`}
-                  >
-                    <Sparkles className="h-5 w-5 text-blue-300" />
-                    <span className="text-sm font-bold text-white">Quests</span>
-                    {questReadyCount > 0 ? (
-                      <span className="absolute right-2 top-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">
-                        {questReadyCount}
-                      </span>
-                    ) : claimedTodayCount > 0 ? (
-                      <span className="absolute right-2 top-2 inline-flex items-center justify-center rounded-full bg-cyan-500/90 px-2 py-0.5 text-[10px] font-extrabold text-white">
-                        Claimed
-                      </span>
-                    ) : null}
-                  </button>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="space-y-3">
-              <button
-                type="button"
-                onClick={() => toggleMobileSection("learn")}
-                className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.07]"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  Learn
-                </h3>
-                <ChevronDown
-                  className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.learn ? "rotate-180" : ""}`}
-                />
-              </button>
-              {openMobileSections.learn ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    disabled
-                    className={`${drawerCardClass} cursor-not-allowed opacity-70`}
-                  >
-                    <PenTool className="h-5 w-5 text-neutral-400" />
-                    <span className="text-sm font-bold text-white">Blog</span>
-                  </button>
-                  <button
-                    disabled
-                    className={`${drawerCardClass} cursor-not-allowed opacity-70`}
-                  >
-                    <HelpCircle className="h-5 w-5 text-neutral-400" />
-                    <span className="text-sm font-bold text-white">FAQ</span>
-                  </button>
-                </div>
-              ) : null}
-            </section>
-
-            <section className="space-y-3">
-              <button
-                type="button"
-                onClick={() => toggleMobileSection("support")}
-                className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.07]"
-              >
-                <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-                  Info and Support
-                </h3>
-                <ChevronDown
-                  className={`h-4 w-4 text-neutral-400 transition-transform ${openMobileSections.support ? "rotate-180" : ""}`}
-                />
-              </button>
-              {openMobileSections.support ? (
-                <>
-                  {isAuthenticated && (
-                    <button
-                      onClick={() => {
-                        playSound("click");
-                        setIsMobileMenuOpen(false);
-                        setShowActivity(true);
-                      }}
-                      className={`${drawerCardClass} w-full`}
-                    >
-                      <div className="relative">
-                        <Clock3 className="h-5 w-5 text-cyan-300" />
-                        {unreadCount > 0 ? (
-                          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-cyan-300" />
-                        ) : null}
-                      </div>
-                      <div className="flex min-w-0 flex-col items-start">
-                        <span className="text-sm font-bold text-white">
-                          Notifications
-                        </span>
-                        <span className="text-xs text-neutral-400">
-                          Activity, opens, sells, and shipping
-                        </span>
-                      </div>
-                    </button>
-                  )}
-                  <button
-                    onClick={() => navigate("CONTACT")}
-                    className={`${drawerCardClass} w-full`}
-                  >
-                    <LifeBuoy className="h-5 w-5 text-white" />
-                    <span className="text-sm font-bold text-white">
-                      Support
-                    </span>
-                  </button>
-                </>
-              ) : null}
-            </section>
-
-            <section className="mt-2 flex flex-col items-center gap-5 border-t border-white/10 pt-5">
-              <div className="grid w-full grid-cols-4 gap-2 text-white">
-                <a
-                  href="https://www.instagram.com/pullz.gg/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Follow Pullz.gg on Instagram"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.facebook.com/pullzgg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Follow Pullz.gg on Facebook"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://x.com/pullzgg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Follow Pullz.gg on X"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                >
-                  <Twitter className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.threads.com/@pullz.gg"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label="Follow Pullz.gg on Threads"
-                  className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                >
-                  <AtSign className="h-5 w-5" />
-                </a>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-lg font-black text-white">
+                  {isAuthenticated
+                    ? resolvedDisplayName || "Pullz Player"
+                    : "Welcome to Pullz"}
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-400">
+                  {isAuthenticated
+                    ? "Manage your rewards"
+                    : "Sign in to view your profile"}
+                </p>
               </div>
-              <div className="flex flex-col items-center gap-3 text-xs font-bold text-neutral-500">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => navigate("TERMS")}
-                    className="hover:text-white"
-                  >
-                    Terms of Service
-                  </button>
-                  <span>|</span>
-                  <button
-                    onClick={() => navigate("PRIVACY")}
-                    className="hover:text-white"
-                  >
-                    Privacy Policy
-                  </button>
-                </div>
-                <button disabled className="cursor-not-allowed opacity-70">
-                  AML &amp; KYC Policy
-                </button>
-              </div>
-            </section>
+            </div>
+
+            <nav className="space-y-2" aria-label="Mobile menu links">
+              <button
+                onClick={() => navigate("HOME")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <HomeIcon className="h-5 w-5 text-purple-300" />
+                Home
+              </button>
+              <button
+                onClick={() => navigate("BOXES")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <Package className="h-5 w-5 text-purple-300" />
+                Cases
+              </button>
+              <button
+                onClick={() => navigate("PLINKO")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <UpgraderIcon className="h-5 w-5 text-purple-300" />
+                Upgrader
+              </button>
+              <button
+                onClick={() => navigate("PULL_PASS")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PULL_PASS" || view.type === "BONUSES" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <PullPassNavIcon className="h-5 w-5 text-purple-300" />
+                Rewards
+              </button>
+              <button
+                onClick={() => navigate("PROFILE")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+              >
+                <UserIcon className="h-5 w-5 text-purple-300" />
+                Profile
+              </button>
+            </nav>
+
+            <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
+              <button
+                onClick={() => navigate("REFERRALS")}
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+              >
+                <Users className="h-5 w-5 text-purple-300" />
+                Refer a Friend
+              </button>
+              <button
+                onClick={() => navigate("CONTACT")}
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+              >
+                <LifeBuoy className="h-5 w-5 text-purple-300" />
+                Support
+              </button>
+            </div>
           </div>
         </div>
       </div>
