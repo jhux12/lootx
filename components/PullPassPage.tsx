@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, CalendarClock, Check, ChevronRight, Crown, Lock, PackageOpen, Sparkles, WalletCards } from 'lucide-react';
 
 const PULL_PASS_HERO_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2FUntitled%20design.png?alt=media&token=71332ff4-61eb-483a-8bcc-33eb8a2e58d4';
+const PULL_PASS_COIN_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567';
 const PULL_PASS_BOX_IMAGES = {
   bronze: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fbronze.png?alt=media&token=2074648a-5fc0-42bd-8fd6-776bbd716fed',
   silver: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fsilver.png?alt=media&token=60df1026-45da-41a6-b572-0fe5bbb9399e',
@@ -18,10 +19,10 @@ const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: R
   { tier: 10, name: 'Silver Box', status: 'claimed', type: 'silver' },
   { tier: 11, name: '250 XP', status: 'claimed', type: 'xp' },
   { tier: 12, name: 'Silver Box', status: 'active', type: 'silver' },
-  { tier: 13, name: 'Bronze Box', status: 'locked', type: 'bronze' },
+  { tier: 13, name: '150 Coins', status: 'locked', type: 'coins' },
   { tier: 14, name: 'Gold Box', status: 'locked', type: 'gold' },
   { tier: 15, name: '300 XP', status: 'locked', type: 'xp' },
-  { tier: 20, name: 'Gold Box', status: 'locked', type: 'gold' },
+  { tier: 20, name: '500 Coins', status: 'locked', type: 'coins' },
   { tier: 50, name: 'Gold Collector Box', status: 'locked', type: 'gold' },
 ];
 
@@ -38,14 +39,14 @@ const missions = [
 const MiniRewardArt: React.FC<{ type: RewardType; compact?: boolean }> = ({ type, compact }) => {
   if (type === 'coins') {
     return (
-      <div className={`relative ${compact ? 'h-12 w-16' : 'h-20 w-24'}`} aria-hidden="true">
-        {[0, 1, 2, 3, 4].map((coin) => (
-          <span
-            key={coin}
-            className="absolute h-3.5 w-8 rounded-full border border-amber-200/70 bg-[linear-gradient(180deg,#ffe68a,#f5a800)] shadow-[0_3px_10px_rgba(245,168,0,0.22)]"
-            style={{ left: `${(coin % 3) * 18}px`, bottom: `${Math.floor(coin / 2) * 9 + (coin % 2) * 4}px` }}
-          />
-        ))}
+      <div className={`${compact ? 'h-12 w-16' : 'h-20 w-24'} relative grid place-items-center`} aria-hidden="true">
+        <img
+          src={PULL_PASS_COIN_IMAGE}
+          alt=""
+          className={`${compact ? 'h-12 w-16' : 'h-20 w-24'} object-contain drop-shadow-[0_10px_20px_rgba(245,168,0,0.2)]`}
+          loading="lazy"
+          decoding="async"
+        />
       </div>
     );
   }
