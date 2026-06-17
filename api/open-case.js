@@ -146,9 +146,15 @@ export default async function handler(req, res) {
       const pullPassClaimData = pullPassClaimKey && userData.pullPassClaims && typeof userData.pullPassClaims === 'object'
         ? userData.pullPassClaims[pullPassClaimKey]
         : null;
+      const activePullPassBoxClaim = userData.activePullPassBoxClaim && typeof userData.activePullPassBoxClaim === 'object'
+        ? userData.activePullPassBoxClaim
+        : null;
       if (isPullPassClaimOpen) {
         if (!pullPassClaimData) {
           fail(404, 'PULL_PASS_CLAIM_NOT_FOUND', 'Pull Pass box reward claim not found.', { tier: pullPassClaimTier });
+        }
+        if (!activePullPassBoxClaim || Number(activePullPassBoxClaim.tier) !== pullPassClaimTier || activePullPassBoxClaim.boxId !== boxId) {
+          fail(403, 'INVALID_PULL_PASS_REWARD', 'This Pull Pass reward is not active for opening.', { tier: pullPassClaimTier, caseId: boxId });
         }
         if (pullPassClaimData.opened === true || pullPassClaimData.openedAt) {
           fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward box has already been opened.', { tier: pullPassClaimTier });
@@ -446,6 +452,7 @@ export default async function handler(req, res) {
               pullPassXp: pullPassXpAward,
               pullPassClaims: {},
               pullPass: admin.firestore.FieldValue.delete(),
+              activePullPassBoxClaim: admin.firestore.FieldValue.delete(),
               pullPassResetAt: pullPassLastResetAt,
               pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
             }
@@ -504,6 +511,7 @@ export default async function handler(req, res) {
               openedInventoryId: inventoryRef.id
             }
           },
+          activePullPassBoxClaim: admin.firestore.FieldValue.delete(),
           updatedAt: Date.now()
         }, { merge: true });
       }

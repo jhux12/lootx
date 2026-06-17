@@ -26,6 +26,7 @@ export interface User {
   pullPassXp?: number;
   pullPassClaims?: Record<string, any>;
   pullPassResetAt?: number;
+  activePullPassBoxClaim?: { tier: number; boxId: string; claimedAt?: number; rewardName?: string };
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;

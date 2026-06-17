@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
-import { Timestamp, addDoc, arrayUnion, collection, collectionGroup, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
 import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
@@ -1280,7 +1280,7 @@ export const AdminPanel: React.FC = () => {
 
   const handleResetCurrentPullPass = async () => {
       const confirmed = window.confirm(
-          `Reset "${pullPassDraft.seasonName || DEFAULT_PULL_PASS_SETTINGS.seasonName}" for every user?\n\nThis clears Pull Pass XP, claims, and un/opened Pull Pass reward-box inventory entries. This cannot be undone.`
+          `Reset "${pullPassDraft.seasonName || DEFAULT_PULL_PASS_SETTINGS.seasonName}" for every user?\n\nThis clears Pull Pass XP, claims, and active reward-box claim flags. This cannot be undone.`
       );
       if (!confirmed || isResettingPullPass) return;
 
@@ -1288,10 +1288,7 @@ export const AdminPanel: React.FC = () => {
       setPullPassResetNotice(null);
       try {
           const resetAt = Date.now();
-          const [usersSnapshot, pullPassInventorySnapshot] = await Promise.all([
-              getDocs(collection(db, 'users')),
-              getDocs(query(collectionGroup(db, 'inventory'), where('source', '==', 'pullPassBoxReward')))
-          ]);
+          const usersSnapshot = await getDocs(collection(db, 'users'));
 
           let batch = writeBatch(db);
           let operationCount = 0;
@@ -1307,16 +1304,11 @@ export const AdminPanel: React.FC = () => {
                   pullPassSeasonXp: 0,
                   pullPassXp: 0,
                   pullPassClaims: {},
+                  activePullPassBoxClaim: deleteField(),
                   pullPass: deleteField(),
                   pullPassLastXpAwardAt: deleteField(),
                   pullPassResetAt: resetAt,
               }, { merge: true });
-              operationCount += 1;
-              await commitIfNeeded();
-          }
-
-          for (const inventoryDoc of pullPassInventorySnapshot.docs) {
-              batch.delete(inventoryDoc.ref);
               operationCount += 1;
               await commitIfNeeded();
           }
@@ -1326,7 +1318,7 @@ export const AdminPanel: React.FC = () => {
               lastResetAt: resetAt,
               updatedAt: resetAt,
           }, { merge: true });
-          setPullPassResetNotice(`Pull Pass reset complete for ${usersSnapshot.size.toLocaleString()} users. Removed ${pullPassInventorySnapshot.size.toLocaleString()} reward box inventory entries.`);
+          setPullPassResetNotice(`Pull Pass reset complete for ${usersSnapshot.size.toLocaleString()} users. Cleared Pull Pass XP, claims, and active reward-box flags.`);
       } catch (error) {
           console.error('Failed to reset Pull Pass', error);
           window.alert('Unable to reset Pull Pass. Please try again.');
@@ -5632,7 +5624,7 @@ export const AdminPanel: React.FC = () => {
                                 <div className="min-w-0">
                                     <p className="text-sm font-bold text-red-200">Reset current Pull Pass</p>
                                     <p className="mt-1 text-xs leading-5 text-gray-400">
-                                        Clears every user&apos;s Pull Pass XP and claims, then removes Pull Pass reward-box inventory entries so the current season starts fresh.
+                                        Clears every user&apos;s Pull Pass XP, claims, and active reward-box claim flags so the current season starts fresh.
                                     </p>
                                 </div>
                                 <button

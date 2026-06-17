@@ -144,6 +144,14 @@ export default async function handler(req, res) {
           ...rawClaims,
           [String(requestedTier)]: claimPayload
         },
+        ...(pullPassBox ? {
+          activePullPassBoxClaim: {
+            tier: requestedTier,
+            boxId: pullPassBox.id,
+            claimedAt,
+            rewardName
+          }
+        } : {}),
         pullPassResetAt: Math.max(userResetAt, lastResetAt),
         updatedAt: claimedAt
       }, { merge: true });
