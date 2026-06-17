@@ -4,7 +4,7 @@ import pullzLogo from '../assets/pullz-p.PNG';
 
 type RewardStatus = 'claimed' | 'active' | 'locked';
 
-const tiers = [9, 10, 11, 12, 13, 14, 15, 20, 50];
+const currentTier = 12;
 
 const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: 'coins' | 'box' | 'xp' }> = [
   { tier: 9, name: '100 Coins', status: 'claimed', type: 'coins' },
@@ -12,7 +12,14 @@ const rewards: Array<{ tier: number; name: string; status: RewardStatus; type: '
   { tier: 11, name: '250 XP', status: 'claimed', type: 'xp' },
   { tier: 12, name: 'Silver Box', status: 'active', type: 'box' },
   { tier: 13, name: '150 Coins', status: 'locked', type: 'coins' },
+  { tier: 14, name: 'Gold Box', status: 'locked', type: 'box' },
+  { tier: 15, name: '300 XP', status: 'locked', type: 'xp' },
+  { tier: 20, name: '500 Coins', status: 'locked', type: 'coins' },
+  { tier: 50, name: 'Collector Box', status: 'locked', type: 'box' },
 ];
+
+const activeRewardIndex = rewards.findIndex((reward) => reward.tier === currentTier);
+const timelineProgress = `${(activeRewardIndex / Math.max(rewards.length - 1, 1)) * 100}%`;
 
 const missions = [
   { icon: PackageOpen, title: 'Open Cases', description: 'Open any case', progress: '0 / 5', xp: '250 XP', fill: '0%' },
@@ -119,15 +126,39 @@ export const PullPassPage: React.FC = () => (
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b1220]/86 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
         <div className="grid grid-cols-2 border-b border-white/10 text-xs font-extrabold uppercase"><button className="border-b-2 border-purple-500 py-4 text-purple-200">Rewards</button><button className="py-4 text-slate-400">XP Missions</button></div>
         <div className="px-3 py-4 sm:px-5">
-          <div className="mb-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="relative flex min-w-max items-center gap-10 px-2 pt-6">
-              <div className="absolute left-6 right-6 top-[45px] h-2 rounded-full bg-slate-800"><div className="h-full w-[58%] rounded-full bg-purple-600 shadow-[0_0_16px_rgba(147,51,234,0.55)]" /></div>
-              {tiers.map((tier) => <div key={tier} className="relative z-10 flex w-8 flex-col items-center gap-2"><span className="text-xs font-black text-white">{tier}</span><span className={`${tier === 12 ? 'h-7 w-7 bg-purple-600 text-white shadow-[0_0_18px_rgba(147,51,234,0.7)]' : 'h-2.5 w-2.5 bg-white'} grid place-items-center rounded-full text-xs font-black`}>{tier === 12 ? '12' : ''}</span></div>)}
+          <div className="mb-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Pull Pass tier timeline">
+            <div className="relative flex min-w-max gap-2.5 px-1 pt-5 sm:gap-3">
+              <div className="absolute left-12 right-12 top-[64px] h-1.5 rounded-full bg-slate-800" aria-hidden="true">
+                <div className="h-full rounded-full bg-purple-600 shadow-[0_0_16px_rgba(147,51,234,0.55)]" style={{ width: timelineProgress }} />
+              </div>
+              {rewards.map((reward) => (
+                <div key={reward.tier} className="relative z-10 flex w-[92px] shrink-0 flex-col items-center gap-2 sm:w-[108px]">
+                  <div className={`grid h-12 w-12 place-items-center rounded-2xl border transition-all duration-200 ${reward.status === 'active' ? 'border-purple-300 bg-purple-500/20 shadow-[0_0_22px_rgba(147,51,234,0.55)]' : reward.status === 'claimed' ? 'border-purple-300/30 bg-purple-500/10' : 'border-white/10 bg-[#09090B]'}`}>
+                    {reward.status === 'claimed' ? <Check className="h-5 w-5 text-emerald-400" /> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="text-sm font-black text-white">{reward.tier}</span>}
+                  </div>
+                  <div className={`w-full rounded-xl border px-2 py-2 text-center ${reward.status === 'active' ? 'border-purple-400/80 bg-purple-500/15' : 'border-white/10 bg-white/[0.03]'}`}>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tier {reward.tier}</p>
+                    <p className="truncate text-xs font-bold text-white">{reward.name}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Pull Pass rewards">
             <div className="flex min-w-max gap-2.5 sm:gap-3">
-              {rewards.map((reward) => <article key={reward.tier} className={`group flex h-[220px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 ${reward.status === 'active' ? 'border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]' : 'border-white/10 bg-white/[0.035]'}`}><p className="font-bold text-white">{reward.tier}</p><div className="grid flex-1 place-items-center"><MiniRewardArt type={reward.type} /></div><h3 className="text-center text-sm font-bold text-white">{reward.name}</h3><div className="mt-3 grid h-5 place-items-center">{reward.status === 'claimed' ? <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-500"><Check className="h-3.5 w-3.5" /></span> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="h-1.5 w-10 rounded-full bg-purple-400" />}</div></article>)}
+              {rewards.map((reward) => (
+                <article key={reward.tier} className={`group flex h-[220px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 ${reward.status === 'active' ? 'border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]' : 'border-white/10 bg-white/[0.035]'}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Tier <span className="text-white">{reward.tier}</span></p>
+                    {reward.status === 'claimed' ? <Check className="h-4 w-4 text-emerald-400" /> : reward.status === 'locked' ? <Lock className="h-4 w-4 text-slate-500" /> : <span className="rounded-full bg-purple-500 px-2 py-0.5 text-[10px] font-black text-white">Active</span>}
+                  </div>
+                  <div className="grid flex-1 place-items-center"><MiniRewardArt type={reward.type} /></div>
+                  <h3 className="text-center text-sm font-bold text-white">{reward.name}</h3>
+                  <div className="mt-3 grid h-5 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    {reward.status === 'claimed' ? 'Claimed' : reward.status === 'locked' ? 'Locked' : 'Current Tier'}
+                  </div>
+                </article>
+              ))}
             </div>
           </div>
           <div className="mt-2 flex items-center gap-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.055] p-4"><Crown className="h-10 w-10 shrink-0 text-amber-300" /><div className="min-w-0 flex-1"><h3 className="text-sm font-black uppercase text-amber-200">Upgrade To Premium</h3><p className="text-xs text-slate-400">Unlock premium rewards and future season content.</p></div><button disabled className="rounded-lg bg-[linear-gradient(135deg,#7c3aed,#4c1d95)] px-5 py-3 text-xs font-black text-white opacity-75">COMING SOON</button></div>
