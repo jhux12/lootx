@@ -22,6 +22,9 @@ export interface User {
   xpBalance?: number;
   xpEarnedLifetime?: number;
   xpSpentLifetime?: number;
+  pullPassSeasonXp?: number;
+  pullPassXp?: number;
+  pullPassClaims?: Record<string, any>;
   balance?: number;
   followers?: string[];
   lastDailyClaim?: number;

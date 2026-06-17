@@ -235,6 +235,7 @@ export const PullPassPage: React.FC = () => {
     });
   }, [displayedTier, tierDefinitions]);
   const displayedActiveRewardIndex = Math.max(0, configuredRewards.findIndex((reward) => reward.tier === displayedTier));
+  const nextReward = configuredRewards.find((reward) => reward.tier > displayedTier) ?? configuredRewards[configuredRewards.length - 1];
   const displayedTimelineProgress = `${(displayedActiveRewardIndex / Math.max(configuredRewards.length - 1, 1)) * 100}%`;
 
   const claimedTiers = (user as Record<string, any>).pullPassClaims ?? {};
@@ -321,10 +322,10 @@ export const PullPassPage: React.FC = () => {
         <div className="mt-4 flex items-center justify-between rounded-xl border border-white/7 bg-white/[0.03] p-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Next Reward</p>
-            <p className="text-base font-bold text-white">Silver Box</p>
+            <p className="text-base font-bold text-white">{nextReward?.name ?? 'Reward'}</p>
             <p className="text-xs font-semibold text-slate-400">{Math.max(0, nextTierXp - displayedXp)} XP away</p>
           </div>
-          <div className="flex items-center gap-2"><MiniRewardArt type="silver" compact /><ChevronRight className="h-5 w-5 text-slate-500" /></div>
+          <div className="flex items-center gap-2"><MiniRewardArt type={nextReward?.type ?? 'coins'} compact /><ChevronRight className="h-5 w-5 text-slate-500" /></div>
         </div>
       </section>
 
