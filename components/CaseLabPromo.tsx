@@ -1,6 +1,6 @@
 import React from 'react';
 import { useGame } from '../context/GameContext';
-import caselabImage from '../assets/caselab.gif';
+import caselabImage from '../assets/caselab.jpg';
 
 export const CaseLabPromo: React.FC = () => {
   const { setView } = useGame();

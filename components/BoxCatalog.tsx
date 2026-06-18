@@ -116,7 +116,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
         <div className="mx-auto aspect-[1.35] w-full">
           <BlurImage
             src={box.image}
-            fallbackSrc="/preview.png"
+            fallbackSrc="/android-chrome-512x512.png"
             alt={box.name}
             loading={isPriority ? 'eager' : 'lazy'}
             fetchPriority={isPriority ? 'high' : 'low'}
@@ -137,7 +137,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
         <div className="mt-1 grid grid-cols-3 gap-1.5">
           {topItemPreviews.map((item) => (
             <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
-              <BlurImage src={item.image} fallbackSrc="/preview.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
+              <BlurImage src={item.image} fallbackSrc="/android-chrome-512x512.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
             </div>
           ))}
         </div>

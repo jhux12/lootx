@@ -76,6 +76,35 @@ const SPINNER_MOTION = {
   initialBlurDurationMs: 260
 } as const;
 
+const solveCubicBezier = (x1: number, y1: number, x2: number, y2: number, x: number) => {
+  const sampleCurveX = (t: number) => {
+    const invT = 1 - t;
+    return (3 * invT * invT * t * x1) + (3 * invT * t * t * x2) + (t * t * t);
+  };
+  const sampleCurveY = (t: number) => {
+    const invT = 1 - t;
+    return (3 * invT * invT * t * y1) + (3 * invT * t * t * y2) + (t * t * t);
+  };
+
+  let lower = 0;
+  let upper = 1;
+  let t = x;
+  for (let i = 0; i < 8; i += 1) {
+    const estimate = sampleCurveX(t);
+    if (Math.abs(estimate - x) < 0.001) break;
+    if (estimate < x) lower = t;
+    else upper = t;
+    t = (lower + upper) / 2;
+  }
+  return sampleCurveY(t);
+};
+
+const spinnerEase = {
+  launch: (progress: number) => solveCubicBezier(0.24, 0.62, 0.18, 1, progress),
+  decelerate: (progress: number) => solveCubicBezier(0.12, 0.82, 0.2, 1, progress),
+  settle: (progress: number) => solveCubicBezier(0.18, 0, 0.2, 1, progress)
+};
+
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-transparent',
   epic: 'bg-transparent',
@@ -410,6 +439,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
+  const tickTimersRef = useRef<number[]>([]);
   const tickFrameRef = useRef<number | null>(null);
   const lastTickedCenterIndexRef = useRef<number>(-1);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
@@ -478,7 +508,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
-  const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
@@ -978,6 +1007,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
+    tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    tickTimersRef.current = [];
     if (tickFrameRef.current !== null) {
       window.cancelAnimationFrame(tickFrameRef.current);
       tickFrameRef.current = null;
@@ -1027,11 +1058,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
 
-    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
+    // Two paint frames let mobile browsers apply the starting transform before the compositor-only WAAPI timeline begins.
     await waitForNextPaint();
     await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
-    void container.getBoundingClientRect();
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
@@ -1067,29 +1096,48 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
-    let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
-          lastTickedCenterIndexRef.current = index;
-        }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
-        }
+
+    // Drive tick sounds from animation time instead of DOM layout/style reads.
+    // The mirrored keyframe timeline keeps ticks aligned with the items passing
+    // the center marker without React state updates in the animation hot path.
+    const getTimelineTranslate = (progress: number) => {
+      if (progress <= overshootOffset) {
+        const local = overshootOffset <= 0 ? 1 : progress / overshootOffset;
+        return overshootTarget * spinnerEase.launch(clamp(local, 0, 1));
       }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
+      if (progress <= preSettleOffset) {
+        const span = Math.max(0.001, preSettleOffset - overshootOffset);
+        const local = (progress - overshootOffset) / span;
+        return overshootTarget + ((jitterLandingTranslate - overshootTarget) * spinnerEase.decelerate(clamp(local, 0, 1)));
+      }
+      const span = Math.max(0.001, 1 - preSettleOffset);
+      const local = (progress - preSettleOffset) / span;
+      return jitterLandingTranslate + ((centeredTranslate - jitterLandingTranslate) * spinnerEase.settle(clamp(local, 0, 1)));
     };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
+
+    const maxAudibleTicks = reduceMobileEffects ? 34 : 64;
+    const tickStride = Math.max(1, Math.ceil(Math.abs(winnerIndex - startingCenterIndex) / maxAudibleTicks));
+    const syncTickToAnimationTime = () => {
+      if (!isSpinningRef.current || document.visibilityState === 'hidden') {
+        tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
+        return;
+      }
+
+      const currentTime = typeof animation.currentTime === 'number' ? animation.currentTime : Number(animation.currentTime ?? 0);
+      const progress = clamp(currentTime / resolvedDuration, 0, 1);
+      const translate = getTimelineTranslate(progress);
+      const index = getCenteredIndexFromTranslate(translate);
+      const previous = lastTickedCenterIndexRef.current;
+      if (index !== previous && Math.abs(index - previous) >= tickStride) {
+        lastTickedCenterIndexRef.current = index;
+        lastCenterIndexRef.current = index;
+        playSound('spin-tick');
+      }
+      if (progress < 1) {
+        tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
+      }
+    };
+    tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1112,7 +1160,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      tickTimersRef.current = [];
+      if (tickFrameRef.current !== null) {
+        window.cancelAnimationFrame(tickFrameRef.current);
+      }
       tickFrameRef.current = null;
 
       setAnimationPhase('idle');
@@ -1127,14 +1179,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      tickTimersRef.current = [];
+      if (tickFrameRef.current !== null) {
+        window.cancelAnimationFrame(tickFrameRef.current);
+      }
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2042,7 +2098,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {/* The Moving Reel */}
                 <div
                     ref={scrollContainerRef}
-                    className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
+                    className={`pullz-spinner-track flex transition-opacity duration-300 opacity-100 ${isSpinning ? 'will-change-transform' : ''}`}
                     style={{
                       gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
@@ -2089,9 +2145,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
                               <BlurImage
                                   src={item.image}
+                                  fallbackSrc="/android-chrome-512x512.png"
                                   alt={item.name}
                                   loading={isSpinning || idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
                                   fetchPriority={isSpinning || idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
+                                  width={160}
+                                  height={160}
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
                                   retryOnError={!(reduceMobileEffects || isSpinning)}
