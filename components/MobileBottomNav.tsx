@@ -86,6 +86,27 @@ export const MobileBottomNav: React.FC = () => {
     setIsFreeBoxTooltipDismissed(window.sessionStorage.getItem('pullz:free-box-tooltip-dismissed') === '1');
   }, []);
 
+
+  // Track Safari visual viewport offset to fix bottom nav lag when toolbar hides/shows
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (!vv) return undefined;
+
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
+      document.documentElement.style.setProperty('--safari-vvp-offset', `${offset}px`);
+    };
+
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      document.documentElement.style.removeProperty('--safari-vvp-offset');
+    };
+  }, []);
+
   const handleNav = (item: NavItem) => {
     playSound('click');
 
@@ -126,14 +147,14 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[transform,opacity] duration-300 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-opacity duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
         height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateZ(0)',
-        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateZ(0)',
+        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateY(calc(-1 * var(--safari-vvp-offset, 0px)))',
+        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateY(calc(-1 * var(--safari-vvp-offset, 0px)))',
         willChange: 'transform'
       }}
       aria-label="Primary navigation"
