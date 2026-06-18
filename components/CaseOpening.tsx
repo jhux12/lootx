@@ -76,6 +76,35 @@ const SPINNER_MOTION = {
   initialBlurDurationMs: 260
 } as const;
 
+const solveCubicBezier = (x1: number, y1: number, x2: number, y2: number, x: number) => {
+  const sampleCurveX = (t: number) => {
+    const invT = 1 - t;
+    return (3 * invT * invT * t * x1) + (3 * invT * t * t * x2) + (t * t * t);
+  };
+  const sampleCurveY = (t: number) => {
+    const invT = 1 - t;
+    return (3 * invT * invT * t * y1) + (3 * invT * t * t * y2) + (t * t * t);
+  };
+
+  let lower = 0;
+  let upper = 1;
+  let t = x;
+  for (let i = 0; i < 8; i += 1) {
+    const estimate = sampleCurveX(t);
+    if (Math.abs(estimate - x) < 0.001) break;
+    if (estimate < x) lower = t;
+    else upper = t;
+    t = (lower + upper) / 2;
+  }
+  return sampleCurveY(t);
+};
+
+const spinnerEase = {
+  launch: (progress: number) => solveCubicBezier(0.24, 0.62, 0.18, 1, progress),
+  decelerate: (progress: number) => solveCubicBezier(0.12, 0.82, 0.2, 1, progress),
+  settle: (progress: number) => solveCubicBezier(0.18, 0, 0.2, 1, progress)
+};
+
 const rarityGlowClass: Record<string, string> = {
   legendary: 'bg-transparent',
   epic: 'bg-transparent',
@@ -1068,29 +1097,50 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     spinnerAnimationRef.current = animation;
 
-    // Drive tick sounds from precomputed center-index thresholds instead of
-    // reading computed transforms every frame. This keeps the reel compositor-only
-    // during the spin and avoids React state updates in the animation hot path.
-    const startIndex = startingCenterIndex;
-    const endIndex = winnerIndex;
-    const totalSteps = Math.max(1, Math.abs(endIndex - startIndex));
-    const direction = endIndex >= startIndex ? 1 : -1;
-    const maxAudibleTicks = reduceMobileEffects ? 32 : 56;
-    const tickStride = Math.max(1, Math.ceil(totalSteps / maxAudibleTicks));
-    for (let step = tickStride; step < totalSteps; step += tickStride) {
-      const progress = step / totalSteps;
-      const easedTime = 1 - Math.pow(1 - progress, 1 / 3);
+    // Drive tick sounds from precomputed center-index crossings instead of
+    // reading computed transforms every frame. The sampled timeline mirrors the
+    // WAAPI keyframes/easings above so ticks stay aligned with passing items.
+    const getTimelineTranslate = (progress: number) => {
+      if (progress <= overshootOffset) {
+        const local = overshootOffset <= 0 ? 1 : progress / overshootOffset;
+        return overshootTarget * spinnerEase.launch(clamp(local, 0, 1));
+      }
+      if (progress <= preSettleOffset) {
+        const span = Math.max(0.001, preSettleOffset - overshootOffset);
+        const local = (progress - overshootOffset) / span;
+        return overshootTarget + ((jitterLandingTranslate - overshootTarget) * spinnerEase.decelerate(clamp(local, 0, 1)));
+      }
+      const span = Math.max(0.001, 1 - preSettleOffset);
+      const local = (progress - preSettleOffset) / span;
+      return jitterLandingTranslate + ((centeredTranslate - jitterLandingTranslate) * spinnerEase.settle(clamp(local, 0, 1)));
+    };
+
+    const maxAudibleTicks = reduceMobileEffects ? 34 : 64;
+    const sampledTicks: Array<{ index: number; time: number }> = [];
+    let previousSampledIndex = startingCenterIndex;
+    const sampleCount = Math.max(90, Math.min(260, Math.ceil(resolvedDuration / 36)));
+    for (let sample = 1; sample <= sampleCount; sample += 1) {
+      const progress = sample / sampleCount;
+      const translate = getTimelineTranslate(progress);
+      const index = getCenteredIndexFromTranslate(translate);
+      if (index !== previousSampledIndex) {
+        sampledTicks.push({ index, time: progress * resolvedDuration });
+        previousSampledIndex = index;
+      }
+    }
+    const tickStride = Math.max(1, Math.ceil(sampledTicks.length / maxAudibleTicks));
+    sampledTicks.forEach((tick, tickIndex) => {
+      if (tickIndex % tickStride !== 0 || tick.time >= resolvedDuration - 120) return;
       const timerId = window.setTimeout(() => {
         if (!isSpinningRef.current || document.visibilityState === 'hidden') return;
-        const index = startIndex + direction * step;
-        if (index !== lastTickedCenterIndexRef.current) {
-          lastTickedCenterIndexRef.current = index;
-          lastCenterIndexRef.current = index;
+        if (tick.index !== lastTickedCenterIndexRef.current) {
+          lastTickedCenterIndexRef.current = tick.index;
+          lastCenterIndexRef.current = tick.index;
           playSound('spin-tick');
         }
-      }, Math.max(0, Math.min(resolvedDuration - 120, easedTime * resolvedDuration)));
+      }, Math.max(0, tick.time));
       tickTimersRef.current.push(timerId);
-    }
+    });
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1137,7 +1187,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, playSound, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2045,7 +2095,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {/* The Moving Reel */}
                 <div
                     ref={scrollContainerRef}
-                    className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
+                    className={`pullz-spinner-track flex transition-opacity duration-300 opacity-100 ${isSpinning ? 'will-change-transform' : ''}`}
                     style={{
                       gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
@@ -2092,9 +2142,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
                               <BlurImage
                                   src={item.image}
+                                  fallbackSrc="/android-chrome-512x512.png"
                                   alt={item.name}
                                   loading={isSpinning || idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
                                   fetchPriority={isSpinning || idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
+                                  width={160}
+                                  height={160}
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
                                   retryOnError={!(reduceMobileEffects || isSpinning)}

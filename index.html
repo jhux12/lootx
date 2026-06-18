@@ -171,9 +171,8 @@
         width: 100% !important;
         padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
         height: calc(64px + max(env(safe-area-inset-bottom), 8px)) !important;
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: transform;
+        transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
@@ -290,9 +289,7 @@
           box-shadow: 0 0 12px rgba(32, 93, 215, 0.16) !important;
         }
         html.pullz-mobile-optimized .pullz-spinner-track {
-          will-change: auto;
-          transform: translateZ(0);
-          contain: layout paint style;
+          transform: translate3d(0, 0, 0);
         }
         html.pullz-mobile-optimized .pullz-spinner-card.is-spinning,
         html.pullz-low-performance .pullz-spinner-card {
