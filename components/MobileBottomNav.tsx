@@ -87,22 +87,38 @@ export const MobileBottomNav: React.FC = () => {
   }, []);
 
 
-  // Track Safari visual viewport offset to fix bottom nav lag when toolbar hides/shows
+  // Track Safari visual viewport offset to fix bottom nav lag when toolbar hides/shows.
+  // We also listen to window 'scroll' and 'pageshow' because scroll-lock release calls
+  // window.scrollTo() which can change the visual viewport position without triggering
+  // a visualViewport scroll/resize event (e.g. after the login modal closes on Safari).
   useEffect(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
     if (!vv) return undefined;
 
+    let rafId: number;
     const update = () => {
       const offset = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
       document.documentElement.style.setProperty('--safari-vvp-offset', `${offset}px`);
+    };
+    // Deferred update via rAF so that DOM layout has settled after programmatic scrolls
+    const deferredUpdate = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(update);
     };
 
     update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
+    // window scroll fires after window.scrollTo() from scroll-lock release
+    window.addEventListener('scroll', deferredUpdate, { passive: true });
+    // pageshow fires when the page is restored from bfcache
+    window.addEventListener('pageshow', deferredUpdate);
     return () => {
+      cancelAnimationFrame(rafId);
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
+      window.removeEventListener('scroll', deferredUpdate);
+      window.removeEventListener('pageshow', deferredUpdate);
       document.documentElement.style.removeProperty('--safari-vvp-offset');
     };
   }, []);
