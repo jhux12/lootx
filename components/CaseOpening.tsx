@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
-import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
+import { XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
 import { useGame } from '../context/GameContext';
@@ -58,12 +58,6 @@ const SPINNER_MOTION = {
   postWinnerItems: 14,
   spinDurationMs: 11200,
   quickSpinDurationMs: 900,
-  goldTicketDurationMs: 10400,
-  quickGoldTicketDurationMs: 650,
-  goldFinalDurationMs: 9600,
-  quickGoldFinalDurationMs: 800,
-  goldStageDelayMs: 700,
-  quickGoldStageDelayMs: 120,
   settleDurationMs: 2200,
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
@@ -399,8 +393,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
 
-  // Gold Spin State
-  const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
 
@@ -435,7 +427,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
-  const goldStageTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
@@ -861,8 +852,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return direction * softMagnitude;
   }, []);
 
-  const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
-    const { sprinkleGold, seed } = options;
+  const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { seed: string }) => {
+    const { seed } = options;
     const rng = createSeededRng(seed);
     const preWinnerItems = reduceMobileEffects ? 42 : SPINNER_MOTION.preWinnerItems;
     const postWinnerItems = reduceMobileEffects ? 8 : SPINNER_MOTION.postWinnerItems;
@@ -885,21 +876,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       newReel.push(next);
     }
 
-    if (sprinkleGold) {
-      // Sparse deterministic gold inserts keep readability and premium spacing.
-      const minSpacing = 14;
-      const maxGoldInsertions = Math.max(1, Math.floor(reelLength / 26));
-      let insertions = 0;
-      let nextGold = Math.floor(rng() * minSpacing) + 8;
-
-      while (nextGold < reelLength && insertions < maxGoldInsertions) {
-        if (nextGold !== winnerIndex && newReel[nextGold]?.id !== target.id && newReel[nextGold]?.rarity !== 'legendary') {
-          newReel[nextGold] = GOLDEN_TICKET_ITEM;
-          insertions += 1;
-        }
-        nextGold += minSpacing + Math.floor(rng() * 8);
-      }
-    }
 
     return { items: newReel, winnerIndex };
   }, [reduceMobileEffects]);
@@ -983,10 +959,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       tickFrameRef.current = null;
     }
     lastTickedCenterIndexRef.current = -1;
-    if (goldStageTimerRef.current !== null) {
-      window.clearTimeout(goldStageTimerRef.current);
-      goldStageTimerRef.current = null;
-    }
     if (topUpLockTimerRef.current !== null) {
       window.clearTimeout(topUpLockTimerRef.current);
       topUpLockTimerRef.current = null;
@@ -1298,7 +1270,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins', isQuick = false }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
+  const handleSpin = async ({ isDemo = false, paymentMethod = 'coins', isQuick = false }: { isDemo?: boolean; paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
     if (isSpinning || spinRequestLockRef.current) {
       if (isFree) {
         trackEvent('free_spin_duplicate_click_blocked', { box_id: box?.id ?? boxId });
@@ -1316,10 +1288,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       winSoundTimerRef.current = null;
     }
     setSpinFeedbackMessage(null);
-
-    if (forceGold) {
-      isDemo = true;
-    }
 
     if (isDemo) {
       setIsDemoSpin(true);
@@ -1400,7 +1368,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       trackEvent('free_spin_started', { box_id: box.id });
     }
     setShowWinModal(false);
-    setIsGoldMode(false);
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
@@ -1443,6 +1410,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           inventoryId: string;
           openId: string;
           sellBackRate?: number;
+          guaranteedLegendarySpin?: boolean;
           provablyFair: {
             serverSeedHash: string;
             clientSeed: string;
@@ -1557,11 +1525,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
     }
 
-    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
-    if (forceGold && legendaryPool.length > 0) {
-      winner = legendaryPool[Math.floor(rollValue * legendaryPool.length)];
-    }
-
     if (!isDemo) {
       const latestRoll = {
         nonce: rollNonce,
@@ -1595,56 +1558,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setLastRoll(null);
     }
 
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
+    // Always use the regular single-stage reel. Legendary guarantees affect only the server-selected prize.
+    const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
+    const normalReelResult = generateReel(winner, items, { seed: mainSeed });
+    await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items.
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
-        const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
-        await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
-
-        const goldTicketDuration = isQuick ? SPINNER_MOTION.quickGoldTicketDurationMs : SPINNER_MOTION.goldTicketDurationMs;
-        const goldFinalDuration = isQuick ? SPINNER_MOTION.quickGoldFinalDurationMs : SPINNER_MOTION.goldFinalDurationMs;
-        const goldStageDelay = isQuick ? SPINNER_MOTION.quickGoldStageDelayMs : SPINNER_MOTION.goldStageDelayMs;
-        animateSpin(ticketReelResult.winnerIndex, goldTicketDuration, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-
-            // Wait a moment to see the ticket
-            goldStageTimerRef.current = window.setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
-                const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
-                void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
-                  animateSpin(goldReelResult.winnerIndex, goldFinalDuration, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                  });
-                });
-              goldStageTimerRef.current = null;
-            }, goldStageDelay);
-        });
-
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
-        const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
-        await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
-
-        animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
-            finishSpin(winner);
-        });
-    }
+    animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
+        finishSpin(winner);
+    });
   };
 
   const handleTryFree = () => {
@@ -1991,9 +1912,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {/* SPINNER AREA */}
         <div className="relative mb-8 w-full overflow-visible p-0">
 
-            {/* Gold Mode Overlay Effect */}
-            {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
-
             <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
               <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
                 {box?.name ?? 'Mystery Box'}
@@ -2095,7 +2013,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
                                   retryOnError={!(reduceMobileEffects || isSpinning)}
-                                  className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
+                                  className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'}`}
                               />
                               </div>
                             </div>
@@ -2112,7 +2030,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                  <button
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25'}`}
                 >
                     <span>
                       {isSyncingFair ? (

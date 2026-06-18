@@ -6,7 +6,7 @@ import rareWinSoundUrl from '../assets/audio/rare.wav';
 import epicWinSoundUrl from '../assets/audio/epic.wav';
 import legendaryWinSoundUrl from '../assets/audio/legendary.wav';
 
-type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-uncommon' | 'win-rare' | 'win-epic' | 'win-gold' | 'gold-mode' | 'coins';
+type SoundType = 'click' | 'hover' | 'spin-start' | 'spin-tick' | 'win-common' | 'win-uncommon' | 'win-rare' | 'win-epic' | 'win-gold' | 'coins';
 
 interface SoundContextType {
   muted: boolean;

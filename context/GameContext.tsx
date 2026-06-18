@@ -436,6 +436,14 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BATTLES' };
   }
 
+  if (primary === 'login' || primary === 'signin' || primary === 'sign-in') {
+    return { type: 'AUTH', mode: 'login' };
+  }
+
+  if (primary === 'register' || primary === 'signup' || primary === 'sign-up') {
+    return { type: 'AUTH', mode: 'register' };
+  }
+
   if (primary === 'boxes') {
     return { type: 'BOXES' };
   }
@@ -532,6 +540,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/';
     case 'BOXES':
       return '/boxes';
+    case 'AUTH':
+      return view.mode === 'register' ? '/register' : '/login';
     case 'SPIN':
       return '/spin';
     case 'PLINKO':
@@ -1353,7 +1363,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       trackEvent('signup_cta_clicked', { entrypoint: 'auth_modal' });
     }
     setAuthModalMode(mode);
-    setShowLoginModal(true);
+    setShowLoginModal(false);
+    setView({ type: 'AUTH', mode });
   };
 
   useEffect(() => {
