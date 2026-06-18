@@ -410,6 +410,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
+  const tickTimersRef = useRef<number[]>([]);
   const tickFrameRef = useRef<number | null>(null);
   const lastTickedCenterIndexRef = useRef<number>(-1);
   const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
@@ -478,7 +479,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
-  const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
@@ -978,6 +978,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       window.clearTimeout(tickTimerRef.current);
       tickTimerRef.current = null;
     }
+    tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    tickTimersRef.current = [];
     if (tickFrameRef.current !== null) {
       window.cancelAnimationFrame(tickFrameRef.current);
       tickFrameRef.current = null;
@@ -1027,11 +1029,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
 
-    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
+    // Two paint frames let mobile browsers apply the starting transform before the compositor-only WAAPI timeline begins.
     await waitForNextPaint();
     await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
-    void container.getBoundingClientRect();
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
     lastCenterIndexRef.current = startingCenterIndex;
@@ -1067,29 +1067,30 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
-    let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
+
+    // Drive tick sounds from precomputed center-index thresholds instead of
+    // reading computed transforms every frame. This keeps the reel compositor-only
+    // during the spin and avoids React state updates in the animation hot path.
+    const startIndex = startingCenterIndex;
+    const endIndex = winnerIndex;
+    const totalSteps = Math.max(1, Math.abs(endIndex - startIndex));
+    const direction = endIndex >= startIndex ? 1 : -1;
+    const maxAudibleTicks = reduceMobileEffects ? 32 : 56;
+    const tickStride = Math.max(1, Math.ceil(totalSteps / maxAudibleTicks));
+    for (let step = tickStride; step < totalSteps; step += tickStride) {
+      const progress = step / totalSteps;
+      const easedTime = 1 - Math.pow(1 - progress, 1 / 3);
+      const timerId = window.setTimeout(() => {
+        if (!isSpinningRef.current || document.visibilityState === 'hidden') return;
+        const index = startIndex + direction * step;
+        if (index !== lastTickedCenterIndexRef.current) {
           lastTickedCenterIndexRef.current = index;
+          lastCenterIndexRef.current = index;
+          playSound('spin-tick');
         }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
-        }
-      }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
-    };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
+      }, Math.max(0, Math.min(resolvedDuration - 120, easedTime * resolvedDuration)));
+      tickTimersRef.current.push(timerId);
+    }
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1112,7 +1113,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      tickTimersRef.current = [];
       tickFrameRef.current = null;
 
       setAnimationPhase('idle');
@@ -1127,14 +1129,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      tickTimersRef.current = [];
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, playSound, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
