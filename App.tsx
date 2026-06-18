@@ -512,6 +512,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
       
+      {view.type === 'AUTH' && (
+        <div className="w-full">
+          <LoginModal isPage />
+        </div>
+      )}
+
       {view.type === 'BOXES' && (
         <div className="w-full">
           <BoxCatalog isChatCollapsed={isChatCollapsed} />

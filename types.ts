@@ -65,6 +65,7 @@ export interface User {
     rarityUnboxed?: Record<string, number>;
   };
   questClaims?: Record<string, string>;
+  guaranteedLegendarySpin?: boolean;
 }
 
 export interface ChatMessage {
@@ -370,6 +371,7 @@ export type ViewState =
   | { type: 'HOME' }
   | { type: 'SPIN' }
   | { type: 'BOXES' }
+  | { type: 'AUTH'; mode: 'login' | 'register' }
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }

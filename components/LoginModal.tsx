@@ -14,7 +14,9 @@ import { lockPageScroll } from '../utils/scrollLock';
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account before signing in.';
 
-export const LoginModal: React.FC = () => {
+type LoginModalProps = { isPage?: boolean };
+
+export const LoginModal: React.FC<LoginModalProps> = ({ isPage = false }) => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
@@ -284,24 +286,31 @@ export const LoginModal: React.FC = () => {
     setEmailConfirmationReminderCount((count) => count + 1);
   };
 
-  useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
+  useEffect(() => {
+    if (isPage) return undefined;
+    return lockPageScroll({ preserveScrollPosition: true });
+  }, [isPage]);
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
+      className={isPage ? 'mx-auto flex min-h-[calc(100dvh-var(--pullz-header-height,72px)-96px)] w-full max-w-6xl items-start justify-center px-3 py-6 sm:px-4 sm:py-10' : 'fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4'}
     >
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-md"
-        onClick={() => setShowLoginModal(false)}
-      />
-
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
-        <button
+      {!isPage && (
+        <div
+          className="absolute inset-0 bg-black/80 backdrop-blur-md"
           onClick={() => setShowLoginModal(false)}
-          className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        />
+      )}
+
+      <div className={isPage ? 'relative flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl' : 'relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]'}>
+        {!isPage && (
+          <button
+            onClick={() => setShowLoginModal(false)}
+            className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
 
         <div className="flex w-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#18181b] p-4 pr-3 sm:p-6 sm:pr-5">
           {!isLinkingGoogle && (

@@ -307,7 +307,14 @@ export default async function handler(req, res) {
       }
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
-      const prize = pickPrizeByWeight(prizes, roll);
+      const shouldGuaranteeLegendary = userData.guaranteedLegendarySpin === true;
+      const legendaryPrizes = shouldGuaranteeLegendary
+        ? prizes.filter((entry) => String(entry?.rarity ?? '').toLowerCase() === 'legendary')
+        : [];
+      const prize = legendaryPrizes.length > 0
+        ? legendaryPrizes[Math.min(legendaryPrizes.length - 1, Math.floor(roll * legendaryPrizes.length))]
+        : pickPrizeByWeight(prizes, roll);
+      const consumedGuaranteedLegendarySpin = shouldGuaranteeLegendary && legendaryPrizes.length > 0;
       const prizeForcesFullSellBack = prize?.forceFullSellBack === true;
       const appliedSellBackRate = isFree || prizeForcesFullSellBack ? 1 : sellBackRate;
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
@@ -328,7 +335,8 @@ export default async function handler(req, res) {
       const freeBoxClaimedAt = isFree ? Date.now() : null;
       const nextUserPatch = sanitizeForFirestore({
         ...(!userSnap.exists ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
-        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
+        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {}),
+        ...(consumedGuaranteedLegendarySpin ? { guaranteedLegendarySpin: false } : {})
       });
 
       if (coinCost > 0) {

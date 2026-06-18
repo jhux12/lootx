@@ -2646,6 +2646,17 @@ export const AdminPanel: React.FC = () => {
       void updateUserAdminData(userId, { adminNotes: note }); // TODO: replace with dedicated admin notes collection when available.
   };
 
+  const toggleGuaranteedLegendarySpin = (userId: string, enabled: boolean) => {
+      void updateUserAdminData(userId, { guaranteedLegendarySpin: enabled });
+      logAdminAction(
+          userId,
+          'guaranteed_legendary_spin',
+          { guaranteedLegendarySpin: !enabled },
+          { guaranteedLegendarySpin: enabled },
+          enabled ? 'Enabled guaranteed legendary item on next case open' : 'Disabled guaranteed legendary item'
+      );
+  };
+
   const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const getUserLabels = (profile: (typeof users)[number]) => {
@@ -4988,6 +4999,24 @@ export const AdminPanel: React.FC = () => {
                                                         <button onClick={() => startEditUser(selectedUser.id, selectedUser.xp || 0)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">Edit XP</button>
                                                     )}
                                                     <button onClick={() => handleDeleteUser(selectedUser.id)} disabled={deletingUserId === selectedUser.id} className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-300">{deletingUserId === selectedUser.id ? 'Deleting...' : 'Delete User'}</button>
+                                                </div>
+                                            </div>
+
+                                            <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] p-4 sm:p-5 space-y-3">
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-xs font-bold uppercase tracking-wide text-amber-200">Legendary Spin Override</h4>
+                                                        <p className="mt-1 text-xs leading-5 text-amber-100/70">Guarantees this user's next real case open awards a legendary item. This does not force the gold-ticket animation.</p>
+                                                    </div>
+                                                    <label className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-[#0b0e14] px-3 py-3 text-sm font-semibold text-amber-100 sm:w-auto sm:min-w-56">
+                                                        <span>Guarantee legendary</span>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedUser.guaranteedLegendarySpin === true}
+                                                            onChange={(event) => toggleGuaranteedLegendarySpin(selectedUser.id, event.target.checked)}
+                                                            className="h-5 w-5 rounded border-amber-300 bg-[#131720] text-amber-400 focus:ring-amber-400"
+                                                        />
+                                                    </label>
                                                 </div>
                                             </div>
 
