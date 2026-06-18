@@ -380,6 +380,10 @@ export type ViewState =
   | { type: 'CONTACT' }
   | { type: 'TERMS' }
   | { type: 'PRIVACY' }
+  | { type: 'FAQ' }
+  | { type: 'ABOUT' }
+  | { type: 'SHIPPING_POLICY' }
+  | { type: 'REFUND_POLICY' }
   | { type: 'ADMIN' }
   | { type: 'LEADERBOARD' }
   | { type: 'CUSTOM_CREATOR' }

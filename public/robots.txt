@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
 
+Disallow: /admin
+Disallow: /inventory
+Disallow: /profile
+Disallow: /checkout
+Disallow: /settings
+
 Sitemap: https://pullz.gg/sitemap.xml
