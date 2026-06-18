@@ -1097,9 +1097,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     spinnerAnimationRef.current = animation;
 
-    // Drive tick sounds from precomputed center-index crossings instead of
-    // reading computed transforms every frame. The sampled timeline mirrors the
-    // WAAPI keyframes/easings above so ticks stay aligned with passing items.
+    // Drive tick sounds from animation time instead of DOM layout/style reads.
+    // The mirrored keyframe timeline keeps ticks aligned with the items passing
+    // the center marker without React state updates in the animation hot path.
     const getTimelineTranslate = (progress: number) => {
       if (progress <= overshootOffset) {
         const local = overshootOffset <= 0 ? 1 : progress / overshootOffset;
@@ -1116,31 +1116,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     };
 
     const maxAudibleTicks = reduceMobileEffects ? 34 : 64;
-    const sampledTicks: Array<{ index: number; time: number }> = [];
-    let previousSampledIndex = startingCenterIndex;
-    const sampleCount = Math.max(90, Math.min(260, Math.ceil(resolvedDuration / 36)));
-    for (let sample = 1; sample <= sampleCount; sample += 1) {
-      const progress = sample / sampleCount;
+    const tickStride = Math.max(1, Math.ceil(Math.abs(winnerIndex - startingCenterIndex) / maxAudibleTicks));
+    const syncTickToAnimationTime = () => {
+      if (!isSpinningRef.current || document.visibilityState === 'hidden') {
+        tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
+        return;
+      }
+
+      const currentTime = typeof animation.currentTime === 'number' ? animation.currentTime : Number(animation.currentTime ?? 0);
+      const progress = clamp(currentTime / resolvedDuration, 0, 1);
       const translate = getTimelineTranslate(progress);
       const index = getCenteredIndexFromTranslate(translate);
-      if (index !== previousSampledIndex) {
-        sampledTicks.push({ index, time: progress * resolvedDuration });
-        previousSampledIndex = index;
+      const previous = lastTickedCenterIndexRef.current;
+      if (index !== previous && Math.abs(index - previous) >= tickStride) {
+        lastTickedCenterIndexRef.current = index;
+        lastCenterIndexRef.current = index;
+        playSound('spin-tick');
       }
-    }
-    const tickStride = Math.max(1, Math.ceil(sampledTicks.length / maxAudibleTicks));
-    sampledTicks.forEach((tick, tickIndex) => {
-      if (tickIndex % tickStride !== 0 || tick.time >= resolvedDuration - 120) return;
-      const timerId = window.setTimeout(() => {
-        if (!isSpinningRef.current || document.visibilityState === 'hidden') return;
-        if (tick.index !== lastTickedCenterIndexRef.current) {
-          lastTickedCenterIndexRef.current = tick.index;
-          lastCenterIndexRef.current = tick.index;
-          playSound('spin-tick');
-        }
-      }, Math.max(0, tick.time));
-      tickTimersRef.current.push(timerId);
-    });
+      if (progress < 1) {
+        tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
+      }
+    };
+    tickFrameRef.current = window.requestAnimationFrame(syncTickToAnimationTime);
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1165,6 +1162,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setHasSpinSettled(true);
       tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       tickTimersRef.current = [];
+      if (tickFrameRef.current !== null) {
+        window.cancelAnimationFrame(tickFrameRef.current);
+      }
       tickFrameRef.current = null;
 
       setAnimationPhase('idle');
@@ -1181,6 +1181,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       tickTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       tickTimersRef.current = [];
+      if (tickFrameRef.current !== null) {
+        window.cancelAnimationFrame(tickFrameRef.current);
+      }
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';

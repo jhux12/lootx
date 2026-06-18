@@ -128,7 +128,7 @@ export const MobileBottomNav: React.FC = () => {
   const nav = (
     <div
       className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-opacity duration-200 ease-out lg:hidden ${
-        isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
+        isSuppressed || showTopUpModal ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
       }`}
       style={{
         height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
@@ -138,9 +138,9 @@ export const MobileBottomNav: React.FC = () => {
         right: 0,
         bottom: 0,
         top: 'auto',
-        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
-        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
-        willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
+        transform: 'none',
+        WebkitTransform: 'none',
+        willChange: 'auto'
       }}
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
