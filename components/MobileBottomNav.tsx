@@ -126,7 +126,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-opacity duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[transform,opacity] duration-300 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
