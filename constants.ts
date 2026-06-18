@@ -1,4 +1,3 @@
-import pullzTicketImage from './assets/pullz-p.PNG';
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
 export const XP_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/WebIcons%2Fsd%20(27).png?alt=media&token=475e5bf6-136e-45ad-9c7f-7fcb88b9fa02';
@@ -39,15 +38,6 @@ export const MYSTERY_BOXES: MysteryBox[] = [
   { id: 'watch', name: 'Timekeeper', price: 290.00, image: 'https://picsum.photos/id/180/300/300', accentColor: '#eab308', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
 ];
 
-export const GOLDEN_TICKET_ITEM: CaseItem = {
-  id: 'golden-ticket',
-  name: 'GOLDEN UPGRADE',
-  price: 0,
-  image: pullzTicketImage,
-  rarity: 'legendary',
-  chance: 0,
-  color: '#fbbf24'
-};
 
 export const LIVE_DROPS: LiveDrop[] = [
   { id: '1', itemName: 'Yeezy Boost', itemImage: 'https://picsum.photos/id/21/50/50', value: 1500, user: MOCK_USERS[0], rarity: 'legendary' },

@@ -5006,7 +5006,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                                     <div className="min-w-0">
                                                         <h4 className="text-xs font-bold uppercase tracking-wide text-amber-200">Legendary Spin Override</h4>
-                                                        <p className="mt-1 text-xs leading-5 text-amber-100/70">Guarantees this user's next real case open awards a legendary item. This does not force the gold-ticket animation.</p>
+                                                        <p className="mt-1 text-xs leading-5 text-amber-100/70">Guarantees this user's next real case open awards a legendary item while keeping the regular spin animation.</p>
                                                     </div>
                                                     <label className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-amber-400/30 bg-[#0b0e14] px-3 py-3 text-sm font-semibold text-amber-100 sm:w-auto sm:min-w-56">
                                                         <span>Guarantee legendary</span>
