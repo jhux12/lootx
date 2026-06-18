@@ -56,7 +56,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
         }
       }}
       className={`group rounded-2xl border p-3 transition ${rarityStyle.card} ${
-        selected ? 'ring-2 ring-blue-400/60 shadow-[0_0_18px_rgba(32,93,215,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
+        selected ? 'border-blue-300 ring-4 ring-blue-400/70 shadow-[0_0_26px_rgba(56,189,248,0.55)] sm:ring-2 sm:ring-blue-400/60 sm:shadow-[0_0_18px_rgba(32,93,215,0.35)]' : 'hover:shadow-[0_0_18px_rgba(255,255,255,0.08)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <div className="mb-3 flex items-center justify-between">

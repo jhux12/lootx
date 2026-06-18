@@ -193,6 +193,7 @@ export const Profile: React.FC = () => {
   const [showSignatureRequiredInfo, setShowSignatureRequiredInfo] = useState(false);
   const [withdrawLockedModalOpen, setWithdrawLockedModalOpen] = useState(false);
   const [tradeInModalItemId, setTradeInModalItemId] = useState<string | null>(null);
+  const [showSellSelectedConfirm, setShowSellSelectedConfirm] = useState(false);
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
@@ -317,6 +318,7 @@ export const Profile: React.FC = () => {
   const isFreeShippingItem = (item: InventoryItem) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? NaN) === 0 || Number(item.shippingCostOverrideCents ?? NaN) === 0 || isXpPurchasedItem(item);
 
   const isPullPassBoxReward = (item: InventoryItem) => item.source === 'pullPassBoxReward' && Boolean(item.boxId);
+  const canSellInventoryItem = (item: InventoryItem) => item.status === 'available' && !item.locked && item.redeemable !== false && !isXpPurchasedItem(item);
   const isItemShippable = (item: InventoryItem) => item.status === 'available' && !item.locked && item.shippable !== false && !isPullPassBoxReward(item);
   const canSelectShipment = (item: InventoryItem) => isItemShippable(item);
 
@@ -403,6 +405,8 @@ export const Profile: React.FC = () => {
   const shipmentPreviewItems = selectedShipmentItems.slice(0, 6);
   const hiddenShipmentItemCount = Math.max(0, selectedShipmentItems.length - shipmentPreviewItems.length);
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
+  const selectedSellableItems = selectedShipmentItems.filter((item) => canSellInventoryItem(item));
+  const selectedSellValue = selectedSellableItems.reduce((sum, item) => sum + getSellBackValue(toCoins(item.price, PRICE_UNIT_MODE), getSellBackRate(item)), 0);
   const paidShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + (isFreeShippingItem(item) ? 0 : toCoins(item.price, PRICE_UNIT_MODE)), 0);
   const shipmentRate = getShipmentShippingRate(paidShipmentValue);
   const protectionRate = getShippingProtectionRate(paidShipmentValue);
@@ -434,7 +438,7 @@ export const Profile: React.FC = () => {
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
   }, [canUseCoinShipping, canUseCashShipping]);
 
-  const getSellBackRate = (item: InventoryItem) => {
+  function getSellBackRate(item: InventoryItem) {
     const storedRate = Number(item.sellBackRate);
     if (Number.isFinite(storedRate) && storedRate > 0) return Math.min(1, Math.max(0, storedRate));
     if (item.provenance?.sourceType === 'case_open' && item.provenance?.sourceId) {
@@ -443,7 +447,7 @@ export const Profile: React.FC = () => {
       if (sourceBox?.isUserCreated) return 0.75;
     }
     return 0.82;
-  };
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -562,6 +566,37 @@ export const Profile: React.FC = () => {
     }
   };
 
+  const handleOpenSellSelectedConfirm = () => {
+    if (selectedSellableItems.length === 0) {
+      toast.info('No selected items are eligible to sell.');
+      return;
+    }
+    setShowSellSelectedConfirm(true);
+  };
+
+  const handleConfirmSellSelected = async () => {
+    if (selectedSellableItems.length === 0) return;
+    const itemIds = selectedSellableItems.map((item) => item.instanceId);
+    setIsSellingItems((prev) => itemIds.reduce((next, id) => ({ ...next, [id]: true }), prev));
+    try {
+      for (const item of selectedSellableItems) {
+        await sellItem(item.instanceId);
+      }
+      setSelectedShipments((prev) => prev.filter((id) => !itemIds.includes(id)));
+      setShowSellSelectedConfirm(false);
+      toast.success(`${itemIds.length} ${itemIds.length === 1 ? 'item' : 'items'} sold.`);
+    } catch (error) {
+      console.error('Failed to sell selected items', error);
+      toast.error('Unable to sell selected items right now. Please try again.');
+    } finally {
+      setIsSellingItems((prev) => {
+        const next = { ...prev };
+        itemIds.forEach((id) => { next[id] = false; });
+        return next;
+      });
+    }
+  };
+
   const handleConfirmTradeIn = async () => {
     const tradeItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId);
     if (!tradeItem || isSellingItems[tradeItem.instanceId]) return;
@@ -674,7 +709,7 @@ export const Profile: React.FC = () => {
       };
     }
     const canShip = isItemShippable(item);
-    const canSell = isAvailable && !isLocked && item.redeemable !== false && !isXpPurchasedItem(item);
+    const canSell = isAvailable && !isLocked && canSellInventoryItem(item);
 
     if (canShip) {
       return {
@@ -739,6 +774,8 @@ export const Profile: React.FC = () => {
               selectedIds={selectedShipments}
               onToggleSelect={(id) => setSelectedShipments((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
               onReviewShipping={() => handleOpenShippingReview(selectedShipments)}
+              onSellSelected={handleOpenSellSelectedConfirm}
+              sellSelectedDisabled={selectedSellableItems.length === 0 || selectedSellableItems.some((item) => isSellingItems[item.instanceId])}
               search={search}
               setSearch={setSearch}
               rarity={rarity}
@@ -752,6 +789,7 @@ export const Profile: React.FC = () => {
               totalValue={inventoryTotalValue}
               availableToShip={availableToShip}
               selectedValue={selectedShipmentValue}
+              selectedSellValue={selectedSellValue}
             />
           ) : activeTab === 'orders' ? (
             <OrdersView orders={orders} />
@@ -786,6 +824,38 @@ export const Profile: React.FC = () => {
       </div>
 
       {!showShippingReview && <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} onGames={() => setView({ type: 'BOXES' })} onRewards={() => setView({ type: 'BONUSES' })} />}
+
+      {showSellSelectedConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-emerald-400/25 bg-[#1f252c] p-4 shadow-2xl shadow-black/40">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-white">Sell Selected Items?</h3>
+                <p className="mt-1 text-sm text-gray-400">This is your final confirmation before selling.</p>
+              </div>
+              <button aria-label="Close sell selected confirmation" onClick={() => setShowSellSelectedConfirm(false)}><X className="h-5 w-5 text-gray-400" /></button>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-[#171d24] p-3">
+              <p className="text-sm text-gray-300">You are about to sell <span className="font-bold text-white">{selectedSellableItems.length}</span> selected {selectedSellableItems.length === 1 ? 'item' : 'items'}.</p>
+              <p className="mt-2 text-sm text-gray-400">Estimated payout:</p>
+              <CoinAmount amount={selectedSellValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-bold text-emerald-400" iconClassName="h-5 w-5" />
+              {selectedSellableItems.length < selectedShipmentItems.length ? (
+                <p className="mt-2 text-xs text-amber-200">{selectedShipmentItems.length - selectedSellableItems.length} selected {selectedShipmentItems.length - selectedSellableItems.length === 1 ? 'item is' : 'items are'} not eligible to sell and will be skipped.</p>
+              ) : null}
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setShowSellSelectedConfirm(false)}>Cancel</button>
+              <button
+                className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => { void handleConfirmSellSelected(); }}
+                disabled={selectedSellableItems.length === 0 || selectedSellableItems.some((item) => isSellingItems[item.instanceId])}
+              >
+                {selectedSellableItems.some((item) => isSellingItems[item.instanceId]) ? 'Selling...' : 'Confirm Sell Selected'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {tradeInModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">

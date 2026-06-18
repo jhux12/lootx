@@ -10,6 +10,8 @@ interface InventoryViewProps {
   selectedIds: string[];
   onToggleSelect: (id: string) => void;
   onReviewShipping: () => void;
+  onSellSelected: () => void;
+  sellSelectedDisabled: boolean;
   search: string;
   setSearch: (value: string) => void;
   rarity: string;
@@ -23,6 +25,7 @@ interface InventoryViewProps {
   totalValue: number;
   availableToShip: number;
   selectedValue: number;
+  selectedSellValue: number;
 }
 
 export const InventoryView: React.FC<InventoryViewProps> = ({
@@ -30,6 +33,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   selectedIds,
   onToggleSelect,
   onReviewShipping,
+  onSellSelected,
+  sellSelectedDisabled,
   search,
   setSearch,
   rarity,
@@ -42,7 +47,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   isSelectable,
   totalValue,
   availableToShip,
-  selectedValue
+  selectedValue,
+  selectedSellValue
 }) => {
   return (
     <section className="flex-1 space-y-4">
@@ -65,6 +71,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         selectedCount={selectedIds.length}
         onReviewShipping={onReviewShipping}
         reviewDisabled={selectedIds.length === 0}
+        onSellSelected={onSellSelected}
+        sellDisabled={sellSelectedDisabled}
       />
 
       {items.length === 0 ? (
@@ -95,8 +103,9 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {selectedIds.length > 0 && (
         <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-blue-400/30 bg-[#1f252c]/95 p-3 backdrop-blur md:bottom-4">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
+            <button onClick={onSellSelected} disabled={sellSelectedDisabled} className={`rounded-xl px-3 py-2 text-xs font-bold ${sellSelectedDisabled ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500' : 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-100'}`}>Sell Selected{selectedSellValue > 0 ? <span className="sr-only"> for {selectedSellValue} coins</span> : null}</button>
             <button onClick={onReviewShipping} className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-3 py-2 text-xs font-bold text-white">Review Shipping</button>
           </div>
         </div>
