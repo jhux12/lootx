@@ -9,7 +9,7 @@ type SeoConfig = {
 };
 
 const SITE_URL = 'https://pullz.gg';
-const FALLBACK_IMAGE = `${SITE_URL}/preview.png`;
+const FALLBACK_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
 const HOMEPAGE_DESCRIPTION = 'Open Pokémon mystery boxes online and win real collectibles. Keep your items or sell them back for site credit. New users get a free welcome box.';
 
 const ensureMeta = (selector: string, attributes: Record<string, string>) => {

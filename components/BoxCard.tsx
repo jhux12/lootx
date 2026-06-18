@@ -56,7 +56,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
         prefetchHandlers.onTouchStart();
       }}
       onKeyDown={handleKeyDown}
-      className={`group relative mx-auto flex h-full w-full max-w-[18rem] cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11141a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
+      className={`pullz-stable-card group relative mx-auto flex h-full min-h-[19rem] w-full max-w-[18rem] sm:min-h-[22rem] cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11141a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
       tabIndex={0}
       role="button"
     >
@@ -72,7 +72,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       </div>
 
       <div className="flex w-full flex-col items-center gap-2 pb-1">
-        <h4 className={`font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
+        <h4 className={`min-h-[2.5rem] overflow-hidden font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
         {box.currencyType === 'XP' ? (
           <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
             <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" width={16} height={16} className="h-4 w-4 object-contain" />

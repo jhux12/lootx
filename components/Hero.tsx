@@ -26,7 +26,7 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="group relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#060910] px-5 py-7 sm:px-8 sm:py-10 lg:px-14 lg:py-14">
+    <section className="pullz-cls-hero group relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#060910] px-5 py-7 sm:px-8 sm:py-10 lg:px-14 lg:py-14">
       <div className="pointer-events-none absolute inset-0 rounded-[28px]">
         <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,#131f42_0%,#090d18_45%,#05070d_100%)]" />
         <div className="absolute inset-0 opacity-20 mix-blend-screen animate-hero-drift" style={{ backgroundImage: `url(${pullzPattern})`, backgroundSize: '260px 260px' }} />
@@ -36,7 +36,7 @@ export const Hero: React.FC = () => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,rgba(3,6,12,0.65)_100%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <div className="relative z-10 mx-auto grid min-h-[500px] max-w-6xl gap-8 lg:min-h-[620px] lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div className="space-y-5 sm:space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-slate-900/50 px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-100 shadow-[0_0_24px_rgba(94,92,230,0.35)] backdrop-blur-md sm:text-xs">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7]/90 to-sky-500/90 text-white shadow-[0_0_14px_rgba(32,93,215,0.65)]">
@@ -81,7 +81,7 @@ export const Hero: React.FC = () => {
           </div>
         </div>
 
-        <div className="relative flex items-end justify-center pt-4 lg:pt-0">
+        <div className="relative flex min-h-[300px] items-end justify-center pt-4 sm:min-h-[390px] lg:min-h-[520px] lg:pt-0">
           <div className="pointer-events-none absolute inset-x-[14%] top-[18%] h-[50%] rounded-full bg-[radial-gradient(circle,rgba(56,189,248,0.45)_0%,rgba(147,51,234,0.25)_40%,rgba(0,0,0,0)_72%)] blur-2xl animate-hero-pulse" />
           <div className="pointer-events-none absolute inset-x-[18%] top-[25%] h-[45%] rounded-full border border-cyan-300/20 blur-sm" />
           <img
@@ -94,6 +94,7 @@ export const Hero: React.FC = () => {
             width={960}
             height={960}
             style={{
+              aspectRatio: '1 / 1',
               filter: 'drop-shadow(0 0 24px rgba(32,93,215,0.35)) drop-shadow(0 0 60px rgba(236,72,153,0.2))'
             }}
           />

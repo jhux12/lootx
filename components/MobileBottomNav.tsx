@@ -169,9 +169,9 @@ export const MobileBottomNav: React.FC = () => {
       style={{
         height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateY(calc(-1 * var(--safari-vvp-offset, 0px)))',
-        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translateY(calc(-1 * var(--safari-vvp-offset, 0px)))',
-        willChange: 'transform'
+        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
+        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
+        willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
       }}
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}

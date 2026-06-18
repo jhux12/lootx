@@ -176,7 +176,8 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         <div
           className={`pullz-spinner-track flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
           style={{
-            transform: state === 'IDLE' ? undefined : `translateX(${translateX}px)`,
+            transform: state === 'IDLE' ? undefined : `translate3d(${translateX}px, 0, 0)`,
+            willChange: state === 'SPIN' ? 'transform' : 'auto',
             transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
           }}
         >
@@ -187,7 +188,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`pullz-spinner-card w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
               >
                 <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
                   {item.imageUrl ? (
@@ -197,6 +198,9 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
                       className="w-full h-full object-contain"
                       loading={index < 8 ? 'eager' : 'lazy'}
                       decoding="async"
+                      width={128}
+                      height={56}
+                      style={{ aspectRatio: '16 / 7' }}
                       draggable={false}
                     />
                   ) : (
@@ -214,7 +218,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         </div>
       </div>
 
-      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-280px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
+      <style>{`@keyframes reelIdle { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-280px,0,0); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
     </div>
   );
 };

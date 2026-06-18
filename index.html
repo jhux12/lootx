@@ -24,17 +24,18 @@
     <meta property="og:title" content="Pullz.gg Mystery Boxes" />
     <meta property="og:description" content="Open premium mystery boxes with provably fair results and live drop action." />
     <meta property="og:url" content="https://pullz.gg/" />
-    <meta property="og:image" content="https://pullz.gg/preview.png" />
+    <meta property="og:image" content="https://pullz.gg/android-chrome-512x512.png" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Pullz.gg Mystery Boxes" />
     <meta name="twitter:description" content="Open premium mystery boxes with provably fair results and live drop action." />
-    <meta name="twitter:image" content="https://pullz.gg/preview.png" />
+    <meta name="twitter:image" content="https://pullz.gg/android-chrome-512x512.png" />
     <meta name="twitter:image:alt" content="Pullz.gg homepage social preview" />
     <script src="https://cdn.tailwindcss.com" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://firebasestorage.googleapis.com">
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
     <link rel="preload" as="image" href="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060" fetchpriority="high">
@@ -115,6 +116,24 @@
       #root {
         min-height: 100dvh;
       }
+      img, video, canvas, svg {
+        max-width: 100%;
+      }
+      img {
+        height: auto;
+        content-visibility: auto;
+      }
+      .pullz-cls-hero {
+        min-height: clamp(560px, 72svh, 760px);
+        contain: layout paint;
+      }
+      .pullz-stable-card {
+        contain: layout paint style;
+      }
+      .pullz-stable-modal {
+        contain: layout paint;
+        overscroll-behavior: contain;
+      }
 
       @media (max-width: 768px) {
         input,
@@ -139,9 +158,10 @@
         width: 100% !important;
         padding-bottom: max(env(safe-area-inset-bottom), 8px) !important;
         height: calc(64px + max(env(safe-area-inset-bottom), 8px)) !important;
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: transform;
+        transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
+        contain: layout paint style;
+        will-change: auto;
       }
       /* Custom scrollbar for chat */
       .scrollbar-thin::-webkit-scrollbar {
