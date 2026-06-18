@@ -24,14 +24,14 @@
     <meta property="og:title" content="Pullz.gg Mystery Boxes" />
     <meta property="og:description" content="Open premium mystery boxes with provably fair results and live drop action." />
     <meta property="og:url" content="https://pullz.gg/" />
-    <meta property="og:image" content="https://pullz.gg/preview.png" />
-    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image" content="https://pullz.gg/home-banners/homepage-preview.svg" />
+    <meta property="og:image:type" content="image/svg+xml" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Pullz.gg Mystery Boxes" />
     <meta name="twitter:description" content="Open premium mystery boxes with provably fair results and live drop action." />
-    <meta name="twitter:image" content="https://pullz.gg/preview.png" />
+    <meta name="twitter:image" content="https://pullz.gg/home-banners/homepage-preview.svg" />
     <meta name="twitter:image:alt" content="Pullz.gg homepage social preview" />
     <script src="https://cdn.tailwindcss.com" defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,6 +93,7 @@
     <style>
       :root {
         --app-height: 100dvh;
+        --app-small-height: 100svh;
       }
       html {
         overflow-x: hidden;
@@ -110,10 +111,23 @@
         touch-action: pan-x pan-y pinch-zoom;
         background-color: #0b0e14;
         color: white;
+        min-height: 100svh;
         min-height: 100dvh;
       }
       #root {
+        min-height: 100svh;
         min-height: 100dvh;
+        width: 100%;
+        overflow-x: clip;
+      }
+      img, video, canvas, svg {
+        max-width: 100%;
+      }
+      button, a, input, select, textarea {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button, [role="button"], a {
+        touch-action: manipulation;
       }
 
       @media (max-width: 768px) {
@@ -259,7 +273,7 @@
         }
         html.pullz-mobile-optimized .pullz-spinner-track {
           will-change: transform;
-          transform: translateZ(0);
+          transform: translate3d(0, 0, 0);
           contain: layout paint style;
         }
         html.pullz-mobile-optimized .pullz-spinner-card.is-spinning,

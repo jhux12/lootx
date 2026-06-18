@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import popupArt from '../assets/popup.png';
 import pullzLogo from '../assets/pullz-p.PNG';
 import { useGame } from '../context/GameContext';
 import { lockPageScroll } from '../utils/scrollLock';
@@ -14,7 +13,7 @@ type PromoPopupModalProps = {
 
 export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClose, onSignUp, onSignIn }) => {
   const { stripeSettings } = useGame();
-  const popupImage = stripeSettings.boxCatalogHeroImageUrl || stripeSettings.authPopupImageUrl || popupArt;
+  const popupImage = stripeSettings.boxCatalogHeroImageUrl || stripeSettings.authPopupImageUrl || '/home-banners/homepage-preview.svg';
   useEffect(() => {
     if (!isOpen) return undefined;
 

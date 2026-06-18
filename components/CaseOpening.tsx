@@ -67,11 +67,6 @@ const SPINNER_MOTION = {
   settleDurationMs: 2200,
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
-  overshootPx: 10,
-  approachOffsetSoftMaxPx: 10,
-  approachOffsetNearMissMinPx: 20,
-  approachOffsetNearMissMaxPx: 34,
-  nearMissChance: 0.42,
   durationVarianceMs: 180,
   initialBlurDurationMs: 260
 } as const;
@@ -153,6 +148,14 @@ const pickWeightedSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], 
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+const randomSignedOffset = (rng: () => number, maxMagnitude: number, minMagnitude = 8) => {
+  const magnitude = maxMagnitude <= minMagnitude ? maxMagnitude : minMagnitude + rng() * (maxMagnitude - minMagnitude);
+  return (rng() < 0.5 ? -1 : 1) * magnitude;
+};
+const shouldDebugSpinner = () => {
+  if (!(import.meta as { env?: { DEV?: boolean } }).env?.DEV || typeof window === 'undefined') return false;
+  return window.localStorage?.getItem('pullz:debug-spinner') === 'true';
+};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -478,7 +481,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
-  const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
@@ -847,20 +849,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
-    }
-
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -904,30 +892,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return { items: newReel, winnerIndex };
   }, [reduceMobileEffects]);
 
-  const getCenteredTranslate = useCallback((winnerIndex: number, landingOffset = 0) => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-
-    if (!viewport || !container) {
-      return null;
-    }
-
-    updateSpinnerMeasurements();
-    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
-    const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
-    const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
-    return viewportCenterX - winnerCenterX + landingOffset;
-  }, [updateSpinnerMeasurements]);
-
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const viewportCenter = viewportWidth / 2;
     const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
     const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
+
     if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
       return 0;
     }
+
     return Math.max(
       0,
       Math.min(
@@ -937,30 +911,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
   }, [reelItems.length]);
 
-  const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const next = getCenteredTranslate(winnerIndex, landingOffset);
-      if (next !== null) return next;
-      await waitForNextPaint();
-    }
-    return null;
-  }, [getCenteredTranslate]);
-
-  const getTranslateBounds = useCallback(() => {
-    const viewport = scrollViewportRef.current;
-    const container = scrollContainerRef.current;
-    if (!viewport || !container) return null;
-
-    const measuredViewport = spinnerMeasurementsRef.current.viewportWidth || viewport.clientWidth;
-    const minTranslate = Math.min(0, measuredViewport - container.scrollWidth);
-    return { minTranslate, maxTranslate: 0 };
-  }, []);
-
-  const clampTranslate = useCallback((translateX: number) => {
-    const bounds = getTranslateBounds();
-    if (!bounds) return translateX;
-    return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
-  }, [getTranslateBounds]);
 
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
@@ -1011,14 +961,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
 
@@ -1027,37 +972,76 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
 
-    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
+    // Two paint frames + one pre-animation layout flush prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
     await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    lastTickedCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
 
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    const { cardWidth, reelGap, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
+    const centerMarkerX = viewportWidth / 2;
+    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
+    const finalTranslate = centerMarkerX - winnerCenterX;
+    const startingTranslate = 0;
+    const startingCenterIndex = getCenteredIndexFromTranslate(startingTranslate);
+
+    if (!Number.isFinite(cardWidth) || !Number.isFinite(stepWidth) || !Number.isFinite(viewportWidth) || viewportWidth <= 0) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
+      container.style.willChange = 'auto';
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const mobileOffsetScale = reduceMobileEffects ? 0.78 : 1;
+    const maxOffset1 = Math.max(4, Math.min((cardWidth / 2) - 8, cardWidth * 0.35) * mobileOffsetScale);
+    const maxOffset2 = Math.max(4, Math.min((cardWidth / 2) - 10, cardWidth * 0.2) * mobileOffsetScale);
+    const maxOffset3 = Math.max(3, Math.min((cardWidth / 2) - 12, cardWidth * 0.1) * mobileOffsetScale);
+    const randomOffset1 = randomSignedOffset(rng, maxOffset1);
+    const randomOffset2 = randomSignedOffset(rng, maxOffset2, 5);
+    const randomOffset3 = randomSignedOffset(rng, maxOffset3, 3);
+    const fastTranslate = finalTranslate + (stepWidth * (reduceMobileEffects ? 5 : 7));
+    const approachTranslate1 = finalTranslate + randomOffset1;
+    const approachTranslate2 = finalTranslate + randomOffset2;
+    const approachTranslate3 = finalTranslate + randomOffset3;
+
+    lastCenterIndexRef.current = startingCenterIndex;
+    lastTickedCenterIndexRef.current = startingCenterIndex;
+    setCurrentCenterIndex(startingCenterIndex);
     setAnimationPhase('spinning');
+
+    if (shouldDebugSpinner()) {
+      console.debug('[Pullz spinner]', {
+        winnerIndex,
+        cardWidth,
+        gap: reelGap,
+        stepWidth,
+        viewportWidth,
+        centerMarkerX,
+        winnerCenterX,
+        finalTranslate,
+        randomOffset1,
+        randomOffset2,
+        randomOffset3
+      });
+    }
+
+    const keyframePoints = [
+      { progress: 0, translate: startingTranslate },
+      { progress: 0.55, translate: fastTranslate },
+      { progress: 0.75, translate: approachTranslate1 },
+      { progress: 0.88, translate: approachTranslate2 },
+      { progress: 0.96, translate: approachTranslate3 },
+      { progress: 1, translate: finalTranslate }
+    ];
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${startingTranslate}px, 0, 0)`, offset: 0, easing: 'cubic-bezier(0.16, 0.84, 0.18, 1)' },
+        { transform: `translate3d(${fastTranslate}px, 0, 0)`, offset: 0.55, easing: 'cubic-bezier(0.12, 0.78, 0.16, 1)' },
+        { transform: `translate3d(${approachTranslate1}px, 0, 0)`, offset: 0.75, easing: 'cubic-bezier(0.18, 0.7, 0.22, 1)' },
+        { transform: `translate3d(${approachTranslate2}px, 0, 0)`, offset: 0.88, easing: 'cubic-bezier(0.22, 0.62, 0.24, 1)' },
+        { transform: `translate3d(${approachTranslate3}px, 0, 0)`, offset: 0.96, easing: 'cubic-bezier(0.22, 0.5, 0.28, 1)' },
+        { transform: `translate3d(${finalTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.16, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1067,32 +1051,50 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
-    let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
-          lastTickedCenterIndexRef.current = index;
-        }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
-        }
+
+    const scheduledTickTimers: number[] = [];
+    const tickStride = reduceMobileEffects ? 2 : 1;
+    const minTickGapMs = reduceMobileEffects ? 52 : 32;
+    let previousTickTime = -Infinity;
+    const totalDistance = Math.abs(finalTranslate - startingTranslate);
+    const translateForIndex = (index: number) => centerMarkerX - ((index * stepWidth) + (cardWidth / 2));
+    const resolveTickTime = (index: number) => {
+      const indexTranslate = translateForIndex(index);
+      const distanceProgress = totalDistance <= 0 ? 1 : clamp(Math.abs(indexTranslate - startingTranslate) / totalDistance, 0, 1);
+
+      for (let i = 0; i < keyframePoints.length - 1; i += 1) {
+        const current = keyframePoints[i];
+        const next = keyframePoints[i + 1];
+        const currentProgress = totalDistance <= 0 ? current.progress : clamp(Math.abs(current.translate - startingTranslate) / totalDistance, 0, 1);
+        const nextProgress = totalDistance <= 0 ? next.progress : clamp(Math.abs(next.translate - startingTranslate) / totalDistance, 0, 1);
+        const minProgress = Math.min(currentProgress, nextProgress);
+        const maxProgress = Math.max(currentProgress, nextProgress);
+        if (distanceProgress < minProgress || distanceProgress > maxProgress) continue;
+
+        const segmentRange = Math.max(0.0001, maxProgress - minProgress);
+        const segmentT = clamp((distanceProgress - minProgress) / segmentRange, 0, 1);
+        return (current.progress + ((next.progress - current.progress) * segmentT)) * resolvedDuration;
       }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
+
+      return Math.pow(distanceProgress, 0.44) * resolvedDuration;
     };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
+
+    for (let index = Math.min(startingCenterIndex + 1, winnerIndex); index <= winnerIndex; index += tickStride) {
+      const tickTime = resolveTickTime(index);
+      if (!Number.isFinite(tickTime) || tickTime < 0 || tickTime > resolvedDuration - 80) continue;
+      if (tickTime - previousTickTime < minTickGapMs) continue;
+      previousTickTime = tickTime;
+      const timer = window.setTimeout(() => {
+        if (!isSpinningRef.current || document.visibilityState === 'hidden') return;
+        lastTickedCenterIndexRef.current = index;
+        playSound('spin-tick');
+      }, tickTime);
+      scheduledTickTimers.push(timer);
+    }
+
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
-      Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
+      Math.max(0, resolvedDuration * 0.75)
     );
 
     animation.onfinish = () => {
@@ -1107,12 +1109,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
+      lastTickedCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      scheduledTickTimers.forEach((timer) => window.clearTimeout(timer));
       tickFrameRef.current = null;
 
       setAnimationPhase('idle');
@@ -1127,14 +1130,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      scheduledTickTimers.forEach((timer) => window.clearTimeout(timer));
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [getCenteredIndexFromTranslate, playSound, reduceMobileEffects, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
