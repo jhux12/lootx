@@ -763,17 +763,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                       </span>
                     ) : null}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("PROFILE")}
-                    className={
-                      activeDesktopSection === "profile"
-                        ? desktopActiveNavButtonClass
-                        : desktopNavButtonClass
-                    }
-                  >
-                    Profile
-                  </button>
                 </div>
               </div>
 

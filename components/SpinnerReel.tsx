@@ -52,6 +52,15 @@ const RARITY_CARD_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
   legendary: 'border-amber-400/55 shadow-[0_0_18px_rgba(251,191,36,0.22)]'
 };
 
+
+const RARITY_GLOW_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
+  common: 'bg-gray-300/18',
+  uncommon: 'bg-green-300/24',
+  rare: 'bg-blue-300/28',
+  epic: 'bg-purple-400/30',
+  legendary: 'bg-amber-300/35'
+};
+
 const RARITY_BADGE_CLASS: Record<ReturnType<typeof normalizeRarity>, string> = {
   common: 'bg-gray-500/15 text-gray-200',
   uncommon: 'bg-green-500/15 text-green-200',
@@ -176,7 +185,8 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         <div
           className={`pullz-spinner-track flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
           style={{
-            transform: state === 'IDLE' ? undefined : `translateX(${translateX}px)`,
+            transform: state === 'IDLE' ? undefined : `translate3d(${translateX}px, 0, 0)`,
+            willChange: state === 'SPIN' ? 'transform' : 'auto',
             transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
           }}
         >
@@ -187,16 +197,20 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
             return (
               <div
                 key={itemKey(item, index)}
-                className={`w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
+                className={`pullz-spinner-card w-28 sm:w-32 shrink-0 rounded-lg border p-2 sm:p-2.5 ${state === 'SPIN' ? 'transition-none' : 'transition-colors'} ${isWinner && state === 'STOPPED' ? 'border-brand-blue bg-brand-blue/15 shadow-[0_0_24px_rgba(32,93,215,0.45)]' : `bg-[#111827] ${RARITY_CARD_CLASS[rarity]}`}`}
               >
-                <div className="h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
+                <div className="relative h-12 sm:h-14 rounded-md bg-[#0b1020] overflow-hidden mb-1.5 flex items-center justify-center">
+                  <div className={`pullz-spinner-rarity-glow pointer-events-none absolute inset-x-3 top-2 bottom-2 rounded-[40%] opacity-60 blur-xl ${RARITY_GLOW_CLASS[rarity]}`} />
                   {item.imageUrl ? (
                     <img
                       src={item.imageUrl}
                       alt={item.itemName}
-                      className="w-full h-full object-contain"
+                      className="relative z-10 w-full h-full object-contain"
                       loading={index < 8 ? 'eager' : 'lazy'}
                       decoding="async"
+                      width={128}
+                      height={56}
+                      style={{ aspectRatio: '16 / 7' }}
                       draggable={false}
                     />
                   ) : (
@@ -214,7 +228,7 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
         </div>
       </div>
 
-      <style>{`@keyframes reelIdle { 0% { transform: translateX(0); } 100% { transform: translateX(-280px); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
+      <style>{`@keyframes reelIdle { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-280px,0,0); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
     </div>
   );
 };

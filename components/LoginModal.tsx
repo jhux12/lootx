@@ -286,19 +286,35 @@ export const LoginModal: React.FC = () => {
 
   useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (!viewport) return undefined;
+
+    const previousContent = viewport.getAttribute('content');
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+
+    return () => {
+      if (previousContent) {
+        viewport.setAttribute('content', previousContent);
+      }
+    };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
+      className="fixed inset-0 z-[300] flex touch-pan-y touch-manipulation items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
+      <div className="pullz-stable-modal relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
         <button
           onClick={() => setShowLoginModal(false)}
-          className="absolute right-3 top-3 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
+          className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
         >
           <X className="h-5 w-5" />
         </button>
@@ -348,6 +364,11 @@ export const LoginModal: React.FC = () => {
                   src={registerBonusImage}
                   alt="Free signup box"
                   className="h-full w-full object-contain"
+                  loading="eager"
+                  decoding="async"
+                  width={320}
+                  height={176}
+                  style={{ aspectRatio: '20 / 11' }}
                 />
               </div>
               <p className="text-sm text-neutral-300">Register to claim your free box.</p>
@@ -363,7 +384,7 @@ export const LoginModal: React.FC = () => {
                   disabled={isLoading}
                   className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" />}
+                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
                   {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
                 </button>
 
