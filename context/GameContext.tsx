@@ -495,8 +495,24 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'PRIVACY' };
   }
 
-  if (primary === 'leaderboard') {
+  if (primary === 'leaderboard' || primary === 'leaderboards') {
     return { type: 'LEADERBOARD' };
+  }
+
+  if (primary === 'faq') {
+    return { type: 'FAQ' };
+  }
+
+  if (primary === 'about') {
+    return { type: 'ABOUT' };
+  }
+
+  if (primary === 'shipping-policy') {
+    return { type: 'SHIPPING_POLICY' };
+  }
+
+  if (primary === 'refund-policy') {
+    return { type: 'REFUND_POLICY' };
   }
 
   if (primary === 'provably-fair') {
@@ -556,6 +572,14 @@ const getPathFromView = (view: ViewState): string => {
       return '/terms';
     case 'PRIVACY':
       return '/privacy';
+    case 'FAQ':
+      return '/faq';
+    case 'ABOUT':
+      return '/about';
+    case 'SHIPPING_POLICY':
+      return '/shipping-policy';
+    case 'REFUND_POLICY':
+      return '/refund-policy';
     case 'ADMIN':
       return '/admin';
     case 'ADMIN_UPGRADER_SETTINGS':
@@ -563,7 +587,7 @@ const getPathFromView = (view: ViewState): string => {
     case 'ADMIN_UPGRADER_TARGETS':
       return '/admin/upgrader/targets';
     case 'LEADERBOARD':
-      return '/leaderboard';
+      return '/leaderboards';
     case 'CUSTOM_CREATOR':
       return '/case-lab';
     case 'PROVABLY_FAIR':

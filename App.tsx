@@ -84,6 +84,7 @@ const LegalPage = lazy(() => import('./components/LegalPage').then((module) => (
 const SiteFooter = lazy(() => import('./components/SiteFooter').then((module) => ({ default: module.SiteFooter })));
 const ProvablyFairPage = lazy(() => import('./components/ProvablyFairPage').then((module) => ({ default: module.ProvablyFairPage })));
 const ContactSupport = lazy(() => import('./components/ContactSupport').then((module) => ({ default: module.ContactSupport })));
+const TrustPage = lazy(() => import('./components/TrustPage').then((module) => ({ default: module.TrustPage })));
 const ReferralsPage = lazy(() => import('./components/ReferralsPage').then((module) => ({ default: module.ReferralsPage })));
 const PollsPage = lazy(() => import('./components/PollsPage').then((module) => ({ default: module.PollsPage })));
 const SpinLandingPage = lazy(() => import('./components/SpinLandingPage').then((module) => ({ default: module.SpinLandingPage })));
@@ -601,6 +602,30 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'PRIVACY' && (
         <div className="w-full">
           <LegalPage variant="privacy" />
+        </div>
+      )}
+
+      {view.type === 'FAQ' && (
+        <div className="w-full">
+          <TrustPage variant="faq" />
+        </div>
+      )}
+
+      {view.type === 'ABOUT' && (
+        <div className="w-full">
+          <TrustPage variant="about" />
+        </div>
+      )}
+
+      {view.type === 'SHIPPING_POLICY' && (
+        <div className="w-full">
+          <TrustPage variant="shipping" />
+        </div>
+      )}
+
+      {view.type === 'REFUND_POLICY' && (
+        <div className="w-full">
+          <TrustPage variant="refund" />
         </div>
       )}
 

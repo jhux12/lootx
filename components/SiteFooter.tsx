@@ -62,6 +62,20 @@ export const SiteFooter: React.FC = () => {
         <div className="flex flex-wrap gap-4 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
           <button
             className="transition hover:text-white"
+            onClick={() => setView({ type: 'ABOUT' })}
+            type="button"
+          >
+            About
+          </button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'FAQ' })}
+            type="button"
+          >
+            FAQ
+          </button>
+          <button
+            className="transition hover:text-white"
             onClick={() => setView({ type: 'TERMS' })}
             type="button"
           >
@@ -90,6 +104,20 @@ export const SiteFooter: React.FC = () => {
             type="button"
           >
             Provably Fair
+          </button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'SHIPPING_POLICY' })}
+            type="button"
+          >
+            Shipping
+          </button>
+          <button
+            className="transition hover:text-white"
+            onClick={() => setView({ type: 'REFUND_POLICY' })}
+            type="button"
+          >
+            Refunds
           </button>
           <button
             className="transition hover:text-white"
