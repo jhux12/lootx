@@ -121,7 +121,14 @@
       }
       img {
         height: auto;
-        content-visibility: auto;
+        vertical-align: middle;
+      }
+      .pullz-spinner-track img,
+      .pullz-spinner-track .pullz-blur-full,
+      .pullz-spinner-card img {
+        content-visibility: visible !important;
+        opacity: 1;
+        visibility: visible;
       }
       .pullz-cls-hero {
         min-height: clamp(560px, 72svh, 760px);
@@ -280,7 +287,13 @@
         html.pullz-mobile-optimized .pullz-spinner-track {
           will-change: transform;
           transform: translateZ(0);
-          contain: layout paint style;
+          contain: style;
+        }
+        html.pullz-mobile-optimized .pullz-spinner-track img,
+        html.pullz-mobile-optimized .pullz-spinner-track .pullz-blur-full {
+          content-visibility: visible !important;
+          opacity: 1 !important;
+          visibility: visible !important;
         }
         html.pullz-mobile-optimized .pullz-spinner-card.is-spinning,
         html.pullz-low-performance .pullz-spinner-card {

@@ -286,9 +286,25 @@ export const LoginModal: React.FC = () => {
 
   useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+
+    const viewport = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+    if (!viewport) return undefined;
+
+    const previousContent = viewport.getAttribute('content');
+    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content');
+
+    return () => {
+      if (previousContent) {
+        viewport.setAttribute('content', previousContent);
+      }
+    };
+  }, []);
+
   return (
     <div
-      className="fixed inset-0 z-[300] flex touch-pan-y items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
+      className="fixed inset-0 z-[300] flex touch-pan-y touch-manipulation items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"
