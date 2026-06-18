@@ -892,6 +892,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return { items: newReel, winnerIndex };
   }, [reduceMobileEffects]);
 
+  const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
+    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
+    const viewportCenter = viewportWidth / 2;
+    const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
+    const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
+
+    if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
+      return 0;
+    }
+
+    return Math.max(
+      0,
+      Math.min(
+        reelLength - 1,
+        Math.round((viewportCenter - translateX - (cardWidth / 2)) / stepWidth)
+      )
+    );
+  }, [reelItems.length]);
+
+
   const resetSpinnerAnimation = useCallback(() => {
     if (spinnerAnimationRef.current) {
       spinnerAnimationRef.current.cancel();
