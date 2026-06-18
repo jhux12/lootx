@@ -1067,29 +1067,31 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
-    let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
-          lastTickedCenterIndexRef.current = index;
-        }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
-        }
-      }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
+
+    const startingTranslate = 0;
+    const totalDistance = Math.abs(centeredTranslate - startingTranslate);
+    const travelledToIndex = (index: number) => {
+      const centered = getCenteredTranslate(index, 0);
+      if (centered === null || totalDistance <= 0) return null;
+      return clamp(Math.abs(centered - startingTranslate) / totalDistance, 0, 1);
     };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
+    const scheduledTickTimers: number[] = [];
+    const firstTickIndex = Math.min(startingCenterIndex + 1, winnerIndex);
+    const tickStride = reduceMobileEffects ? 2 : 1;
+
+    for (let index = firstTickIndex; index <= winnerIndex; index += tickStride) {
+      const progress = travelledToIndex(index);
+      if (progress === null) continue;
+      // Approximate the decelerating keyframe curve without reading layout during animation.
+      const easedTime = Math.pow(progress, 0.42);
+      const delay = Math.max(0, Math.min(resolvedDuration - 120, easedTime * resolvedDuration));
+      const timer = window.setTimeout(() => {
+        if (!isSpinningRef.current || document.visibilityState === 'hidden') return;
+        lastTickedCenterIndexRef.current = index;
+        playSound('spin-tick');
+      }, delay);
+      scheduledTickTimers.push(timer);
+    }
     const decelerationTimer = window.setTimeout(
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
@@ -1112,7 +1114,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      scheduledTickTimers.forEach((timer) => window.clearTimeout(timer));
       tickFrameRef.current = null;
 
       setAnimationPhase('idle');
@@ -1127,14 +1129,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(tickTimerRef.current);
         tickTimerRef.current = null;
       }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      scheduledTickTimers.forEach((timer) => window.clearTimeout(timer));
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, getCenteredTranslate, playSound, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
