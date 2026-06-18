@@ -196,6 +196,7 @@ export const Profile: React.FC = () => {
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
@@ -392,6 +393,8 @@ export const Profile: React.FC = () => {
 
     if (shippingStatus === 'success') {
       clearStoredBatch();
+      setShowShippingReview(true);
+      setShippingRequestConfirmed(true);
       clearUrlParams();
     }
   }, []);
@@ -418,6 +421,14 @@ export const Profile: React.FC = () => {
   const selectedShippingCostLabel = activeShippingMethod === 'cash'
     ? `$${(shippingCashTotalCents / 100).toFixed(2)}`
     : shippingCoinTotal.toLocaleString();
+  const shippingAccent = activeShippingMethod === 'cash' ? 'green' : 'blue';
+  const activeShippingBorderClass = shippingAccent === 'green'
+    ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_18px_rgba(16,185,129,0.28)]'
+    : 'border-blue-500 bg-blue-500/10 shadow-[0_0_18px_rgba(32,93,215,0.3)]';
+  const activeAddOnClass = shippingAccent === 'green'
+    ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
+    : 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]';
+  const activeCheckClass = shippingAccent === 'green' ? 'bg-emerald-500' : 'bg-blue-500';
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -450,6 +461,7 @@ export const Profile: React.FC = () => {
     setSelectedShipments(instanceIds);
     setShippingPaymentMethod(shippingCoinEnabled ? 'coins' : 'cash');
     setShowShippingRateTooltip(false);
+    setShippingRequestConfirmed(false);
     setShippingProtectionSelected(false);
     setSignatureRequiredSelected(false);
     setShowShippingProtectionInfo(false);
@@ -459,6 +471,7 @@ export const Profile: React.FC = () => {
 
   const handleAddMoreShipmentItems = () => {
     setShowShippingRateTooltip(false);
+    setShippingRequestConfirmed(false);
     setShowShippingReview(false);
     setActiveTab('inventory');
   };
@@ -577,7 +590,7 @@ export const Profile: React.FC = () => {
     try {
       await shipItem(itemsToShip.map((item) => item.instanceId), { shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected });
       setSelectedShipments([]);
-      setShowShippingReview(false);
+      setShippingRequestConfirmed(true);
     } catch {
       toast.error('Unable to request shipment right now. Please try again.');
     } finally {
@@ -612,7 +625,11 @@ export const Profile: React.FC = () => {
       if (!response.ok) throw new Error('Unable to start checkout.');
       const data = await response.json();
       if (typeof data.shipmentBatchId === 'string') window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
-      if (!data.sessionId) return;
+      if (!data.sessionId) {
+        setSelectedShipments([]);
+        setShippingRequestConfirmed(true);
+        return;
+      }
       const stripe = await stripePromise;
       if (!stripe) throw new Error('Stripe failed to initialize.');
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
@@ -789,7 +806,7 @@ export const Profile: React.FC = () => {
 
       {showShippingReview && (
         <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm">
-          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[21.5rem] overflow-y-auto rounded-[1.4rem] border border-white/15 bg-[#11131a]/95 p-4 shadow-2xl shadow-blue-950/40 ring-1 ring-white/5 sm:max-w-[23rem] sm:p-5">
+          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[21.5rem] overflow-y-auto rounded-[1.4rem] border border-white/15 bg-[#1f252c]/95 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:max-w-[23rem] sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#205DD7]/25 to-slate-800/80 text-blue-300 shadow-lg shadow-blue-900/20">
@@ -803,12 +820,33 @@ export const Profile: React.FC = () => {
               <button
                 aria-label="Close shipping review"
                 className="-mr-1 rounded-full p-1 text-slate-400 transition hover:bg-white/5 hover:text-white"
-                onClick={() => { setShowShippingRateTooltip(false); setShowShippingReview(false); }}
+                onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
+            {shippingRequestConfirmed ? (
+              <div className="rounded-3xl border border-white/10 bg-[#171d24] px-4 py-7 text-center sm:px-5 sm:py-8">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-950/30">
+                  <Check className="h-9 w-9" />
+                </div>
+                <h3 className="mt-4 text-2xl font-black text-white">Shipment Requested</h3>
+                <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-6 text-slate-400">We received your request and will prepare your item for shipping.</p>
+                <button
+                  type="button"
+                  className="mt-6 w-full rounded-xl border border-white/10 bg-[#262d35] px-4 py-3 text-base font-black text-white transition hover:border-white/20 hover:bg-[#2d3540] focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
+                  onClick={() => {
+                    setShowShippingRateTooltip(false);
+                    setShippingRequestConfirmed(false);
+                    setShowShippingReview(false);
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#141821]/90">
               <div className="px-3 py-3 sm:px-4" aria-label={`${selectedShipmentItems.length} shipment items selected`}>
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -875,7 +913,7 @@ export const Profile: React.FC = () => {
             {!isFreeOnlySelection && (
               <div className="mt-4 space-y-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Add-ons</p>
-                <div className={`rounded-xl border transition ${shippingProtectionSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                <div className={`rounded-xl border transition ${shippingProtectionSelected ? activeAddOnClass : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                   <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
                     <input id="shipping-protection-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={shippingProtectionSelected} onChange={(event) => setShippingProtectionSelected(event.target.checked)} />
                     <label htmlFor="shipping-protection-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Shipping protection</label>
@@ -890,7 +928,7 @@ export const Profile: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className={`rounded-xl border transition ${signatureRequiredSelected ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]' : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
+                <div className={`rounded-xl border transition ${signatureRequiredSelected ? activeAddOnClass : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                   <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
                     <input id="signature-required-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={signatureRequiredSelected} onChange={(event) => setSignatureRequiredSelected(event.target.checked)} />
                     <label htmlFor="signature-required-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Signature required</label>
@@ -913,7 +951,7 @@ export const Profile: React.FC = () => {
                 <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pay with</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'coins' ? 'border-blue-500 bg-blue-500/10 text-white shadow-[0_0_18px_rgba(32,93,215,0.3)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    className={`flex min-h-12 items-center justify-between gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'coins' ? `${activeShippingBorderClass} text-white` : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
                     onClick={() => setShippingPaymentMethod('coins')}
                     disabled={!canUseCoinShipping}
                   >
@@ -921,16 +959,16 @@ export const Profile: React.FC = () => {
                       <Coins className="h-5 w-5 text-blue-400" />
                       <span className="text-sm font-bold sm:text-base">Coins</span>
                     </span>
-                    {activeShippingMethod === 'coins' && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white"><Check className="h-4 w-4" /></span>}
+                    {activeShippingMethod === 'coins' && <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${activeCheckClass} text-white`}><Check className="h-4 w-4" /></span>}
                   </button>
                   <button
-                    className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'cash' ? 'border-blue-500 bg-blue-500/10 text-white shadow-[0_0_18px_rgba(32,93,215,0.3)]' : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
+                    className={`flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-40 ${activeShippingMethod === 'cash' ? `${activeShippingBorderClass} text-white` : 'border-white/10 bg-transparent text-slate-400 hover:border-white/20'}`}
                     onClick={() => setShippingPaymentMethod('cash')}
                     disabled={!canUseCashShipping}
                   >
                     <CreditCard className="h-5 w-5" />
                     <span className="text-sm font-bold sm:text-base">Cash</span>
-                    {activeShippingMethod === 'cash' && <span className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white"><Check className="h-4 w-4" /></span>}
+                    {activeShippingMethod === 'cash' && <span className={`ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${activeCheckClass} text-white`}><Check className="h-4 w-4" /></span>}
                   </button>
                 </div>
               </div>
@@ -942,8 +980,11 @@ export const Profile: React.FC = () => {
               ) : (
                 <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
               )}
-              <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShowShippingReview(false); }}>Cancel</button>
+              <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
+
+              </>
+            )}
           </div>
         </div>
       )}
