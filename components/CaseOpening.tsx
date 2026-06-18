@@ -77,11 +77,11 @@ const SPINNER_MOTION = {
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
-  legendary: 'bg-transparent',
-  epic: 'bg-transparent',
-  rare: 'bg-transparent',
-  uncommon: 'bg-transparent',
-  common: 'bg-transparent'
+  legendary: 'bg-amber-300/35',
+  epic: 'bg-purple-400/30',
+  rare: 'bg-blue-300/28',
+  uncommon: 'bg-green-300/24',
+  common: 'bg-gray-300/18'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
@@ -2060,7 +2060,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
-                          const showItemGlow = !isUltraSmoothSpin && (!useMobileSpinnerBehavior || !reduceMobileEffects);
+                          const showItemGlow = true;
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
                         <div
@@ -2082,7 +2082,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-65 blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-60 blur-2xl sm:blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
