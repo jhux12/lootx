@@ -3060,7 +3060,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: `Shipment requested for ${shipmentLabel}`,
         meta: { shipmentId: data.shipmentId ?? data.shipmentBatchId, trackingStatus: 'Processing' }
       });
-      await refreshInventory(auth.currentUser.uid);
+      const shippedUserId = auth.currentUser.uid;
+      void refreshInventory(shippedUserId).catch((refreshError) => {
+        console.error('Failed to refresh inventory after shipment request', refreshError);
+      });
       return { shipmentId: data.shipmentId, shipmentBatchId: data.shipmentBatchId };
     } catch (error) {
       console.error('Failed to request shipment', error);
