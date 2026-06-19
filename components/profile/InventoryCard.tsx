@@ -62,7 +62,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative rounded-2xl border p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_44px_rgba(0,0,0,0.22)] transition sm:rounded-3xl sm:p-4 ${isList ? 'sm:grid sm:grid-cols-[9rem_minmax(0,1fr)_12rem] sm:items-center sm:gap-4' : 'flex flex-col'} ${rarityStyle.card} ${
+      className={`group relative rounded-3xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_44px_rgba(0,0,0,0.22)] transition sm:p-4 ${isList ? 'sm:grid sm:grid-cols-[9rem_minmax(0,1fr)_12rem] sm:items-center sm:gap-4' : 'flex flex-col'} ${rarityStyle.card} ${
         selected ? 'border-purple-300/80 ring-4 ring-purple-400/45 shadow-[0_0_34px_rgba(168,85,247,0.42)]' : 'hover:shadow-[0_0_22px_rgba(255,255,255,0.08)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
@@ -73,25 +73,25 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
       ) : null}
 
       <div className={`${isList ? 'mb-3 sm:mb-0' : 'mb-3'} flex items-center justify-between gap-3 sm:col-span-full ${isList ? 'sm:hidden' : ''}`}>
-        <span className={`rounded-md border px-2 py-0.5 text-[9px] sm:px-2.5 sm:py-1 sm:text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
+        <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
         <button type="button" className="rounded-lg p-1 text-gray-200 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()} aria-label={`More actions for ${item.name}`}>
-          <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
+          <MoreHorizontal className="h-5 w-5" />
         </button>
       </div>
 
-      <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-xl border bg-[#090e16] p-2 sm:rounded-2xl sm:p-3 ${rarityStyle.image} ${isList ? 'mx-auto mb-3 w-full max-w-[9rem] sm:mb-0' : 'mb-3 w-full'}`}>
-        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={180} height={180} showPlaceholder={false} />
+      <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] p-3 ${rarityStyle.image} ${isList ? 'mx-auto mb-3 w-full max-w-[9rem] sm:mb-0' : 'mb-3 w-full'}`}>
+        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={220} showPlaceholder={false} />
       </div>
 
       <div className="min-w-0">
         <div className={`hidden items-center justify-between gap-3 ${isList ? 'sm:flex' : ''}`}>
-          <span className={`rounded-md border px-2 py-0.5 text-[9px] sm:px-2.5 sm:py-1 sm:text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
+          <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
           <button type="button" className="rounded-lg p-1 text-gray-200 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()} aria-label={`More actions for ${item.name}`}>
-            <MoreHorizontal className="h-4 w-4 sm:h-5 sm:w-5" />
+            <MoreHorizontal className="h-5 w-5" />
           </button>
         </div>
-        <p className="mt-2 line-clamp-2 text-sm font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{item.name}</p>
-        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 text-sm font-black sm:mt-3 sm:text-lg text-white" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
+        <p className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{item.name}</p>
+        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-3 text-sm font-bold text-white" iconClassName="h-5 w-5" />
       </div>
 
       <div className={`mt-3 ${isList ? 'sm:mt-0' : 'mt-auto pt-1'}`}>
@@ -102,13 +102,13 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
             onAction();
           }}
           disabled={actionDisabled}
-          className={`flex h-10 w-full items-center justify-center gap-2 rounded-xl border text-xs font-black transition ${
+          className={`flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-black transition ${
             actionDisabled
               ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500'
               : 'border-purple-400/55 bg-purple-500/20 text-white shadow-[0_0_22px_rgba(168,85,247,0.18)] hover:bg-purple-500/30'
           }`}
         >
-          <Package className="h-4 w-4 sm:h-5 sm:w-5" /> {actionLabel}
+          <Package className="h-5 w-5" /> {actionLabel}
         </button>
 
         {secondaryActionLabel && onSecondaryAction && (
@@ -119,13 +119,13 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
               onSecondaryAction();
             }}
             disabled={secondaryActionDisabled}
-            className={`mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-xl border text-xs font-black transition ${
+            className={`mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-black transition ${
               secondaryActionDisabled
                 ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500'
                 : 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
             }`}
           >
-            <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5" /> {secondaryActionLabel}
+            <ArrowLeftRight className="h-5 w-5" /> {secondaryActionLabel}
           </button>
         )}
       </div>

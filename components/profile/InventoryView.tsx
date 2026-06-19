@@ -48,7 +48,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
 
   return (
-    <section className="mx-auto w-full max-w-6xl flex-1 space-y-5 pb-3">
+    <section className="mx-auto w-full max-w-5xl flex-1 space-y-4 pb-3">
       <header>
         <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Inventory</h2>
         <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your items and view their values.</p>
@@ -71,7 +71,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-2xl font-black tracking-[-0.04em] text-white">Your Items ({items.length})</h3>
+        <h3 className="text-lg font-bold sm:text-xl text-white">Your Items ({items.length})</h3>
         <div className="flex rounded-2xl border border-white/10 bg-[#111720] p-1">
           <button type="button" onClick={() => setLayoutMode('grid')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'grid' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="Grid view"><Grid2X2 className="h-6 w-6" /></button>
           <button type="button" onClick={() => setLayoutMode('list')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'list' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="List view"><List className="h-6 w-6" /></button>
@@ -105,12 +105,12 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-[#111824] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#111824] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <ShieldCheck className="h-12 w-12 shrink-0 text-purple-400" />
-          <p className="max-w-2xl text-lg font-semibold leading-snug text-white">Items available to ship will be sent to your address on file.</p>
+          <ShieldCheck className="h-9 w-9 shrink-0 text-purple-400" />
+          <p className="max-w-2xl text-sm font-semibold leading-snug text-white">Items available to ship will be sent to your address on file.</p>
         </div>
-        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-lg font-black text-purple-300 hover:bg-purple-500/10">Learn More <span aria-hidden="true">›</span></button>
+        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-purple-300 hover:bg-purple-500/10">Learn More <span aria-hidden="true">›</span></button>
       </div>
 
       {selectedIds.length > 0 && (

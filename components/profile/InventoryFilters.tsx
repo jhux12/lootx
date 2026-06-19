@@ -15,7 +15,7 @@ interface InventoryFiltersProps {
   reviewDisabled: boolean;
 }
 
-const selectClass = 'h-12 w-full appearance-none rounded-2xl border border-white/10 bg-[#111720] px-4 pr-10 text-sm font-bold text-white outline-none transition focus:border-purple-300/40 focus:ring-2 focus:ring-purple-500/20';
+const selectClass = 'h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#111720] px-4 pr-10 text-sm font-bold text-white outline-none transition focus:border-purple-300/40 focus:ring-2 focus:ring-purple-500/20';
 
 export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   search,
@@ -46,7 +46,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   const activeFilterCount = (rarity !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-4">
+    <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-5">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         <label className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-[#111720] px-4 text-gray-400 focus-within:border-purple-300/40 focus-within:ring-2 focus-within:ring-purple-500/20">
           <Search className="h-5 w-5 shrink-0" />
