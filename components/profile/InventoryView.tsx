@@ -50,8 +50,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   return (
     <section className="mx-auto w-full max-w-6xl flex-1 space-y-5 pb-3">
       <header>
-        <h2 className="text-[2rem] font-black leading-tight tracking-[-0.05em] text-white sm:text-4xl">Inventory</h2>
-        <p className="mt-2 text-base font-medium text-gray-400 sm:text-lg">Manage your items and view their values.</p>
+        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Inventory</h2>
+        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your items and view their values.</p>
       </header>
 
       <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
@@ -81,7 +81,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className={`${layoutMode === 'grid' ? 'grid grid-cols-1 gap-4 min-[680px]:grid-cols-2 xl:grid-cols-3' : 'grid grid-cols-1 gap-4'}`}>
+        <div className={`${layoutMode === 'grid' ? 'grid grid-cols-1 gap-3 min-[720px]:grid-cols-2' : 'grid grid-cols-1 gap-4'}`}>
           {items.map((item) => {
             const action = getAction(item);
             return (
@@ -97,6 +97,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 secondaryActionLabel={action.secondaryLabel}
                 secondaryActionDisabled={action.secondaryDisabled}
                 onSecondaryAction={action.onSecondaryClick}
+                layoutMode={layoutMode}
               />
             );
           })}

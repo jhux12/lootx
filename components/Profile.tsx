@@ -225,8 +225,14 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
             return (
               <article key={orderGroup.id} className="rounded-3xl border border-white/7 bg-[#101722] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
                 <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)_13rem] sm:items-stretch">
-                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] p-3 ${order.rarity === 'legendary' || order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
-                    <img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
+                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] ${order.rarity === 'legendary' || order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
+                    <div className="flex h-full w-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${activeIndex * 100}%)` }}>
+                      {orderGroup.items.map((item) => (
+                        <div key={item.id} className="flex h-full w-full shrink-0 items-center justify-center p-3">
+                          <img src={item.image} alt={item.name} className="h-full w-full object-contain transition-opacity duration-300" loading="lazy" decoding="async" />
+                        </div>
+                      ))}
+                    </div>
                     {orderGroup.items.length > 1 ? (
                       <div className="absolute inset-x-2 top-1/2 flex -translate-y-1/2 justify-between">
                         <button type="button" onClick={(event) => { event.stopPropagation(); setActiveItemIndex(orderGroup.id, orderGroup.items.length, -1); }} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:bg-purple-500/60" aria-label="Previous item in order"><ChevronLeft className="h-5 w-5" /></button>
