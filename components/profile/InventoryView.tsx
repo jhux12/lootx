@@ -95,7 +95,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {selectedIds.length > 0 && (
         <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-blue-400/30 bg-[#1f252c]/95 p-3 backdrop-blur md:bottom-4">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
             <button onClick={onReviewShipping} className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-3 py-2 text-xs font-bold text-white">Review Shipping</button>
           </div>

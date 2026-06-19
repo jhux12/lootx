@@ -434,7 +434,7 @@ export const Profile: React.FC = () => {
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
   }, [canUseCoinShipping, canUseCashShipping]);
 
-  const getSellBackRate = (item: InventoryItem) => {
+  function getSellBackRate(item: InventoryItem) {
     const storedRate = Number(item.sellBackRate);
     if (Number.isFinite(storedRate) && storedRate > 0) return Math.min(1, Math.max(0, storedRate));
     if (item.provenance?.sourceType === 'case_open' && item.provenance?.sourceId) {
@@ -443,7 +443,7 @@ export const Profile: React.FC = () => {
       if (sourceBox?.isUserCreated) return 0.75;
     }
     return 0.82;
-  };
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -786,6 +786,7 @@ export const Profile: React.FC = () => {
       </div>
 
       {!showShippingReview && <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} onGames={() => setView({ type: 'BOXES' })} onRewards={() => setView({ type: 'BONUSES' })} />}
+
 
       {tradeInModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
