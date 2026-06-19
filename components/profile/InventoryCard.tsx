@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowLeftRight, Check, MoreHorizontal, Package } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeftRight, Check, Package, Search, X } from 'lucide-react';
 import { InventoryItem } from '../../types';
 import { BlurImage } from '../../src/ui/images/BlurImage';
 import { CoinAmount } from '../CoinAmount';
@@ -50,6 +50,36 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
 export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction, layoutMode = 'grid' }) => {
   const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
   const isList = layoutMode === 'list';
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isPreviewOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsPreviewOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isPreviewOpen]);
+
+  const openPreview = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setIsPreviewOpen(true);
+  };
+
+  const closePreview = (event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setIsPreviewOpen(false);
+  };
 
   return (
     <div
@@ -74,8 +104,8 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
 
       <div className={`${isList ? 'mb-3 sm:mb-0' : 'mb-3'} flex items-center justify-between gap-3 sm:col-span-full ${isList ? 'sm:hidden' : ''}`}>
         <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-        <button type="button" className="rounded-lg p-1 text-gray-200 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()} aria-label={`More actions for ${item.name}`}>
-          <MoreHorizontal className="h-5 w-5" />
+        <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
+          <Search className="h-4 w-4" />
         </button>
       </div>
 
@@ -86,8 +116,8 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
       <div className="min-w-0">
         <div className={`hidden items-center justify-between gap-3 ${isList ? 'sm:flex' : ''}`}>
           <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-          <button type="button" className="rounded-lg p-1 text-gray-200 hover:bg-white/10 hover:text-white" onClick={(e) => e.stopPropagation()} aria-label={`More actions for ${item.name}`}>
-            <MoreHorizontal className="h-5 w-5" />
+          <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
+            <Search className="h-4 w-4" />
           </button>
         </div>
         <p className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{item.name}</p>
@@ -129,6 +159,57 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           </button>
         )}
       </div>
+
+
+      {isPreviewOpen ? (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md motion-safe:animate-[inventory-fade-in_180ms_ease-out] sm:px-6"
+          onClick={closePreview}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${item.name} enlarged preview`}
+        >
+          <div
+            className="relative flex max-h-[88vh] w-full max-w-md flex-col overflow-hidden rounded-[2rem] border border-white/12 bg-[#0d121b]/95 p-4 shadow-[0_28px_90px_rgba(0,0,0,0.55)] motion-safe:animate-[inventory-zoom-in_220ms_cubic-bezier(0.22,1,0.36,1)] sm:max-w-lg sm:p-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closePreview}
+              className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/35 text-gray-200 backdrop-blur transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70"
+              aria-label="Close item preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className={`flex min-h-0 aspect-square w-full items-center justify-center overflow-hidden rounded-[1.5rem] border bg-[#080d14] p-5 sm:p-7 ${rarityStyle.image}`}>
+              <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain motion-safe:animate-[inventory-image-pop_320ms_cubic-bezier(0.22,1,0.36,1)]" width={520} height={520} showPlaceholder={false} />
+            </div>
+
+            <div className="pt-4 text-center">
+              <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] ${rarityStyle.badge}`}>{item.rarity}</span>
+              <h4 className="mt-3 break-words text-2xl font-black leading-tight tracking-[-0.04em] text-white sm:text-3xl">{item.name}</h4>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <style>{`
+        @keyframes inventory-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes inventory-zoom-in {
+          from { opacity: 0; transform: translateY(10px) scale(0.94); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes inventory-image-pop {
+          from { transform: scale(0.9); }
+          to { transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 };
