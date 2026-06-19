@@ -670,12 +670,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   return (
     <>
       <div
-        className={`relative z-[260] transition-[opacity,transform] duration-200 ease-out ${isSuppressed || showTopUpModal ? "pointer-events-none -translate-y-full opacity-0" : "opacity-100"}`}
+        className={`relative z-[260] transition-opacity duration-200 ease-out ${isSuppressed || showTopUpModal ? "pointer-events-none opacity-0" : "opacity-100"}`}
         aria-hidden={isSuppressed || showTopUpModal}
       >
         <header
           ref={headerRef}
-          className={`${isSticky ? "fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
+          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
         >
           <div className="pt-[env(safe-area-inset-top,0px)]">
             <nav className="relative mx-auto flex h-[52px] max-w-7xl items-center justify-between px-3 sm:h-[56px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
@@ -935,14 +935,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen

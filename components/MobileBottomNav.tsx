@@ -87,7 +87,7 @@ export const MobileBottomNav: React.FC = () => {
   }, []);
 
 
-  // Track Safari visual viewport offset to fix bottom nav lag when toolbar hides/shows.
+  // Track the visual viewport offset to keep fixed mobile chrome pinned during browser toolbar changes.
   // We also listen to window 'scroll' and 'pageshow' because scroll-lock release calls
   // window.scrollTo() which can change the visual viewport position without triggering
   // a visualViewport scroll/resize event (e.g. after the login modal closes on Safari).
@@ -98,7 +98,7 @@ export const MobileBottomNav: React.FC = () => {
     let rafId: number;
     const update = () => {
       const offset = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
-      document.documentElement.style.setProperty('--safari-vvp-offset', `${offset}px`);
+      document.documentElement.style.setProperty('--pullz-viewport-bottom-offset', `${offset}px`);
     };
     // Deferred update via rAF so that DOM layout has settled after programmatic scrolls
     const deferredUpdate = () => {
@@ -119,7 +119,7 @@ export const MobileBottomNav: React.FC = () => {
       vv.removeEventListener('scroll', update);
       window.removeEventListener('scroll', deferredUpdate);
       window.removeEventListener('pageshow', deferredUpdate);
-      document.documentElement.style.removeProperty('--safari-vvp-offset');
+      document.documentElement.style.removeProperty('--pullz-viewport-bottom-offset');
     };
   }, []);
 
@@ -163,11 +163,12 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-0 left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-opacity duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
         height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
+        bottom: 'var(--pullz-viewport-bottom-offset, 0px)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
         transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
         WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
