@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Check, ChevronDown, Coins, Copy, CreditCard, Info, PackageCheck, Plus, Truck, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Coins, Copy, CreditCard, ExternalLink, Filter, Info, Package, PackageCheck, Plus, Search, ShieldCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -42,6 +42,7 @@ const getProfileUsername = (profile: { provider?: string; username?: string; nam
 
 type OrderSummary = {
   id: string;
+  orderGroupId: string;
   inventoryId?: string;
   name: string;
   image: string;
@@ -59,10 +60,87 @@ const formatOrderDate = (timestamp?: number) => {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(timestamp);
 };
 
+
+type OrderGroupSummary = {
+  id: string;
+  items: OrderSummary[];
+  status: OrderSummary['status'];
+  trackingNumber?: string;
+  createdAt?: number;
+  shippedAt?: number;
+};
+
+const getRarityBadgeClass = (rarity: InventoryItem['rarity']) => {
+  switch (rarity) {
+    case 'legendary':
+      return 'border-yellow-400/40 bg-yellow-400/10 text-yellow-200 shadow-[0_0_18px_rgba(234,179,8,0.08)]';
+    case 'epic':
+      return 'border-purple-400/40 bg-purple-500/10 text-purple-200';
+    case 'rare':
+      return 'border-blue-400/40 bg-blue-500/10 text-blue-200';
+    case 'uncommon':
+      return 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200';
+    default:
+      return 'border-white/15 bg-white/5 text-gray-300';
+  }
+};
+
+const getCompactOrderDate = (timestamp?: number) => {
+  if (!timestamp) return 'Date unavailable';
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(timestamp);
+};
+
 const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
-  const shippedCount = orders.filter((order) => order.status === 'shipped').length;
-  const pendingCount = orders.filter((order) => order.status === 'pending').length;
+  const orderGroups = useMemo<OrderGroupSummary[]>(() => {
+    const groups = new Map<string, OrderSummary[]>();
+
+    orders.forEach((order) => {
+      const groupId = order.orderGroupId || order.id;
+      groups.set(groupId, [...(groups.get(groupId) ?? []), order]);
+    });
+
+    return Array.from(groups.entries())
+      .map(([id, items]) => {
+        const sortedItems = [...items].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+        const status: OrderSummary['status'] = sortedItems.every((item) => item.status === 'shipped') ? 'shipped' : 'pending';
+        return {
+          id,
+          items: sortedItems,
+          status,
+          trackingNumber: sortedItems.find((item) => item.trackingNumber)?.trackingNumber,
+          createdAt: Math.min(...sortedItems.map((item) => item.createdAt ?? item.shippedAt ?? Date.now())),
+          shippedAt: Math.max(...sortedItems.map((item) => item.shippedAt ?? item.createdAt ?? 0)) || undefined
+        };
+      })
+      .sort((a, b) => (b.createdAt ?? b.shippedAt ?? 0) - (a.createdAt ?? a.shippedAt ?? 0));
+  }, [orders]);
+
+  const shippedCount = orderGroups.filter((order) => order.status === 'shipped').length;
+  const pendingCount = orderGroups.filter((order) => order.status === 'pending').length;
   const [copiedTrackingId, setCopiedTrackingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'shipped'>('all');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [activeItemIndexes, setActiveItemIndexes] = useState<Record<string, number>>({});
+
+  const filteredOrders = useMemo(() => {
+    const term = orderSearch.trim().toLowerCase();
+    return orderGroups.filter((order) => {
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      const matchesSearch = !term
+        || order.id.toLowerCase().includes(term)
+        || order.items.some((item) => item.name.toLowerCase().includes(term) || item.id.toLowerCase().includes(term) || (item.trackingNumber ?? '').toLowerCase().includes(term));
+      return matchesStatus && matchesSearch;
+    });
+  }, [orderGroups, orderSearch, statusFilter]);
+
+  const activeFilterCount = (statusFilter === 'all' ? 0 : 1) + (orderSearch.trim() ? 1 : 0);
+
+  const setActiveItemIndex = (orderId: string, itemCount: number, direction: -1 | 1) => {
+    setActiveItemIndexes((current) => {
+      const currentIndex = current[orderId] ?? 0;
+      return { ...current, [orderId]: (currentIndex + direction + itemCount) % itemCount };
+    });
+  };
 
   const handleCopyTracking = async (orderId: string, trackingNumber: string) => {
     try {
@@ -78,85 +156,139 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
     }
   };
 
+  const filterTabs: Array<{ id: 'all' | 'pending' | 'shipped'; label: string }> = [
+    { id: 'all', label: 'All' },
+    { id: 'pending', label: 'Pending' },
+    { id: 'shipped', label: 'Shipped' }
+  ];
+
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-4">
-      <header className="flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-end min-[420px]:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Orders</h2>
-          <p className="text-sm text-gray-400">Pending and shipped rewards, with tracking details when available.</p>
-        </div>
-        <div className="w-fit rounded-2xl border border-white/10 bg-[#1f252c] px-3 py-2 text-sm text-gray-300 sm:px-4 sm:py-3">
-          <span className="font-bold text-white">{pendingCount}</span> pending • <span className="font-bold text-white">{shippedCount}</span> shipped
-        </div>
+    <section className="mx-auto w-full max-w-5xl space-y-4 pb-3 text-white sm:space-y-5">
+      <header>
+        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Orders</h2>
+        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Track your rewards from case openings.</p>
       </header>
 
-      {orders.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-[#1f252c] p-8 text-center sm:p-10">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-blue-300">
-            <PackageCheck className="h-7 w-7" />
+      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
+        <div className="rounded-2xl border border-purple-400/20 bg-[#111421]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center gap-4">
+            <Package className="h-8 w-8 text-purple-400" />
+            <div><p className="text-2xl font-black leading-none">{orderGroups.length}</p><p className="mt-1 text-sm font-medium text-gray-400">Total Orders</p></div>
           </div>
-          <h3 className="mt-4 text-lg font-bold text-white">No orders yet</h3>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
-            Once your physical rewards ship, they will appear here with tracking when available.
-          </p>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <article
-              key={order.id}
-              className="rounded-2xl border border-white/10 bg-[#1f252c] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.18)] transition hover:border-white/15 sm:rounded-3xl sm:p-4"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#111720] p-2 min-[420px]:h-16 min-[420px]:w-16 sm:h-20 sm:w-20">
-                    <img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" decoding="async" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-200">
-                        {order.status === 'pending' ? 'Pending' : 'Shipped'}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-gray-300">
-                        {order.rarity}
-                      </span>
-                    </div>
-                    <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-white sm:truncate sm:text-lg">{order.name}</h3>
-                    <p className="mt-1 text-xs text-gray-500">Order #{order.id.slice(0, 8)}</p>
-                  </div>
-                </div>
+        <div className="rounded-2xl border border-sky-400/15 bg-[#101823]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center gap-4">
+            <Truck className="h-8 w-8 text-sky-400" />
+            <div><p className="text-2xl font-black leading-none">{shippedCount}</p><p className="mt-1 text-sm font-medium text-gray-400">Shipped</p></div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-amber-300/20 bg-[#171916]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
+          <div className="flex items-center gap-4">
+            <Clock className="h-8 w-8 text-amber-300" />
+            <div><p className="text-2xl font-black leading-none">{pendingCount}</p><p className="mt-1 text-sm font-medium text-gray-400">Pending</p></div>
+          </div>
+        </div>
+      </div>
 
-                <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:w-[21rem]">
-                  <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">{order.status === 'pending' ? 'Requested' : 'Shipped'}</p>
-                    <p className="mt-1 text-sm font-semibold text-white">{formatOrderDate(order.status === 'pending' ? order.createdAt : (order.shippedAt ?? order.createdAt))}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-[#171d24] px-3 py-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">Tracking</p>
-                    {order.trackingNumber ? (
-                      <div className="mt-1 flex items-start gap-2">
-                        <p className="min-w-0 break-all pr-1 text-sm font-semibold text-blue-200">{order.trackingNumber}</p>
-                        {order.status === 'shipped' ? (
-                          <button
-                            type="button"
-                            onClick={() => { void handleCopyTracking(order.id, order.trackingNumber as string); }}
-                            className="shrink-0 rounded-md border border-blue-300/25 bg-blue-500/10 p-1.5 text-blue-100 transition hover:bg-blue-500/20 focus:outline-none focus:ring-2 focus:ring-blue-300/50"
-                            aria-label={copiedTrackingId === order.id ? 'Tracking number copied' : 'Copy tracking number'}
-                          >
-                            {copiedTrackingId === order.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                          </button>
-                        ) : null}
+      <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-1 pb-3">
+          <div className="flex gap-5 sm:gap-8">
+            {filterTabs.map((tab) => (
+              <button key={tab.id} type="button" onClick={() => setStatusFilter(tab.id)} className={`relative pb-3 text-sm font-bold transition sm:text-base ${statusFilter === tab.id ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
+                {tab.label}
+                {statusFilter === tab.id ? <span className="absolute inset-x-0 -bottom-[13px] h-0.5 rounded-full bg-purple-400 shadow-[0_0_14px_rgba(192,132,252,0.9)]" /> : null}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={() => setStatusFilter(statusFilter === 'all' ? 'pending' : 'all')} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#111824] px-3 py-2 text-sm font-bold text-white transition hover:border-purple-300/40 hover:bg-purple-500/10">
+            <Filter className="h-4 w-4" /> Filters <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs text-white">{activeFilterCount}</span>
+          </button>
+        </div>
+
+        <label className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#111720] px-4 py-3 text-gray-400 focus-within:border-purple-300/40 focus-within:ring-2 focus-within:ring-purple-500/20">
+          <Search className="h-5 w-5 shrink-0" />
+          <input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search orders..." className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500 sm:text-base" />
+        </label>
+
+        <div className="mt-4 space-y-3">
+          {filteredOrders.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-[#111720] p-8 text-center">
+              <PackageCheck className="mx-auto h-10 w-10 text-purple-300" />
+              <h3 className="mt-3 text-lg font-bold">No orders found</h3>
+              <p className="mt-1 text-sm text-gray-400">Try changing your search or status filters.</p>
+            </div>
+          ) : filteredOrders.map((orderGroup) => {
+            const activeIndex = Math.min(activeItemIndexes[orderGroup.id] ?? 0, orderGroup.items.length - 1);
+            const order = orderGroup.items[activeIndex] ?? orderGroup.items[0];
+            const placedDate = getCompactOrderDate(orderGroup.createdAt ?? orderGroup.shippedAt);
+            const shippedDetail = orderGroup.status === 'shipped' ? (orderGroup.trackingNumber || 'Tracking unavailable') : 'Pending';
+            return (
+              <article key={orderGroup.id} className="rounded-3xl border border-white/7 bg-[#101722] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
+                <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)_13rem] sm:items-stretch">
+                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] ${order.rarity === 'legendary' || order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
+                    <div className="flex h-full w-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${activeIndex * 100}%)` }}>
+                      {orderGroup.items.map((item) => (
+                        <div key={item.id} className="flex h-full w-full shrink-0 items-center justify-center p-3">
+                          <img src={item.image} alt={item.name} className="h-full w-full object-contain transition-opacity duration-300" loading="lazy" decoding="async" />
+                        </div>
+                      ))}
+                    </div>
+                    {orderGroup.items.length > 1 ? (
+                      <div className="absolute inset-x-2 top-1/2 flex -translate-y-1/2 justify-between">
+                        <button type="button" onClick={(event) => { event.stopPropagation(); setActiveItemIndex(orderGroup.id, orderGroup.items.length, -1); }} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:bg-purple-500/60" aria-label="Previous item in order"><ChevronLeft className="h-5 w-5" /></button>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); setActiveItemIndex(orderGroup.id, orderGroup.items.length, 1); }} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:bg-purple-500/60" aria-label="Next item in order"><ChevronRight className="h-5 w-5" /></button>
                       </div>
-                    ) : (
-                      <p className="mt-1 text-sm font-semibold text-gray-400">Not available</p>
-                    )}
+                    ) : null}
+                  </div>
+
+                  <div className="min-w-0 py-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${getRarityBadgeClass(order.rarity)}`}>{order.rarity}</span>
+                      <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${orderGroup.status === 'shipped' ? 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200' : 'border-amber-300/35 bg-amber-400/10 text-amber-200'}`}>{orderGroup.status}</span>
+                    </div>
+                    <h3 className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{order.name}</h3>
+                    <p className="mt-2 text-sm font-semibold text-gray-500">Order #{orderGroup.id.slice(0, 8)}{orderGroup.items.length > 1 ? ` • Item ${activeIndex + 1} of ${orderGroup.items.length}` : ''}</p>
+                    <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border border-white/8 bg-[#111924]">
+                      <div className="border-r border-white/8 px-3 py-2"><p className="text-[11px] font-bold text-gray-500">Won on</p><p className="mt-1 text-sm font-bold text-white">{formatOrderDate(order.createdAt)}</p></div>
+                      <div className="px-3 py-2"><p className="text-[11px] font-bold text-gray-500">Value</p><p className="mt-1 text-sm font-bold text-white"><CoinAmount amount={order.value} /></p></div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-white/8 pt-2 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+                    <div className="space-y-3">
+                      {[
+                        ['Order Placed', placedDate, true],
+                        ['Processing', placedDate, true],
+                        ['Shipped', shippedDetail, orderGroup.status === 'shipped']
+                      ].map(([label, date, complete], index, steps) => (
+                        <div key={label as string} className="relative flex gap-3">
+                          {index < steps.length - 1 ? <span className={`absolute left-[9px] top-5 h-8 w-px ${complete ? 'bg-emerald-400' : 'bg-gray-600'}`} /> : null}
+                          <span className={`relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${complete ? 'border-emerald-400 bg-emerald-400 text-[#092016]' : 'border-gray-600 bg-[#111720] text-gray-500'}`}>
+                            {complete ? <Check className="h-3 w-3 stroke-[4]" /> : null}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-extrabold leading-tight text-white">{label}</p>
+                            <p className="text-sm font-medium leading-tight text-gray-400">{date}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {orderGroup.trackingNumber ? <button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, orderGroup.trackingNumber as string); }} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-blue-100 hover:bg-white/5">{copiedTrackingId === orderGroup.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Tracking</button> : null}
                   </div>
                 </div>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#111824] p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-3">
+          <ShieldCheck className="h-9 w-9 shrink-0 text-purple-400" />
+          <div><p className="font-bold text-white">All items are 100% real and shipped to your door.</p></div>
+        </div>
+        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-white/5">How It Works <ExternalLink className="h-4 w-4" /></button>
+      </div>
     </section>
   );
 };
@@ -279,6 +411,7 @@ export const Profile: React.FC = () => {
       .filter((shipment) => shipment.uid === user.id && (shipment.status === 'shipped' || pendingStatuses.has(shipment.status)))
       .map((shipment) => ({
         id: shipment.id,
+        orderGroupId: shipment.shippingBatchId || shipment.id,
         inventoryId: shipment.inventoryId,
         name: shipment.item.name,
         image: shipment.item.image,
@@ -296,6 +429,7 @@ export const Profile: React.FC = () => {
       .filter((item) => (item.status === 'shipped' || item.status === 'shipping' || item.status === 'shipping_requested') && !shipmentInventoryIds.has(item.instanceId))
       .map((item) => ({
         id: item.instanceId,
+        orderGroupId: item.instanceId,
         inventoryId: item.instanceId,
         name: item.name,
         image: item.image,
