@@ -6,7 +6,6 @@ import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
-import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
@@ -138,7 +137,7 @@ type MainContentProps = {
 
 // Main content wrapper to handle view switching
 const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
-  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, authInitialized, user, setView, setShowLoginModal, boxes, openAuthModal } = useGame();
+  const { view, showLoginModal, showTopUpModal, showEmailVerificationModal, showEmailVerifiedModal, isAuthenticated, authInitialized, user, setView, boxes, openAuthModal } = useGame();
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
@@ -455,7 +454,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
 
   return (
-    <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+    <main className="flex-1 min-w-0 pb-6 sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
         <HomeReplica
@@ -480,7 +479,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         />
       )}
       {view.type === 'HOME' && showHomePrompt && !isAuthenticated && (
-        <div className="fixed bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+0.75rem)] left-1/2 z-[150] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-500/25 bg-[#22282c]/95 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:bottom-4">
+        <div className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-[150] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-500/25 bg-[#22282c]/95 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:bottom-4">
           <p className="text-base font-bold text-white">{homePromptVariant === 'returning' ? 'Finish your free pull' : 'Your first pull is free 🎁'}</p>
           <p className="mt-1 text-sm text-slate-300">{homePromptVariant === 'returning' ? 'You’re one step away from opening your first box' : 'Open your first box — no deposit needed'}</p>
           <div className="mt-3 flex gap-2">
@@ -537,7 +536,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               <h2 className="text-2xl font-bold text-white mb-2">Sign in to access bonuses</h2>
               <p className="text-gray-400 mb-6">Bonuses, rakeback, and affiliate rewards are available to registered players only.</p>
               <button
-                onClick={() => setShowLoginModal(true)}
+                onClick={() => openAuthModal('login')}
                 className="px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
               >
                 Sign in
@@ -559,7 +558,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               <h2 className="text-2xl font-bold text-white mb-2">Sign in to access quests</h2>
               <p className="text-gray-400 mb-6">Complete daily actions and claim rewards once you're signed in.</p>
               <button
-                onClick={() => setShowLoginModal(true)}
+                onClick={() => openAuthModal('login')}
                 className="px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
               >
                 Sign in
@@ -788,7 +787,6 @@ const AppShell = () => {
         isSticky={shouldUseStickyHeader}
       />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-      <MobileBottomNav />
       <ResetPasswordModal />
     </div>
   );
@@ -798,7 +796,7 @@ const AppLayout: React.FC<{
   hasStickyHeader: boolean;
 }> = ({ hasStickyHeader }) => {
   return (
-    <div className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}>
+    <div className="flex flex-1">
       <MainContent isChatCollapsed />
     </div>
   );
