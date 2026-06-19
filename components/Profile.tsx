@@ -177,7 +177,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
             </div>
           ) : filteredOrders.map((order) => {
             const placedDate = getCompactOrderDate(order.createdAt ?? order.shippedAt);
-            const shippedDate = order.status === 'shipped' ? getCompactOrderDate(order.shippedAt ?? order.createdAt) : 'Pending';
+            const shippedDetail = order.status === 'shipped' ? (order.trackingNumber || 'Tracking unavailable') : 'Pending';
             return (
               <article key={order.id} className="rounded-3xl border border-white/7 bg-[#101722] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
                 <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)_13rem] sm:items-stretch">
@@ -203,7 +203,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
                       {[
                         ['Order Placed', placedDate, true],
                         ['Processing', placedDate, true],
-                        ['Shipped', shippedDate, order.status === 'shipped']
+                        ['Shipped', shippedDetail, order.status === 'shipped']
                       ].map(([label, date, complete], index, steps) => (
                         <div key={label as string} className="relative flex gap-3">
                           {index < steps.length - 1 ? <span className={`absolute left-[9px] top-5 h-8 w-px ${complete ? 'bg-emerald-400' : 'bg-gray-600'}`} /> : null}
