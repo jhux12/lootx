@@ -13,8 +13,6 @@ interface InventoryFiltersProps {
   selectedCount: number;
   onReviewShipping: () => void;
   reviewDisabled: boolean;
-  onSellSelected: () => void;
-  sellDisabled: boolean;
 }
 
 export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
@@ -28,9 +26,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   onSortChange,
   selectedCount,
   onReviewShipping,
-  reviewDisabled,
-  onSellSelected,
-  sellDisabled
+  reviewDisabled
 }) => {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[#1f252c] p-3">
@@ -61,21 +57,9 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
       ))}
       <button
         type="button"
-        onClick={onSellSelected}
-        disabled={sellDisabled}
-        className={`w-full rounded-xl px-4 py-2 text-sm font-bold sm:w-auto sm:ml-auto ${
-          sellDisabled
-            ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
-            : 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-100 shadow-[0_8px_20px_rgba(16,185,129,0.18)]'
-        }`}
-      >
-        Sell Selected ({selectedCount})
-      </button>
-      <button
-        type="button"
         onClick={onReviewShipping}
         disabled={reviewDisabled}
-        className={`w-full rounded-xl px-4 py-2 text-sm font-bold sm:w-auto ${
+        className={`ml-auto rounded-xl px-4 py-2 text-sm font-bold ${
           reviewDisabled
             ? 'cursor-not-allowed border border-white/10 bg-[#2a323b] text-gray-500'
             : 'bg-gradient-to-r from-[#205DD7] to-sky-500 text-white shadow-[0_8px_20px_rgba(32,93,215,0.35)]'
