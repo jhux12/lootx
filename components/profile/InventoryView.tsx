@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { InventoryItem } from '../../types';
+import { Grid2X2, List, ShieldCheck } from 'lucide-react';
 import { CoinAmount } from '../CoinAmount';
 import { InventoryStats } from './InventoryStats';
 import { InventoryFilters } from './InventoryFilters';
@@ -44,11 +45,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   availableToShip,
   selectedValue
 }) => {
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
+
   return (
-    <section className="flex-1 space-y-4">
+    <section className="mx-auto w-full max-w-6xl flex-1 space-y-5 pb-3">
       <header>
-        <h2 className="text-2xl font-bold text-white">Inventory</h2>
-        <p className="text-sm text-gray-400">Manage your items, ship rewards, or sell them back for coins.</p>
+        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Inventory</h2>
+        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your items and view their values.</p>
       </header>
 
       <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
@@ -67,10 +70,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         reviewDisabled={selectedIds.length === 0}
       />
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-2xl font-black tracking-[-0.04em] text-white">Your Items ({items.length})</h3>
+        <div className="flex rounded-2xl border border-white/10 bg-[#111720] p-1">
+          <button type="button" onClick={() => setLayoutMode('grid')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'grid' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="Grid view"><Grid2X2 className="h-6 w-6" /></button>
+          <button type="button" onClick={() => setLayoutMode('list')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'list' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="List view"><List className="h-6 w-6" /></button>
+        </div>
+      </div>
+
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-10 text-center text-gray-400">No items found.</div>
+        <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className={`${layoutMode === 'grid' ? 'grid grid-cols-1 gap-3 min-[720px]:grid-cols-2' : 'grid grid-cols-1 gap-4'}`}>
           {items.map((item) => {
             const action = getAction(item);
             return (
@@ -86,18 +97,27 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 secondaryActionLabel={action.secondaryLabel}
                 secondaryActionDisabled={action.secondaryDisabled}
                 onSecondaryAction={action.onSecondaryClick}
+                layoutMode={layoutMode}
               />
             );
           })}
         </div>
       )}
 
+      <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-[#111824] p-5 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <ShieldCheck className="h-12 w-12 shrink-0 text-purple-400" />
+          <p className="max-w-2xl text-lg font-semibold leading-snug text-white">Items available to ship will be sent to your address on file.</p>
+        </div>
+        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-lg font-black text-purple-300 hover:bg-purple-500/10">Learn More <span aria-hidden="true">›</span></button>
+      </div>
+
       {selectedIds.length > 0 && (
-        <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-blue-400/30 bg-[#1f252c]/95 p-3 backdrop-blur md:bottom-4">
+        <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 backdrop-blur md:bottom-4">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
           <div className="flex items-center gap-3">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
-            <button onClick={onReviewShipping} className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 px-3 py-2 text-xs font-bold text-white">Review Shipping</button>
+            <button onClick={onReviewShipping} className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-xs font-bold text-white">Review Shipping</button>
           </div>
         </div>
       )}
