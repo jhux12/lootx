@@ -133,6 +133,15 @@ const desktopMenuItemClass =
 const utilityButtonClass =
   "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60";
 
+const primaryGradientButtonClass =
+  "group relative inline-flex min-h-10 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-[12px] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 text-[12px] font-black uppercase tracking-[0.08em] text-white shadow-[0_14px_34px_rgba(79,127,244,0.25)] outline-none transition-all duration-200 hover:scale-[1.01] hover:shadow-[0_18px_42px_rgba(79,127,244,0.34)] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99]";
+
+const mobileMenuItemClass =
+  "group relative flex min-h-14 w-full items-center gap-4 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-left text-base font-extrabold text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300/30 hover:bg-white/[0.075] hover:text-white active:translate-y-0";
+
+const mobileMenuItemActiveClass =
+  "border-blue-300/35 bg-[linear-gradient(135deg,rgba(98,37,239,0.22),rgba(79,127,244,0.16))] text-white shadow-[0_16px_34px_rgba(79,127,244,0.16),inset_0_1px_0_rgba(255,255,255,0.06)]";
+
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
 type PullPassHeaderTier = {
@@ -618,7 +627,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           playSound("click");
           openAuthModal("register");
         }}
-        className="group relative inline-flex h-10 shrink-0 items-center gap-2 overflow-hidden rounded-[10px] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 text-[13px] font-bold text-white shadow-[0_14px_34px_rgba(79,127,244,0.25)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:px-5 lg:h-11 lg:min-w-[188px] lg:justify-center lg:rounded-[11px] lg:text-[15px]"
+        className={`${primaryGradientButtonClass} h-10 normal-case tracking-normal sm:px-5 lg:h-11 lg:min-w-[188px] lg:rounded-[11px] lg:text-[15px]`}
         aria-label="Open Free Box"
       >
         <span
@@ -670,12 +679,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   return (
     <>
       <div
-        className={`relative z-[260] transition-[opacity,transform] duration-200 ease-out ${isSuppressed || showTopUpModal ? "pointer-events-none -translate-y-full opacity-0" : "opacity-100"}`}
+        className={`${isSticky ? "sticky top-0" : "relative"} z-[260] transition-[opacity,transform] duration-200 ease-out ${isSuppressed || showTopUpModal ? "pointer-events-none -translate-y-full opacity-0" : "opacity-100"}`}
         aria-hidden={isSuppressed || showTopUpModal}
       >
         <header
           ref={headerRef}
-          className={`${isSticky ? "fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
+          className="relative z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2"
         >
           <div className="pt-[env(safe-area-inset-top,0px)]">
             <nav className="relative mx-auto flex h-[52px] max-w-7xl items-center justify-between px-3 sm:h-[56px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
@@ -683,7 +692,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen((open) => !open)}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#3a4146]/70 bg-[#242b31] text-slate-300 transition-colors hover:text-white lg:hidden"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-blue-300/20 bg-[#0e1420]/85 text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:border-blue-300/40 hover:bg-[#141d2d] hover:text-white lg:hidden"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                   aria-expanded={isMobileMenuOpen}
                 >
@@ -755,7 +764,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     onClick={() => navigate("PULL_PASS")}
                     className={`${activeDesktopSection === "rewards" ? desktopActiveNavButtonClass : desktopNavButtonClass} gap-2`}
                   >
-                    <PullPassNavIcon className="h-5 w-5 text-purple-300" />
+                    <PullPassNavIcon className="h-5 w-5 text-blue-300" />
                     Rewards
                     {questReadyCount > 0 ? (
                       <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">
@@ -935,14 +944,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-0 z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[var(--pullz-mobile-bottom-nav-height,72px)] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-0 z-[240] w-full overflow-y-auto overscroll-contain border-l border-blue-300/10 bg-[#111722]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[-18px_0_52px_rgba(0,0,0,0.38)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
@@ -953,12 +962,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
-          <div className="flex min-h-full flex-col pb-4 pt-1">
+          <div className="relative flex min-h-full flex-col pb-4 pt-1 before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[radial-gradient(circle_at_20%_0%,rgba(98,37,239,0.18),transparent_34%),radial-gradient(circle_at_90%_12%,rgba(79,127,244,0.16),transparent_30%)]">
             <div className="mb-7 flex w-full items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => navigate("PROFILE")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.045]"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/[0.07]"
               >
                 {isAuthenticated ? (
                   <UserAvatar
@@ -987,7 +996,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     void logout();
                   }}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-white/[0.075]"
+                  className={`${primaryGradientButtonClass} px-3 py-2`}
                 >
                   Sign out
                 </button>
@@ -995,7 +1004,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={handleSignIn}
-                  className="shrink-0 rounded-xl border border-purple-300/25 bg-purple-500/15 px-3 py-2 text-xs font-black uppercase text-purple-100 transition-colors hover:bg-purple-500/25"
+                  className={`${primaryGradientButtonClass} px-3 py-2`}
                 >
                   Sign in
                 </button>
@@ -1005,44 +1014,44 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <nav className="space-y-2" aria-label="Mobile menu links">
               <button
                 onClick={() => navigate("HOME")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "HOME" ? mobileMenuItemActiveClass : ""}`}
               >
-                <HomeIcon className="h-5 w-5 text-purple-300" />
+                <HomeIcon className="h-5 w-5 text-blue-300" />
                 Home
               </button>
               <button
                 onClick={() => navigate("BOXES")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "BOXES" || view.type === "CASE_OPENING" ? mobileMenuItemActiveClass : ""}`}
               >
-                <Package className="h-5 w-5 text-purple-300" />
+                <Package className="h-5 w-5 text-blue-300" />
                 Boxes
               </button>
               <button
                 onClick={() => navigate("PLINKO")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "PLINKO" ? mobileMenuItemActiveClass : ""}`}
               >
-                <UpgraderIcon className="h-5 w-5 text-purple-300" />
+                <UpgraderIcon className="h-5 w-5 text-blue-300" />
                 Upgrader
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "LEADERBOARD" ? mobileMenuItemActiveClass : ""}`}
               >
-                <Trophy className="h-5 w-5 text-purple-300" />
+                <Trophy className="h-5 w-5 text-blue-300" />
                 Leaderboard
               </button>
               <button
                 onClick={() => navigate("PULL_PASS")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PULL_PASS" || view.type === "BONUSES" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "PULL_PASS" || view.type === "BONUSES" ? mobileMenuItemActiveClass : ""}`}
               >
-                <PullPassNavIcon className="h-5 w-5 text-purple-300" />
+                <PullPassNavIcon className="h-5 w-5 text-blue-300" />
                 Rewards
               </button>
               <button
                 onClick={() => navigate("PROFILE")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`${mobileMenuItemClass} ${view.type === "PROFILE" || view.type === "INVENTORY" ? mobileMenuItemActiveClass : ""}`}
               >
-                <UserIcon className="h-5 w-5 text-purple-300" />
+                <UserIcon className="h-5 w-5 text-blue-300" />
                 Profile
               </button>
               {isAuthenticated && nextPullPassReward ? (
@@ -1090,16 +1099,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
               <button
                 onClick={() => navigate("REFERRALS")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+                className={mobileMenuItemClass}
               >
-                <Users className="h-5 w-5 text-purple-300" />
+                <Users className="h-5 w-5 text-blue-300" />
                 Refer a Friend
               </button>
               <button
                 onClick={() => navigate("CONTACT")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+                className={mobileMenuItemClass}
               >
-                <LifeBuoy className="h-5 w-5 text-purple-300" />
+                <LifeBuoy className="h-5 w-5 text-blue-300" />
                 Support
               </button>
             </div>

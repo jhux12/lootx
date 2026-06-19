@@ -6,7 +6,6 @@ import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
-import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeReplica } from './components/HomeReplica';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
@@ -788,7 +787,6 @@ const AppShell = () => {
         isSticky={shouldUseStickyHeader}
       />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-      <MobileBottomNav />
       <ResetPasswordModal />
     </div>
   );
@@ -798,7 +796,7 @@ const AppLayout: React.FC<{
   hasStickyHeader: boolean;
 }> = ({ hasStickyHeader }) => {
   return (
-    <div className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}>
+    <div className="flex flex-1">
       <MainContent isChatCollapsed />
     </div>
   );
