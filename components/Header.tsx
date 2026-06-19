@@ -611,7 +611,15 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const handleSignIn = useCallback(() => {
     playSound("click");
     setIsMobileMenuOpen(false);
-    openAuthModal("login");
+
+    if (typeof window === "undefined") {
+      openAuthModal("login");
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      openAuthModal("login");
+    });
   }, [openAuthModal, playSound]);
 
   const handleLogout = useCallback(() => {
