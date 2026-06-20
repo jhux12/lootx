@@ -471,10 +471,6 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'QUESTS' };
   }
 
-  if (primary === 'pull-pass' || primary === 'pullpass') {
-    return { type: 'PULL_PASS' };
-  }
-
   if (primary === 'polls') {
     return { type: 'POLLS' };
   }
@@ -560,8 +556,6 @@ const getPathFromView = (view: ViewState): string => {
       return '/bonuses';
     case 'QUESTS':
       return '/quests';
-    case 'PULL_PASS':
-      return '/pull-pass';
     case 'POLLS':
       return '/polls';
     case 'REFERRALS':
