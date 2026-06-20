@@ -1,19 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, User, X } from 'lucide-react';
+import { Box, Home, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'PLINKO' | 'PULL_PASS' | 'PROFILE';
+  id: 'HOME' | 'BOXES' | 'PULL_PASS' | 'PROFILE';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   iconClassName?: string;
   requiresAuth?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 const PullPassTabIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 64 64" fill="none" className={className} aria-hidden="true">
     <path d="M32 4L55 17V47L32 60L9 47V17L32 4Z" fill="#111827" stroke="currentColor" strokeWidth="3" />
@@ -32,7 +31,6 @@ const PullPassTabIcon: React.FC<{ className?: string }> = ({ className }) => (
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
   { id: 'PULL_PASS', label: 'Rewards', icon: PullPassTabIcon },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];
@@ -142,7 +140,6 @@ export const MobileBottomNav: React.FC = () => {
     if (view.type === 'CASE_OPENING') return 'BOXES';
     if (view.type === 'INVENTORY' || view.type === 'PROFILE') return 'PROFILE';
     if (view.type === 'PULL_PASS' || view.type === 'BONUSES') return 'PULL_PASS';
-    if (view.type === 'PLINKO') return 'PLINKO';
     if (view.type === 'BOXES') return 'BOXES';
     return 'HOME';
   }, [view.type]);
@@ -177,7 +174,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
+      <nav className="grid h-full grid-cols-4 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
