@@ -24,7 +24,6 @@ import {
   PenTool,
   Plus,
   RefreshCw,
-  Sparkles,
   BarChart3,
   Bell,
   Box,
@@ -70,50 +69,6 @@ const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
 const GamesIcon: React.FC<{ className?: string }> = ({ className }) => (
   <Package className={className} aria-hidden="true" />
 );
-const RewardsIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <Sparkles className={className} aria-hidden="true" />
-);
-const PullPassNavIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 64 64" fill="none" className={className} aria-hidden="true">
-    <path
-      d="M32 4L55 17V47L32 60L9 47V17L32 4Z"
-      fill="#111827"
-      stroke="currentColor"
-      strokeWidth="3"
-    />
-    <path
-      d="M32 9L50 19.5V44.5L32 55L14 44.5V19.5L32 9Z"
-      fill="url(#header-pull-pass-gradient)"
-      stroke="currentColor"
-      strokeWidth="1.5"
-    />
-    <path
-      d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5L23.3 43.5L25.3 33.8L18 27.2L27.8 26.1L32 17Z"
-      fill="#FACC15"
-      stroke="#FEF3C7"
-      strokeWidth="1.5"
-    />
-    <path
-      d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5V17Z"
-      fill="#F59E0B"
-      opacity="0.65"
-    />
-    <defs>
-      <linearGradient
-        id="header-pull-pass-gradient"
-        x1="32"
-        y1="9"
-        x2="32"
-        y2="55"
-        gradientUnits="userSpaceOnUse"
-      >
-        <stop stopColor="#312E81" />
-        <stop offset="1" stopColor="#09090B" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
 const drawerCardClass =
   "flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0";
 
@@ -134,40 +89,6 @@ const utilityButtonClass =
   "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60";
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
-
-type PullPassHeaderTier = {
-  tier?: number;
-  xpRequired?: number;
-  freeReward?: string;
-};
-
-type PullPassHeaderSettings = {
-  tiers: PullPassHeaderTier[];
-};
-
-const PULL_PASS_HEADER_COIN_IMAGE =
-  "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fcoins.png?alt=media&token=a4dc007b-6e01-43bb-8b94-4dcc677f9567";
-const PULL_PASS_HEADER_BOX_IMAGES = {
-  bronze:
-    "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fbronze.png?alt=media&token=2074648a-5fc0-42bd-8fd6-776bbd716fed",
-  silver:
-    "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fsilver.png?alt=media&token=60df1026-45da-41a6-b572-0fe5bbb9399e",
-  gold: "https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/pullpass%2Fgold.png?alt=media&token=29316f1c-3d13-46c9-ab6c-5b1fb5823daa",
-};
-
-const getPullPassRewardImage = (rewardName: string) => {
-  const normalized = rewardName.toLowerCase();
-  if (normalized.includes("bronze")) return PULL_PASS_HEADER_BOX_IMAGES.bronze;
-  if (normalized.includes("silver")) return PULL_PASS_HEADER_BOX_IMAGES.silver;
-  if (
-    normalized.includes("gold") ||
-    normalized.includes("elite") ||
-    normalized.includes("master")
-  )
-    return PULL_PASS_HEADER_BOX_IMAGES.gold;
-  if (normalized.includes("coin")) return PULL_PASS_HEADER_COIN_IMAGE;
-  return null;
-};
 
 const HeaderSkeleton: React.FC = memo(() => (
   <div className="flex min-h-[44px] items-center gap-2" aria-hidden="true">
@@ -201,7 +122,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
-  const [isRewardsMenuOpen, setIsRewardsMenuOpen] = useState(false);
   const [questReadyCount, setQuestReadyCount] = useState(0);
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
   const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<
@@ -210,15 +130,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const [showActivity, setShowActivity] = useState(false);
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] =
     useState(false);
-  const [openMobileSections, setOpenMobileSections] = useState({
-    games: true,
-    rewards: false,
-    learn: false,
-    support: false,
-  });
   const headerRef = useRef<HTMLElement | null>(null);
   const gamesMenuRef = useRef<HTMLDivElement | null>(null);
-  const rewardsMenuRef = useRef<HTMLDivElement | null>(null);
   const resolvedDisplayName = useMemo(
     () => (authInitialized ? resolveUserDisplayName(user) : ""),
     [authInitialized, user],
@@ -249,7 +162,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     if (view.type === "PLINKO") return "upgrader";
     if (view.type === "LEADERBOARD") return "leaderboard";
     if (
-      view.type === "PULL_PASS" ||
       view.type === "BONUSES" ||
       view.type === "QUESTS" ||
       view.type === "POLLS" ||
@@ -260,8 +172,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     return null;
   }, [view.type]);
   const [rewardsSettings, setRewardsSettings] = useState<RewardsSettingsData>();
-  const [pullPassSettings, setPullPassSettings] =
-    useState<PullPassHeaderSettings>({ tiers: [] });
   const [enableRewardsRealtime, setEnableRewardsRealtime] = useState(false);
 
   useEffect(() => {
@@ -285,13 +195,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       ) {
         setIsGamesMenuOpen(false);
       }
-      if (
-        isRewardsMenuOpen &&
-        rewardsMenuRef.current &&
-        !rewardsMenuRef.current.contains(target)
-      ) {
-        setIsRewardsMenuOpen(false);
-      }
     };
 
     document.addEventListener("mousedown", handleDocumentClick);
@@ -300,7 +203,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       document.removeEventListener("mousedown", handleDocumentClick);
       document.removeEventListener("touchstart", handleDocumentClick);
     };
-  }, [isGamesMenuOpen, isRewardsMenuOpen]);
+  }, [isGamesMenuOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -435,31 +338,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   }, [enableRewardsRealtime, isAuthenticated]);
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, "settings", "pullPass"),
-      (snap) => {
-        const data = snap.data() as Record<string, unknown> | undefined;
-        let tiers = Array.isArray(data?.tiers)
-          ? (data?.tiers as PullPassHeaderTier[])
-          : [];
-        if (!tiers.length && typeof data?.tiersText === "string") {
-          try {
-            const parsed = JSON.parse(data.tiersText);
-            tiers = Array.isArray(parsed) ? parsed : [];
-          } catch {
-            tiers = [];
-          }
-        }
-        setPullPassSettings({ tiers });
-      },
-      (error) => {
-        console.error("Pull Pass settings snapshot failed", error);
-      },
-    );
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
     if (!isAuthenticated) {
       setQuestReadyCount((current) => (current === 0 ? current : 0));
       setClaimedTodayCount((current) => (current === 0 ? current : 0));
@@ -488,41 +366,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     user.challengeStatsDay,
     user.questClaims,
   ]);
-
-  const nextPullPassReward = useMemo(() => {
-    const tiers = pullPassSettings.tiers
-      .map((tier, index) => ({
-        tier: Math.max(1, Number(tier.tier ?? index + 1) || index + 1),
-        xpRequired: Math.max(0, Number(tier.xpRequired ?? 0) || 0),
-        freeReward:
-          typeof tier.freeReward === "string" && tier.freeReward.trim()
-            ? tier.freeReward.trim()
-            : `Tier ${tier.tier ?? index + 1} Reward`,
-      }))
-      .sort((a, b) => a.tier - b.tier);
-    const currentXp = Math.max(
-      0,
-      Number(
-        (user as Record<string, unknown>).pullPassSeasonXp ??
-          (user as Record<string, unknown>).pullPassXp ??
-          0,
-      ) || 0,
-    );
-    const nextTier = tiers.find((tier) => tier.xpRequired > currentXp);
-    if (!nextTier) return null;
-    const xpAway = Math.max(0, nextTier.xpRequired - currentXp);
-    return {
-      title: nextTier.freeReward,
-      meta: `${xpAway.toLocaleString()} XP away`,
-      imageUrl: getPullPassRewardImage(nextTier.freeReward),
-      progress: Math.min(
-        100,
-        Math.max(0, (currentXp / Math.max(1, nextTier.xpRequired)) * 100),
-      ),
-      currentXp,
-      xpRequired: nextTier.xpRequired,
-    };
-  }, [pullPassSettings.tiers, user]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -558,7 +401,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         | "HOME"
         | "BOXES"
         | "PLINKO"
-        | "PULL_PASS"
         | "BONUSES"
         | "LEADERBOARD"
         | "QUESTS"
@@ -574,7 +416,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     ) => {
       playSound("click");
       const requiresAuth =
-        type === "PULL_PASS" ||
         type === "BONUSES" ||
         type === "QUESTS" ||
         type === "POLLS" ||
@@ -588,7 +429,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       setView({ type } as any);
       setIsMobileMenuOpen(false);
       setIsGamesMenuOpen(false);
-      setIsRewardsMenuOpen(false);
     },
     [isAuthenticated, openAuthModal, playSound, setView],
   );
@@ -636,30 +476,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     [openAuthModal, playSound],
   );
 
-  const dailySpinDesktopClass = `group relative flex w-full items-center gap-2 overflow-hidden rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 ${
-    showDailySpinReady
-      ? "border border-blue-400/50 bg-blue-500/10 shadow-[0_0_16px_rgba(59,130,246,0.24)] hover:bg-blue-500/20"
-      : "hover:bg-white/[0.07] hover:text-white"
-  }`;
 
-  const dailySpinMobileClass = `${drawerCardClass} group relative overflow-hidden transition-all ${
-    showDailySpinReady
-      ? "border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.25)] hover:bg-blue-500/20"
-      : ""
-  }`;
-  const rewardsDesktopTabClass = `${activeDesktopSection === "rewards" ? desktopActiveNavButtonClass : desktopNavButtonClass} overflow-hidden ${showDailySpinReady ? "shadow-[0_0_18px_rgba(59,130,246,0.18)]" : ""}`;
-  const rewardsMobileTabClass = `group relative flex w-full items-center justify-between overflow-hidden rounded-2xl border px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 ${
-    showDailySpinReady
-      ? "border-blue-400/60 bg-blue-500/10 shadow-[0_0_18px_rgba(59,130,246,0.22)] hover:bg-blue-500/20"
-      : "border-white/10 bg-white/[0.045] hover:bg-white/[0.07]"
-  }`;
-
-  const toggleMobileSection = useCallback(
-    (section: keyof typeof openMobileSections) => {
-      setOpenMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
-    },
-    [],
-  );
 
   const dismissFreeBoxTooltip = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -751,21 +568,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   >
                     Leaderboard
                   </button>
-                  {isAuthenticated ? (
-                    <button
-                      type="button"
-                      onClick={() => navigate("PULL_PASS")}
-                      className={`${activeDesktopSection === "rewards" ? desktopActiveNavButtonClass : desktopNavButtonClass} gap-2`}
-                    >
-                      <PullPassNavIcon className="h-5 w-5 text-purple-300" />
-                      Rewards
-                      {questReadyCount > 0 ? (
-                        <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">
-                          {questReadyCount}
-                        </span>
-                      ) : null}
-                    </button>
-                  ) : null}
                 </div>
               </div>
 
@@ -1034,15 +836,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <Trophy className="h-5 w-5 text-purple-300" />
                 Leaderboard
               </button>
-              {isAuthenticated ? (
-                <button
-                  onClick={() => navigate("PULL_PASS")}
-                  className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PULL_PASS" || view.type === "BONUSES" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
-                >
-                  <PullPassNavIcon className="h-5 w-5 text-purple-300" />
-                  Rewards
-                </button>
-              ) : null}
               <button
                 onClick={() => navigate("PROFILE")}
                 className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
@@ -1050,46 +843,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <UserIcon className="h-5 w-5 text-purple-300" />
                 Profile
               </button>
-              {isAuthenticated && nextPullPassReward ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("PULL_PASS")}
-                  className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-colors hover:bg-white/[0.06]"
-                >
-                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-purple-500/10">
-                    {nextPullPassReward.imageUrl ? (
-                      <img
-                        src={nextPullPassReward.imageUrl}
-                        alt=""
-                        className="h-12 w-12 object-contain"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <span className="text-sm font-black text-purple-100">
-                        XP
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                      Next Reward
-                    </p>
-                    <p className="truncate text-sm font-bold text-white">
-                      {nextPullPassReward.title}
-                    </p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-[linear-gradient(90deg,#7c3aed,#a855f7)]"
-                        style={{ width: `${nextPullPassReward.progress}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs font-semibold text-slate-400">
-                      {nextPullPassReward.meta}
-                    </p>
-                  </div>
-                </button>
-              ) : null}
             </nav>
 
             <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">

@@ -119,7 +119,6 @@ const getSeoConfigForView = (view: ViewState): SeoConfig => {
     case 'INVENTORY':
     case 'BONUSES':
     case 'QUESTS':
-    case 'PULL_PASS':
     case 'POLLS':
     case 'REFERRALS':
     case 'PLINKO':

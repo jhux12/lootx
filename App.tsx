@@ -97,7 +97,6 @@ const Profile = lazy(() => import('./components/Profile').then((module) => ({ de
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
 const Quests = lazy(() => import('./components/Quests').then((module) => ({ default: module.Quests })));
-const PullPassPage = lazy(() => import('./components/PullPassPage'));
 
 const LoadingSpinner = React.memo(() => (
   <div className="flex min-h-[40vh] items-center justify-center" aria-live="polite" aria-busy="true">
@@ -146,11 +145,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const [showHomePrompt, setShowHomePrompt] = useState(false);
   const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
   const homePromptTrackedRef = useRef(false);
-
-  useEffect(() => {
-    if (!authInitialized || isAuthenticated || view.type !== 'PULL_PASS') return;
-    setView({ type: 'HOME' });
-  }, [authInitialized, isAuthenticated, setView, view.type]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -571,12 +565,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
               </button>
             </div>
           )}
-        </div>
-      )}
-
-      {view.type === 'PULL_PASS' && isAuthenticated && (
-        <div className="w-full">
-          <PullPassPage />
         </div>
       )}
 

@@ -376,7 +376,6 @@ export type ViewState =
   | { type: 'POLLS' }
   | { type: 'REFERRALS' }
   | { type: 'QUESTS' }
-  | { type: 'PULL_PASS' }
   | { type: 'CONTACT' }
   | { type: 'TERMS' }
   | { type: 'PRIVACY' }
