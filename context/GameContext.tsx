@@ -445,11 +445,11 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
   }
 
   if (primary === 'arcade' && secondary === 'plinko') {
-    return { type: 'PLINKO' };
+    return { type: 'HOME' };
   }
 
   if (primary === 'plinko' || primary === 'upgrader') {
-    return { type: 'PLINKO' };
+    return { type: 'HOME' };
   }
 
   if (primary === 'profile') {
@@ -551,7 +551,7 @@ const getPathFromView = (view: ViewState): string => {
     case 'SPIN':
       return '/spin';
     case 'PLINKO':
-      return '/upgrader';
+      return '/';
     case 'PROFILE':
       return view.userId ? `/profile/${view.userId}` : '/profile';
     case 'INVENTORY':

@@ -9,7 +9,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Flame,
   Home as HomeIcon,
   AtSign,
   ChevronDown,
@@ -64,9 +63,6 @@ type HeaderProps = {
   isSticky?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <Flame className={className} aria-hidden="true" />
-);
 const GamesIcon: React.FC<{ className?: string }> = ({ className }) => (
   <Package className={className} aria-hidden="true" />
 );
@@ -242,11 +238,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const activeDesktopSection = useMemo<
-    "home" | "cases" | "upgrader" | "leaderboard" | "rewards" | "profile" | null
+    "home" | "cases" | "leaderboard" | "rewards" | "profile" | null
   >(() => {
     if (view.type === "HOME") return "home";
     if (view.type === "BOXES" || view.type === "CASE_OPENING") return "cases";
-    if (view.type === "PLINKO") return "upgrader";
     if (view.type === "LEADERBOARD") return "leaderboard";
     if (
       view.type === "PULL_PASS" ||
@@ -557,7 +552,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       type:
         | "HOME"
         | "BOXES"
-        | "PLINKO"
         | "PULL_PASS"
         | "BONUSES"
         | "LEADERBOARD"
@@ -727,17 +721,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     }
                   >
                     Boxes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("PLINKO")}
-                    className={
-                      activeDesktopSection === "upgrader"
-                        ? desktopActiveNavButtonClass
-                        : desktopNavButtonClass
-                    }
-                  >
-                    Upgrader
                   </button>
                   <button
                     type="button"
@@ -1016,13 +999,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <Package className="h-5 w-5 text-purple-300" />
                 Boxes
-              </button>
-              <button
-                onClick={() => navigate("PLINKO")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
-              >
-                <UpgraderIcon className="h-5 w-5 text-purple-300" />
-                Upgrader
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
