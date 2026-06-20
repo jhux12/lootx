@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Download } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
@@ -902,6 +902,24 @@ export const AdminPanel: React.FC = () => {
       const formatted = absoluteAmount.toLocaleString(undefined, { maximumFractionDigits: 0 });
       const sign = showSign ? (amount < 0 ? '-' : '+') : '';
       return `${sign}${formatted} coins`;
+  };
+
+  const escapeCsvField = (value: unknown) => {
+      if (value === null || value === undefined) return '';
+      const text = String(value);
+      return text.includes(',') || text.includes('"') || text.includes('\n') || text.includes('\r') ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+
+  const downloadTextFile = (filename: string, contents: string, mimeType = 'text/csv;charset=utf-8;') => {
+      const blob = new Blob([contents], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
   };
 
   const normalizeLedgerEntries = (entries: LedgerEntry[] = [], currentBalance?: number) => {
@@ -2859,11 +2877,36 @@ export const AdminPanel: React.FC = () => {
       return [
           entry.memo,
           entry.sourceId,
-          entry.type
+          entry.type,
+          entry.id,
+          entry.balanceAfter
       ]
-          .filter(Boolean)
+          .filter((value) => value !== undefined && value !== null)
           .some((value) => String(value).toLowerCase().includes(ledgerSearchValue));
   });
+
+  const downloadSelectedUserLedger = (entries: LedgerEntry[], scopeLabel: string) => {
+      if (!selectedUser) return;
+      const rows = [
+          ['entry_id', 'user_id', 'user_email', 'type', 'amount', 'balance_after', 'source_id', 'memo', 'created_at_iso', 'created_at_ms'],
+          ...entries.map((entry) => [
+              entry.id,
+              entry.userId || selectedUser.id,
+              selectedUser.email ?? '',
+              entry.type,
+              entry.amount,
+              entry.balanceAfter ?? '',
+              entry.sourceId ?? '',
+              entry.memo ?? '',
+              entry.createdAt ? new Date(entry.createdAt).toISOString() : '',
+              entry.createdAt ?? ''
+          ])
+      ];
+      const csv = rows.map((row) => row.map(escapeCsvField).join(',')).join('\n');
+      const safeUser = (selectedUser.email || selectedUser.username || selectedUser.id).replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || selectedUser.id;
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      downloadTextFile(`${safeUser}-${scopeLabel}-ledger-${dateStamp}.csv`, csv);
+  };
 
   const timelineSearchValue = timelineSearch.trim().toLowerCase();
   const filteredTimelineEntries = timelineEntries.filter((entry) => {
@@ -5106,10 +5149,24 @@ export const AdminPanel: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
-                                                <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
-                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
+                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-4">
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div>
+                                                        <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Full Ledger History</h4>
+                                                        <p className="mt-1 text-xs text-gray-500">Showing every stored ledger entry for this user, newest first.</p>
+                                                    </div>
+                                                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                                                        <button type="button" onClick={() => downloadSelectedUserLedger(selectedLedgerEntries, 'full')} disabled={selectedLedgerEntries.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200 transition-colors hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Download className="h-3.5 w-3.5" />Download full CSV</button>
+                                                        <button type="button" onClick={() => downloadSelectedUserLedger(filteredLedgerEntries, 'filtered')} disabled={filteredLedgerEntries.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200 transition-colors hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Download className="h-3.5 w-3.5" />Download filtered</button>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="text-[10px] uppercase text-gray-500">Entries</div><div className="mt-1 font-bold text-white">{selectedLedgerEntries.length.toLocaleString()}</div></div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="text-[10px] uppercase text-gray-500">Filtered</div><div className="mt-1 font-bold text-white">{filteredLedgerEntries.length.toLocaleString()}</div></div>
+                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="text-[10px] uppercase text-gray-500">Net Change</div><CoinAmount amount={ledgerNetChange} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`mt-1 text-sm font-bold ${ledgerNetChange >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="h-3.5 w-3.5" /></div>
+                                                </div>
+                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[180px_minmax(0,1fr)]"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search memo, source, type, ID, or balance" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
+                                                <div className="max-h-[32rem] space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="rounded-lg border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-xs text-gray-500">No ledger entries match the current filters.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><span className="text-xs font-bold uppercase text-gray-300">{entry.type.replace('_', ' ')}</span><div className="mt-1 break-words text-xs text-gray-300">{entry.memo || 'Balance update'}</div></div><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-sm font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="mt-3 grid grid-cols-1 gap-2 text-[10px] text-gray-500 sm:grid-cols-2"><div className="break-all">Source: {entry.sourceId || 'Manual'}</div><div>Created: {formatTimestamp(entry.createdAt)}</div><div className="break-all">Entry ID: {entry.id}</div><div>Balance after: {entry.balanceAfter == null ? '—' : `${Math.round(entry.balanceAfter).toLocaleString()} coins`}</div></div></div>))}</div>
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-3">
