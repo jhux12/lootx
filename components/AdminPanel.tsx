@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Download, Plus, Search, Eye, MoreVertical, Filter, Infinity as InfinityIcon } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
@@ -568,6 +568,12 @@ export const AdminPanel: React.FC = () => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
   const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
+  const [usersStatusFilter, setUsersStatusFilter] = useState<'all' | UserStatus>('all');
+  const [usersKycFilter, setUsersKycFilter] = useState<'all' | 'verified' | 'unverified'>('all');
+  const [usersDepositFilter, setUsersDepositFilter] = useState<'all' | 'none' | 'low' | 'mid' | 'high'>('all');
+  const [usersRiskFilter, setUsersRiskFilter] = useState<'all' | 'Low' | 'Medium' | 'High'>('all');
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersRowsPerPage, setUsersRowsPerPage] = useState(10);
   const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
       key: 'created',
       direction: 'desc'
@@ -2720,6 +2726,16 @@ export const AdminPanel: React.FC = () => {
       const quickFiltered = searched.filter((profile) => {
           const metrics = getUserMetrics(profile);
           const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
+          const status = userStatuses[profile.id] ?? 'active';
+          const kycVerified = Boolean((profile as unknown as { kycVerified?: boolean; kycLevel?: string }).kycVerified || (profile as unknown as { kycLevel?: string }).kycLevel === 'verified');
+          if (usersStatusFilter !== 'all' && status !== usersStatusFilter) return false;
+          if (usersKycFilter === 'verified' && !kycVerified) return false;
+          if (usersKycFilter === 'unverified' && kycVerified) return false;
+          if (usersRiskFilter !== 'all' && metrics.riskLevel !== usersRiskFilter) return false;
+          if (usersDepositFilter === 'none' && metrics.lifetimeDeposits > 0) return false;
+          if (usersDepositFilter === 'low' && !(metrics.lifetimeDeposits > 0 && metrics.lifetimeDeposits < 100)) return false;
+          if (usersDepositFilter === 'mid' && !(metrics.lifetimeDeposits >= 100 && metrics.lifetimeDeposits < 1000)) return false;
+          if (usersDepositFilter === 'high' && metrics.lifetimeDeposits < 1000) return false;
           if (usersQuickFilter === 'locked') return locked;
           if (usersQuickFilter === 'high_risk') return metrics.riskScore >= 60;
           if (usersQuickFilter === 'empty_inventory') return metrics.inventory.length === 0;
@@ -2747,7 +2763,26 @@ export const AdminPanel: React.FC = () => {
           };
           return comparisons[usersSort.key] * direction;
       });
-  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
+  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, usersStatusFilter, usersKycFilter, usersDepositFilter, usersRiskFilter, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
+
+  const userManagementStats = useMemo(() => {
+      const now = Date.now();
+      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+      return {
+          total: users.length,
+          active: users.filter((profile) => (userStatuses[profile.id] ?? 'active') === 'active').length,
+          suspended: users.filter((profile) => (userStatuses[profile.id] ?? 'active') === 'suspended').length,
+          newThisMonth: users.filter((profile) => (profile.createdAt ?? now) >= monthStart).length
+      };
+  }, [users, userStatuses]);
+
+  const usersTotalPages = Math.max(1, Math.ceil(filteredUsers.length / usersRowsPerPage));
+  const paginatedUsers = filteredUsers.slice((Math.min(usersPage, usersTotalPages) - 1) * usersRowsPerPage, Math.min(usersPage, usersTotalPages) * usersRowsPerPage);
+
+  useEffect(() => {
+      setUsersPage(1);
+  }, [normalizedUserSearch, usersQuickFilter, usersStatusFilter, usersKycFilter, usersDepositFilter, usersRiskFilter, usersRowsPerPage]);
+
   const selectedLedgerEntries = useMemo(() => {
       if (!selectedUserId) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
@@ -4754,131 +4789,54 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: USERS */}
             {activeTab === 'users' && (
                 <div className="space-y-6">
-                    <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-white">User Operations</h2>
-                                <p className="text-sm text-gray-400">Live user monitoring center for moderation, finance, inventory, shipments, and support workflows.</p>
-                            </div>
-                            <div className="flex w-full flex-col gap-3 md:flex-row xl:w-auto">
-                                <Input
-                                    type="text"
-                                    value={userSearchQuery}
-                                    onChange={(event) => setUserSearchQuery(event.target.value)}
-                                    placeholder="Search users, UID, email, labels, risk, balances"
-                                    className="w-full md:w-96 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
-                                />
-                                <button type="button" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs font-semibold text-gray-300">Export</button>
-                            </div>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h2 className="text-2xl font-extrabold text-white">User Management</h2>
+                            <p className="mt-1 text-sm text-gray-400">Manage and monitor all user accounts</p>
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
-                            {[
-                                { key: 'all', label: 'All Users' },
-                                { key: 'high_risk', label: 'High Risk' },
-                                { key: 'locked', label: 'Any Lock' },
-                                { key: 'empty_inventory', label: 'Empty Inventory' },
-                                { key: 'high_value', label: 'High Value' }
-                            ].map((chip) => (
-                                <button
-                                    key={chip.key}
-                                    type="button"
-                                    onClick={() => setUsersQuickFilter(chip.key as typeof usersQuickFilter)}
-                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${usersQuickFilter === chip.key ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40' : 'bg-[#0b0e14] text-gray-400 border border-gray-700 hover:text-gray-200'}`}
-                                >
-                                    {chip.label}
-                                </button>
-                            ))}
-                            <span className="ml-auto rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live • synced</span>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:w-auto">
+                            <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-[#0b0e14] px-4 py-2 text-sm font-semibold text-gray-200 transition-colors hover:bg-[#182033]"><Download className="h-4 w-4" /> Export Users</button>
+                            <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-950/40 transition-colors hover:bg-blue-500"><Plus className="h-4 w-4" /> Add User</button>
                         </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#131720]">
-                        <div className="max-h-[420px] overflow-auto">
-                            <table className="hidden min-w-[1400px] w-full text-left text-xs md:table">
-                                <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#0b0e14] text-gray-400">
-                                    <tr>
-                                        {[
-                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
-                                        ].map(([label, key]) => (
-                                            <th key={label} className="px-3 py-3 font-semibold">
-                                                <button type="button" onClick={() => toggleUsersSort(key as typeof usersSort.key)} className="inline-flex items-center gap-1 text-left hover:text-white">
-                                                    {label}
-                                                    {usersSort.key === key && <span>{usersSort.direction === 'desc' ? '↓' : '↑'}</span>}
-                                                </button>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-800">
-                                    {filteredUsers.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={14} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
-                                        </tr>
-                                    ) : (
-                                        filteredUsers.map((profile) => {
-                                            const metrics = getUserMetrics(profile);
-                                            const status = userStatuses[profile.id] ?? 'active';
-                                            const labels = getUserLabels(profile);
-                                            const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
-                                            const isSelected = selectedUserId === profile.id;
-                                            return (
-                                                <tr
-                                                    key={profile.id}
-                                                    onClick={() => setSelectedUserId(profile.id)}
-                                                    className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}
-                                                >
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <img src={profile.avatar} alt={profile.name} className="h-8 w-8 rounded-full" />
-                                                            <div>
-                                                                <div className="font-semibold text-white">{profile.displayName || profile.name}</div>
-                                                                <div className="text-[11px] text-gray-500">@{profile.username || 'unknown'}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-gray-300">{profile.email || '—'}</td>
-                                                    <td className="px-3 py-3 text-gray-500">{profile.id.slice(0, 10)}...</td>
-                                                    <td className="px-3 py-3 text-gray-300">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{new Date(metrics.lastActive).toLocaleDateString()}</td>
-                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span></td>
-                                                    <td className="px-3 py-3 text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.inventoryValue).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeDeposits).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeSpent).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{metrics.pendingShipmentCount}</td>
-                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore}</span></td>
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex flex-wrap gap-1">{labels.length ? labels.slice(0, 2).map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] text-blue-300">{label}</span>) : <span className="text-gray-500">—</span>}</div>
-                                                    </td>
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex items-center gap-2 text-[11px]">
-                                                            {locked && <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-300">Locked</span>}
-                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(profile.id); }}>Inspect</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                            <div className="space-y-3 p-3 md:hidden">
-                                {filteredUsers.map((profile) => {
-                                    const metrics = getUserMetrics(profile);
-                                    return (
-                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <div className="text-sm font-semibold text-white">{profile.name}</div>
-                                                    <div className="text-xs text-gray-500">{profile.email || profile.id}</div>
-                                                </div>
-                                                <span className="rounded-full bg-[#131720] px-2 py-1 text-xs text-gray-300">Risk {metrics.riskScore}</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        {[
+                            { label: 'Total Users', value: userManagementStats.total.toLocaleString(), delta: '8.3% this month', color: 'text-blue-300', icon: Users },
+                            { label: 'Active Users', value: userManagementStats.active.toLocaleString(), delta: '5.7% this month', color: 'text-emerald-300', icon: Activity },
+                            { label: 'Suspended Users', value: userManagementStats.suspended.toLocaleString(), delta: '2.1% this month', color: 'text-orange-300', icon: UserCog },
+                            { label: 'New This Month', value: userManagementStats.newThisMonth.toLocaleString(), delta: '12.4% this month', color: 'text-purple-300', icon: InfinityIcon }
+                        ].map((card) => {
+                            const Icon = card.icon;
+                            return (
+                                <div key={card.label} className="rounded-xl border border-gray-800 bg-gradient-to-br from-[#131b2a] to-[#0c121d] p-5 shadow-xl shadow-black/10">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div><div className="text-xs font-semibold text-gray-400">{card.label}</div><div className="mt-3 text-2xl font-extrabold text-white">{card.value}</div></div>
+                                        <div className={`rounded-full bg-gray-900/60 p-3 ${card.color}`}><Icon className="h-5 w-5" /></div>
+                                    </div>
+                                    <div className="mt-3 text-xs text-emerald-300">↑ {card.delta}</div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#101827] shadow-2xl shadow-black/20">
+                        <div className="grid gap-3 border-b border-gray-800 p-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_.65fr_.65fr_.75fr_.65fr_auto_auto]">
+                            <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" /><Input type="text" value={userSearchQuery} onChange={(event) => setUserSearchQuery(event.target.value)} placeholder="Search by email, username or UID..." className="w-full rounded-lg border border-gray-700 bg-[#0b1220] py-2 pl-10 pr-3 text-sm text-gray-200" /></label>
+                            <Select value={usersStatusFilter} onChange={(event) => setUsersStatusFilter(event.target.value as 'all' | UserStatus)} className="rounded-lg border border-gray-700 bg-[#0b1220] px-3 py-2 text-sm text-gray-200"><option value="all">All Status</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></Select>
+                            <Select value={usersKycFilter} onChange={(event) => setUsersKycFilter(event.target.value as typeof usersKycFilter)} className="rounded-lg border border-gray-700 bg-[#0b1220] px-3 py-2 text-sm text-gray-200"><option value="all">All KYC</option><option value="verified">Verified</option><option value="unverified">Unverified</option></Select>
+                            <Select value={usersDepositFilter} onChange={(event) => setUsersDepositFilter(event.target.value as typeof usersDepositFilter)} className="rounded-lg border border-gray-700 bg-[#0b1220] px-3 py-2 text-sm text-gray-200"><option value="all">All Deposits</option><option value="none">$0</option><option value="low">$1-$99</option><option value="mid">$100-$999</option><option value="high">$1,000+</option></Select>
+                            <Select value={usersRiskFilter} onChange={(event) => setUsersRiskFilter(event.target.value as typeof usersRiskFilter)} className="rounded-lg border border-gray-700 bg-[#0b1220] px-3 py-2 text-sm text-gray-200"><option value="all">All Risk</option><option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option></Select>
+                            <button type="button" onClick={() => setUsersQuickFilter(usersQuickFilter === 'all' ? 'high_risk' : 'all')} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1f2a3c] px-3 py-2 text-sm font-semibold text-gray-200"><Filter className="h-4 w-4" /> More Filters</button>
+                            <button type="button" onClick={() => { setUserSearchQuery(''); setUsersQuickFilter('all'); setUsersStatusFilter('all'); setUsersKycFilter('all'); setUsersDepositFilter('all'); setUsersRiskFilter('all'); }} className="rounded-lg px-3 py-2 text-sm font-semibold text-gray-300 hover:text-white">Reset</button>
                         </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-[980px] w-full text-left text-xs">
+                                <thead className="border-b border-gray-800 bg-[#121c2b] text-gray-400"><tr>{['User','Status','KYC','Deposits','Balance','Lifetime Spent','Risk','Last Active','Actions'].map((h)=><th key={h} className="px-4 py-3 font-semibold">{h}</th>)}</tr></thead>
+                                <tbody className="divide-y divide-gray-800">{paginatedUsers.length === 0 ? <tr><td colSpan={9} className="px-6 py-10 text-center text-gray-500">No users match your search or filters.</td></tr> : paginatedUsers.map((profile) => { const metrics = getUserMetrics(profile); const status = userStatuses[profile.id] ?? 'active'; const isKyc = Boolean((profile as unknown as { kycVerified?: boolean; kycLevel?: string }).kycVerified || (profile as unknown as { kycLevel?: string }).kycLevel === 'verified'); const isSelected = selectedUserId === profile.id; return <tr key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}><td className="px-4 py-3"><div className="flex items-center gap-3"><img src={profile.avatar} alt={profile.name} className="h-9 w-9 rounded-full" /><div className="min-w-0"><div className="truncate font-bold text-white">{profile.displayName || profile.name}</div><div className="truncate text-[11px] text-gray-400">{profile.email || 'No email'}</div><div className="truncate text-[10px] text-gray-500">UID: {profile.id}</div></div></div></td><td className="px-4 py-3"><span className={`rounded-md px-2 py-1 font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-orange-500/10 text-orange-300' : 'bg-red-500/10 text-red-300'}`}>● {status}</span></td><td className="px-4 py-3"><span className={`rounded-md px-2 py-1 ${isKyc ? 'bg-emerald-500/10 text-emerald-300' : 'bg-gray-700/60 text-gray-300'}`}>{isKyc ? 'Verified' : 'Unverified'}</span></td><td className="px-4 py-3 font-semibold text-gray-200">${metrics.lifetimeDeposits.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td className="px-4 py-3"><CoinAmount amount={profile.balance ?? 0} animated={false} className="text-xs font-bold text-gray-200" iconClassName="h-3.5 w-3.5" /></td><td className="px-4 py-3 font-semibold text-gray-200">${metrics.lifetimeSpent.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td><td className="px-4 py-3"><span className={`rounded-md px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-orange-500/10 text-orange-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskLevel}</span></td><td className="px-4 py-3 text-gray-300">{formatTimestamp(metrics.lastActive)}</td><td className="px-4 py-3"><div className="flex gap-2"><button type="button" onClick={(e)=>{e.stopPropagation(); setSelectedUserId(profile.id);}} className="rounded-lg bg-[#243149] p-2 text-gray-300 hover:text-white"><Eye className="h-4 w-4" /></button><button type="button" onClick={(e)=>e.stopPropagation()} className="rounded-lg bg-[#243149] p-2 text-gray-300 hover:text-white"><MoreVertical className="h-4 w-4" /></button></div></td></tr>; })}</tbody>
+                            </table>
+                        </div>
+                        <div className="flex flex-col gap-3 border-t border-gray-800 px-4 py-3 text-sm text-gray-300 sm:flex-row sm:items-center sm:justify-between"><span>Showing {filteredUsers.length === 0 ? 0 : ((Math.min(usersPage, usersTotalPages) - 1) * usersRowsPerPage) + 1} to {Math.min(filteredUsers.length, Math.min(usersPage, usersTotalPages) * usersRowsPerPage)} of {filteredUsers.length.toLocaleString()} users</span><div className="flex flex-wrap items-center gap-2"><button disabled={usersPage <= 1} onClick={() => setUsersPage((v) => Math.max(1, v - 1))} className="rounded px-3 py-1 disabled:opacity-40">‹</button><span className="rounded-lg bg-blue-600 px-3 py-2 font-bold text-white">{Math.min(usersPage, usersTotalPages)}</span><span>of {usersTotalPages}</span><button disabled={usersPage >= usersTotalPages} onClick={() => setUsersPage((v) => Math.min(usersTotalPages, v + 1))} className="rounded px-3 py-1 disabled:opacity-40">›</button><span className="ml-2">Rows per page</span><Select value={String(usersRowsPerPage)} onChange={(e) => setUsersRowsPerPage(Number(e.target.value))} className="rounded-lg border border-gray-700 bg-[#0b1220] px-2 py-1 text-sm text-gray-200"><option value="6">6</option><option value="10">10</option><option value="25">25</option><option value="50">50</option></Select></div></div>
                     </div>
 
                     {selectedUser ? (
@@ -5107,9 +5065,9 @@ export const AdminPanel: React.FC = () => {
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
+                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Full Ledger History</h4>
                                                 <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
-                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
+                                                <div className="max-h-[32rem] space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-3">
