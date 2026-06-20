@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, User, X } from 'lucide-react';
+import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'PLINKO' | 'PULL_PASS' | 'PROFILE';
+  id: 'HOME' | 'BOXES' | 'PLINKO' | 'LEADERBOARD' | 'PROFILE';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   iconClassName?: string;
@@ -14,26 +14,11 @@ type NavItem = {
 };
 
 const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
-const PullPassTabIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 64 64" fill="none" className={className} aria-hidden="true">
-    <path d="M32 4L55 17V47L32 60L9 47V17L32 4Z" fill="#111827" stroke="currentColor" strokeWidth="3" />
-    <path d="M32 9L50 19.5V44.5L32 55L14 44.5V19.5L32 9Z" fill="url(#mobile-pull-pass-gradient)" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5L23.3 43.5L25.3 33.8L18 27.2L27.8 26.1L32 17Z" fill="#FACC15" stroke="#FEF3C7" strokeWidth="1.5" />
-    <path d="M32 17L36.2 26.1L46 27.2L38.7 33.8L40.7 43.5L32 38.5V17Z" fill="#F59E0B" opacity="0.65" />
-    <defs>
-      <linearGradient id="mobile-pull-pass-gradient" x1="32" y1="9" x2="32" y2="55" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#312E81" />
-        <stop offset="1" stopColor="#09090B" />
-      </linearGradient>
-    </defs>
-  </svg>
-);
-
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
-  { id: 'PULL_PASS', label: 'Rewards', icon: PullPassTabIcon },
+  { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];
 
@@ -141,7 +126,7 @@ export const MobileBottomNav: React.FC = () => {
   const activeId = useMemo<NavItem['id']>(() => {
     if (view.type === 'CASE_OPENING') return 'BOXES';
     if (view.type === 'INVENTORY' || view.type === 'PROFILE') return 'PROFILE';
-    if (view.type === 'PULL_PASS' || view.type === 'BONUSES') return 'PULL_PASS';
+    if (view.type === 'LEADERBOARD') return 'LEADERBOARD';
     if (view.type === 'PLINKO') return 'PLINKO';
     if (view.type === 'BOXES') return 'BOXES';
     return 'HOME';

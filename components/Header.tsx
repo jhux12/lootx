@@ -574,6 +574,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     ) => {
       playSound("click");
       const requiresAuth =
+        type === "PULL_PASS" ||
         type === "BONUSES" ||
         type === "QUESTS" ||
         type === "POLLS" ||
@@ -749,19 +750,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     }
                   >
                     Leaderboard
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("PULL_PASS")}
-                    className={`${activeDesktopSection === "rewards" ? desktopActiveNavButtonClass : desktopNavButtonClass} gap-2`}
-                  >
-                    <PullPassNavIcon className="h-5 w-5 text-purple-300" />
-                    Rewards
-                    {questReadyCount > 0 ? (
-                      <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-emerald-500 px-1 text-[10px] font-extrabold text-white">
-                        {questReadyCount}
-                      </span>
-                    ) : null}
                   </button>
                 </div>
               </div>
@@ -1030,13 +1018,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <Trophy className="h-5 w-5 text-purple-300" />
                 Leaderboard
-              </button>
-              <button
-                onClick={() => navigate("PULL_PASS")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PULL_PASS" || view.type === "BONUSES" ? "bg-purple-500/12 text-purple-100" : "text-slate-200 hover:bg-white/[0.055]"}`}
-              >
-                <PullPassNavIcon className="h-5 w-5 text-purple-300" />
-                Rewards
               </button>
               <button
                 onClick={() => navigate("PROFILE")}

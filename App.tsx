@@ -571,7 +571,23 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'PULL_PASS' && (
         <div className="w-full">
-          <PullPassPage />
+          {!authInitialized ? (
+            <ProtectedPageLoading />
+          ) : isAuthenticated ? (
+            <PullPassPage />
+          ) : (
+            <div className="max-w-xl mx-auto bg-[#0b0e14] border border-gray-800 rounded-2xl p-6 text-center mt-10 sm:p-10">
+              <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">Sign in to access rewards</h2>
+              <p className="text-gray-400 mb-6">Pull Pass rewards are available to registered players only.</p>
+              <button
+                onClick={() => setShowLoginModal(true)}
+                className="min-h-12 px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
+              >
+                Sign in
+              </button>
+            </div>
+          )}
         </div>
       )}
 
