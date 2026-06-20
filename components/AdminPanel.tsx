@@ -2304,6 +2304,12 @@ export const AdminPanel: React.FC = () => {
       setIsEditingBalance(true);
   };
 
+  const startAddCoins = () => {
+      if (!selectedUser) return;
+      setBalanceDraft(String(Math.round((selectedUser.balance ?? 0) + 100)));
+      setIsEditingBalance(true);
+  };
+
   const cancelBalanceEdit = () => {
       setIsEditingBalance(false);
       setBalanceDraft('');
@@ -4840,6 +4846,53 @@ export const AdminPanel: React.FC = () => {
                     </div>
 
                     {selectedUser ? (
+                        <>
+                            {(() => {
+                                const metrics = getUserMetrics(selectedUser);
+                                const status = userStatuses[selectedUser.id] ?? 'active';
+                                const kycVerified = Boolean((selectedUser as unknown as { kycVerified?: boolean; kycLevel?: string }).kycVerified || (selectedUser as unknown as { kycLevel?: string }).kycLevel === 'verified');
+                                const accountAgeDays = Math.max(1, Math.ceil((Date.now() - (selectedUser.createdAt ?? Date.now())) / (24 * 60 * 60 * 1000)));
+                                const boxesOpened = selectedLedgerEntries.filter((entry) => entry.type === 'case_open').length;
+                                const itemsWon = metrics.inventory.length;
+                                const itemsSold = selectedLedgerEntries.filter((entry) => entry.type === 'sell_back').length;
+                                const winRate = boxesOpened > 0 ? Math.min(100, (itemsWon / boxesOpened) * 100) : 0;
+                                const recentCoinLedger = filteredLedgerEntries.slice(0, 6);
+                                return (
+                                    <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gradient-to-br from-[#111c2c] to-[#0b1320] shadow-2xl shadow-black/25">
+                                        <div className="flex flex-col gap-4 border-b border-gray-800 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <img src={selectedUser.avatar} alt={selectedUser.name} className="h-14 w-14 flex-none rounded-full ring-1 ring-blue-300/20" />
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-xl font-extrabold text-white">{selectedUser.displayName || selectedUser.name}</h3><span className="rounded-md bg-emerald-500/15 px-2 py-1 text-[11px] font-bold text-emerald-300">{status}</span></div>
+                                                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400"><span>{selectedUser.email || 'No email'}</span><span className="break-all">UID: {selectedUser.id}</span></div>
+                                                    <div className="mt-1 text-xs text-gray-400">Joined: {selectedUser.createdAt ? formatTimestamp(selectedUser.createdAt) : 'Unknown'} • Last Active: {formatTimestamp(metrics.lastActive)}</div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:flex-none">
+                                                <button type="button" onClick={() => setTimelineFilter('all')} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-[#0c1524] px-4 py-2 text-xs font-bold text-gray-100 hover:bg-[#142238]"><Eye className="h-4 w-4" /> View Profile</button>
+                                                <button type="button" onClick={() => startEditUser(selectedUser.id, selectedUser.xp || 0)} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-[#0c1524] px-4 py-2 text-xs font-bold text-gray-100 hover:bg-[#142238]"><Edit2 className="h-4 w-4" /> Edit User</button>
+                                                <button type="button" onClick={() => setUsersQuickFilter('locked')} className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-700 bg-[#1d2a3d] px-4 py-2 text-xs font-bold text-gray-100 hover:bg-[#25364e]"><MoreVertical className="h-4 w-4" /> More Actions</button>
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto border-b border-gray-800 px-4 sm:px-5">
+                                            <div className="flex min-w-max gap-7 text-xs font-semibold text-gray-300">
+                                                {['Overview', 'Financial', 'Activity', 'Inventory', 'Shipments', 'Notes', 'Risk & Compliance'].map((tab, index) => <button key={tab} type="button" className={`border-b-2 py-3 ${index === 0 ? 'border-blue-500 text-blue-300' : 'border-transparent hover:text-white'}`}>{tab}</button>)}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 p-4 sm:p-5 lg:grid-cols-2 2xl:grid-cols-4">
+                                            <div className="rounded-xl border border-gray-800 bg-[#101a29] p-4"><h4 className="mb-4 text-sm font-extrabold text-white">Account Summary</h4>{[['Status', status], ['KYC Level', kycVerified ? 'Verified' : 'Unverified'], ['Risk Level', metrics.riskLevel], ['Account Age', `${accountAgeDays} day${accountAgeDays === 1 ? '' : 's'}`], ['Email Verified', (selectedUser as unknown as { emailVerified?: boolean }).emailVerified === false ? 'No' : 'Yes']].map(([label, value]) => <div key={label} className="flex items-center justify-between border-b border-gray-800/70 py-2 last:border-0"><span className="text-xs text-gray-400">{label}</span><span className="rounded-md bg-gray-800/70 px-2 py-1 text-xs font-bold text-gray-100">{value}</span></div>)}</div>
+                                            <div className="rounded-xl border border-gray-800 bg-[#101a29] p-4"><h4 className="mb-4 text-sm font-extrabold text-white">Financial Overview</h4>{[['Total Deposits', `$${metrics.lifetimeDeposits.toLocaleString(undefined, { maximumFractionDigits: 2 })}`], ['Current Balance', 'balance'], ['Lifetime Spent', `$${metrics.lifetimeSpent.toLocaleString(undefined, { maximumFractionDigits: 2 })}`], ['Total Sellbacks', `$${metrics.lifetimeSellback.toLocaleString(undefined, { maximumFractionDigits: 2 })}`], ['Withdrawn', '$0.00']].map(([label, value]) => <div key={label} className="flex items-center justify-between border-b border-gray-800/70 py-2 last:border-0"><span className="text-xs text-gray-400">{label}</span>{value === 'balance' ? <CoinAmount amount={selectedUser.balance ?? 0} animated={false} className="text-sm font-extrabold text-white" iconClassName="h-4 w-4" /> : <span className="text-sm font-extrabold text-white">{value}</span>}</div>)}</div>
+                                            <div className="rounded-xl border border-gray-800 bg-[#101a29] p-4"><h4 className="mb-4 text-sm font-extrabold text-white">Key Metrics</h4>{[['Boxes Opened', boxesOpened.toLocaleString()], ['Items Won', itemsWon.toLocaleString()], ['Items Sold', itemsSold.toLocaleString()], ['Win Rate', `${winRate.toFixed(2)}%`], ['Last 30 Days Spent', `$${metrics.lifetimeSpent.toLocaleString(undefined, { maximumFractionDigits: 2 })}`]].map(([label, value]) => <div key={label} className="flex items-center justify-between border-b border-gray-800/70 py-2 last:border-0"><span className="text-xs text-gray-400">{label}</span><span className="text-sm font-extrabold text-white">{value}</span></div>)}</div>
+                                            <div className="rounded-xl border border-gray-800 bg-[#101a29] p-4"><h4 className="mb-4 text-sm font-extrabold text-white">Quick Actions</h4><div className="space-y-2"><button onClick={startBalanceEdit} className="w-full rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-2 text-xs font-bold text-blue-300">$ &nbsp; Adjust Balance</button><button onClick={startAddCoins} className="w-full rounded-lg border border-lime-500/30 bg-lime-500/5 px-3 py-2 text-xs font-bold text-lime-300">◎ &nbsp; Add Coins</button><button onClick={() => handleStatusChange(selectedUser.id, 'suspended')} className="w-full rounded-lg border border-orange-500/30 bg-orange-500/5 px-3 py-2 text-xs font-bold text-orange-300">ⓘ &nbsp; Suspend User</button><button onClick={() => { void updateUserAdminData(selectedUser.id, { twoFactorResetRequestedAt: Date.now() }); logAdminAction(selectedUser.id, 'reset_2fa', {}, {}, 'Reset 2FA requested'); }} className="w-full rounded-lg border border-purple-500/30 bg-purple-500/5 px-3 py-2 text-xs font-bold text-purple-300">◉ &nbsp; Reset 2FA</button><button onClick={() => { void updateUserAdminData(selectedUser.id, { forceLogoutAt: Date.now() }); logAdminAction(selectedUser.id, 'force_logout', {}, {}, 'Force logout requested'); }} className="w-full rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-2 text-xs font-bold text-red-300">⌘ &nbsp; Force Logout</button></div></div>
+                                        </div>
+
+                                        <div className="border-t border-gray-800 p-4 sm:p-5"><div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h4 className="text-sm font-extrabold text-white">Coin Ledger</h4><div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs text-gray-200 sm:w-44"><option value="all">All ledger types</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search ledger" className="w-full rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs text-gray-200" /></div></div><div className="max-h-64 space-y-2 overflow-auto pr-1">{recentCoinLedger.length === 0 ? <div className="rounded-lg border border-dashed border-gray-800 p-3 text-xs text-gray-500">No coin ledger entries.</div> : recentCoinLedger.map((entry) => <div key={`overview-${entry.id}`} className="flex flex-col gap-2 rounded-lg border border-gray-800 bg-[#0d1624] p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-bold uppercase text-gray-300">{entry.type.replace('_', ' ')}</div><div className="text-xs text-gray-500">{entry.memo || entry.sourceId || 'Balance update'} • {formatTimestamp(entry.createdAt)}</div></div><CoinAmount amount={entry.amount} showSign animated={false} className={`text-sm font-extrabold ${entry.amount >= 0 ? 'text-emerald-300' : 'text-red-300'}`} iconClassName="h-4 w-4" /></div>)}</div></div>
+                                    </div>
+                                );
+                            })()}
+
                         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                             <div className="space-y-6">
                                 <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
@@ -5116,6 +5169,7 @@ export const AdminPanel: React.FC = () => {
                                 })()}
                             </div>
                         </div>
+                        </>
                     ) : (
                         <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user to open the operator inspector panel.</div>
                     )}
