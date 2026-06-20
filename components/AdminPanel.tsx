@@ -567,7 +567,8 @@ export const AdminPanel: React.FC = () => {
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
-  const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
+  const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'active' | 'under_review' | 'high_risk' | 'zero_deposits' | 'high_value' | 'pending_shipments' | 'chargebacks' | 'new_users' | 'dormant'>('all');
+  const [userWorkspaceTab, setUserWorkspaceTab] = useState<'overview' | 'financial' | 'inventory' | 'shipments' | 'activity' | 'ledger' | 'support' | 'notes'>('overview');
   const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
       key: 'created',
       direction: 'desc'
@@ -2720,10 +2721,15 @@ export const AdminPanel: React.FC = () => {
       const quickFiltered = searched.filter((profile) => {
           const metrics = getUserMetrics(profile);
           const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
-          if (usersQuickFilter === 'locked') return locked;
+          if (usersQuickFilter === 'active') return (userStatuses[profile.id] ?? 'active') === 'active' && !locked;
+          if (usersQuickFilter === 'under_review') return (userStatuses[profile.id] ?? 'active') === 'under_review' || metrics.riskScore >= 45;
           if (usersQuickFilter === 'high_risk') return metrics.riskScore >= 60;
-          if (usersQuickFilter === 'empty_inventory') return metrics.inventory.length === 0;
-          if (usersQuickFilter === 'high_value') return metrics.lifetimeDeposits >= 25000 || metrics.inventoryValue >= 15000;
+          if (usersQuickFilter === 'zero_deposits') return metrics.lifetimeDeposits === 0;
+          if (usersQuickFilter === 'high_value') return metrics.lifetimeDeposits >= 25000 || metrics.inventoryValue >= 15000 || Number(profile.balance ?? 0) >= 15000;
+          if (usersQuickFilter === 'pending_shipments') return metrics.pendingShipmentCount > 0;
+          if (usersQuickFilter === 'chargebacks') return metrics.chargebackCount > 0;
+          if (usersQuickFilter === 'new_users') return Date.now() - (profile.createdAt ?? Date.now()) <= 7 * 24 * 60 * 60 * 1000;
+          if (usersQuickFilter === 'dormant') return Date.now() - metrics.lastActive >= 30 * 24 * 60 * 60 * 1000;
           return true;
       });
 
@@ -4753,414 +4759,109 @@ export const AdminPanel: React.FC = () => {
 
             {/* TAB: USERS */}
             {activeTab === 'users' && (
-                <div className="space-y-6">
-                    <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="-mx-2 sm:mx-0 space-y-3">
+                    <div className="sticky top-0 z-20 rounded-xl border border-gray-800/90 bg-[#0b0e14]/95 p-3 shadow-2xl backdrop-blur">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-white">User Operations</h2>
-                                <p className="text-sm text-gray-400">Live user monitoring center for moderation, finance, inventory, shipments, and support workflows.</p>
+                                <h2 className="text-lg font-bold text-white">User Management</h2>
+                                <p className="text-xs text-gray-400">Operations cockpit: fraud, support, shipments, balances, and immutable history in one viewport.</p>
                             </div>
-                            <div className="flex w-full flex-col gap-3 md:flex-row xl:w-auto">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <Input
                                     type="text"
                                     value={userSearchQuery}
                                     onChange={(event) => setUserSearchQuery(event.target.value)}
-                                    placeholder="Search users, UID, email, labels, risk, balances"
-                                    className="w-full md:w-96 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                    placeholder="Search email, username, UID, order #, tracking #"
+                                    className="h-9 w-full rounded-lg border border-gray-700 bg-[#111827] px-3 text-sm text-gray-200 sm:w-[360px]"
                                 />
-                                <button type="button" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs font-semibold text-gray-300">Export</button>
+                                <button type="button" className="h-9 rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 text-xs font-semibold text-blue-200 hover:bg-blue-500/20">⌘K shortcuts</button>
                             </div>
                         </div>
-                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                             {[
-                                { key: 'all', label: 'All Users' },
-                                { key: 'high_risk', label: 'High Risk' },
-                                { key: 'locked', label: 'Any Lock' },
-                                { key: 'empty_inventory', label: 'Empty Inventory' },
-                                { key: 'high_value', label: 'High Value' }
-                            ].map((chip) => (
-                                <button
-                                    key={chip.key}
-                                    type="button"
-                                    onClick={() => setUsersQuickFilter(chip.key as typeof usersQuickFilter)}
-                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${usersQuickFilter === chip.key ? 'bg-blue-500/20 text-blue-300 border border-blue-400/40' : 'bg-[#0b0e14] text-gray-400 border border-gray-700 hover:text-gray-200'}`}
-                                >
-                                    {chip.label}
-                                </button>
+                                ['all', 'All Users'], ['active', 'Active'], ['under_review', 'Under Review'], ['high_risk', 'High Risk'], ['zero_deposits', '0 Deposits'], ['high_value', 'High Value'], ['pending_shipments', 'Pending Shipments'], ['chargebacks', 'Chargebacks'], ['new_users', 'New Users (7d)'], ['dormant', 'Dormant (30d)']
+                            ].map(([key, label]) => (
+                                <button key={key} type="button" onClick={() => setUsersQuickFilter(key as typeof usersQuickFilter)} className={`shrink-0 rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition ${usersQuickFilter === key ? 'border-blue-400/50 bg-blue-500/20 text-blue-100' : 'border-gray-800 bg-[#111827] text-gray-400 hover:border-gray-700 hover:text-gray-200'}`}>{label}</button>
                             ))}
-                            <span className="ml-auto rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live • synced</span>
                         </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#131720]">
-                        <div className="max-h-[420px] overflow-auto">
-                            <table className="hidden min-w-[1400px] w-full text-left text-xs md:table">
-                                <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#0b0e14] text-gray-400">
-                                    <tr>
-                                        {[
-                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
-                                        ].map(([label, key]) => (
-                                            <th key={label} className="px-3 py-3 font-semibold">
-                                                <button type="button" onClick={() => toggleUsersSort(key as typeof usersSort.key)} className="inline-flex items-center gap-1 text-left hover:text-white">
-                                                    {label}
-                                                    {usersSort.key === key && <span>{usersSort.direction === 'desc' ? '↓' : '↑'}</span>}
-                                                </button>
-                                            </th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-800">
-                                    {filteredUsers.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={14} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
-                                        </tr>
-                                    ) : (
-                                        filteredUsers.map((profile) => {
-                                            const metrics = getUserMetrics(profile);
-                                            const status = userStatuses[profile.id] ?? 'active';
-                                            const labels = getUserLabels(profile);
-                                            const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
-                                            const isSelected = selectedUserId === profile.id;
-                                            return (
-                                                <tr
-                                                    key={profile.id}
-                                                    onClick={() => setSelectedUserId(profile.id)}
-                                                    className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}
-                                                >
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <img src={profile.avatar} alt={profile.name} className="h-8 w-8 rounded-full" />
-                                                            <div>
-                                                                <div className="font-semibold text-white">{profile.displayName || profile.name}</div>
-                                                                <div className="text-[11px] text-gray-500">@{profile.username || 'unknown'}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-gray-300">{profile.email || '—'}</td>
-                                                    <td className="px-3 py-3 text-gray-500">{profile.id.slice(0, 10)}...</td>
-                                                    <td className="px-3 py-3 text-gray-300">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{new Date(metrics.lastActive).toLocaleDateString()}</td>
-                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span></td>
-                                                    <td className="px-3 py-3 text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.inventoryValue).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeDeposits).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeSpent).toLocaleString()}</td>
-                                                    <td className="px-3 py-3 text-gray-300">{metrics.pendingShipmentCount}</td>
-                                                    <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore}</span></td>
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex flex-wrap gap-1">{labels.length ? labels.slice(0, 2).map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-[10px] text-blue-300">{label}</span>) : <span className="text-gray-500">—</span>}</div>
-                                                    </td>
-                                                    <td className="px-3 py-3">
-                                                        <div className="flex items-center gap-2 text-[11px]">
-                                                            {locked && <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-300">Locked</span>}
-                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(profile.id); }}>Inspect</button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                            <div className="space-y-3 p-3 md:hidden">
-                                {filteredUsers.map((profile) => {
+                    <div className="grid min-h-[calc(100vh-220px)] gap-3 xl:grid-cols-[30%_minmax(0,45%)_25%]">
+                        <aside className="rounded-xl border border-gray-800 bg-[#10141d]/95 backdrop-blur">
+                            <div className="sticky top-24 z-10 flex items-center justify-between border-b border-gray-800 bg-[#10141d] p-3">
+                                <div className="text-xs font-bold uppercase tracking-wide text-gray-400">Directory</div>
+                                <div className="text-[11px] text-gray-500">{Math.min(filteredUsers.length, 25)} / {filteredUsers.length}</div>
+                            </div>
+                            <div className="max-h-[calc(100vh-285px)] space-y-2 overflow-y-auto p-2">
+                                {filteredUsers.length === 0 ? <div className="p-6 text-center text-sm text-gray-500">No users match this search.</div> : filteredUsers.slice(0, 25).map((profile) => {
                                     const metrics = getUserMetrics(profile);
+                                    const status = userStatuses[profile.id] ?? (metrics.lifetimeDeposits === 0 && (Number(profile.balance ?? 0) + metrics.inventoryValue + metrics.lifetimeSellback > 5000) ? 'under_review' : 'active');
+                                    const selected = selectedUserId === profile.id;
                                     return (
-                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <div className="text-sm font-semibold text-white">{profile.name}</div>
-                                                    <div className="text-xs text-gray-500">{profile.email || profile.id}</div>
+                                        <button key={profile.id} type="button" onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-lg border p-3 text-left transition hover:-translate-y-0.5 hover:border-blue-500/40 ${selected ? 'border-blue-400/60 bg-blue-500/15' : 'border-gray-800 bg-[#0b0e14]'}`}>
+                                            <div className="flex items-start gap-3">
+                                                <img src={profile.avatar} alt={profile.name} className="h-9 w-9 rounded-full bg-gray-800 object-cover" />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-semibold text-white">{profile.displayName || profile.name || 'Unknown user'}</span><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'under_review' || status === 'suspended' ? 'bg-amber-500/10 text-amber-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span></div>
+                                                    <div className="truncate text-xs text-gray-500">{profile.email || `@${profile.username || 'unknown'}`}</div>
+                                                    <div className="mt-2 grid grid-cols-4 gap-1 text-[10px] text-gray-400">
+                                                        <span>{Math.round(profile.balance ?? 0).toLocaleString()} coins</span><span>{Math.round(metrics.lifetimeDeposits).toLocaleString()} dep</span><span className={metrics.riskScore >= 60 ? 'text-red-300' : metrics.riskScore >= 25 ? 'text-amber-300' : 'text-emerald-300'}>Risk {metrics.riskScore}</span><span>{new Date(metrics.lastActive).toLocaleDateString()}</span>
+                                                    </div>
                                                 </div>
-                                                <span className="rounded-full bg-[#131720] px-2 py-1 text-xs text-gray-300">Risk {metrics.riskScore}</span>
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
-                        </div>
+                        </aside>
+
+                        {selectedUser ? (() => {
+                            const metrics = getUserMetrics(selectedUser);
+                            const labels = getUserLabels(selectedUser);
+                            const userShipments = shipments.filter((shipment) => shipment.uid === selectedUser.id);
+                            const userSupportCases = supportCases.filter((caseItem) => caseItem.uid === selectedUser.id);
+                            const currentLocks = userLocks[selectedUser.id] ?? DEFAULT_LOCKS;
+                            const riskLevel = metrics.riskScore >= 85 ? 'CRITICAL' : metrics.riskScore >= 60 ? 'HIGH' : metrics.riskScore >= 25 ? 'MEDIUM' : 'LOW';
+                            const financialParts = [
+                                ['Deposited', metrics.lifetimeDeposits], ['Sellbacks', metrics.lifetimeSellback], ['Rewards', selectedLedgerEntries.filter((e) => ['bonus', 'daily_reward', 'admin_adjustment'].includes(e.type)).reduce((sum, e) => sum + Math.max(0, e.amount), 0)]
+                            ];
+                            const totalIn = Math.max(1, financialParts.reduce((sum, [, value]) => sum + Number(value), 0));
+                            const tabs = ['overview', 'financial', 'inventory', 'shipments', 'activity', 'ledger', 'support', 'notes'] as const;
+                            return <>
+                                <main className="rounded-xl border border-gray-800 bg-[#10141d]">
+                                    <div className="sticky top-24 z-10 border-b border-gray-800 bg-[#10141d]/95 p-3 backdrop-blur">
+                                        <div className="flex items-start gap-3">
+                                            <img src={selectedUser.avatar} alt={selectedUser.name} className="h-12 w-12 rounded-xl bg-gray-800 object-cover" />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2"><h3 className="truncate text-lg font-bold text-white">{selectedUser.displayName || selectedUser.name}</h3><span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-300">Online</span>{metrics.lifetimeDeposits === 0 && <span className="rounded-full bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-300">0 Deposit</span>}{metrics.pendingShipmentCount > 0 && <span className="rounded-full bg-blue-500/10 px-2 py-1 text-[10px] font-bold text-blue-300">Pending Shipment</span>}</div>
+                                                <div className="truncate text-xs text-gray-400">{selectedUser.email || 'No email'} • UID <button type="button" onClick={() => navigator.clipboard?.writeText(selectedUser.id)} className="text-blue-300 hover:text-blue-200">{selectedUser.id.slice(0, 12)}… copy</button></div>
+                                                <div className="text-[11px] text-gray-500">Joined {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'Unknown'} • Last active {new Date(metrics.lastActive).toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex gap-1 overflow-x-auto">{tabs.map((tab) => <button key={tab} type="button" onClick={() => setUserWorkspaceTab(tab)} className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold capitalize ${userWorkspaceTab === tab ? 'bg-blue-500 text-white' : 'bg-[#0b0e14] text-gray-400 hover:text-white'}`}>{tab}</button>)}</div>
+                                    </div>
+                                    <div className="max-h-[calc(100vh-360px)] overflow-y-auto p-3">
+                                        {userWorkspaceTab === 'overview' && <div className="grid grid-cols-2 gap-2 md:grid-cols-4">{[
+                                            ['Current Balance', `${Math.round(selectedUser.balance ?? 0).toLocaleString()} coins`], ['Lifetime Deposits', Math.round(metrics.lifetimeDeposits).toLocaleString()], ['Lifetime Spent', Math.round(metrics.lifetimeSpent).toLocaleString()], ['Lifetime Sellback', Math.round(metrics.lifetimeSellback).toLocaleString()], ['Inventory Value', Math.round(metrics.inventoryValue).toLocaleString()], ['Boxes Opened', selectedLedgerEntries.filter(e => e.type === 'case_open').length.toString()], ['Biggest Win', Math.round(metrics.biggestWin).toLocaleString()], ['Pending Shipments', metrics.pendingShipmentCount.toString()]
+                                        ].map(([label, value]) => <div key={label} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="text-[10px] uppercase text-gray-500">{label}</div><div className="mt-1 text-sm font-bold text-white">{value}</div></div>)}</div>}
+                                        {userWorkspaceTab === 'financial' && <div className="space-y-3">{financialParts.map(([label, value]) => <div key={label} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="flex justify-between text-xs"><span className="text-gray-300">{label}</span><span className="text-white">{Math.round(Number(value) / totalIn * 100)}%</span></div><div className="mt-2 h-2 rounded-full bg-gray-800"><div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.round(Number(value) / totalIn * 100)}%` }} /></div></div>)}<div className="grid grid-cols-4 gap-2 text-center text-xs text-gray-300"><div className="rounded-lg bg-[#0b0e14] p-3">Coins In<br/><b>{Math.round(totalIn).toLocaleString()}</b></div><div className="rounded-lg bg-[#0b0e14] p-3">Spent ↓<br/><b>{Math.round(metrics.lifetimeSpent).toLocaleString()}</b></div><div className="rounded-lg bg-[#0b0e14] p-3">Sold ↓<br/><b>{Math.round(metrics.lifetimeSellback).toLocaleString()}</b></div><div className="rounded-lg bg-[#0b0e14] p-3">Balance<br/><b>{Math.round(selectedUser.balance ?? 0).toLocaleString()}</b></div></div></div>}
+                                        {userWorkspaceTab === 'inventory' && <div className="space-y-2">{selectedInventory.slice(0, 25).map((item) => <div key={item.instanceId} className="grid grid-cols-[44px_1fr_auto] items-center gap-3 rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><img src={item.image} alt={item.name} className="h-10 w-10 rounded object-contain"/><div className="min-w-0"><div className="truncate text-sm font-semibold text-white">{item.name}</div><div className="text-[11px] text-gray-500">{item.rarity} • {Math.round(Number(item.price ?? 0)).toLocaleString()} • {item.status}</div></div><div className="flex gap-1"><button className="rounded bg-blue-500/10 px-2 py-1 text-[10px] text-blue-300">Ship</button><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-gray-700/50 px-2 py-1 text-[10px] text-gray-200">{item.locked ? 'Unlock' : 'Lock'}</button><button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-500/10 px-2 py-1 text-[10px] text-red-300">Remove</button></div></div>)}</div>}
+                                        {userWorkspaceTab === 'shipments' && <div className="grid gap-2">{userShipments.length === 0 ? <div className="text-sm text-gray-500">No shipments.</div> : userShipments.slice(0, 12).map((shipment) => <div key={shipment.id || shipment.inventoryId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-xs text-gray-300"><div className="flex justify-between"><b className="text-white">Order #{(shipment.id || shipment.inventoryId).slice(0, 10)}</b><span>{shipment.status}</span></div><div>{shipment.item?.name} • Tracking {shipment.trackingNumber || 'pending'}</div><div className="mt-2 flex gap-2"><button className="rounded bg-emerald-500/10 px-2 py-1 text-emerald-300">Approve</button><button className="rounded bg-blue-500/10 px-2 py-1 text-blue-300">Ship</button><button className="rounded bg-red-500/10 px-2 py-1 text-red-300">Cancel</button><button className="rounded bg-amber-500/10 px-2 py-1 text-amber-300">Refund</button></div></div>)}</div>}
+                                        {userWorkspaceTab === 'activity' && <div className="space-y-2">{filteredTimelineEntries.slice(0, 25).map((entry) => <div key={entry.id} className="rounded-lg border-l-2 border-blue-500 bg-[#0b0e14] p-3"><div className="text-[11px] text-gray-500">{formatTimestamp(entry.createdAt)}</div><div className="text-sm font-semibold text-white">{entry.title}</div><div className="text-xs text-gray-400">{entry.description}</div></div>)}</div>}
+                                        {userWorkspaceTab === 'ledger' && <div className="space-y-2"><div className="flex gap-2"><Select value={ledgerFilter} onChange={(e) => setLedgerFilter(e.target.value as 'all' | LedgerEntryType)} className="rounded-lg border border-gray-700 bg-[#0b0e14] px-2 text-xs text-gray-200"><option value="all">All</option><option value="deposit">Deposits</option><option value="case_open">Case Opens</option><option value="sell_back">Sellbacks</option><option value="bonus">Rewards</option><option value="admin_adjustment">Adjustments</option><option value="reversal">Reversals</option></Select><Input value={ledgerSearch} onChange={(e) => setLedgerSearch(e.target.value)} placeholder="operationId, sourceId, item, box" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-2 text-xs text-gray-200"/><button className="rounded-lg border border-gray-700 px-2 text-xs text-gray-300">Export CSV</button></div><div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left text-[11px]"><thead className="sticky top-0 bg-[#10141d] text-gray-500"><tr>{['Time','Action','Amount','Before','After','Source','Reason','Operation ID'].map(h => <th key={h} className="p-2">{h}</th>)}</tr></thead><tbody>{filteredLedgerEntries.slice(0, 50).map((entry) => <tr key={entry.id} className="border-t border-gray-800"><td className="p-2 text-gray-400">{formatTimestamp(entry.createdAt)}</td><td className="p-2 text-white">{entry.type}</td><td className={`p-2 font-bold ${entry.amount >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>{entry.amount}</td><td className="p-2 text-gray-400">{entry.balanceBefore ?? '—'}</td><td className="p-2 text-gray-300">{entry.balanceAfter ?? '—'}</td><td className="p-2 text-gray-400">{entry.sourceId ?? '—'}</td><td className="p-2 text-gray-400">{entry.memo ?? '—'}</td><td className="p-2 text-gray-500">{entry.id}</td></tr>)}</tbody></table></div></div>}
+                                        {userWorkspaceTab === 'support' && <div className="space-y-2">{userSupportCases.length === 0 ? <div className="text-sm text-gray-500">No support tickets.</div> : userSupportCases.map((ticket) => <div key={ticket.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className="text-sm font-semibold text-white">{ticket.subject}</div><div className="text-xs text-gray-500">{ticket.status} • {formatTimestamp(toMillis(ticket.lastUpdatedAt ?? ticket.createdAt))}</div><div className="mt-2 flex gap-2"><button className="rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-300">Reply</button><button className="rounded bg-gray-700/50 px-2 py-1 text-xs text-gray-200">Email</button><button className="rounded bg-indigo-500/10 px-2 py-1 text-xs text-indigo-300">Discord</button><button className="rounded bg-amber-500/10 px-2 py-1 text-xs text-amber-300">Refund</button></div></div>)}</div>}
+                                        {userWorkspaceTab === 'notes' && <div className="space-y-3"><Textarea value={userAdminNotes[selectedUser.id] ?? ''} onChange={(e) => setUserAdminNotes((prev) => ({ ...prev, [selectedUser.id]: e.target.value }))} placeholder="Private admin notes. Pin important context, fraud findings, refund approvals, or shipment exceptions." className="min-h-32 rounded-lg border border-gray-700 bg-[#0b0e14] p-3 text-sm text-gray-200"/><button onClick={() => saveAdminNote(selectedUser.id)} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Save private note</button>{selectedUser.adminNotes && <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-sm text-gray-300">📌 {selectedUser.adminNotes}</div>}</div>}
+                                    </div>
+                                </main>
+
+                                <aside className="space-y-3 rounded-xl border border-gray-800 bg-[#10141d] p-3 xl:sticky xl:top-24 xl:max-h-[calc(100vh-220px)] xl:overflow-y-auto">
+                                    <section className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><h4 className="text-xs font-bold uppercase text-gray-400">Account Actions</h4><div className="mt-2 grid grid-cols-2 gap-2">{(Object.keys(currentLocks) as (keyof UserLocks)[]).map((key) => <button key={key} onClick={() => handleLockToggle(selectedUser.id, key)} className={`rounded-lg border px-2 py-2 text-[11px] font-semibold ${currentLocks[key] ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-gray-700 bg-[#111827] text-gray-300'}`}>{key}: {currentLocks[key] ? 'Off' : 'On'}</button>)}</div></section>
+                                    <section className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><h4 className="text-xs font-bold uppercase text-gray-400">Financial Actions</h4><div className="mt-2 space-y-2">{isEditingBalance ? <><Input value={balanceDraft} onChange={(e) => setBalanceDraft(e.target.value)} className="rounded-lg border border-gray-700 bg-[#111827] px-2 text-sm text-white"/><div className="flex gap-2"><button onClick={saveBalanceEdit} className="rounded bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">Confirm</button><button onClick={cancelBalanceEdit} className="rounded bg-gray-700 px-3 py-1.5 text-xs text-gray-200">Cancel</button></div></> : <button onClick={startBalanceEdit} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white">Adjust Balance</button>}<button className="w-full rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300">Void Transaction</button><button className="w-full rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-300">Compensate User</button><button className="w-full rounded-lg border border-amber-500/30 px-3 py-2 text-xs text-amber-300">Refund Deposit</button><button className="w-full rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-300">Reverse Coins</button></div></section>
+                                    <section className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3"><div className={`rounded-lg p-3 text-center text-lg font-black ${riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'bg-red-500/10 text-red-300' : riskLevel === 'MEDIUM' ? 'bg-amber-500/10 text-amber-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{riskLevel} RISK</div><div className="mt-3 space-y-2 text-xs text-gray-300">{[['0 Deposit High Value', metrics.lifetimeDeposits === 0 && (Number(selectedUser.balance ?? 0) + metrics.inventoryValue + metrics.lifetimeSellback > 5000)], ['Rapid Sellbacks', metrics.hasRapidSellback], ['Rapid Opens', selectedLedgerEntries.filter(e => e.type === 'case_open' && Date.now() - e.createdAt < 10 * 60 * 1000).length > 100], ['Multiple Accounts', labels.includes('multi-account')], ['Chargebacks', metrics.chargebackCount > 0], ['API Abuse', labels.includes('api-abuse')], ['Referral Abuse', labels.includes('referral-abuse')], ['Excessive Adjustments', metrics.excessiveAdminAdjustments > 4]].map(([label, flagged]) => <div key={String(label)} className="flex items-center justify-between rounded border border-gray-800 bg-[#111827] px-2 py-1.5"><span>{label}</span><span className={flagged ? 'text-red-300' : 'text-emerald-300'}>{flagged ? 'Flag' : 'Clear'}</span></div>)}</div></section>
+                                </aside>
+                            </>;
+                        })() : <main className="rounded-xl border border-dashed border-gray-700 bg-[#10141d] p-10 text-center text-sm text-gray-500">Select a user to open the workspace.</main>}
                     </div>
-
-                    {selectedUser ? (
-                        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-                            <div className="space-y-6">
-                                <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <h3 className="text-sm font-bold uppercase tracking-wide text-gray-300">Unified Timeline</h3>
-                                        <span className="text-xs text-gray-500">{filteredTimelineEntries.length} events</span>
-                                    </div>
-                                    <div className="mb-4 flex flex-col gap-2 sm:flex-row">
-                                        <Select value={timelineFilter} onChange={(event) => setTimelineFilter(event.target.value as typeof timelineFilter)} className="w-full sm:w-48 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200">
-                                            <option value="all">All types</option><option value="ledger">Ledger</option><option value="inventory">Inventory</option><option value="admin">Admin</option><option value="shipment">Shipment</option><option value="support">Support</option>
-                                        </Select>
-                                        <Input type="text" value={timelineSearch} onChange={(event) => setTimelineSearch(event.target.value)} placeholder="Search timeline" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                    </div>
-                                    <div className="space-y-3">
-                                        {filteredTimelineEntries.length === 0 ? <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-sm text-gray-500">No timeline events available.</div> : filteredTimelineEntries.slice(0, 30).map((entry) => (
-                                            <div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="rounded-full bg-[#131720] px-2 py-1 text-[10px] font-semibold uppercase text-gray-300">{entry.category}</span>
-                                                    <span className="text-[11px] text-gray-500">{formatTimestamp(entry.createdAt)}</span>
-                                                </div>
-                                                <div className="mt-1 text-sm font-semibold text-gray-100">{entry.title}</div>
-                                                <div className="text-xs text-gray-400">{entry.description}</div>
-                                                {entry.meta && <div className="text-[11px] text-gray-500">{entry.meta}</div>}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
-                                {(() => {
-                                    const metrics = getUserMetrics(selectedUser);
-                                    const labels = getUserLabels(selectedUser);
-                                    const status = userStatuses[selectedUser.id] ?? 'active';
-                                    const editableXp = editingUserId === selectedUser.id;
-                                    return (
-                                        <>
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
-                                                <div className="flex items-start gap-3">
-                                                    <img src={selectedUser.avatar} alt={selectedUser.name} className="h-12 w-12 rounded-full" />
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="text-lg font-bold text-white">{selectedUser.displayName || selectedUser.name}</div>
-                                                        <div className="text-xs text-gray-400">@{selectedUser.username || 'unknown'} • {selectedUser.email || 'No email'}</div>
-                                                        <div className="mt-2 text-xs text-gray-500">UID: {selectedUser.id}</div>
-                                                        <div className="text-xs text-gray-500">Created: {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'Unknown'} • Last active: {new Date(metrics.lastActive).toLocaleString()}</div>
-                                                        <div className="text-xs text-gray-500">Provider: {selectedUser.provider || 'Unknown'}</div>
-                                                        <div className="mt-2 flex flex-wrap gap-2">
-                                                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span>
-                                                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>Risk {metrics.riskScore}</span>
-                                                            {labels.map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-xs text-blue-300">{label}</span>)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {[
-                                                    ['Current Balance', `${Math.round(selectedUser.balance ?? 0).toLocaleString()} coins`],
-                                                    ['Lifetime Deposits', Math.round(metrics.lifetimeDeposits).toLocaleString()],
-                                                    ['Lifetime Spent', Math.round(metrics.lifetimeSpent).toLocaleString()],
-                                                    ['Lifetime Sellback', Math.round(metrics.lifetimeSellback).toLocaleString()],
-                                                    ['Inventory Count', metrics.inventory.length.toString()],
-                                                    ['Inventory Value', Math.round(metrics.inventoryValue).toLocaleString()],
-                                                    ['Pending Shipments', metrics.pendingShipmentCount.toString()],
-                                                    ['Support Tickets', metrics.supportTicketCount.toString()],
-                                                    ['Biggest Win', Math.round(metrics.biggestWin).toLocaleString()],
-                                                    ['Last Box Opened', selectedLedgerEntries.find((entry) => entry.type === 'case_open')?.sourceId ?? '—']
-                                                ].map(([label, value]) => (
-                                                    <div key={label} className="rounded-xl border border-gray-800 bg-[#131720] p-3">
-                                                        <div className="text-[10px] uppercase text-gray-500">{label}</div>
-                                                        <div className="mt-1 text-sm font-semibold text-gray-100">{value}</div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Account Controls</h4>
-                                                <Select value={status} onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></Select>
-                                                <label className="flex flex-col gap-3 rounded-xl border border-gray-700 bg-[#0b0e14] p-3 text-sm text-gray-200 sm:flex-row sm:items-start">
-                                                    <Checkbox
-                                                        checked={selectedUser.hiddenFromLeaderboard === true || selectedUser.hiddenFromPublicDisplay === true}
-                                                        onChange={() => handlePublicVisibilityToggle(selectedUser.id)}
-                                                        className="mt-0.5 h-5 w-5 shrink-0"
-                                                    />
-                                                    <span className="min-w-0">
-                                                        <span className="block font-semibold text-white">Hide from leaderboard and public display</span>
-                                                        <span className="mt-1 block text-xs leading-5 text-gray-400">Removes this account from public leaderboards and live public win displays. Use for test, staff, or privacy-sensitive accounts.</span>
-                                                    </span>
-                                                </label>
-                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                                    {Object.entries(LOCK_LABELS).map(([key, label]) => {
-                                                        const isLocked = userLocks[selectedUser.id]?.[key as keyof UserLocks];
-                                                        return <button key={key} onClick={() => handleLockToggle(selectedUser.id, key as keyof UserLocks)} className={`rounded-lg border px-3 py-2 text-xs ${isLocked ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-gray-700 bg-[#0b0e14] text-gray-300'}`}>{label}</button>;
-                                                    })}
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {editableXp ? (
-                                                        <>
-                                                            <Input type="number" value={userXpInput} onChange={(event) => setUserXpInput(Number(event.target.value))} className="w-36 bg-[#0b0e14] border border-gray-700 rounded px-3 py-1.5 text-white text-sm" />
-                                                            <button onClick={() => saveUserProgress(selectedUser.id)} disabled={isSavingUser} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300">Save XP</button>
-                                                            <button onClick={cancelEditUser} className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-200">Cancel</button>
-                                                        </>
-                                                    ) : (
-                                                        <button onClick={() => startEditUser(selectedUser.id, selectedUser.xp || 0)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-300">Edit XP</button>
-                                                    )}
-                                                    <button onClick={() => handleDeleteUser(selectedUser.id)} disabled={deletingUserId === selectedUser.id} className="rounded-lg bg-red-500/20 px-3 py-1.5 text-xs font-semibold text-red-300">{deletingUserId === selectedUser.id ? 'Deleting...' : 'Delete User'}</button>
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Financial Controls</h4>
-                                                {!isEditingBalance ? <button onClick={startBalanceEdit} className="rounded-lg bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-300">Edit Balance</button> : <div className="space-y-2"><Input type="number" value={balanceDraft} onChange={(event) => setBalanceDraft(event.target.value)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><div className="flex gap-2"><button onClick={saveBalanceEdit} className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-300">Save</button><button onClick={cancelBalanceEdit} className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-200">Cancel</button></div></div>}
-                                                <Input type="number" value={reversalAmount} onChange={(event) => setReversalAmount(event.target.value)} placeholder="Reversal amount" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                <Textarea rows={2} value={reversalReason} onChange={(event) => setReversalReason(event.target.value)} placeholder="Reversal reason" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                <button onClick={handleCreateReversal} disabled={!reversalAmount || !reversalReason.trim()} className="w-full rounded-lg bg-red-500/20 px-3 py-2 text-xs font-bold uppercase text-red-300 disabled:opacity-50">Create Reversal</button>
-                                                <Input type="text" value={voidSourceId} onChange={(event) => setVoidSourceId(event.target.value)} placeholder="Void source ID" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                <Textarea rows={2} value={voidReason} onChange={(event) => setVoidReason(event.target.value)} placeholder="Void reason" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                <button onClick={handleVoidOpen} disabled={!voidSourceId.trim()} className="w-full rounded-lg bg-yellow-500/20 px-3 py-2 text-xs font-bold uppercase text-yellow-300 disabled:opacity-50">Void Open & Compensate</button>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-4">
-                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                    <div>
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Live Shippable Inventory</h4>
-                                                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-300">Live</span>
-                                                        </div>
-                                                        <p className="mt-1 text-xs text-gray-500">Available, unlocked items that are currently eligible for shipment.</p>
-                                                    </div>
-                                                    <button onClick={() => setIsEditingInventory((prev) => !prev)} className="w-full rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300 sm:w-auto sm:py-1.5">{isEditingInventory ? 'Done Editing Inventory' : 'Edit Inventory'}</button>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
-                                                        <div className="text-[10px] uppercase text-gray-500">Shippable items</div>
-                                                        <div className="mt-1 text-lg font-bold text-white">{selectedShippableInventory.length}</div>
-                                                    </div>
-                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
-                                                        <div className="text-[10px] uppercase text-gray-500">Shippable value</div>
-                                                        <CoinAmount amount={selectedShippableInventoryValue} animated={false} className="mt-1 text-lg font-bold text-white" iconClassName="h-4 w-4" />
-                                                    </div>
-                                                    <div className="col-span-2 rounded-xl border border-gray-800 bg-[#0b0e14] p-3 sm:col-span-1">
-                                                        <div className="text-[10px] uppercase text-gray-500">Total inventory</div>
-                                                        <div className="mt-1 text-lg font-bold text-white">{selectedInventory.length}</div>
-                                                    </div>
-                                                </div>
-                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
-                                                <div className="max-h-72 space-y-2 overflow-auto pr-1">
-                                                    {selectedShippableInventory.map((item) => (
-                                                        <div key={item.instanceId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
-                                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                                                <div className="flex min-w-0 items-center gap-3">
-                                                                    <img src={item.image} alt={item.name} className="h-10 w-10 flex-none rounded-lg object-cover" />
-                                                                    <div className="min-w-0">
-                                                                        <div className="truncate text-xs font-semibold text-gray-100">{item.name}</div>
-                                                                        <div className="text-[10px] text-gray-500">{item.provenance ? `${item.provenance.sourceType}:${item.provenance.sourceId}` : 'unknown provenance'}</div>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                                                                    <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} animated={false} className="text-xs font-bold text-emerald-300" iconClassName="h-3.5 w-3.5" />
-                                                                    {item.freeShipping && <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">Free ship</span>}
-                                                                    {item.size && <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">{item.size}</span>}
-                                                                </div>
-                                                            </div>
-                                                            <div className="mt-2 flex flex-wrap gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">Lock</button>{isEditingInventory && <button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button>}</div>
-                                                        </div>
-                                                    ))}
-                                                    {selectedShippableInventory.length === 0 && <div className="rounded-lg border border-dashed border-gray-800 bg-[#0b0e14] p-4 text-xs text-gray-500">No live shippable inventory for this user.</div>}
-                                                </div>
-                                                {selectedInventory.length > selectedShippableInventory.length && <div className="text-[11px] text-gray-500">Hidden from this list: sold, shipping, shipped, locked, or non-shippable items.</div>}
-                                                {isEditingInventory && (
-                                                    <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-3">
-                                                        <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-500">All inventory controls</div>
-                                                        <div className="max-h-48 space-y-2 overflow-auto pr-1">
-                                                            {selectedInventory.map((item) => (
-                                                                <div key={`all-${item.instanceId}`} className="rounded-lg border border-gray-800 bg-[#131720] p-2">
-                                                                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><span className="text-xs text-gray-200">{item.name}</span><span className="text-[10px] text-gray-500">{item.status}{item.locked ? ' • locked' : ''}{item.shippable === false ? ' • non-shippable' : ''}</span></div>
-                                                                    <div className="mt-2 flex flex-wrap gap-2"><button onClick={() => handleInventoryLockToggle(selectedUser.id, item.instanceId)} className="rounded bg-red-500/20 px-2 py-1 text-[10px] font-semibold text-red-300">{item.locked ? 'Unlock' : 'Lock'}</button><button onClick={() => handleRemoveInventoryItem(selectedUser.id, item.instanceId)} className="rounded bg-red-600/20 px-2 py-1 text-[10px] font-semibold text-red-300">Remove</button></div>
-                                                                </div>
-                                                            ))}
-                                                            {selectedInventory.length === 0 && <div className="text-xs text-gray-500">No inventory items.</div>}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Shipment Controls</h4>
-                                                <div className="text-xs text-gray-400">Pending shipments: <span className="font-semibold text-gray-200">{metrics.pendingShipmentCount}</span></div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Communication</h4>
-                                                <div>
-                                                    <div className="mb-2 text-[11px] uppercase text-gray-500">Internal Labels</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {['VIP', 'Fraud Watch', 'Big Depositor', 'Chargeback Risk', 'Support Sensitive', 'Needs Review'].map((label) => (
-                                                            <button key={label} onClick={() => toggleInternalLabel(selectedUser.id, label)} className={`rounded-full px-2 py-1 text-[10px] font-semibold ${labels.includes(label) ? 'bg-blue-500/30 text-blue-200' : 'bg-[#0b0e14] text-gray-400 border border-gray-700'}`}>{label}</button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className="mb-2 text-[11px] uppercase text-gray-500">Admin Notes</div>
-                                                    <Textarea rows={4} value={userAdminNotes[selectedUser.id] ?? ''} onChange={(event) => setUserAdminNotes((prev) => ({ ...prev, [selectedUser.id]: event.target.value }))} placeholder="Private operator notes only (not user-facing)." className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
-                                                    <div className="mt-2 flex gap-2"><button onClick={() => saveAdminNote(selectedUser.id)} className="rounded-lg bg-blue-500/20 px-3 py-1.5 text-xs font-semibold text-blue-200">Save Notes</button><button disabled className="rounded-lg bg-gray-700/40 px-3 py-1.5 text-xs font-semibold text-gray-400">Send Admin Notice (TODO)</button></div>
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Risk & Compliance</h4>
-                                                <div className="rounded-lg border border-gray-700 bg-[#0b0e14] p-3">
-                                                    <div className="text-xs text-gray-400">Calculated Risk Score</div>
-                                                    <div className={`mt-1 inline-flex rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore} • {metrics.riskLevel}</div>
-                                                </div>
-                                                <div className="grid grid-cols-1 gap-2 text-xs text-gray-300">
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Chargeback count: {metrics.chargebackCount}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Failed payment count: {metrics.failedPaymentCount}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Rapid sellback behavior: {metrics.hasRapidSellback ? 'Flagged' : 'None'}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">New account high-value activity: {metrics.isNewHighValue ? 'Flagged' : 'No'}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Repeated shipment requests: {metrics.pendingShipmentCount > 2 ? 'Flagged' : 'Normal'}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Excessive admin adjustments: {metrics.excessiveAdminAdjustments}</div>
-                                                    <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">Suspicious activity flags: {metrics.suspiciousFlags}</div>
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
-                                                <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
-                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-3">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Balance Audit</h4>
-                                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                                    <Select value={balanceAuditCurrencyFilter} onChange={(event) => setBalanceAuditCurrencyFilter(event.target.value as 'all' | 'coins' | 'xp')} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All currencies</option><option value="coins">Coins</option><option value="xp">XP</option></Select>
-                                                    <Select value={balanceAuditDirectionFilter} onChange={(event) => setBalanceAuditDirectionFilter(event.target.value as 'all' | 'positive' | 'negative')} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All directions</option><option value="positive">Positive</option><option value="negative">Negative</option></Select>
-                                                    <Select value={balanceAuditReasonFilter} onChange={(event) => setBalanceAuditReasonFilter(event.target.value)} className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"><option value="all">All reasons</option>{balanceAuditReasons.map((reason) => <option key={reason} value={reason}>{reason}</option>)}</Select>
-                                                    <Input value={balanceAuditSearch} onChange={(event) => setBalanceAuditSearch(event.target.value)} placeholder="Search source / relatedId" className="bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200" />
-                                                </div>
-                                                <div className="max-h-72 space-y-2 overflow-auto pr-1">
-                                                    {selectedBalanceAudits.length === 0 ? <div className="text-xs text-gray-500">No balance audit entries.</div> : selectedBalanceAudits.map((entry) => {
-                                                        const delta = (entry.balanceAfter ?? 0) - (entry.balanceBefore ?? 0);
-                                                        const hasWarning = (entry.balanceAfter ?? 0) < 0
-                                                            || entry.balanceBefore == null
-                                                            || delta !== entry.amount
-                                                            || !entry.source
-                                                            || !entry.actorType;
-                                                        const expandedKey = `${selectedUser.id}_${entry.id}`;
-                                                        return (
-                                                            <div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
-                                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                                    <div className="text-[10px] text-gray-500">{entry.createdAt ? formatTimestamp(entry.createdAt.toMillis()) : '—'} • {entry.currency.toUpperCase()} • {entry.reason}</div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className={`text-xs font-bold ${entry.amount >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>{entry.amount >= 0 ? '+' : ''}{entry.amount.toLocaleString()}</span>
-                                                                        {hasWarning && <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-300">⚠ warning</span>}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="mt-1 text-[11px] text-gray-300 break-all">{entry.balanceBefore ?? '—'} → {entry.balanceAfter ?? '—'} • {entry.actorType ?? 'missing-actor'} • {entry.actorUid ?? 'null'} • {entry.source || 'missing-source'} • {entry.relatedId ?? 'null'}</div>
-                                                                <button onClick={() => setExpandedAuditRows((prev) => ({ ...prev, [expandedKey]: !prev[expandedKey] }))} className="mt-2 rounded bg-gray-700/40 px-2 py-1 text-[10px] text-gray-300">{expandedAuditRows[expandedKey] ? 'Hide metadata' : 'Show metadata'}</button>
-                                                                {expandedAuditRows[expandedKey] && (
-                                                                    <pre className="mt-2 overflow-x-auto rounded-lg border border-gray-800 bg-[#131720] p-2 text-[10px] text-gray-300">{JSON.stringify(entry.metadata ?? {}, null, 2)}</pre>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-2">
-                                                <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Admin Action Log</h4>
-                                                <div className="max-h-44 space-y-2 overflow-auto pr-1">{selectedAdminLogs.length === 0 ? <div className="text-xs text-gray-500">No admin actions recorded.</div> : selectedAdminLogs.map((log) => <div key={log.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="text-xs uppercase text-gray-400">{log.actionType.replace('_', ' ')}</div><div className="text-xs text-gray-200">{log.reason}</div><div className="text-[10px] text-gray-500">Admin {log.adminUid} • {formatTimestamp(log.createdAt)}</div></div>)}</div>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user to open the operator inspector panel.</div>
-                    )}
                 </div>
             )}
 
