@@ -33,6 +33,9 @@ const fail = (status, error, message, details = {}) => {
   throw { status, error, message, ...details };
 };
 
+const FORBIDDEN_PULL_PASS_CLIENT_FIELDS = new Set(['pullPassXp', 'pullPassXpAward', 'pullPassXpAwarded', 'tierProgress', 'pullPassLevel']);
+const getForbiddenPullPassClientFields = (body = {}) => Object.keys(body ?? {}).filter((key) => FORBIDDEN_PULL_PASS_CLIENT_FIELDS.has(key));
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -44,6 +47,10 @@ export default async function handler(req, res) {
     if (!token) return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Sign in to claim Pull Pass rewards.' });
     const decoded = await adminAuth.verifyIdToken(token);
     const body = await readJsonBody(req);
+    const forbiddenClientFields = getForbiddenPullPassClientFields(body);
+    if (forbiddenClientFields.length) {
+      return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Pull Pass progress is calculated by the server.', fields: forbiddenClientFields });
+    }
     const requestedTier = Math.max(1, Math.floor(toNumber(body?.tier, 0)));
     if (!requestedTier) return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Missing Pull Pass tier.' });
 
@@ -140,6 +147,7 @@ export default async function handler(req, res) {
       transaction.set(userRef, {
         pullPassSeasonXp: seasonXp,
         pullPassXp: seasonXp,
+        ...(coinAmount > 0 ? { pullPassCoins: admin.firestore.FieldValue.increment(coinAmount) } : {}),
         pullPassClaims: {
           ...rawClaims,
           [String(requestedTier)]: claimPayload

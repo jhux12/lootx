@@ -41,6 +41,48 @@ const fail = (status, error, message, details = {}) => {
   throw { status, error, message, ...details };
 };
 
+const FORBIDDEN_PULL_PASS_CLIENT_FIELDS = new Set(['pullPassXp', 'pullPassXpAward', 'pullPassXpAwarded', 'tierProgress', 'pullPassLevel']);
+
+const getForbiddenPullPassClientFields = (body = {}) => Object.keys(body ?? {}).filter((key) => FORBIDDEN_PULL_PASS_CLIENT_FIELDS.has(key));
+
+const allocateCoinSpendBySource = (userData = {}, amount = 0) => {
+  let remaining = Math.max(0, Math.floor(Number(amount) || 0));
+  const sourceOrder = ['dailyCoins', 'pullPassCoins', 'sellbackCoins', 'bonusCoins', 'promoCoins', 'referralCoins', 'adminGiftCoins', 'depositCoins'];
+  const patch = {};
+  const spent = {};
+
+  for (const source of sourceOrder) {
+    const available = Math.max(0, Math.floor(Number(userData[source] ?? 0) || 0));
+    const used = Math.min(available, remaining);
+    if (used > 0 || available > 0) {
+      patch[source] = available - used;
+    }
+    spent[source] = used;
+    remaining -= used;
+  }
+
+  return {
+    patch,
+    spent,
+    depositCoinsSpent: spent.depositCoins ?? 0,
+    unattributedCoinsSpent: remaining
+  };
+};
+
+const buildReviewPatch = ({ userData = {}, nextBalance = 0, pullPassXp = 0, inventoryValue = 0, lifetimeSellback = 0 }) => {
+  const lifetimeDeposits = Math.max(0, Math.floor(Number(userData.lifetimeDeposits ?? userData.depositCoinsLifetime ?? 0) || 0));
+  const flags = [];
+  if (lifetimeDeposits === 0 && pullPassXp > 100) flags.push('zero_deposit_pull_pass_xp');
+  if (lifetimeDeposits === 0 && nextBalance + inventoryValue + lifetimeSellback > 5000) flags.push('zero_deposit_high_value');
+  if (!flags.length) return {};
+  return {
+    accountReviewStatus: 'Under Review',
+    underReview: true,
+    reviewFlags: admin.firestore.FieldValue.arrayUnion(...flags),
+    reviewFlaggedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+};
+
 function sanitizeForFirestore(obj) {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined)
@@ -74,6 +116,10 @@ export default async function handler(req, res) {
     }
 
     const body = await readJsonBody(req);
+    const forbiddenClientFields = getForbiddenPullPassClientFields(body);
+    if (forbiddenClientFields.length) {
+      return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Pull Pass progress is calculated by the server.', fields: forbiddenClientFields });
+    }
     const boxId = typeof body?.boxId === 'string' ? body.boxId : (typeof body?.caseId === 'string' ? body.caseId : null);
     const requestedPaymentMethod = body?.paymentMethod === 'xp' ? 'xp' : 'coins';
     const pullPassInventoryId = typeof body?.inventoryId === 'string' && body.inventoryId.trim().length
@@ -274,8 +320,10 @@ export default async function handler(req, res) {
       const userPullPassResetAt = Math.max(0, Math.floor(toSafeNonNegativeNumber(userData.pullPassResetAt, 0)) || 0);
       const shouldResetUserPullPassBeforeAward = pullPassLastResetAt > userPullPassResetAt;
       const pullPassCoinsPerXp = Math.max(1, Math.floor(toSafeNonNegativeNumber(pullPassSettings.coinsPerXp, 10)) || 10);
-      const pullPassXpAward = pullPassIsActive && coinsSpent > 0
-        ? Math.floor(Math.max(0, coinsSpent) / pullPassCoinsPerXp)
+      const coinSourceSpend = allocateCoinSpendBySource(userData, coinsSpent);
+      const pullPassEligibleCoinsSpent = coinSourceSpend.depositCoinsSpent;
+      const pullPassXpAward = pullPassIsActive && pullPassEligibleCoinsSpent > 0
+        ? Math.floor(Math.max(0, pullPassEligibleCoinsSpent) / pullPassCoinsPerXp)
         : 0;
       const xpFromOpen = !isFree && shouldAwardForOpenType ? xpPerCaseOpened : 0;
       const totalXpAward = xpSystemEnabled && shouldAwardForOpenType
@@ -348,6 +396,7 @@ export default async function handler(req, res) {
         });
         newCoins = result.balanceAfter;
         balanceState = result.userData;
+        transaction.set(userRef, coinSourceSpend.patch, { merge: true });
       }
 
       if (paidWithXp) {
@@ -462,6 +511,32 @@ export default async function handler(req, res) {
               pullPassLastXpAwardAt: admin.firestore.FieldValue.serverTimestamp()
             };
         transaction.set(userRef, pullPassAwardPatch, { merge: true });
+        const pullPassXpLedgerRef = userRef.collection('pullPassLedger').doc(openRef.id);
+        transaction.set(pullPassXpLedgerRef, {
+          type: 'pull_pass_xp',
+          source: 'deposit',
+          coinsSpent: pullPassEligibleCoinsSpent,
+          xpAwarded: pullPassXpAward,
+          caseId: boxId,
+          openId: openRef.id,
+          operationId,
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+
+      const nextPullPassXp = shouldResetUserPullPassBeforeAward
+        ? pullPassXpAward
+        : Math.max(0, Math.floor(toFiniteNumber(userData.pullPassSeasonXp ?? userData.pullPassXp, 0))) + pullPassXpAward;
+      const nextLifetimeSellback = Math.max(0, Math.floor(toFiniteNumber(userData.lifetimeSellback, 0)));
+      const reviewPatch = buildReviewPatch({
+        userData,
+        nextBalance: newCoins,
+        pullPassXp: nextPullPassXp,
+        inventoryValue: Math.max(0, Math.floor(toFiniteNumber(userData.inventoryValue, 0))) + Math.max(0, Math.floor(prizeValue)),
+        lifetimeSellback: nextLifetimeSellback
+      });
+      if (Object.keys(reviewPatch).length) {
+        transaction.set(userRef, reviewPatch, { merge: true });
       }
 
       transaction.set(provablyRef, {
@@ -562,6 +637,7 @@ export default async function handler(req, res) {
           type: 'CASE_OPEN',
           operationId,
           coinsSpent,
+          eligibleDepositCoinsSpent: pullPassEligibleCoinsSpent,
           xpAward: totalXpAward,
           caseId: boxId,
           createdAt: obtainedAt
@@ -636,6 +712,7 @@ export default async function handler(req, res) {
         xpPer100CoinsWagered,
         xpPerCaseOpened,
         pullPassCoinsPerXp,
+        pullPassEligibleCoinsSpent,
         pullPassXpAward,
         baseXpBonus,
         xpMultiplier,
