@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, ChevronRight, Crown, Lock } from "lucide-react";
+import { Check, ChevronRight, Crown, Eye, Lock, X } from "lucide-react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useGame } from "../context/GameContext";
@@ -299,6 +299,7 @@ export const PullPassPage: React.FC = () => {
     addNotification,
     syncBalance,
     setView,
+    boxes,
   } = useGame();
   const [settings, setSettings] = useState<PullPassSettings>(
     DEFAULT_PULL_PASS_SETTINGS,
@@ -307,6 +308,11 @@ export const PullPassPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"rewards" | "dailySpin">(
     "rewards",
   );
+  const [previewReward, setPreviewReward] = useState<{
+    tier: number;
+    name: string;
+    type: RewardType;
+  } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -474,6 +480,36 @@ export const PullPassPage: React.FC = () => {
   const nextReward =
     configuredRewards.find((reward) => reward.tier > displayedTier) ??
     configuredRewards[configuredRewards.length - 1];
+  const previewBox = useMemo(() => {
+    if (
+      !previewReward ||
+      !["bronze", "silver", "gold"].includes(previewReward.type)
+    ) {
+      return null;
+    }
+
+    return (
+      boxes.find(
+        (box) =>
+          box.isPullPassBox && box.pullPassBoxType === previewReward.type,
+      ) ?? null
+    );
+  }, [boxes, previewReward]);
+  const previewItems = useMemo(() => {
+    if (!previewBox) return [];
+    return [...previewBox.items]
+      .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+      .slice(0, 8);
+  }, [previewBox]);
+  const handlePreviewReward = (reward: {
+    tier: number;
+    name: string;
+    type: RewardType;
+  }) => {
+    if (!["bronze", "silver", "gold"].includes(reward.type)) return;
+    setPreviewReward(reward);
+  };
+
   const handleClaimReward = async (reward: {
     tier: number;
     name: string;
@@ -616,7 +652,24 @@ export const PullPassPage: React.FC = () => {
                   {configuredRewards.map((reward) => (
                     <article
                       key={reward.tier}
-                      className={`group flex h-[220px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 ${reward.status === "active" ? "border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]" : "border-white/10 bg-white/[0.035]"}`}
+                      role={
+                        ["bronze", "silver", "gold"].includes(reward.type)
+                          ? "button"
+                          : undefined
+                      }
+                      tabIndex={
+                        ["bronze", "silver", "gold"].includes(reward.type)
+                          ? 0
+                          : undefined
+                      }
+                      onClick={() => handlePreviewReward(reward)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handlePreviewReward(reward);
+                        }
+                      }}
+                      className={`group flex h-[232px] w-[160px] flex-col rounded-2xl border p-3 transition duration-200 hover:-translate-y-1 sm:w-[168px] ${["bronze", "silver", "gold"].includes(reward.type) ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-300" : ""} ${reward.status === "active" ? "border-purple-400 bg-purple-500/10 shadow-[0_0_22px_rgba(147,51,234,0.22)]" : "border-white/10 bg-white/[0.035]"}`}
                     >
                       <div className="flex items-center justify-between">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
@@ -638,20 +691,26 @@ export const PullPassPage: React.FC = () => {
                       <h3 className="text-center text-sm font-bold text-white">
                         {reward.name}
                       </h3>
+                      {["bronze", "silver", "gold"].includes(reward.type) && (
+                        <span className="mt-2 inline-flex items-center justify-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] font-black uppercase tracking-wide text-purple-200 transition-colors group-hover:border-purple-300/40 group-hover:bg-purple-500/15">
+                          <Eye className="h-3 w-3" /> Preview
+                        </span>
+                      )}
                       <div className="mt-3 grid min-h-8 place-items-center text-[10px] font-black uppercase tracking-wide text-slate-500">
                         {claimedTiers[String(reward.tier)] ? (
                           claimedTiers[String(reward.tier)]?.boxId &&
                           claimedTiers[String(reward.tier)]?.opened !== true ? (
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={(event) => {
+                                event.stopPropagation();
                                 setView({
                                   type: "CASE_OPENING",
                                   boxId:
                                     claimedTiers[String(reward.tier)].boxId,
                                   pullPassClaimTier: reward.tier,
-                                })
-                              }
+                                });
+                              }}
                               className="rounded-full border border-purple-300/35 bg-purple-500/20 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-purple-100 transition-colors hover:bg-purple-500/30"
                             >
                               Open Box
@@ -664,7 +723,8 @@ export const PullPassPage: React.FC = () => {
                         ) : reward.status === "active" ? (
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(event) => {
+                              event.stopPropagation();
                               void handleClaimReward(reward);
                             }}
                             disabled={claimingTier !== null}
@@ -711,6 +771,89 @@ export const PullPassPage: React.FC = () => {
           <Quests embedded />
         </section>
       </div>
+      {previewReward && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pull-pass-preview-title"
+          onClick={() => setPreviewReward(null)}
+        >
+          <div
+            className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-3xl border border-white/10 bg-[#0b1220] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3 border-b border-white/10 p-4 sm:p-5">
+              <MiniRewardArt type={previewReward.type} compact />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black uppercase tracking-wide text-purple-300">
+                  Tier {previewReward.tier} box preview
+                </p>
+                <h2
+                  id="pull-pass-preview-title"
+                  className="text-xl font-black text-white sm:text-2xl"
+                >
+                  {previewBox?.name ?? previewReward.name}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Tap Claim when unlocked to open this Pull Pass box. Previewed odds and items may update with the live box configuration.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewReward(null)}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+                aria-label="Close box preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-[58vh] overflow-y-auto p-4 sm:p-5">
+              {previewItems.length ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {previewItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"
+                    >
+                      <div className="aspect-square rounded-xl bg-black/20 p-2">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-full w-full object-contain"
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </div>
+                      <p className="mt-2 line-clamp-2 min-h-10 text-xs font-bold text-white">
+                        {item.name}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-black uppercase">
+                        <span
+                          className="rounded-full px-2 py-0.5"
+                          style={{
+                            backgroundColor: `${item.color}26`,
+                            color: item.color,
+                          }}
+                        >
+                          {item.rarity}
+                        </span>
+                        <span className="text-slate-400">
+                          {Number(item.chance || 0).toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-6 text-center text-sm text-slate-400">
+                  No live item preview is configured for this Pull Pass box yet.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
