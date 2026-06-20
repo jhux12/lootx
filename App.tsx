@@ -148,6 +148,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const homePromptTrackedRef = useRef(false);
 
   useEffect(() => {
+    if (!authInitialized || isAuthenticated || view.type !== 'PULL_PASS') return;
+    setView({ type: 'HOME' });
+  }, [authInitialized, isAuthenticated, setView, view.type]);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
     const clarityWindow = window as ClarityWindow;
@@ -569,25 +574,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         </div>
       )}
 
-      {view.type === 'PULL_PASS' && (
+      {view.type === 'PULL_PASS' && isAuthenticated && (
         <div className="w-full">
-          {!authInitialized ? (
-            <ProtectedPageLoading />
-          ) : isAuthenticated ? (
-            <PullPassPage />
-          ) : (
-            <div className="max-w-xl mx-auto bg-[#0b0e14] border border-gray-800 rounded-2xl p-6 text-center mt-10 sm:p-10">
-              <ShieldAlert className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Sign in to access rewards</h2>
-              <p className="text-gray-400 mb-6">Pull Pass rewards are available to registered players only.</p>
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="min-h-12 px-6 py-3 btn-logo-gradient text-white font-bold rounded-lg transition-colors"
-              >
-                Sign in
-              </button>
-            </div>
-          )}
+          <PullPassPage />
         </div>
       )}
 
