@@ -1,8 +1,6 @@
 import React from 'react';
 import { User, ShippingAddress } from '../../types';
 import { UserAvatar } from '../UserAvatar';
-import { XP_ICON } from '../../constants';
-import { AnimatedNumber } from '../../src/ui/numbers/AnimatedNumber';
 import { CoinAmount } from '../CoinAmount';
 
 interface QuickAction {
@@ -28,7 +26,6 @@ interface AccountViewProps {
   user: User;
   username: string;
   memberSince: string;
-  xp: number;
   balance: number;
   quickActions: QuickAction[];
   activePanel: AccountPanel;
@@ -54,7 +51,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
   user,
   username,
   memberSince,
-  xp,
   balance,
   quickActions,
   activePanel,
@@ -106,12 +102,8 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <p className="mt-1 text-[11px] text-gray-400">{user.email || 'No email linked yet'}</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <span className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs text-white">
-              <img src={XP_ICON} alt="XP" className="h-3.5 w-3.5" loading="lazy" decoding="async" width={14} height={14} />
-              <AnimatedNumber value={xp} /> XP
-            </span>
-            <span className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white">
+          <div className="flex w-full sm:w-auto">
+            <span className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white sm:w-auto">
               <CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="text-xs font-semibold text-white" iconClassName="h-3.5 w-3.5" />
             </span>
           </div>

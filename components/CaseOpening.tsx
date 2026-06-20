@@ -2143,11 +2143,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               />
                             )}
                           </span>
-                          {previewTotalXp > 0 && (
-                            <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
-                              +{previewTotalXp.toLocaleString()} XP
-                            </span>
-                          )}
                         </span>
                       )}
                     </span>

@@ -777,7 +777,6 @@ export const Profile: React.FC = () => {
   };
 
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
-  const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
 
   const quickActions = [
@@ -839,7 +838,6 @@ export const Profile: React.FC = () => {
           user={user}
           username={displayUsername}
           memberSince={joinedDate}
-          xp={xp}
           balance={balance}
           quickActions={quickActions}
           activePanel={activeAccountPanel}
@@ -894,7 +892,6 @@ export const Profile: React.FC = () => {
               user={user}
               username={displayUsername}
               memberSince={joinedDate}
-              xp={xp}
               balance={balance}
               quickActions={quickActions}
               activePanel={activeAccountPanel}
