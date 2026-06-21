@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Package, X } from 'lucide-react';
+import { Bike, ChevronLeft, ChevronRight, Dice5, Gamepad2, Grid2X2, Package, Search, SlidersHorizontal, Spade, X } from 'lucide-react';
 import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
@@ -217,6 +217,76 @@ const HomeBelowFoldSkeleton = memo(() => (
 ));
 HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
 
+
+const MobileMiniGameCard = ({ title, subtitle, image, accent }: { title: string; subtitle: string; image?: string; accent: string }) => (
+  <button type="button" className={`relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-gradient-to-br ${accent} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`}>
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,0.25),transparent_34%)]" />
+    <div className="relative z-10 mx-auto mb-1 w-fit rounded-full bg-white/20 px-2 py-0.5 text-[5px] font-black uppercase tracking-wide text-white/90">Thrill Originals</div>
+    <div className="relative z-10 text-center text-[21px] font-black uppercase leading-none tracking-wide text-white drop-shadow-sm">{title}</div>
+    {image ? <img src={image} alt="" className="absolute inset-x-2 bottom-2 mx-auto h-[72px] w-[72px] object-contain opacity-85 drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]" loading="lazy" /> : null}
+    <div className="absolute bottom-2 right-2 rounded bg-white/20 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{subtitle}</div>
+  </button>
+);
+
+const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBox: (boxId: string) => void }) => {
+  const cards = boxes.slice(0, 6);
+  const originals = cards.length ? cards.slice(0, 3) : [];
+  const slotCards = cards.length ? cards.slice(3, 6) : [];
+
+  return (
+    <div className="lg:hidden">
+      <section className="px-3 pt-3">
+        <button type="button" className="relative h-[122px] w-full overflow-hidden rounded-[1.28rem] bg-[#55f4a7] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]" />
+          <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Spade className="h-3 w-3" />Announcement</div>
+          <h1 className="relative z-10 mt-3 max-w-[150px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">Hot Picks</h1>
+          <p className="relative z-10 mt-1 max-w-[130px] text-[8px] font-black uppercase leading-tight text-[#172233]">Dive into today's most liked slots.</p>
+          <div className="absolute -right-8 top-1 flex rotate-[12deg] gap-2">
+            {(cards.length ? cards.slice(0, 4) : [{ id: 'a', name: 'Banana Farm', image: '' }, { id: 'b', name: 'Le Bandit', image: '' }] as any).map((box: MysteryBox, index: number) => (
+              <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl">
+                {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain" /> : <span className="text-center text-sm font-black uppercase text-white">{box.name}</span>}
+              </div>
+            ))}
+          </div>
+        </button>
+        <div className="mt-2 flex justify-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#52f7b0]" /><span className="h-1.5 w-1.5 rounded-full bg-slate-600" /><span className="h-1.5 w-1.5 rounded-full bg-slate-600" /></div>
+      </section>
+
+      <section className="mt-5 overflow-x-auto px-3 [scrollbar-width:none]">
+        <div className="flex min-w-max gap-2.5">
+          {[['Lobby', Grid2X2, true], ['Originals', Dice5, false], ['Slots', Bike, false], ['Live Casino', Gamepad2, false]].map(([label, Icon, active]) => {
+            const C = Icon as typeof Grid2X2;
+            return <button key={label as string} className={`flex h-[82px] w-[82px] flex-col items-center justify-center gap-2 rounded-[1.15rem] text-[10px] font-black uppercase ${active ? 'bg-[#22363d] text-[#57ffc0] shadow-[inset_0_0_24px_rgba(87,255,192,0.08)]' : 'bg-[#202637] text-slate-500'}`}><C className="h-5 w-5" /><span>{label as string}</span></button>;
+          })}
+        </div>
+      </section>
+
+      <div className="mt-7 flex items-center gap-2 px-3">
+        <button className="grid h-10 w-10 place-items-center rounded-full bg-[#252d42] text-slate-300"><Search className="h-5 w-5" /></button>
+        <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
+        <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5 rotate-90" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
+      </div>
+
+      <MobileGameRow title="Thrill Originals" icon={<Spade className="h-4 w-4 text-slate-400" />}>
+        {(originals.length ? originals : [{ id:'dice', name:'Dice', image:'' },{ id:'limbo', name:'Limbo', image:'' },{ id:'slide', name:'Slide', image:'' }] as any).map((box: MysteryBox, i: number) => <MobileMiniGameCard key={box.id} title={i===0?'Dice':i===1?'Limbo':'Slide'} subtitle={i===2?'New game':''} image={box.image} accent={i===0?'from-cyan-400 to-blue-600':i===1?'from-lime-300 to-emerald-700':'from-cyan-300 to-cyan-600'} />)}
+      </MobileGameRow>
+      <MobileGameRow title="Slots" icon={<Bike className="h-4 w-4 text-slate-400" />}>
+        {(slotCards.length ? slotCards : cards.slice(0,3)).map((box: MysteryBox, i: number) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-2 top-2 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[6px] font-black uppercase text-white">Pragmatic Play</span></button>)}
+      </MobileGameRow>
+    </div>
+  );
+};
+
+const MobileGameRow = ({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) => (
+  <section className="mt-7 px-3">
+    <div className="mb-4 flex items-center justify-between">
+      <div className="flex items-center gap-2">{icon}<h2 className="text-[18px] font-black uppercase tracking-tight text-white">{title}</h2></div>
+      <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
+    </div>
+    <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">{children}</div>
+  </section>
+);
+
 const FirstDepositBanner = memo(({ onClaim, onDismiss }: { onClaim: () => void; onDismiss: () => void }) => (
   <section className="relative overflow-hidden rounded-2xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(247,183,51,0.16),rgba(124,92,255,0.14),rgba(32,93,215,0.12))] p-4 shadow-[0_16px_40px_rgba(5,8,12,0.28)] sm:p-5" aria-label="First deposit bonus">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(247,183,51,0.22),transparent_32%),radial-gradient(circle_at_88%_100%,rgba(56,189,248,0.16),transparent_36%)]" />
@@ -382,7 +452,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
 
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
-      <main className="mx-auto max-w-[1250px] space-y-7 px-4 py-5 sm:space-y-8 sm:px-6 sm:py-6">
+      <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
+        <MobileHomePreview boxes={boxes} onOpenBox={onOpenBox} />
+        <div className="hidden lg:block lg:space-y-7">
         {canShowConversionPrompts && showSocialProof && <SocialProofNotifications />}
         {showFirstDepositBanner && (
           <FirstDepositBanner onClaim={handleClaimFirstDepositBonus} onDismiss={handleDismissFirstDepositBanner} />
@@ -458,6 +530,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
         ) : (
           <HomeBelowFoldSkeleton />
         )}
+        </div>
       </main>
     </div>
   );

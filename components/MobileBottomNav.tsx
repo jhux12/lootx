@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
+import { Clover, Gift, Headphones, Home, Trophy, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
@@ -13,13 +13,13 @@ type NavItem = {
   requiresAuth?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
+const CasinoIcon: React.FC<{ className?: string }> = ({ className }) => <Clover className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
-  { id: 'HOME', label: 'Home', icon: Home },
-  { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
-  { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
-  { id: 'PROFILE', label: 'Profile', requiresAuth: true }
+  { id: 'HOME', label: 'Menu', icon: Home },
+  { id: 'BOXES', label: 'Casino', icon: CasinoIcon },
+  { id: 'PLINKO', label: 'Sports', icon: Trophy },
+  { id: 'LEADERBOARD', label: 'Rewards', icon: Gift },
+  { id: 'PROFILE', label: 'Chat', icon: Headphones, requiresAuth: true }
 ];
 
 export const MobileBottomNav: React.FC = () => {
@@ -148,7 +148,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-12px_32px_rgba(0,0,0,0.35)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-white/10 bg-[#25283b]/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
@@ -187,8 +187,8 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-xl px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
-                  isActive ? 'text-purple-300' : 'text-slate-500 hover:text-slate-300'
+                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
+                  isActive ? 'bg-[#223941] text-[#54f5b3]' : 'text-slate-500 hover:text-slate-300'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
