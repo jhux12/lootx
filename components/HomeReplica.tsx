@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { Bike, ChevronLeft, ChevronRight, Dice5, Gamepad2, Grid2X2, Package, Search, SlidersHorizontal, Spade, X } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Gift, Grid2X2, Package, Search, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
@@ -221,7 +221,7 @@ HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
 const MobileMiniGameCard = ({ title, subtitle, image, accent }: { title: string; subtitle: string; image?: string; accent: string }) => (
   <button type="button" className={`relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-gradient-to-br ${accent} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`}>
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_15%,rgba(255,255,255,0.25),transparent_34%)]" />
-    <div className="relative z-10 mx-auto mb-1 w-fit rounded-full bg-white/20 px-2 py-0.5 text-[5px] font-black uppercase tracking-wide text-white/90">Thrill Originals</div>
+    <div className="relative z-10 mx-auto mb-1 w-fit rounded-full bg-white/20 px-2 py-0.5 text-[5px] font-black uppercase tracking-wide text-white/90">Pullz Picks</div>
     <div className="relative z-10 text-center text-[21px] font-black uppercase leading-none tracking-wide text-white drop-shadow-sm">{title}</div>
     {image ? <img src={image} alt="" className="absolute inset-x-2 bottom-2 mx-auto h-[72px] w-[72px] object-contain opacity-85 drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]" loading="lazy" /> : null}
     <div className="absolute bottom-2 right-2 rounded bg-white/20 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{subtitle}</div>
@@ -238,9 +238,9 @@ const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBo
       <section className="px-3 pt-3">
         <button type="button" className="relative h-[122px] w-full overflow-hidden rounded-[1.28rem] bg-[#55f4a7] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]" />
-          <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Spade className="h-3 w-3" />Announcement</div>
+          <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Sparkles className="h-3 w-3" />Announcement</div>
           <h1 className="relative z-10 mt-3 max-w-[150px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">Hot Picks</h1>
-          <p className="relative z-10 mt-1 max-w-[130px] text-[8px] font-black uppercase leading-tight text-[#172233]">Dive into today's most liked slots.</p>
+          <p className="relative z-10 mt-1 max-w-[130px] text-[8px] font-black uppercase leading-tight text-[#172233]">Open today's most popular mystery boxes.</p>
           <div className="absolute -right-8 top-1 flex rotate-[12deg] gap-2">
             {(cards.length ? cards.slice(0, 4) : [{ id: 'a', name: 'Banana Farm', image: '' }, { id: 'b', name: 'Le Bandit', image: '' }] as any).map((box: MysteryBox, index: number) => (
               <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl">
@@ -254,7 +254,7 @@ const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBo
 
       <section className="mt-5 overflow-x-auto px-3 [scrollbar-width:none]">
         <div className="flex min-w-max gap-2.5">
-          {[['Lobby', Grid2X2, true], ['Originals', Dice5, false], ['Slots', Bike, false], ['Live Casino', Gamepad2, false]].map(([label, Icon, active]) => {
+          {[['Home', Grid2X2, true], ['Featured', Sparkles, false], ['Boxes', Box, false], ['Live Pulls', Gift, false]].map(([label, Icon, active]) => {
             const C = Icon as typeof Grid2X2;
             return <button key={label as string} className={`flex h-[82px] w-[82px] flex-col items-center justify-center gap-2 rounded-[1.15rem] text-[10px] font-black uppercase ${active ? 'bg-[#22363d] text-[#57ffc0] shadow-[inset_0_0_24px_rgba(87,255,192,0.08)]' : 'bg-[#202637] text-slate-500'}`}><C className="h-5 w-5" /><span>{label as string}</span></button>;
           })}
@@ -267,11 +267,11 @@ const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBo
         <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5 rotate-90" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
       </div>
 
-      <MobileGameRow title="Thrill Originals" icon={<Spade className="h-4 w-4 text-slate-400" />}>
-        {(originals.length ? originals : [{ id:'dice', name:'Dice', image:'' },{ id:'limbo', name:'Limbo', image:'' },{ id:'slide', name:'Slide', image:'' }] as any).map((box: MysteryBox, i: number) => <MobileMiniGameCard key={box.id} title={i===0?'Dice':i===1?'Limbo':'Slide'} subtitle={i===2?'New game':''} image={box.image} accent={i===0?'from-cyan-400 to-blue-600':i===1?'from-lime-300 to-emerald-700':'from-cyan-300 to-cyan-600'} />)}
+      <MobileGameRow title="Pullz Picks" icon={<Sparkles className="h-4 w-4 text-slate-400" />}>
+        {(originals.length ? originals : [{ id:'dice', name:'Starter', image:'' },{ id:'limbo', name:'Premium', image:'' },{ id:'slide', name:'Daily', image:'' }] as any).map((box: MysteryBox, i: number) => <MobileMiniGameCard key={box.id} title={i===0?'Starter':i===1?'Premium':'Daily'} subtitle={i===2?'New box':''} image={box.image} accent={i===0?'from-cyan-400 to-blue-600':i===1?'from-lime-300 to-emerald-700':'from-cyan-300 to-cyan-600'} />)}
       </MobileGameRow>
-      <MobileGameRow title="Slots" icon={<Bike className="h-4 w-4 text-slate-400" />}>
-        {(slotCards.length ? slotCards : cards.slice(0,3)).map((box: MysteryBox, i: number) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-2 top-2 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[6px] font-black uppercase text-white">Pragmatic Play</span></button>)}
+      <MobileGameRow title="Mystery Boxes" icon={<Box className="h-4 w-4 text-slate-400" />}>
+        {(slotCards.length ? slotCards : cards.slice(0,3)).map((box: MysteryBox, i: number) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-2 top-2 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[6px] font-black uppercase text-white">Featured Box</span></button>)}
       </MobileGameRow>
     </div>
   );

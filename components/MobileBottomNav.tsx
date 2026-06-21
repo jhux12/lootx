@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clover, Gift, Headphones, Home, Trophy, User, X } from 'lucide-react';
+import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
@@ -13,13 +13,13 @@ type NavItem = {
   requiresAuth?: boolean;
 };
 
-const CasinoIcon: React.FC<{ className?: string }> = ({ className }) => <Clover className={className} aria-hidden="true" />;
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Menu', icon: Home },
-  { id: 'BOXES', label: 'Casino', icon: CasinoIcon },
-  { id: 'PLINKO', label: 'Sports', icon: Trophy },
-  { id: 'LEADERBOARD', label: 'Rewards', icon: Gift },
-  { id: 'PROFILE', label: 'Chat', icon: Headphones, requiresAuth: true }
+  { id: 'BOXES', label: 'Boxes', icon: Box },
+  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
+  { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
+  { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];
 
 export const MobileBottomNav: React.FC = () => {
