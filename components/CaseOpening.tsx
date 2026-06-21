@@ -1022,8 +1022,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     resetSpinnerAnimation();
 
+    updateSpinnerMeasurements();
+    const randomStartSteps = Math.floor(2 + rng() * 8);
+    const measuredStepWidth = spinnerMeasurementsRef.current?.stepWidth ?? (spinnerCardWidth + spinnerGap);
+    const startTranslate = clampTranslate(-(randomStartSteps * measuredStepWidth));
+
     container.style.transition = 'none';
-    container.style.transform = 'translate3d(0px, 0, 0)';
+    container.style.transform = `translate3d(${startTranslate}px, 0, 0)`;
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
 
@@ -1033,7 +1038,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     // Force style/layout flush before starting WAAPI timeline.
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
+    const startingCenterIndex = getCenteredIndexFromTranslate(startTranslate);
     lastCenterIndexRef.current = startingCenterIndex;
     lastTickedCenterIndexRef.current = startingCenterIndex;
     setCurrentCenterIndex(startingCenterIndex);
@@ -1054,10 +1059,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
+        { transform: `translate3d(${startTranslate}px, 0, 0)`, offset: 0, easing: 'cubic-bezier(0.12, 0.78, 0.18, 1)' },
+        { transform: `translate3d(${startTranslate - measuredStepWidth * 5}px, 0, 0)`, offset: 0.2, easing: 'linear' },
+        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: 0.8, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
+        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.14, 0, 0.2, 1)' }
       ],
       {
         duration: resolvedDuration,
@@ -1134,7 +1139,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, spinnerCardWidth, spinnerGap, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2029,7 +2034,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
                 {/* Center Indicator */}
                 <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
+                  className="fa-solid fa-caret-down pullz-center-marker pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
                   style={{
                     color: centeredRarityIndicator.color,
                     filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
@@ -2059,6 +2064,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
+                          const isNearMissLegendary = hasSpinSettled && !isSettledWinner && Math.abs(idx - reelWinnerIndex) <= 2 && rarityValue === 'legendary';
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = true;
                           const allowHeavyHighlight = !isUltraSmoothSpin;
@@ -2066,14 +2072,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${isSettledWinner ? 'pullz-winning-tile' : ''} ${isNearMissLegendary ? 'pullz-near-miss-tile' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
+                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 10px 32px rgba(0,0,0,0.28), 0 0 0 1px ${item.color}66, 0 0 34px ${item.color}60`)
                                   : 'none',
                                 opacity: 1,
                                 filter: 'none',
@@ -2083,7 +2089,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         >
                             <div
                               className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-60 blur-2xl sm:blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
+                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 24px ${item.color}45` : (isNearMissLegendary ? '0 0 18px rgba(251,191,36,0.28)' : 'none') }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
@@ -2106,6 +2112,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 </div>
             </div>
             </div>
+
+
+            <style>{`
+              @keyframes pullzCenterPulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } }
+              @keyframes pullzWinnerGlow { 0% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.035); filter: brightness(1.12); } 100% { transform: scale(1.018); filter: brightness(1.06); } }
+              @keyframes pullzWinnerShine { 0% { opacity: 0; transform: translate3d(-130%,0,0) skewX(-18deg); } 45% { opacity: .28; } 100% { opacity: 0; transform: translate3d(130%,0,0) skewX(-18deg); } }
+              .pullz-center-marker { animation: pullzCenterPulse 1.8s ease-in-out infinite; transform-origin: center; }
+              .pullz-winning-tile { animation: pullzWinnerGlow 600ms cubic-bezier(.16,.84,.24,1) both; }
+              .pullz-winning-tile::after { content: ''; position: absolute; inset: 14px 18px; border-radius: 22px; pointer-events: none; background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.38) 50%, transparent 65%); animation: pullzWinnerShine 600ms ease-out both; mix-blend-mode: screen; }
+              .pullz-near-miss-tile { filter: brightness(1.08) saturate(1.08); }
+            `}</style>
 
             {/* Action Bar */}
             <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">

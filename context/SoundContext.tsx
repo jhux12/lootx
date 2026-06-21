@@ -28,7 +28,7 @@ const SOUND_URLS: Partial<Record<SoundType, string>> = {
 
 const SOUND_VOLUMES: Partial<Record<SoundType, number>> = {
   'spin-start': 0.2,
-  'spin-tick': 0.28,
+  'spin-tick': 0.13,
   'win-common': 0.5,
   'win-uncommon': 0.52,
   'win-rare': 0.55,
@@ -43,6 +43,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const roundRobinIndexRef = useRef<Partial<Record<SoundType, number>>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickAtRef = useRef(0);
+  const tickPitchRef = useRef(0);
   const didInitRef = useRef(false);
   const didWarmupRef = useRef(false);
   const hasUserInteractedRef = useRef(false);
@@ -118,7 +119,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      if (now - lastTickAtRef.current < 42) return;
+      if (now - lastTickAtRef.current < 58) return;
       lastTickAtRef.current = now;
     }
 
@@ -132,6 +133,14 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       audio.currentTime = 0;
+      if (type === 'spin-tick') {
+        tickPitchRef.current = (tickPitchRef.current + 1) % 5;
+        audio.playbackRate = 0.96 + tickPitchRef.current * 0.018;
+        audio.volume = (SOUND_VOLUMES[type] ?? 0.13) * 0.86;
+      } else {
+        audio.playbackRate = 1;
+        audio.volume = SOUND_VOLUMES[type] ?? 0.4;
+      }
       const playPromise = audio.play();
       if (playPromise && typeof playPromise.then === 'function') {
         void playPromise.catch(() => {
