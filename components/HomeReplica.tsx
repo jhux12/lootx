@@ -14,6 +14,7 @@ import { usePerformanceMode } from '../src/lib/performance';
 type HomeReplicaProps = {
   boxes: MysteryBox[];
   demoBoxId?: string | null;
+  trendingBoxIds?: string[];
   isChatCollapsed: boolean;
   onOpenBox: (boxId: string) => void;
   onViewAllBoxes: () => void;
@@ -244,13 +245,18 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
   </button>
 );
 
-const MobileHomePreview = ({ boxes, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
   const cards = boxes.slice(0, 6);
   const originals = cards.length ? cards.slice(0, 3) : [];
-  const mysteryBoxCards = boxes.slice(0, 6);
+  const trendingBoxes = useMemo(() => {
+    const selected = trendingBoxIds
+      .map((id) => boxes.find((box) => box.id === id))
+      .filter(Boolean) as MysteryBox[];
+    return (selected.length ? selected : boxes).slice(0, 6);
+  }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
     const itemPool = boxes
       .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
@@ -331,18 +337,18 @@ const MobileHomePreview = ({ boxes, onOpenBox, onViewAllBoxes }: { boxes: Myster
         </div>
       </section>
 
-      <section className="mt-5 overflow-x-auto px-3 [scrollbar-width:none]">
-        <div className="flex min-w-max gap-3">
+      <section className="mt-5 px-3">
+        <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Home', sublabel: '', icon: Home, active: true, tone: 'text-[#55f7c3]' },
-            { label: 'Trending', sublabel: 'Hot Boxes', icon: Flame, active: false, tone: 'text-orange-400' },
-            { label: 'Cases', sublabel: 'All Boxes', icon: Box, active: false, tone: 'text-purple-400' },
-            { label: 'Winners', sublabel: 'Live Pulls', icon: Trophy, active: false, tone: 'text-yellow-300' }
-          ].map(({ label, sublabel, icon: Icon, active, tone }) => (
-            <button key={label} type="button" className={`flex h-[94px] w-[112px] flex-col items-center justify-center rounded-[1.25rem] border bg-[#101827] text-center shadow-[inset_0_0_22px_rgba(255,255,255,0.025),0_12px_24px_rgba(0,0,0,0.18)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_26px_rgba(36,230,158,0.12),0_0_18px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
-              <Icon className={`mb-2 h-9 w-9 ${tone}`} strokeWidth={1.9} />
-              <span className={`text-[13px] font-black uppercase leading-none tracking-wide ${active ? 'text-[#55f7c3]' : 'text-white'}`}>{label}</span>
-              {sublabel ? <span className="mt-1 text-[9px] font-black uppercase tracking-wide text-slate-500">{sublabel}</span> : null}
+            { label: 'Home', sublabel: '', icon: Home, active: true, tone: 'text-[#55f7c3]', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+            { label: 'Trending', sublabel: 'Boxes', icon: Flame, active: false, tone: 'text-orange-400', action: () => document.getElementById('mobile-trending-boxes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+            { label: 'Boxes', sublabel: 'All Boxes', icon: Box, active: false, tone: 'text-purple-400', action: onViewAllBoxes },
+            { label: 'Winners', sublabel: 'Live Pulls', icon: Trophy, active: false, tone: 'text-yellow-300', action: () => document.getElementById('mobile-live-wins')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+          ].map(({ label, sublabel, icon: Icon, active, tone, action }) => (
+            <button key={label} type="button" onClick={action} className={`flex h-[86px] min-w-0 flex-col items-center justify-center rounded-[1.1rem] border bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_22px_rgba(36,230,158,0.12),0_0_16px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
+              <Icon className={`mb-2 h-7 w-7 ${tone}`} strokeWidth={1.9} />
+              <span className={`text-[10px] font-black uppercase leading-none tracking-wide ${active ? 'text-[#55f7c3]' : 'text-white'}`}>{label}</span>
+              {sublabel ? <span className="mt-1 text-[7px] font-black uppercase tracking-wide text-slate-500">{sublabel}</span> : null}
             </button>
           ))}
         </div>
@@ -354,17 +360,17 @@ const MobileHomePreview = ({ boxes, onOpenBox, onViewAllBoxes }: { boxes: Myster
         <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5 rotate-90" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
       </div>
 
-      <section className="mt-7 px-3">
+      <section id="mobile-trending-boxes" className="scroll-mt-4 mt-7 px-3">
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Mystery Boxes</h2></div>
+          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
           <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {mysteryBoxCards.map((box) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[112px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-1.5 top-1.5 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Featured</span></button>)}
+          {trendingBoxes.map((box) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[112px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-1.5 top-1.5 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span></button>)}
         </div>
       </section>
 
-      <section className="mt-7 px-3">
+      <section id="mobile-live-wins" className="scroll-mt-4 mt-7 px-3">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
           <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
@@ -499,7 +505,7 @@ const SocialProofNotifications = memo(() => {
 });
 SocialProofNotifications.displayName = 'SocialProofNotifications';
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onViewAllBoxes, onSignUp }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes, onSignUp }) => {
   const { user, isAuthenticated, setShowTopUpModal, setTopUpModalIntent } = useGame();
   const performanceMode = usePerformanceMode();
   const [showBelowFold, setShowBelowFold] = useState(false);
@@ -555,7 +561,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, onOpenBox, onVi
   return (
     <div className="min-h-screen bg-[#1b2024] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
         <div className="hidden lg:block lg:space-y-7">
         {canShowConversionPrompts && showSocialProof && <SocialProofNotifications />}
         {showFirstDepositBanner && (
