@@ -1,7 +1,8 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Search, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
-import { collection, doc, getDoc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { db } from '../firebase';
+import { Timestamp, addDoc, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
+import { db, storage } from '../firebase';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
@@ -273,17 +274,34 @@ const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) =>
             <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
           </div>
         </div>
-        <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption || 'Thanks Pullz crew!!'}</p>
+        <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption || 'Thanks Pullz team!!'}</p>
       </div>
     </article>
   );
 };
+
+const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
+  <button
+    type="button"
+    onClick={onSubmit}
+    className="flex min-w-[298px] flex-col items-center justify-center rounded-md border-2 border-dashed border-[#5df7b1]/55 bg-[#202337]/78 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
+  >
+    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#5df7b1]/15 text-3xl">＋</div>
+    <h3 className="mt-4 text-xl font-black uppercase text-white">Submit Yours</h3>
+    <p className="mt-2 max-w-[210px] text-sm font-bold leading-5 text-slate-300">Share your Pullz delivery or big hit for a chance to be featured.</p>
+  </button>
+);
 
 const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
   const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
+  const [isSubmitReviewOpen, setIsSubmitReviewOpen] = useState(false);
+  const [submitReviewFile, setSubmitReviewFile] = useState<File | null>(null);
+  const [submitReviewCaption, setSubmitReviewCaption] = useState('');
+  const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const cards = boxes.slice(0, 6);
   const originals = cards.length ? cards.slice(0, 3) : [];
   const trendingBoxes = useMemo(() => {
@@ -314,7 +332,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
   const customerReviewCards = customerReviews.length
     ? customerReviews
-    : [{ id: 'fallback-review', username: 'edb87', caption: 'Thanks Pullz crew!!', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
+    : [{ id: 'fallback-review', username: 'edb87', caption: 'Thanks Pullz team!!', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
 
   useEffect(() => {
     if (mobileLiveWins.length <= 1) return undefined;
@@ -338,7 +356,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         .map((story) => ({
           id: story.id,
           username: String(story.username || 'Pullz customer'),
-          caption: String(story.caption || 'Thanks Pullz crew!!'),
+          caption: String(story.caption || 'Thanks Pullz team!!'),
           mediaUrl: String(story.mediaUrl || ''),
           timestampLabel: story.timestampLabel ? String(story.timestampLabel) : 'recently',
           order: Number(story.order ?? 9999),
@@ -371,6 +389,69 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
     const firstBox = cards[0];
     if (firstBox) onOpenBox(firstBox.id);
+  };
+
+  const handleSubmitReview = () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setIsSubmitReviewOpen(true);
+  };
+
+  const handleSubmitReviewUpload = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    if (!submitReviewFile) {
+      setSubmitReviewNotice('Add a photo before submitting.');
+      return;
+    }
+    if (!submitReviewFile.type.startsWith('image/')) {
+      setSubmitReviewNotice('Please upload an image file.');
+      return;
+    }
+    setIsSubmittingReview(true);
+    setSubmitReviewNotice(null);
+    try {
+      const safeName = submitReviewFile.name.replace(/[^a-z0-9._-]+/gi, '-').toLowerCase();
+      const uploadRef = ref(storage, `live-community-submissions/${user.id}-${Date.now()}-${safeName}`);
+      await uploadBytes(uploadRef, submitReviewFile, { contentType: submitReviewFile.type || 'image/jpeg' });
+      const mediaUrl = await getDownloadURL(uploadRef);
+      await addDoc(collection(db, 'liveCommunityStories'), {
+        username: user.username || user.displayName || user.name || user.email?.split('@')[0] || 'Pullz customer',
+        caption: submitReviewCaption.trim() || 'Thanks Pullz team!!',
+        mediaUrl,
+        mediaType: 'image',
+        type: 'community setups',
+        rarity: 'rare',
+        source: 'community-submit-pull',
+        submittedByUserId: user.id,
+        submittedByEmail: user.email ?? null,
+        approved: false,
+        status: 'pending',
+        hidden: true,
+        featured: false,
+        showViewCount: true,
+        badgeText: 'Customer review',
+        timestampLabel: new Date().toLocaleDateString(),
+        createdAt: serverTimestamp(),
+        publishAt: Timestamp.fromMillis(Date.now()),
+        expiresAt: Timestamp.fromMillis(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        order: 9999,
+        views: 0,
+        clicks: 0
+      });
+      setSubmitReviewFile(null);
+      setSubmitReviewCaption('');
+      setSubmitReviewNotice('Submitted! We will review it before publishing.');
+    } catch (error) {
+      setSubmitReviewNotice(error instanceof Error ? error.message : 'Unable to submit right now.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   return (
@@ -450,8 +531,24 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <div className="mb-4 flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
         <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
           {customerReviewCards.map((story) => <MobileCustomerReviewCard key={story.id} story={story} />)}
+          <MobileSubmitReviewCard onSubmit={handleSubmitReview} />
         </div>
       </section>
+
+      {isSubmitReviewOpen && (
+        <div className="fixed inset-0 z-[260] flex items-end bg-black/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
+          <form onSubmit={handleSubmitReviewUpload} className="w-full rounded-2xl border border-white/10 bg-[#15192a] p-4 text-white shadow-2xl">
+            <div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-black uppercase">Submit yours</h3><button type="button" onClick={() => setIsSubmitReviewOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-white/10">×</button></div>
+            <label className="block rounded-xl border border-dashed border-[#5df7b1]/50 bg-black/20 p-4 text-center text-sm font-bold text-slate-200">
+              {submitReviewFile ? submitReviewFile.name : 'Tap to add an image'}
+              <input type="file" accept="image/*" className="sr-only" onChange={(event) => setSubmitReviewFile(event.target.files?.[0] ?? null)} />
+            </label>
+            <textarea value={submitReviewCaption} onChange={(event) => setSubmitReviewCaption(event.target.value)} placeholder="Caption (optional)" className="mt-3 min-h-20 w-full rounded-xl border border-white/10 bg-[#0d1220] p-3 text-sm text-white" />
+            {submitReviewNotice && <p className="mt-2 text-sm font-bold text-[#5df7b1]">{submitReviewNotice}</p>}
+            <button type="submit" disabled={isSubmittingReview} className="mt-3 w-full rounded-xl bg-[#5df7b1] px-4 py-3 text-sm font-black uppercase text-[#101827] disabled:opacity-60">{isSubmittingReview ? 'Submitting...' : 'Submit for review'}</button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
