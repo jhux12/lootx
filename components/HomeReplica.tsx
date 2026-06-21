@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Search, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
-import { collection, doc, getDoc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, getDoc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
@@ -228,6 +228,16 @@ type MobileLiveWin = {
   boxId: string;
 };
 
+type MobileCustomerReview = {
+  id: string;
+  username: string;
+  caption: string;
+  mediaUrl: string;
+  timestampLabel?: string;
+  order?: number;
+  featured?: boolean;
+};
+
 const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
   common: 'from-slate-400 to-slate-600',
   uncommon: 'from-emerald-300 to-emerald-700',
@@ -235,6 +245,8 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
   epic: 'from-purple-400 to-fuchsia-800',
   legendary: 'from-amber-300 to-yellow-700'
 };
+
+const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -245,10 +257,33 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
   </button>
 );
 
+
+const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) => {
+  const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
+  return (
+    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#202337] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
+      <div className="aspect-[4/5] w-full overflow-hidden bg-[#141829]">
+        <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" />
+      </div>
+      <div className="p-3">
+        <div className="flex items-center gap-2">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-sm font-black text-white ring-2 ring-white/80">{initial}</div>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
+            <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
+          </div>
+        </div>
+        <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption || 'Thanks Pullz crew!!'}</p>
+      </div>
+    </article>
+  );
+};
+
 const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
+  const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
   const cards = boxes.slice(0, 6);
   const originals = cards.length ? cards.slice(0, 3) : [];
   const trendingBoxes = useMemo(() => {
@@ -276,6 +311,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         boxId
       }));
   }, [boxes]);
+  const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
+  const customerReviewCards = customerReviews.length
+    ? customerReviews
+    : [{ id: 'fallback-review', username: 'edb87', caption: 'Thanks Pullz crew!!', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
+
   useEffect(() => {
     if (mobileLiveWins.length <= 1) return undefined;
     const rotateTimer = window.setInterval(() => {
@@ -283,6 +323,30 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     }, 2400);
     return () => window.clearInterval(rotateTimer);
   }, [mobileLiveWins.length]);
+
+  useEffect(() => {
+    const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
+    return onSnapshot(reviewsQuery, (snapshot) => {
+      const nextReviews = snapshot.docs
+        .map((entry) => ({ id: entry.id, ...(entry.data() as Omit<MobileCustomerReview, 'id'> & { hidden?: boolean; mediaUrl?: string }) }))
+        .filter((story) => !story.hidden && Boolean(story.mediaUrl))
+        .sort((a, b) => {
+          if (a.featured !== b.featured) return a.featured ? -1 : 1;
+          return Number(a.order ?? 9999) - Number(b.order ?? 9999);
+        })
+        .slice(0, 6)
+        .map((story) => ({
+          id: story.id,
+          username: String(story.username || 'Pullz customer'),
+          caption: String(story.caption || 'Thanks Pullz crew!!'),
+          mediaUrl: String(story.mediaUrl || ''),
+          timestampLabel: story.timestampLabel ? String(story.timestampLabel) : 'recently',
+          order: Number(story.order ?? 9999),
+          featured: Boolean(story.featured)
+        }));
+      setCustomerReviews(nextReviews);
+    }, () => setCustomerReviews([]));
+  }, []);
 
   const heroSlides = ['deposit-match', 'hot-picks'] as const;
   const showDepositSlide = activeHeroSlide === 0;
@@ -343,7 +407,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { label: 'Home', sublabel: '', icon: Home, active: true, tone: 'text-[#55f7c3]', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
             { label: 'Trending', sublabel: 'Boxes', icon: Flame, active: false, tone: 'text-orange-400', action: () => document.getElementById('mobile-trending-boxes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
             { label: 'Boxes', sublabel: 'All Boxes', icon: Box, active: false, tone: 'text-purple-400', action: onViewAllBoxes },
-            { label: 'Winners', sublabel: 'Live Pulls', icon: Trophy, active: false, tone: 'text-yellow-300', action: () => document.getElementById('mobile-live-wins')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+            { label: 'Winners', sublabel: 'Reviews', icon: Trophy, active: false, tone: 'text-yellow-300', action: () => document.getElementById('mobile-customer-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
           ].map(({ label, sublabel, icon: Icon, active, tone, action }) => (
             <button key={label} type="button" onClick={action} className={`flex h-[86px] min-w-0 flex-col items-center justify-center rounded-[1.1rem] border bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_22px_rgba(36,230,158,0.12),0_0_16px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
               <Icon className={`mb-2 h-7 w-7 ${tone}`} strokeWidth={1.9} />
@@ -377,8 +441,15 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         </div>
         <div className="overflow-hidden">
           <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeLiveWinIndex * 108}px,0,0)` }}>
-            {(mobileLiveWins.length ? mobileLiveWins : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
+            {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
           </div>
+        </div>
+      </section>
+
+      <section id="mobile-customer-reviews" className="scroll-mt-4 mt-7 px-3">
+        <div className="mb-4 flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
+        <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
+          {customerReviewCards.map((story) => <MobileCustomerReviewCard key={story.id} story={story} />)}
         </div>
       </section>
     </div>
