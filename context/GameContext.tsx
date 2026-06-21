@@ -362,6 +362,9 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
+const XP_SETTINGS_SITE_DOC = 'settings';
+const XP_SETTINGS_SUBCOLLECTION = 'xp';
+const XP_SETTINGS_CONFIG_DOC = 'config';
 const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const SIGNUP_CREDIT_COINS = 0.05;
 const getBoxCurrencyType = (box: Partial<MysteryBox> & { price?: number; priceXP?: number; currencyType?: string }) => {
@@ -2271,6 +2274,33 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     void setDoc(bonusSettingsRef, payload, { merge: true }).catch((error) => {
       console.error('Failed to save bonus settings to Firebase', error);
     });
+
+    const xpSettingsRef = doc(db, 'site', XP_SETTINGS_SITE_DOC, XP_SETTINGS_SUBCOLLECTION, XP_SETTINGS_CONFIG_DOC);
+    void getDoc(xpSettingsRef)
+      .then((snapshot) => {
+        const existingSettings = snapshot.exists() ? snapshot.data() : {};
+        const nextOpenCaseRule = {
+          ...(existingSettings?.earnRules?.openCase ?? {}),
+          enabled: true,
+          fixedXp: Math.max(0, Math.floor(normalized.xpPerCaseOpen)),
+          percentPer100Coins: Math.max(0, Number(normalized.xpPer100Coins) || 0)
+        };
+
+        return setDoc(
+          xpSettingsRef,
+          {
+            ...existingSettings,
+            earnRules: {
+              ...(existingSettings?.earnRules ?? {}),
+              openCase: nextOpenCaseRule
+            }
+          },
+          { merge: true }
+        );
+      })
+      .catch((error) => {
+        console.error('Failed to sync XP open-case settings', error);
+      });
   };
 
   const updateStripeSettings = (settings: StripeSettings) => {
