@@ -369,7 +369,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -2250,6 +2250,33 @@ export const AdminPanel: React.FC = () => {
       }));
   };
 
+
+  const handleBoxMarketItemsUpdated = (updatedCatalogItems: CaseItem[]) => {
+      if (updatedCatalogItems.length === 0) return;
+      const updatedById = new Map(updatedCatalogItems.map((item) => [String(item.id), item]));
+      const mergedItems = selectedItems.map((selectedItem) => {
+          const latest = updatedById.get(String(selectedItem.id));
+          if (!latest) return selectedItem;
+          const latestValueCoins = Math.max(0, Number(latest.valueCoins ?? latest.price ?? selectedItem.price ?? 0) || 0);
+          return {
+              ...selectedItem,
+              ...latest,
+              chance: selectedItem.chance,
+              rarity: selectedItem.rarity,
+              color: selectedItem.color,
+              price: latestValueCoins,
+              valueCoins: latestValueCoins,
+              valueUsd: latest.valueUsd ?? Number((latestValueCoins / 100).toFixed(2)),
+              sellBackCoins: latest.sellBackCoins ?? Math.floor(latestValueCoins * 0.8),
+              boxValueOverrideCoins: latestValueCoins,
+              originalPriceCoins: Number(selectedItem.originalPriceCoins ?? getCatalogItemPrice(selectedItem))
+          };
+      });
+      const { updatedItems } = getAutoCalculatedBoxItems(mergedItems);
+      setSelectedItems(updatedItems);
+      setOddsEditorMode('auto');
+  };
+
   useEffect(() => {
       if (oddsEditorMode !== 'auto') return;
       setSelectedItems((prev) => {
@@ -3513,12 +3540,6 @@ export const AdminPanel: React.FC = () => {
                        <Users className="w-4 h-4" /> Referrals
                    </button>
                    <button
-                     onClick={() => setActiveTab('market-pricing')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'market-pricing' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                   >
-                       <Calculator className="w-4 h-4" /> Market Pricing
-                   </button>
-                   <button
                      onClick={() => setActiveTab('fees')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'fees' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3586,7 +3607,6 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'legal' && 'Legal Content'}
-                    {activeTab === 'market-pricing' && 'Market Pricing'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -4537,6 +4557,19 @@ export const AdminPanel: React.FC = () => {
                                  </div>
                              )}
                         </div>
+
+                        {selectedItems.length > 0 && (
+                            <div className="mb-6">
+                                <MarketPricingAdminSection
+                                    items={items}
+                                    boxes={boxes}
+                                    activeBox={editingBoxId ? boxes.find((box) => box.id === editingBoxId) ?? null : ({ id: '', name: newBox.name || 'Draft box', price: Number(newBox.price ?? 0), image: newBox.image || '', accentColor: newBox.accentColor || '#3b82f6', items: selectedItems } as MysteryBox)}
+                                    selectedItemIds={selectedItems.map((item) => item.id)}
+                                    compact
+                                    onItemsUpdated={handleBoxMarketItemsUpdated}
+                                />
+                            </div>
+                        )}
 
                         <button
                             onClick={handleSaveBox}
@@ -6279,10 +6312,6 @@ export const AdminPanel: React.FC = () => {
             )}
 
             {/* TAB: FEES & SHIPPING */}
-            {activeTab === 'market-pricing' && (
-                <MarketPricingAdminSection items={items} boxes={boxes} />
-            )}
-
             {activeTab === 'referrals' && (
                 <ReferralAdminSection />
             )}
