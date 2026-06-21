@@ -490,19 +490,19 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { label: 'Boxes', sublabel: 'All Boxes', icon: Box, active: false, tone: 'text-purple-400', action: onViewAllBoxes },
             { label: 'Winners', sublabel: 'Reviews', icon: Trophy, active: false, tone: 'text-yellow-300', action: () => document.getElementById('mobile-customer-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
           ].map(({ label, sublabel, icon: Icon, active, tone, action }) => (
-            <button key={label} type="button" onClick={action} className={`flex h-[86px] min-w-0 flex-col items-center justify-center rounded-[1.1rem] border bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_22px_rgba(36,230,158,0.12),0_0_16px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
-              <Icon className={`mb-2 h-7 w-7 ${tone}`} strokeWidth={1.9} />
-              <span className={`text-[10px] font-black uppercase leading-none tracking-wide ${active ? 'text-[#55f7c3]' : 'text-white'}`}>{label}</span>
-              {sublabel ? <span className="mt-1 text-[7px] font-black uppercase tracking-wide text-slate-500">{sublabel}</span> : null}
+            <button key={label} type="button" onClick={action} className={`flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_22px_rgba(36,230,158,0.12),0_0_16px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
+              <Icon className={`mb-1.5 h-5 w-5 ${tone}`} strokeWidth={1.9} />
+              <span className={`text-[13px] font-black uppercase leading-none tracking-tight ${active ? 'text-[#55f7c3]' : 'text-white'}`}>{label}</span>
+              {sublabel ? <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-slate-500">{sublabel}</span> : null}
             </button>
           ))}
         </div>
       </section>
 
-      <div className="mt-7 flex items-center gap-2 px-3">
-        <button className="grid h-10 w-10 place-items-center rounded-full bg-[#252d42] text-slate-300"><Search className="h-5 w-5" /></button>
-        <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
-        <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5 rotate-90" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
+      <div className="mt-5 flex items-center gap-2 px-3">
+        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><Search className="h-4 w-4" />Search</button>
+        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><SlidersHorizontal className="h-4 w-4" />Filters</button>
+        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><ChevronRight className="h-4 w-4 rotate-90" />Sort</button>
       </div>
 
       <section id="mobile-trending-boxes" className="scroll-mt-4 mt-7 px-3">
@@ -510,8 +510,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
           <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
           <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          {trendingBoxes.map((box) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[112px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-1.5 top-1.5 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span></button>)}
+        <div className="grid grid-cols-2 gap-2.5">
+          {trendingBoxes.slice(0, 4).map((box) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[148px] overflow-hidden rounded-xl bg-[#252b3a] p-3 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-1.5 top-1.5 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span></button>)}
         </div>
       </section>
 
