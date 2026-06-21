@@ -218,13 +218,30 @@ const HomeBelowFoldSkeleton = memo(() => (
 HomeBelowFoldSkeleton.displayName = 'HomeBelowFoldSkeleton';
 
 
-const MobileMiniGameCard = ({ title, subtitle, image, accent }: { title: string; subtitle: string; image?: string; accent: string }) => (
-  <button type="button" className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${accent} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`}>
-    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.22))]" />
-    <div className="absolute left-1/2 top-[32px] z-20 -translate-x-1/2 rounded-full bg-white/25 px-2 py-0.5 text-[5px] font-black uppercase tracking-wide text-white/90 shadow-sm">Pullz Picks</div>
-    {image ? <img src={image} alt="" className="absolute inset-x-0 bottom-2 top-3 z-10 mx-auto h-[96px] w-[96px] object-contain drop-shadow-[0_13px_16px_rgba(0,0,0,0.42)]" loading="lazy" /> : null}
-    <div className="absolute inset-x-0 top-[60px] z-30 text-center text-[20px] font-black uppercase leading-none tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)]">{title}</div>
-    {subtitle ? <div className="absolute bottom-2 right-2 z-30 rounded bg-white/18 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{subtitle}</div> : null}
+type MobileLiveWin = {
+  id: string;
+  title: string;
+  image: string;
+  rarity: MysteryBox['items'][number]['rarity'];
+  timeAgo: string;
+};
+
+const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
+  common: 'from-slate-400 to-slate-600',
+  uncommon: 'from-emerald-300 to-emerald-700',
+  rare: 'from-cyan-400 to-blue-700',
+  epic: 'from-purple-400 to-fuchsia-800',
+  legendary: 'from-amber-300 to-yellow-700'
+};
+
+const MobileLiveWinCard = ({ win }: { win: MobileLiveWin }) => (
+  <button type="button" className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`}>
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
+    <div className="absolute left-1/2 top-[32px] z-20 -translate-x-1/2 rounded-full bg-white/25 px-2 py-0.5 text-[5px] font-black uppercase tracking-wide text-white/90 shadow-sm">Live Win</div>
+    {win.image ? <img src={win.image} alt="" className="absolute inset-x-0 bottom-2 top-3 z-10 mx-auto h-[96px] w-[96px] object-contain drop-shadow-[0_13px_16px_rgba(0,0,0,0.42)]" loading="lazy" /> : null}
+    <div className="absolute inset-x-1 top-[60px] z-30 truncate text-center text-[18px] font-black uppercase leading-none tracking-tight text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.65)]">{win.title}</div>
+    <div className="absolute bottom-2 left-2 z-30 rounded bg-black/20 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{win.rarity}</div>
+    <div className="absolute bottom-2 right-2 z-30 rounded bg-white/18 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{win.timeAgo}</div>
   </button>
 );
 
@@ -234,6 +251,24 @@ const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBo
   const cards = boxes.slice(0, 6);
   const originals = cards.length ? cards.slice(0, 3) : [];
   const mysteryBoxCards = cards.length ? cards.slice(3, 6) : [];
+  const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
+    const itemPool = boxes
+      .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
+      .filter(({ item }) => item.image && item.name);
+
+    if (!itemPool.length) return [];
+
+    return [...itemPool]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 8)
+      .map(({ item, boxId }, index) => ({
+        id: `${boxId}-${item.id}-${index}`,
+        title: item.name,
+        image: item.image,
+        rarity: item.rarity,
+        timeAgo: index === 0 ? 'now' : `${index + 1}m`
+      }));
+  }, [boxes]);
   const heroSlides = ['deposit-match', 'hot-picks'] as const;
   const showDepositSlide = activeHeroSlide === 0;
 
@@ -302,8 +337,8 @@ const MobileHomePreview = ({ boxes, onOpenBox }: { boxes: MysteryBox[]; onOpenBo
         <button className="flex h-10 items-center gap-2 rounded-full bg-[#252d42] px-4 text-slate-200"><SlidersHorizontal className="h-5 w-5 rotate-90" /><ChevronRight className="h-3 w-3 rotate-90" /></button>
       </div>
 
-      <MobileGameRow title="Pullz Picks" icon={<Sparkles className="h-4 w-4 text-slate-400" />}>
-        {(originals.length ? originals : [{ id:'starter', name:'Starter', image:'' },{ id:'premium', name:'Premium', image:'' },{ id:'daily', name:'Daily', image:'' }] as any).map((box: MysteryBox, i: number) => <MobileMiniGameCard key={box.id} title={i===0?'Starter':i===1?'Premium':'Daily'} subtitle={i===2?'New box':''} image={box.image} accent={i===0?'from-cyan-400 to-blue-600':i===1?'from-lime-300 to-emerald-700':'from-cyan-300 to-cyan-600'} />)}
+      <MobileGameRow title="Live Wins" icon={<Sparkles className="h-4 w-4 text-slate-400" />}>
+        {(mobileLiveWins.length ? mobileLiveWins : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m` }))).map((win) => <MobileLiveWinCard key={win.id} win={win} />)}
       </MobileGameRow>
       <MobileGameRow title="Mystery Boxes" icon={<Box className="h-4 w-4 text-slate-400" />}>
         {(mysteryBoxCards.length ? mysteryBoxCards : cards.slice(0,3)).map((box: MysteryBox) => <button key={box.id} onClick={() => onOpenBox(box.id)} className="relative h-[140px] min-w-[102px] overflow-hidden rounded-lg bg-[#252b3a] p-2 active:scale-[0.98]"><img src={box.image} alt="" className="h-full w-full object-contain" /><span className="absolute left-2 top-2 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[6px] font-black uppercase text-white">Featured Box</span></button>)}
