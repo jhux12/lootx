@@ -354,7 +354,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       });
     }
 
-    return selected.slice(0, 10).map(({ item, boxId }, index) => ({
+    return selected.slice(0, 10).sort(() => Math.random() - 0.5).map(({ item, boxId }, index) => ({
       id: `${boxId}-${item.id}-${index}`,
       title: item.name,
       image: item.image,

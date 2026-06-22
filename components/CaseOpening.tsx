@@ -84,6 +84,15 @@ const rarityGlowClass: Record<string, string> = {
   common: 'bg-gray-300/18'
 };
 
+
+const dropTableRarityAccent: Record<string, string> = {
+  common: 'from-slate-400 to-slate-600',
+  uncommon: 'from-emerald-300 to-emerald-700',
+  rare: 'from-cyan-400 to-blue-700',
+  epic: 'from-purple-400 to-fuchsia-800',
+  legendary: 'from-amber-300 to-yellow-700'
+};
+
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
   legendary: { color: '#fbbf24', glow: 'rgba(251,191,36,0.95)', label: 'Legendary' },
   epic: { color: '#a855f7', glow: 'rgba(168,85,247,0.9)', label: 'Epic' },
@@ -2497,14 +2506,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {visibleDropItems.map((item) => (
+                {visibleDropItems.map((item) => {
+                  const rarityKey = normalizeRarityKey(item.rarity);
+                  const rarityAccent = dropTableRarityAccent[rarityKey] ?? dropTableRarityAccent.common;
+                  return (
                     <button
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className="group relative overflow-hidden rounded-xl border border-white/10 bg-transparent text-left transition-all hover:border-white/20"
+                        className={`group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] transition-all hover:border-white/20`}
                     >
-                        <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at top, ${item.color}88 0%, transparent 70%)` }} />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
                         <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
                             <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" width={160} height={160} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
                             {item.redeemable === false && (
@@ -2513,7 +2525,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               </span>
                             )}
                         </div>
-                        <div className="relative border-t border-white/10 bg-transparent p-3">
+                        <div className="relative border-t border-white/10 bg-black/15 p-3">
                             <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
                             <div className="flex items-center justify-between gap-2">
                                 <div className="min-w-0">
@@ -2536,7 +2548,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                             </div>
                         </div>
                     </button>
-                ))}
+                  );
+                })}
             </div>
             {hasMoreDropItems && (
               <div className="mt-5 flex justify-center">
