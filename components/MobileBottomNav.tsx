@@ -148,7 +148,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-white/10 bg-[#25283b]/95 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024]/97 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
@@ -170,7 +170,7 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <div key={item.id} className="relative flex justify-center">
               {item.id === 'PROFILE' && showFreeBoxTooltip ? (
-                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-md border border-purple-400/35 bg-[#0f1018] px-2 py-1 text-[10px] font-semibold text-purple-100 shadow-lg">
+                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-md border border-[#3a4146]/70 bg-[#1b2024] px-2 py-1 text-[10px] font-semibold text-slate-100 shadow-lg">
                   <div className="flex items-center gap-1.5">
                     <span>Free box available</span>
                     <button
@@ -188,7 +188,7 @@ export const MobileBottomNav: React.FC = () => {
                 type="button"
                 onClick={() => handleNav(item)}
                 className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
-                  isActive ? 'bg-[#223941] text-[#54f5b3]' : 'text-slate-500 hover:text-slate-300'
+                  isActive ? 'bg-[#242b31] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]' : 'text-slate-500 hover:bg-[#242b31]/70 hover:text-slate-300'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -202,7 +202,7 @@ export const MobileBottomNav: React.FC = () => {
                       </span>
                     )}
                     {isAuthenticated && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-purple-500 ring-1 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#54f5b3] ring-1 ring-[#1b2024]" aria-hidden="true" />
                     )}
                     {hasFreeSignupBox && (
                       <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#1b2024]" aria-hidden="true" />
