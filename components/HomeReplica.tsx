@@ -343,6 +343,14 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     return () => window.clearInterval(rotateTimer);
   }, [mobileLiveWins.length]);
 
+
+  useEffect(() => {
+    const heroTimer = window.setInterval(() => {
+      setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
+    }, 5000);
+    return () => window.clearInterval(heroTimer);
+  }, []);
+
   useEffect(() => {
     const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
     return onSnapshot(reviewsQuery, (snapshot) => {
@@ -461,13 +469,13 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <button type="button" onClick={handleHeroAction} className={`relative h-[122px] w-full overflow-hidden rounded-[1.28rem] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] ${showDepositSlide ? 'bg-[#5df7b1]' : 'bg-[#55f4a7]'}`}>
           <div className={showDepositSlide ? 'absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,58,237,0.32),transparent_32%),radial-gradient(circle_at_46%_118%,rgba(20,184,166,0.36),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]' : 'absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]'} />
           <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Sparkles className="h-3 w-3" />{showDepositSlide ? 'Welcome bonus' : 'Announcement'}</div>
-          <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% MATCH BONUS' : 'Hot Picks'}</h1>
-          <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? "We'll match your first deposit up to $50." : "Open today's most popular mystery boxes."}</p>
-          <div className="absolute -right-7 top-1 flex rotate-[12deg] gap-2">
+          <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% MATCH BONUS' : 'Trending Boxes'}</h1>
+          <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? "We'll match your first deposit up to $50." : 'Open the boxes everyone is watching right now.'}</p>
+          <div className={showDepositSlide ? "absolute right-[-18px] top-2 flex gap-2" : "absolute -right-7 top-1 flex rotate-[12deg] gap-2"}>
             {showDepositSlide ? (
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[112px] w-[168px] rounded-xl object-cover shadow-xl" loading="eager" />
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[108px] w-[176px] rounded-xl object-contain shadow-xl" loading="eager" />
             ) : (
-              (cards.length ? cards.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
+              (trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
                 <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl">
                   {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain" /> : <span className="text-center text-sm font-black uppercase text-white">{box.name}</span>}
                 </div>
