@@ -37,6 +37,7 @@ export type HomepageConfig = {
   showcaseRows: ShowcaseRow[];
   demoBoxId?: string | null;
   trustImageUrl?: string | null;
+  trendingBoxIds?: string[];
 };
 
 export const MAX_SHOWCASE_BOXES = 12;
@@ -131,7 +132,10 @@ export const subscribeHomepageConfig = (
       onData({
         showcaseRows: normalizeShowcaseRows(data.showcaseRows),
         demoBoxId: typeof data.demoBoxId === 'string' && data.demoBoxId.trim() ? data.demoBoxId : null,
-        trustImageUrl: typeof data.trustImageUrl === 'string' && data.trustImageUrl.trim() ? data.trustImageUrl : null
+        trustImageUrl: typeof data.trustImageUrl === 'string' && data.trustImageUrl.trim() ? data.trustImageUrl : null,
+        trendingBoxIds: Array.isArray(data.trendingBoxIds)
+          ? data.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim())
+          : []
       });
     },
     (error) => {
@@ -148,7 +152,7 @@ export const subscribeHomepageConfig = (
 
 export const saveHomepageConfig = async (configOrRows: HomepageConfig | ShowcaseRow[]) => {
   const config = Array.isArray(configOrRows)
-    ? { showcaseRows: configOrRows, demoBoxId: null, trustImageUrl: null }
+    ? { showcaseRows: configOrRows, demoBoxId: null, trustImageUrl: null, trendingBoxIds: [] }
     : configOrRows;
   const normalizedRows = normalizeShowcaseRows(config.showcaseRows);
   const demoBoxId = typeof config.demoBoxId === 'string' && config.demoBoxId.trim()
@@ -157,7 +161,10 @@ export const saveHomepageConfig = async (configOrRows: HomepageConfig | Showcase
   const trustImageUrl = typeof config.trustImageUrl === 'string' && config.trustImageUrl.trim()
     ? config.trustImageUrl.trim()
     : null;
-  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl }, { merge: true });
+  const trendingBoxIds = Array.isArray(config.trendingBoxIds)
+    ? config.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim()).slice(0, 6)
+    : [];
+  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl, trendingBoxIds }, { merge: true });
 };
 
 export const addRow = (rows: ShowcaseRow[]) => {
