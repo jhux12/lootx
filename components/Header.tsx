@@ -763,7 +763,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 onClick={() => navigate("PROFILE")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-white/[0.045]"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-[#242b31]"
               >
                 {isAuthenticated ? (
                   <UserAvatar
@@ -792,7 +792,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     void logout();
                   }}
-                  className="shrink-0 rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-white/[0.075]"
+                  className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-[#2d353c]"
                 >
                   Sign out
                 </button>
@@ -810,35 +810,35 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <nav className="space-y-2" aria-label="Mobile menu links">
               <button
                 onClick={() => navigate("HOME")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <HomeIcon className="h-5 w-5 text-[#54f5b3]" />
                 Home
               </button>
               <button
                 onClick={() => navigate("BOXES")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <Package className="h-5 w-5 text-[#54f5b3]" />
                 Boxes
               </button>
               <button
                 onClick={() => navigate("PLINKO")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <UpgraderIcon className="h-5 w-5 text-[#54f5b3]" />
                 Upgrader
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <Trophy className="h-5 w-5 text-[#54f5b3]" />
                 Leaderboard
               </button>
               <button
                 onClick={() => navigate("PROFILE")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-white/[0.055]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <UserIcon className="h-5 w-5 text-[#54f5b3]" />
                 Profile
@@ -848,14 +848,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
               <button
                 onClick={() => navigate("REFERRALS")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
               >
                 <Users className="h-5 w-5 text-[#54f5b3]" />
                 Refer a Friend
               </button>
               <button
                 onClick={() => navigate("CONTACT")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.055]"
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
               >
                 <LifeBuoy className="h-5 w-5 text-[#54f5b3]" />
                 Support

@@ -148,7 +148,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024]/97 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
@@ -188,7 +188,7 @@ export const MobileBottomNav: React.FC = () => {
                 type="button"
                 onClick={() => handleNav(item)}
                 className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
-                  isActive ? 'bg-[#242b31] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]' : 'text-slate-500 hover:bg-[#242b31]/70 hover:text-slate-300'
+                  isActive ? 'bg-[#242b31] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]' : 'text-slate-500 hover:bg-[#242b31] hover:text-slate-300'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
