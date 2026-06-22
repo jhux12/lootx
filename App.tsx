@@ -141,6 +141,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
+  const [homepageTrendingBoxIds, setHomepageTrendingBoxIds] = useState<string[]>([]);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
   const [showHomePrompt, setShowHomePrompt] = useState(false);
   const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
@@ -209,10 +210,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       unsubscribe = subscribeHomepageConfig(
         (config) => {
           const nextDemoBoxId = config?.demoBoxId ?? null;
+          const nextTrendingBoxIds = config?.trendingBoxIds ?? [];
           setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
+          setHomepageTrendingBoxIds((current) => (current.join('|') === nextTrendingBoxIds.join('|') ? current : nextTrendingBoxIds));
         },
         () => {
           setHomepageDemoBoxId((current) => (current === null ? current : null));
+          setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
         }
       );
     }, 4200);
@@ -460,6 +464,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         <HomeReplica
           boxes={baseHomeBoxes}
           demoBoxId={homepageDemoBoxId}
+          trendingBoxIds={homepageTrendingBoxIds}
           isChatCollapsed={isChatCollapsed}
           onOpenBox={(boxId) => {
             playSound('click');
