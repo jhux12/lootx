@@ -263,11 +263,11 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
 const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) => {
   const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
   return (
-    <article className="min-w-[298px] overflow-hidden rounded-md bg-transparent shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
-      <div className="aspect-[4/5] w-full overflow-hidden rounded-md bg-[#242b31]">
+    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#202337] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
+      <div className="aspect-[4/5] w-full overflow-hidden bg-[#141829]">
         <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" />
       </div>
-      <div className="px-1 pt-3">
+      <div className="p-3">
         <div className="flex items-center gap-2">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-sm font-black text-white ring-2 ring-white/80">{initial}</div>
           <div className="min-w-0">
@@ -275,6 +275,7 @@ const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) =>
             <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
           </div>
         </div>
+        {story.caption ? <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption}</p> : null}
       </div>
     </article>
   );
@@ -538,18 +539,18 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative h-[122px] w-full overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[142px] lg:h-[164px]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[#5df7b1] p-4 sm:p-5 lg:p-6">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_22%,rgba(124,58,237,0.28),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(20,184,166,0.34),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]" />
-              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4] sm:text-[9px]"><Sparkles className="h-3 w-3" />Welcome bonus</div>
-              <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233] sm:max-w-[240px] sm:text-[28px] lg:max-w-[320px] lg:text-[36px]">100% MATCH BONUS</h1>
-              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233] sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">We'll match your first deposit up to $50.</p>
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-4 lg:p-5">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_22%,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
+              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:text-[9px]"><Sparkles className="h-3 w-3" />Welcome bonus</div>
+              <h1 className="relative z-10 mt-2 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-white sm:max-w-[240px] sm:text-[28px] lg:max-w-[320px] lg:text-[36px]">100% MATCH BONUS</h1>
+              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">We'll match your first deposit up to $50.</p>
               <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="absolute right-[-2px] top-2 h-[108px] w-[176px] object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-4 sm:h-[126px] sm:w-[210px] lg:right-10 lg:top-3 lg:h-[150px] lg:w-[250px]" loading="eager" />
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[#55f4a7] p-4 sm:p-5 lg:p-6">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]" />
-              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4] sm:text-[9px]"><Flame className="h-3 w-3" />Trending boxes</div>
-              <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233] sm:max-w-[250px] sm:text-[28px] lg:max-w-[330px] lg:text-[36px]">Trending Boxes</h1>
-              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233] sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">Open the boxes everyone is watching right now.</p>
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-4 lg:p-5">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
+              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:text-[9px]"><Flame className="h-3 w-3" />Trending boxes</div>
+              <h1 className="relative z-10 mt-2 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-white sm:max-w-[250px] sm:text-[28px] lg:max-w-[330px] lg:text-[36px]">Trending Boxes</h1>
+              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">Open the boxes everyone is watching right now.</p>
               <div className="absolute -right-6 top-2 flex gap-2 sm:right-4 lg:right-10">
                 {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
                   <div key={box.id ?? index} className="grid h-[108px] w-[72px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl sm:h-[124px] sm:w-[86px] lg:h-[146px] lg:w-[104px]">

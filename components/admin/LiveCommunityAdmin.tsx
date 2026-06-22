@@ -193,6 +193,7 @@ export const LiveCommunityAdmin: React.FC = () => {
 
     <div className="rounded-xl border border-gray-800 bg-[#131720] p-4">
       <h4 className="mb-3 font-semibold text-white">Edit Customer Review Stories</h4>
+      <p className="mb-3 text-xs text-gray-400">Add or update custom captions here. Caption edits save when you leave the caption field.</p>
       <div className="space-y-3">
         {sortedStories.map((story) => (
           <div key={`edit-${story.id}`} className="grid grid-cols-1 gap-2 rounded-lg border border-gray-800 bg-[#0b0e14] p-3 text-xs text-gray-200 md:grid-cols-[80px_1fr]">
@@ -201,7 +202,10 @@ export const LiveCommunityAdmin: React.FC = () => {
               <input className="rounded bg-[#050811] p-2 text-white" defaultValue={story.username || ''} placeholder="Username" onBlur={(event)=>handleModerationAction('Update username', story.id, { username: event.target.value.trim() })} />
               <input className="rounded bg-[#050811] p-2 text-white" defaultValue={story.timestampLabel || ''} placeholder="Date / label" onBlur={(event)=>handleModerationAction('Update date label', story.id, { timestampLabel: event.target.value.trim() })} />
               <input className="rounded bg-[#050811] p-2 text-white md:col-span-2" defaultValue={story.mediaUrl || ''} placeholder="Image URL" onBlur={(event)=>handleModerationAction('Update image', story.id, { mediaUrl: event.target.value.trim() })} />
-              <textarea className="min-h-16 rounded bg-[#050811] p-2 text-white md:col-span-2" defaultValue={story.caption || ''} placeholder="Caption" onBlur={(event)=>handleModerationAction('Update caption', story.id, { caption: event.target.value.trim() })} />
+              <label className="md:col-span-2">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Custom caption</span>
+                <textarea className="min-h-16 w-full rounded bg-[#050811] p-2 text-white" defaultValue={story.caption || ''} placeholder="Add a custom review caption" onBlur={(event)=>handleModerationAction('Update caption', story.id, { caption: event.target.value.trim() })} />
+              </label>
             </div>
           </div>
         ))}
