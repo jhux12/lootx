@@ -248,6 +248,7 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 };
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
+const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -460,14 +461,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <button type="button" onClick={handleHeroAction} className={`relative h-[122px] w-full overflow-hidden rounded-[1.28rem] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] ${showDepositSlide ? 'bg-[#5df7b1]' : 'bg-[#55f4a7]'}`}>
           <div className={showDepositSlide ? 'absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,58,237,0.32),transparent_32%),radial-gradient(circle_at_46%_118%,rgba(20,184,166,0.36),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]' : 'absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]'} />
           <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Sparkles className="h-3 w-3" />{showDepositSlide ? 'Welcome bonus' : 'Announcement'}</div>
-          <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% Match' : 'Hot Picks'}</h1>
-          <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? 'First deposit match up to $50.' : "Open today's most popular mystery boxes."}</p>
+          <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% MATCH BONUS' : 'Hot Picks'}</h1>
+          <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? "We'll match your first deposit up to $50." : "Open today's most popular mystery boxes."}</p>
           <div className="absolute -right-7 top-1 flex rotate-[12deg] gap-2">
             {showDepositSlide ? (
-              <>
-                <div className="grid h-[112px] w-[74px] place-items-center rounded-xl bg-[#172233] p-2 text-center shadow-xl"><span className="text-[26px] font-black leading-none text-[#5df7b1]">2X</span><span className="text-[8px] font-black uppercase text-white">Coins</span></div>
-                <div className="grid h-[112px] w-[74px] place-items-center rounded-xl bg-gradient-to-b from-violet-400 to-blue-700 p-2 text-center shadow-xl"><span className="text-[22px] font-black leading-none text-white">+$50</span><span className="text-[8px] font-black uppercase text-white/90">Match</span></div>
-              </>
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[112px] w-[168px] rounded-xl object-cover shadow-xl" loading="eager" />
             ) : (
               (cards.length ? cards.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
                 <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl">
