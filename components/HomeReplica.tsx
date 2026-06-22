@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Sparkles, Trophy, X } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Flame, Package, Sparkles, Trophy, X } from 'lucide-react';
 import { Timestamp, addDoc, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -570,16 +570,16 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section className="mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="grid grid-cols-4 gap-2">
           {[
-            { label: 'Home', sublabel: '', icon: Home, active: true, tone: 'text-[#55f7c3]', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
-            { label: 'Trending', sublabel: 'Boxes', icon: Flame, active: false, tone: 'text-orange-400', action: () => document.getElementById('mobile-trending-boxes')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
-            { label: 'Boxes', sublabel: 'All Boxes', icon: Box, active: false, tone: 'text-purple-400', action: onViewAllBoxes },
-            { label: 'Winners', sublabel: 'Reviews', icon: Trophy, active: false, tone: 'text-yellow-300', action: () => document.getElementById('mobile-customer-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
-          ].map(({ label, sublabel, icon: Icon, active, tone, action }) => (
-            <button key={label} type="button" onClick={action} className={`flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)] ${active ? 'border-[#24e69e] shadow-[inset_0_0_22px_rgba(36,230,158,0.12),0_0_16px_rgba(36,230,158,0.20)]' : 'border-[#24314a]'}`}>
-              <Icon className={`mb-1.5 h-5 w-5 ${tone}`} strokeWidth={1.9} />
-              <span className={`text-[13px] font-black uppercase leading-none tracking-tight ${active ? 'text-[#55f7c3]' : 'text-white'}`}>{label}</span>
-              {sublabel ? <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-slate-500">{sublabel}</span> : null}
-            </button>
+            { label: 'Ship Real Items', sublabel: 'To Your Door', icon: '📦' },
+            { label: 'Provably Fair', sublabel: 'Verified Results', icon: '🔒' },
+            { label: 'Instant Sellback', sublabel: 'Get Coins Fast', icon: '⚡' },
+            { label: 'Secure Payments', sublabel: 'Instant Delivery', icon: '🛡️' }
+          ].map(({ label, sublabel, icon }) => (
+            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#24314a] bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
+              <span className="mb-1.5 text-[20px] leading-none" aria-hidden="true">{icon}</span>
+              <span className="text-[10px] font-black uppercase leading-none tracking-tight text-white sm:text-[13px]">{label}</span>
+              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#55f7c3]">{sublabel}</span>
+            </div>
           ))}
         </div>
       </section>
