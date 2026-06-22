@@ -53,6 +53,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [categoryValidation, setCategoryValidation] = useState<Record<string, boolean>>({});
   const [demoBoxId, setDemoBoxId] = useState<string>('');
   const [trustImageUrl, setTrustImageUrl] = useState<string>('');
+  const [trendingBoxIds, setTrendingBoxIds] = useState<string[]>([]);
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -60,6 +61,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         setShowcaseRows(normalizeShowcaseRows(config?.showcaseRows));
         setDemoBoxId(config?.demoBoxId ?? '');
         setTrustImageUrl(config?.trustImageUrl ?? '');
+        setTrendingBoxIds(config?.trendingBoxIds ?? []);
         setIsLoading(false);
       },
       () => {
@@ -91,16 +93,19 @@ export const HomepageShowcaseEditor: React.FC = () => {
     nextRows: ShowcaseRow[],
     successMessage?: string,
     nextDemoBoxId = demoBoxId,
-    nextTrustImageUrl = trustImageUrl
+    nextTrustImageUrl = trustImageUrl,
+    nextTrendingBoxIds = trendingBoxIds
   ) => {
     setShowcaseRows(nextRows);
     setDemoBoxId(nextDemoBoxId);
     setTrustImageUrl(nextTrustImageUrl);
+    setTrendingBoxIds(nextTrendingBoxIds);
     try {
       await saveHomepageConfig({
         showcaseRows: nextRows,
         demoBoxId: nextDemoBoxId || null,
-        trustImageUrl: nextTrustImageUrl || null
+        trustImageUrl: nextTrustImageUrl || null,
+        trendingBoxIds: nextTrendingBoxIds
       });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
@@ -119,6 +124,13 @@ export const HomepageShowcaseEditor: React.FC = () => {
 
   const handleTrustImageSave = () => {
     persistRows(showcaseRows, 'Trust image updated.', demoBoxId, trustImageUrl.trim());
+  };
+
+  const handleTrendingBoxToggle = (boxId: string) => {
+    const nextTrendingBoxIds = trendingBoxIds.includes(boxId)
+      ? trendingBoxIds.filter((id) => id !== boxId)
+      : [...trendingBoxIds, boxId].slice(0, 6);
+    persistRows(showcaseRows, 'Trending boxes updated.', demoBoxId, trustImageUrl, nextTrendingBoxIds);
   };
 
   const handleDeleteRow = (rowId: string) => {
@@ -283,7 +295,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-800 bg-[#131720] p-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-800 bg-[#131720] p-4 lg:grid-cols-3">
         <div>
           <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
             Demo spinner box (homepage hero)
@@ -325,6 +337,33 @@ export const HomepageShowcaseEditor: React.FC = () => {
               loading="lazy"
             />
           )}
+        </div>
+
+        <div>
+          <div className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Trending boxes (homepage)
+            <div className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
+              {sortedBoxes.map((box) => {
+                const isSelected = trendingBoxIds.includes(box.id);
+                const isDisabled = !isSelected && trendingBoxIds.length >= 6;
+                return (
+                  <button
+                    key={`trending-${box.id}`}
+                    type="button"
+                    disabled={isDisabled}
+                    onClick={() => handleTrendingBoxToggle(box.id)}
+                    className={`flex w-full items-center justify-between gap-2 rounded-md border px-2 py-1.5 text-left text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isSelected ? 'border-emerald-400/50 bg-emerald-400/10 text-emerald-100' : 'border-gray-800 bg-[#050811] text-gray-300 hover:border-white/20 hover:text-white'}`}
+                  >
+                    <span className="truncate">{box.name}</span>
+                    <span className="shrink-0 text-[10px] uppercase">{isSelected ? 'Trending' : 'Add'}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-gray-500">
+            Select up to 6 boxes for the mobile homepage Trending Boxes grid.
+          </p>
         </div>
       </div>
 

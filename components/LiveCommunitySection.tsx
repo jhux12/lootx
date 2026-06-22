@@ -119,6 +119,19 @@ export const LiveCommunitySection: React.FC = () => {
   const [isSubmittingPull, setIsSubmittingPull] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const openSubmit = () => {
+      if (!isAuthenticated) {
+        openAuthModal('login');
+        return;
+      }
+      setIsSubmitOpen(true);
+    };
+    window.addEventListener('pullz:open-community-submit', openSubmit);
+    return () => window.removeEventListener('pullz:open-community-submit', openSubmit);
+  }, [isAuthenticated, openAuthModal]);
+
+  useEffect(() => {
     if (!isAuthenticated || submitUsername.trim()) return;
     const accountUsername = getSubmissionUsername(user);
     if (accountUsername) setSubmitUsername(accountUsername);
