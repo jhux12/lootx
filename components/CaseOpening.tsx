@@ -51,6 +51,12 @@ const DESKTOP_CARD_WIDTH = 170;
 const DESKTOP_CARD_HEIGHT = 210;
 const DESKTOP_GAP_WIDTH = 6;
 const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const SPINNER_PRELOAD_LIMIT = {
+  idleMobile: 10,
+  idleDesktop: 28,
+  spinMobile: 18,
+  spinDesktop: 42
+} as const;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -1210,8 +1216,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
   const preloadReelImages = useCallback(async (nextReelItems: CaseItem[], options: { preloadAll?: boolean } = {}) => {
     setIsSpinnerAssetsLoading(true);
-    const preloadLimit = options.preloadAll ? Number.POSITIVE_INFINITY : (reduceMobileEffects ? 10 : 28);
-    const loadTimeoutMs = options.preloadAll ? (reduceMobileEffects ? 3200 : 5000) : (reduceMobileEffects ? 900 : 1400);
+    const preloadLimit = options.preloadAll
+      ? (reduceMobileEffects ? SPINNER_PRELOAD_LIMIT.spinMobile : SPINNER_PRELOAD_LIMIT.spinDesktop)
+      : (reduceMobileEffects ? SPINNER_PRELOAD_LIMIT.idleMobile : SPINNER_PRELOAD_LIMIT.idleDesktop);
+    const loadTimeoutMs = options.preloadAll ? (reduceMobileEffects ? 650 : 900) : (reduceMobileEffects ? 900 : 1400);
     const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
 
     const loadSource = (src: string) => {
@@ -1292,11 +1300,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.style.transition = 'none';
     }
 
-    await preloadReelImages(nextReelItems, { preloadAll: true });
-
+    // Put the generated reel into the DOM before the image preload gate so paid
+    // coin spins feel responsive immediately after the server confirms the result.
+    // The capped eager preload below still warms the first/landing images without
+    // making mobile users wait for every item in a long reel to decode.
     reelItemsRef.current = nextReelItems;
     setReelItems(nextReelItems);
     setReelWinnerIndex(winnerIndex);
+    await preloadReelImages(nextReelItems, { preloadAll: true });
     await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
@@ -2291,8 +2302,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         )}
 
         {/* Slide Up Win Sheet */}
-        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
-        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-200 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
+        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-300 ease-out ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
           {wonItem && (
             <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
               {confetti.map((piece) => (
