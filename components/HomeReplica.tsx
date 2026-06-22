@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Search, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Sparkles, Trophy, X } from 'lucide-react';
 import { Timestamp, addDoc, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -518,24 +518,32 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   };
 
   return (
-    <div className="lg:hidden">
+    <div>
       <section className="px-3 pt-3">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className={`relative h-[122px] w-full overflow-hidden rounded-[1.28rem] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] ${showDepositSlide ? 'bg-[#5df7b1]' : 'bg-[#55f4a7]'}`}>
-          <div className={showDepositSlide ? 'absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,58,237,0.32),transparent_32%),radial-gradient(circle_at_46%_118%,rgba(20,184,166,0.36),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]' : 'absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]'} />
-          <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Sparkles className="h-3 w-3" />{showDepositSlide ? 'Welcome bonus' : 'Announcement'}</div>
-          <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% MATCH BONUS' : 'Trending Boxes'}</h1>
-          <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? "We'll match your first deposit up to $50." : 'Open the boxes everyone is watching right now.'}</p>
-          <div className={showDepositSlide ? "absolute right-[-18px] top-2 flex gap-2 transition-all duration-500 ease-out" : "absolute -right-7 top-1 flex rotate-[12deg] gap-2 transition-all duration-500 ease-out"}>
-            {showDepositSlide ? (
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[108px] w-[176px] rounded-xl object-contain shadow-xl transition-transform duration-500 ease-out" loading="eager" />
-            ) : (
-              (trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl transition-transform duration-500 ease-out">
-                  {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain" /> : <span className="text-center text-sm font-black uppercase text-white">{box.name}</span>}
-                </div>
-              ))
-            )}
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative h-[122px] w-full overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[142px] lg:h-[164px]">
+          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[#5df7b1] p-4 sm:p-5 lg:p-6">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_22%,rgba(124,58,237,0.28),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(20,184,166,0.34),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]" />
+              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4] sm:text-[9px]"><Sparkles className="h-3 w-3" />Welcome bonus</div>
+              <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233] sm:max-w-[240px] sm:text-[28px] lg:max-w-[320px] lg:text-[36px]">100% MATCH BONUS</h1>
+              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233] sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">We'll match your first deposit up to $50.</p>
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="absolute right-[-2px] top-2 h-[108px] w-[176px] object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-4 sm:h-[126px] sm:w-[210px] lg:right-10 lg:top-3 lg:h-[150px] lg:w-[250px]" loading="eager" />
+            </div>
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[#55f4a7] p-4 sm:p-5 lg:p-6">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]" />
+              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4] sm:text-[9px]"><Flame className="h-3 w-3" />Trending boxes</div>
+              <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233] sm:max-w-[250px] sm:text-[28px] lg:max-w-[330px] lg:text-[36px]">Trending Boxes</h1>
+              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233] sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">Open the boxes everyone is watching right now.</p>
+              <div className="absolute -right-6 top-2 flex gap-2 sm:right-4 lg:right-10">
+                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
+                  <div key={box.id ?? index} className="grid h-[108px] w-[72px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl sm:h-[124px] sm:w-[86px] lg:h-[146px] lg:w-[104px]">
+                    {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain" /> : <span className="text-center text-sm font-black uppercase text-white">{box.name}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
+          <span className="sr-only">{showDepositSlide ? 'Claim 100% match bonus' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
           {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'deposit match' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
@@ -558,12 +566,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
           ))}
         </div>
       </section>
-
-      <div className="mt-5 flex items-center gap-2 px-3">
-        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><Search className="h-4 w-4" />Search</button>
-        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><SlidersHorizontal className="h-4 w-4" />Filters</button>
-        <button className="inline-flex h-8 items-center gap-1.5 rounded-full bg-[#252d42] px-3 text-[11px] font-black uppercase text-slate-200 active:scale-[0.98]"><ChevronRight className="h-4 w-4 rotate-90" />Sort</button>
-      </div>
 
       <section id="mobile-trending-boxes" className="scroll-mt-4 mt-7 px-3">
         <div className="mb-4 flex items-center justify-between">
@@ -790,7 +792,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
     <div className="min-h-screen bg-[#1b2024] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
         <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
-        <div className="hidden lg:block lg:space-y-7">
+        <div className="hidden">
         {canShowConversionPrompts && showSocialProof && <SocialProofNotifications />}
         {showFirstDepositBanner && (
           <FirstDepositBanner onClaim={handleClaimFirstDepositBonus} onDismiss={handleDismissFirstDepositBanner} />
