@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, ChevronLeft, ChevronRight, Flame, Home, Package, Search, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
 import { Timestamp, addDoc, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db, storage } from '../firebase';
@@ -296,6 +296,7 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
 const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+  const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
   const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
   const [isSubmitReviewOpen, setIsSubmitReviewOpen] = useState(false);
@@ -318,17 +319,49 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
     if (!itemPool.length) return [];
 
-    return [...itemPool]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 8)
-      .map(({ item, boxId }, index) => ({
-        id: `${boxId}-${item.id}-${index}`,
-        title: item.name,
-        image: item.image,
-        rarity: item.rarity,
-        timeAgo: index === 0 ? 'now' : `${index + 1}m`,
-        boxId
-      }));
+    const rarityTargets: Array<{ rarity: MobileLiveWin['rarity']; count: number }> = [
+      { rarity: 'common', count: 4 },
+      { rarity: 'uncommon', count: 2 },
+      { rarity: 'rare', count: 2 },
+      { rarity: 'epic', count: 1 },
+      { rarity: 'legendary', count: 1 }
+    ];
+    const selected: typeof itemPool = [];
+    const usedKeys = new Set<string>();
+    const shuffledPool = [...itemPool].sort(() => Math.random() - 0.5);
+
+    rarityTargets.forEach(({ rarity, count }) => {
+      shuffledPool
+        .filter(({ item }) => item.rarity === rarity)
+        .slice(0, count)
+        .forEach((entry) => {
+          const key = `${entry.boxId}-${entry.item.id}`;
+          if (!usedKeys.has(key)) {
+            usedKeys.add(key);
+            selected.push(entry);
+          }
+        });
+    });
+
+    if (selected.length < 10) {
+      shuffledPool.forEach((entry) => {
+        if (selected.length >= 10) return;
+        const key = `${entry.boxId}-${entry.item.id}`;
+        if (!usedKeys.has(key)) {
+          usedKeys.add(key);
+          selected.push(entry);
+        }
+      });
+    }
+
+    return selected.slice(0, 10).map(({ item, boxId }, index) => ({
+      id: `${boxId}-${item.id}-${index}`,
+      title: item.name,
+      image: item.image,
+      rarity: item.rarity,
+      timeAgo: index === 0 ? 'now' : `${index + 1}m`,
+      boxId
+    }));
   }, [boxes]);
   const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
   const customerReviewCards = customerReviews.length
@@ -377,6 +410,27 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
   const heroSlides = ['deposit-match', 'hot-picks'] as const;
   const showDepositSlide = activeHeroSlide === 0;
+
+  const goToHeroSlide = (direction: 1 | -1) => {
+    setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleHeroTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    heroTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleHeroTouchEnd = (event: React.TouchEvent<HTMLButtonElement>) => {
+    const start = heroTouchStartRef.current;
+    heroTouchStartRef.current = null;
+    const touch = event.changedTouches[0];
+    if (!start || !touch) return;
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+    goToHeroSlide(deltaX < 0 ? 1 : -1);
+  };
 
   const handleHeroAction = () => {
     if (showDepositSlide) {
@@ -466,17 +520,17 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   return (
     <div className="lg:hidden">
       <section className="px-3 pt-3">
-        <button type="button" onClick={handleHeroAction} className={`relative h-[122px] w-full overflow-hidden rounded-[1.28rem] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] ${showDepositSlide ? 'bg-[#5df7b1]' : 'bg-[#55f4a7]'}`}>
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className={`relative h-[122px] w-full overflow-hidden rounded-[1.28rem] p-4 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] ${showDepositSlide ? 'bg-[#5df7b1]' : 'bg-[#55f4a7]'}`}>
           <div className={showDepositSlide ? 'absolute inset-0 bg-[radial-gradient(circle_at_82%_18%,rgba(124,58,237,0.32),transparent_32%),radial-gradient(circle_at_46%_118%,rgba(20,184,166,0.36),transparent_38%),linear-gradient(135deg,rgba(255,255,255,0.20),transparent_38%)]' : 'absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(124,58,237,0.34),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(20,184,166,0.35),transparent_36%)]'} />
           <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-[#172233] px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#64ffc4]"><Sparkles className="h-3 w-3" />{showDepositSlide ? 'Welcome bonus' : 'Announcement'}</div>
           <h1 className="relative z-10 mt-3 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-[#172233]">{showDepositSlide ? '100% MATCH BONUS' : 'Trending Boxes'}</h1>
           <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-[#172233]">{showDepositSlide ? "We'll match your first deposit up to $50." : 'Open the boxes everyone is watching right now.'}</p>
-          <div className={showDepositSlide ? "absolute right-[-18px] top-2 flex gap-2" : "absolute -right-7 top-1 flex rotate-[12deg] gap-2"}>
+          <div className={showDepositSlide ? "absolute right-[-18px] top-2 flex gap-2 transition-all duration-500 ease-out" : "absolute -right-7 top-1 flex rotate-[12deg] gap-2 transition-all duration-500 ease-out"}>
             {showDepositSlide ? (
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[108px] w-[176px] rounded-xl object-contain shadow-xl" loading="eager" />
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% match bonus" className="h-[108px] w-[176px] rounded-xl object-contain shadow-xl transition-transform duration-500 ease-out" loading="eager" />
             ) : (
               (trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl">
+                <div key={box.id ?? index} className="grid h-[112px] w-[74px] place-items-center overflow-hidden rounded-xl bg-gradient-to-b from-emerald-300 to-emerald-600 p-1 shadow-xl transition-transform duration-500 ease-out">
                   {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain" /> : <span className="text-center text-sm font-black uppercase text-white">{box.name}</span>}
                 </div>
               ))
