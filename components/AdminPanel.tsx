@@ -442,6 +442,7 @@ export const AdminPanel: React.FC = () => {
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
+  const [boxItemSearchQuery, setBoxItemSearchQuery] = useState('');
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
   const [isUploadingBoxCatalogHero, setIsUploadingBoxCatalogHero] = useState(false);
@@ -1708,6 +1709,7 @@ export const AdminPanel: React.FC = () => {
       const normalizedBrand = itemBrandFilter.trim().toLowerCase();
       const normalizedCategory = itemCategoryFilter.trim().toLowerCase();
       const normalizedTagFilters = itemTagFilters.map((tag) => tag.toLowerCase());
+      const query = boxItemSearchQuery.trim().toLowerCase();
 
       return items.filter((item) => {
           const brand = item.brand?.toLowerCase() ?? '';
@@ -1716,9 +1718,22 @@ export const AdminPanel: React.FC = () => {
           const matchesBrand = !normalizedBrand || brand === normalizedBrand;
           const matchesCategory = !normalizedCategory || category === normalizedCategory;
           const matchesTags = normalizedTagFilters.length === 0 || normalizedTagFilters.some((tag) => tags.includes(tag));
-          return matchesBrand && matchesCategory && matchesTags;
+          const haystack = [
+              item.name,
+              item.brand,
+              item.category,
+              item.rarity,
+              item.upgraderCategory,
+              ...(item.tags ?? []),
+              ...(item.sizes ?? [])
+          ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+          const matchesSearch = !query || haystack.includes(query);
+          return matchesBrand && matchesCategory && matchesTags && matchesSearch;
       });
-  }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters]);
+  }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters, boxItemSearchQuery]);
 
   const handleSaveItem = async () => {
       if(!newItem.name || !newItem.price) return;
@@ -4408,19 +4423,33 @@ export const AdminPanel: React.FC = () => {
                                              ))}
                                          </Select>
                                      </label>
-                                     <div className="flex items-end">
-                                         <button
-                                             type="button"
-                                             onClick={() => {
-                                                 setItemBrandFilter('');
-                                                 setItemCategoryFilter('');
-                                                 setItemTagFilters([]);
-                                             }}
-                                             className="w-full rounded border border-gray-700 px-3 py-2 text-[11px] font-semibold uppercase text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
-                                         >
-                                             Clear Filters
-                                         </button>
+                                     <label className="text-[10px] uppercase text-gray-500 font-bold sm:col-span-2 lg:col-span-1">
+                                         Search
+                                         <Input
+                                             type="text"
+                                             value={boxItemSearchQuery}
+                                             onChange={(event) => setBoxItemSearchQuery(event.target.value)}
+                                             placeholder="Search name, tag, category..."
+                                             className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
+                                         />
+                                     </label>
+                                 </div>
+                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                     <div className="text-[11px] text-gray-500">
+                                         Showing <span className="font-semibold text-gray-300">{filteredItemsForBox.length}</span> of {items.length} catalog items.
                                      </div>
+                                     <button
+                                         type="button"
+                                         onClick={() => {
+                                             setItemBrandFilter('');
+                                             setItemCategoryFilter('');
+                                             setItemTagFilters([]);
+                                             setBoxItemSearchQuery('');
+                                         }}
+                                         className="w-full rounded border border-gray-700 px-3 py-2 text-[11px] font-semibold uppercase text-gray-400 transition hover:border-gray-500 hover:text-gray-200 sm:w-auto"
+                                     >
+                                         Clear Filters
+                                     </button>
                                  </div>
                                  <div>
                                      <div className="text-[10px] uppercase text-gray-500 font-bold mb-2">Tags (match any)</div>
@@ -4450,7 +4479,7 @@ export const AdminPanel: React.FC = () => {
                                         <div
                                             key={item.id}
                                             onClick={() => toggleItemSelection(item)}
-                                            className={`p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
+                                            className={`relative p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
                                         >
                                             <img src={item.image} alt={item.name} className="w-8 h-8 object-contain" />
                                             <div className="w-full">
@@ -4474,8 +4503,17 @@ export const AdminPanel: React.FC = () => {
                                      <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
-                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
-                                                 <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
+                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700 sm:flex-nowrap">
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => toggleItemSelection(item)}
+                                                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 text-red-300 transition hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-400"
+                                                     aria-label={`Remove ${item.name} from box`}
+                                                     title="Remove item from box"
+                                                 >
+                                                     <X className="h-4 w-4" />
+                                                 </button>
+                                                 <img src={item.image} alt={item.name} className="w-8 h-8 object-contain sm:w-5 sm:h-5" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
                                                      <div className="flex items-center justify-between gap-2">
