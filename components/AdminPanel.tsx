@@ -3128,16 +3128,33 @@ export const AdminPanel: React.FC = () => {
   };
 
   const toggleItemSelection = (item: CaseItem) => {
-      const exists = selectedItems.find(i => i.id === item.id);
-      if(exists) {
-          setSelectedItems(prev => prev.filter(i => i.id !== item.id));
-      } else {
-          setSelectedItems(prev => [...prev, {
-              ...item,
-              boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
-              originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
-          }]);
-      }
+      setSelectedItems((prev) => {
+          const exists = prev.some((entry) => entry.id === item.id);
+          const nextItems = exists
+              ? prev.filter((entry) => entry.id !== item.id)
+              : [
+                  ...prev,
+                  {
+                      ...item,
+                      boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
+                      originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
+                  }
+              ];
+
+          if (nextItems.length === 0) {
+              return nextItems;
+          }
+
+          const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(nextItems);
+          if (!hasExplicitBoxPrice) {
+              setNewBox((current) => ({
+                  ...current,
+                  [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+              }));
+          }
+          return updatedItems;
+      });
+      setOddsEditorMode('auto');
   };
 
   const getCatalogItemPrice = (item: CaseItem) => {
