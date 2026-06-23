@@ -679,6 +679,7 @@ export const AdminPanel: React.FC = () => {
   const spreadsheetInputRef = useRef<HTMLInputElement | null>(null);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
+  const isRealSelectedUserId = (userId: string | null | undefined) => Boolean(userId && userId.trim() && userId !== 'loading');
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
 
   useEffect(() => {
@@ -1144,7 +1145,10 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       if (users.length === 0) return;
 
-      setSelectedUserId((current) => current ?? users[0].id);
+      setSelectedUserId((current) => {
+          if (isRealSelectedUserId(current) && users.some((profile) => profile.id === current)) return current;
+          return null;
+      });
 
       setUserStatuses((prev) => {
           const next = { ...prev };
@@ -1520,7 +1524,8 @@ export const AdminPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
-      if (!selectedUserId) return;
+      console.log('SELECTED USER', selectedUserId);
+      if (!isRealSelectedUserId(selectedUserId)) return;
       const inventoryPathLabel = `users/${selectedUserId}/inventory`;
       console.log('READING FIRESTORE PATH', inventoryPathLabel);
       const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
@@ -2768,7 +2773,7 @@ export const AdminPanel: React.FC = () => {
       void updateUserAdminData(userId, { adminNotes: note }); // TODO: replace with dedicated admin notes collection when available.
   };
 
-  const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
+  const selectedUser = useMemo(() => isRealSelectedUserId(selectedUserId) ? users.find((profile) => profile.id === selectedUserId) : undefined, [users, selectedUserId]);
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const getUserLabels = (profile: (typeof users)[number]) => {
       const profileLabels = (profile as unknown as { internalLabels?: string[] }).internalLabels ?? [];
@@ -2871,10 +2876,10 @@ export const AdminPanel: React.FC = () => {
       });
   }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
   const selectedLedgerEntries = useMemo(() => {
-      if (!selectedUserId) return [];
+      if (!isRealSelectedUserId(selectedUserId)) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
   }, [ledgerEntries, selectedUser, selectedUserId]);
-  const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
+  const selectedInventory = isRealSelectedUserId(selectedUserId) ? inventoryState[selectedUserId!] ?? [] : [];
   const selectedShippableInventory = selectedInventory.filter((item) => item.status === 'available' && !item.locked && item.shippable !== false);
   const selectedShippableInventoryValue = selectedShippableInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   useEffect(() => {
@@ -2906,7 +2911,7 @@ export const AdminPanel: React.FC = () => {
       void run();
   }, [selectedUserId]);
   const selectedBalanceAudits = useMemo(() => {
-      if (!selectedUserId) return [];
+      if (!isRealSelectedUserId(selectedUserId)) return [];
       const searchValue = balanceAuditSearch.trim().toLowerCase();
       return (balanceAuditEntries[selectedUserId] ?? []).filter((entry) => {
           if (balanceAuditCurrencyFilter !== 'all' && entry.currency !== balanceAuditCurrencyFilter) return false;
@@ -2921,7 +2926,7 @@ export const AdminPanel: React.FC = () => {
       () => Array.from(new Set(selectedBalanceAudits.map((entry) => entry.reason))).sort((a, b) => a.localeCompare(b)),
       [selectedBalanceAudits]
   );
-  const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+  const selectedAdminLogs = isRealSelectedUserId(selectedUserId) ? adminLogs[selectedUserId!] ?? [] : [];
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
@@ -4991,7 +4996,7 @@ export const AdminPanel: React.FC = () => {
                                             return (
                                                 <tr
                                                     key={profile.id}
-                                                    onClick={() => setSelectedUserId(profile.id)}
+                                                    onClick={() => setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null)}
                                                     className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}
                                                 >
                                                     <td className="px-3 py-3">
@@ -5020,7 +5025,7 @@ export const AdminPanel: React.FC = () => {
                                                     <td className="px-3 py-3">
                                                         <div className="flex items-center gap-2 text-[11px]">
                                                             {locked && <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-300">Locked</span>}
-                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(profile.id); }}>Inspect</button>
+                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null); }}>Inspect</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -5033,7 +5038,7 @@ export const AdminPanel: React.FC = () => {
                                 {filteredUsers.map((profile) => {
                                     const metrics = getUserMetrics(profile);
                                     return (
-                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
+                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <div className="text-sm font-semibold text-white">{profile.name}</div>
@@ -5048,7 +5053,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
-                    {selectedUser ? (
+                    {selectedUser && isRealSelectedUserId(selectedUserId) ? (
                         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                             <div className="space-y-6">
                                 <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
@@ -5338,7 +5343,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user to open the operator inspector panel.</div>
+                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user</div>
                     )}
                 </div>
             )}
