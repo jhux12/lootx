@@ -673,6 +673,7 @@ export const AdminPanel: React.FC = () => {
       rarity: 'common',
       status: 'available'
   });
+  const [inventorySaveError, setInventorySaveError] = useState<string | null>(null);
   const [spreadsheetStatus, setSpreadsheetStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const [isSpreadsheetUploading, setIsSpreadsheetUploading] = useState(false);
   const spreadsheetInputRef = useRef<HTMLInputElement | null>(null);
@@ -2369,69 +2370,155 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleAddInventoryItem = async () => {
-      if (!selectedUserId) return;
+      const targetUserId = selectedUserId?.trim() ?? '';
       const name = inventoryDraft.name.trim();
       const price = Number(inventoryDraft.price);
-      if (!name || !Number.isFinite(price)) return;
-      const rarity = inventoryDraft.rarity as InventoryItem['rarity'];
+      const rarity = (inventoryDraft.rarity || 'common') as InventoryItem['rarity'];
       const now = Date.now();
       const instanceId = makeId('inv-instance');
+      const inventoryPath = targetUserId ? `users/${targetUserId}/inventory/${instanceId}` : 'users/<missing>/inventory/<pending>';
+
+      console.log('SAVE ITEM CLICKED', {
+          selectedUserId: targetUserId || null,
+          firestorePath: inventoryPath
+      });
+
+      if (!targetUserId || targetUserId === 'loading') {
+          const message = 'Select a real user before adding an inventory item.';
+          setInventorySaveError(message);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId || null,
+              firestorePath: inventoryPath,
+              code: 'invalid-selected-user',
+              message
+          });
+          return;
+      }
+      if (!name || !Number.isFinite(price) || price < 0) {
+          const message = 'Enter an item name and a non-negative value before saving.';
+          setInventorySaveError(message);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              code: 'invalid-item-payload',
+              message
+          });
+          return;
+      }
+
+      const image = inventoryDraft.image.trim() || 'https://picsum.photos/200';
+      const history: InventoryHistoryEntry[] = [
+          {
+              id: makeId('history'),
+              action: 'added',
+              createdAt: now,
+              note: 'Added by admin',
+              adminUid: adminUser?.id ?? 'admin'
+          }
+      ];
       const newItem: InventoryItem = {
-          id: makeId('inv'),
+          id: instanceId,
           instanceId,
           name,
           price,
-          image: inventoryDraft.image.trim() || 'https://picsum.photos/200',
+          image,
           rarity,
           chance: 0,
           color: rarityColorMap[rarity] ?? '#9ca3af',
           obtainedAt: now,
-          status: inventoryDraft.status as InventoryItem['status'],
+          status: 'available',
           locked: false,
-          history: [
-              {
-                  id: makeId('history'),
-                  action: 'added',
-                  createdAt: now,
-                  note: 'Added by admin',
-                  adminUid: adminUser?.id ?? 'admin'
-              }
-          ]
+          shippable: true,
+          source: 'admin',
+          provenance: {
+              sourceType: 'admin_adjustment',
+              sourceId: instanceId
+          },
+          history
+      };
+      const itemPayload = {
+          name: newItem.name,
+          value: newItem.price,
+          price: newItem.price,
+          image: newItem.image,
+          cardImage: newItem.image,
+          rarity: newItem.rarity,
+          status: 'available',
+          shippable: true,
+          locked: false,
+          obtainedAt: newItem.obtainedAt,
+          createdAt: now,
+          source: 'admin',
+          history,
+          provenance: newItem.provenance,
+          redeemable: true,
+          sellBackRate: 0
       };
 
-      try {
-          await setDoc(doc(db, 'users', selectedUserId, 'inventory', instanceId), {
-              name: newItem.name,
-              value: newItem.price,
-              image: newItem.image,
-              rarity: newItem.rarity,
-              status: newItem.status,
-              obtainedAt: newItem.obtainedAt,
-              locked: newItem.locked,
-              history: newItem.history ?? [],
-              provenance: newItem.provenance ?? null,
-              redeemable: newItem.redeemable ?? true,
-              sellBackRate: newItem.sellBackRate ?? 0
-          });
-      } catch (error) {
-          console.error('Failed to add inventory item to Firebase', error);
-      }
-
-      updateInventoryRecords(selectedUserId, (items) => [newItem, ...items]);
-      logAdminAction(
-          selectedUserId,
-          'inventory_add',
-          {},
-          { instanceId: newItem.instanceId, name: newItem.name, price: newItem.price },
-          'Added inventory item'
-      );
-      setInventoryDraft({
-          name: '',
-          price: '',
-          image: '',
-          rarity: 'common',
-          status: 'available'
+      console.log('SAVE ITEM PAYLOAD', {
+          selectedUserId: targetUserId,
+          firestorePath: inventoryPath,
+          itemPayload
       });
+
+      try {
+          await setDoc(doc(db, 'users', targetUserId, 'inventory', instanceId), itemPayload);
+
+          const adminLogPath = `users/${targetUserId}/adminLogs`;
+          const auditLogPath = 'auditLogs';
+          const logPayload = {
+              adminUid: adminUser?.id ?? 'admin',
+              targetUserUid: targetUserId,
+              actionType: 'inventory_add',
+              before: {},
+              after: { instanceId: newItem.instanceId, name: newItem.name, price: newItem.price },
+              reason: 'Added inventory item',
+              createdAt: now
+          };
+          console.log('SAVE ITEM ADMIN LOG PATHS', {
+              selectedUserId: targetUserId,
+              adminLogPath,
+              auditLogPath
+          });
+          const adminLogRef = await addDoc(collection(db, 'users', targetUserId, 'adminLogs'), logPayload);
+          await addDoc(collection(db, 'auditLogs'), {
+              ...logPayload,
+              userAdminLogId: adminLogRef.id
+          });
+
+          setInventoryState((prev) => ({
+              ...prev,
+              [targetUserId]: [newItem, ...(prev[targetUserId] ?? []).filter((item) => item.instanceId !== instanceId)]
+          }));
+          setAdminLogs((prev) => ({
+              ...prev,
+              [targetUserId]: [{ id: adminLogRef.id, ...logPayload }, ...(prev[targetUserId] ?? [])]
+          }));
+          setInventorySaveError(null);
+          console.log('SAVE ITEM SUCCESS', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              adminLogPath: `${adminLogPath}/${adminLogRef.id}`
+          });
+          setInventoryDraft({
+              name: '',
+              price: '',
+              image: '',
+              rarity: 'common',
+              status: 'available'
+          });
+      } catch (error: any) {
+          const code = error?.code ?? 'unknown';
+          const message = error?.message ?? String(error);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              code,
+              message,
+              error
+          });
+          setInventorySaveError(`Failed to add inventory item: ${code} ${message}`);
+      }
   };
 
   const handleRemoveInventoryItem = async (targetUserId: string, instanceId: string) => {
@@ -5107,7 +5194,19 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mt-1 text-lg font-bold text-white">{selectedInventory.length}</div>
                                                     </div>
                                                 </div>
-                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
+                                                {isEditingInventory && (
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        <Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        <Input type="number" min={0} value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        <Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        {inventorySaveError && (
+                                                            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                                                                {inventorySaveError}
+                                                            </div>
+                                                        )}
+                                                        <button type="button" onClick={handleAddInventoryItem} className="w-full rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300 sm:w-auto">Add Inventory Item</button>
+                                                    </div>
+                                                )}
                                                 <div className="max-h-72 space-y-2 overflow-auto pr-1">
                                                     {selectedShippableInventory.map((item) => (
                                                         <div key={item.instanceId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
