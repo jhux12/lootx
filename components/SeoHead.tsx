@@ -9,8 +9,12 @@ type SeoConfig = {
 };
 
 const SITE_URL = 'https://pullz.gg';
-const FALLBACK_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
-const HOMEPAGE_DESCRIPTION = 'Open Pokémon mystery boxes online and win real collectibles. Keep your items or sell them back for site credit. New users get a free welcome box.';
+const SOCIAL_TITLE = 'Pullz.gg | Open Digital Boxes. Win Real Cards.';
+const META_DESCRIPTION = 'Open digital boxes and win real Pokémon cards. Every win is a real item that can be shipped directly to your door. Provably fair and secure.';
+const SOCIAL_DESCRIPTION = 'Ship real items to your door. Provably fair. Claim your first box free.';
+const SOCIAL_IMAGE = `${SITE_URL}/assets/webimg.png`;
+const CANONICAL_URL = SITE_URL;
+const HOMEPAGE_DESCRIPTION = META_DESCRIPTION;
 
 const ensureMeta = (selector: string, attributes: Record<string, string>) => {
   let node = document.head.querySelector<HTMLMetaElement>(selector);
@@ -32,15 +36,11 @@ const ensureCanonical = () => {
   return node;
 };
 
-const removeCanonical = () => {
-  document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.remove();
-};
-
 const getSeoConfigForView = (view: ViewState): SeoConfig => {
   switch (view.type) {
     case 'HOME':
       return {
-        title: 'Pullz.gg | Open Pokémon Mystery Boxes & Win Real Collectibles',
+        title: SOCIAL_TITLE,
         description: HOMEPAGE_DESCRIPTION,
         path: '/',
         robots: 'index, follow'
@@ -139,7 +139,7 @@ const getSeoConfigForView = (view: ViewState): SeoConfig => {
       };
     default:
       return {
-        title: 'Pullz.gg',
+        title: SOCIAL_TITLE,
         description: HOMEPAGE_DESCRIPTION,
         path: window.location.pathname || '/',
         robots: 'noindex, nofollow'
@@ -150,33 +150,27 @@ const getSeoConfigForView = (view: ViewState): SeoConfig => {
 export const SeoHead = ({ view }: { view: ViewState }) => {
   useEffect(() => {
     const seo = getSeoConfigForView(view);
-    const canonicalUrl = `${SITE_URL}${seo.path}`;
-
     document.title = seo.title;
-    if (seo.robots === 'index, follow') {
-      ensureCanonical().setAttribute('href', canonicalUrl);
-    } else {
-      removeCanonical();
-    }
+    ensureCanonical().setAttribute('href', CANONICAL_URL);
 
     ensureMeta('meta[name="description"]', { name: 'description', content: seo.description });
     ensureMeta('meta[name="robots"]', { name: 'robots', content: seo.robots });
 
     ensureMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
     ensureMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'Pullz.gg' });
-    ensureMeta('meta[property="og:title"]', { property: 'og:title', content: seo.title });
-    ensureMeta('meta[property="og:description"]', { property: 'og:description', content: seo.description });
-    ensureMeta('meta[property="og:url"]', { property: 'og:url', content: canonicalUrl });
-    ensureMeta('meta[property="og:image"]', { property: 'og:image', content: FALLBACK_IMAGE });
+    ensureMeta('meta[property="og:title"]', { property: 'og:title', content: SOCIAL_TITLE });
+    ensureMeta('meta[property="og:description"]', { property: 'og:description', content: SOCIAL_DESCRIPTION });
+    ensureMeta('meta[property="og:image"]', { property: 'og:image', content: SOCIAL_IMAGE });
+    ensureMeta('meta[property="og:url"]', { property: 'og:url', content: CANONICAL_URL });
     ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' });
     ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
     ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
 
     ensureMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
-    ensureMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: seo.title });
-    ensureMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: seo.description });
-    ensureMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: FALLBACK_IMAGE });
-    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz.gg logo and mystery box social preview' });
+    ensureMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: SOCIAL_TITLE });
+    ensureMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: SOCIAL_DESCRIPTION });
+    ensureMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: SOCIAL_IMAGE });
+    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz.gg social preview' });
   }, [view]);
 
   return null;
