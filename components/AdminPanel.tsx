@@ -395,6 +395,7 @@ export const AdminPanel: React.FC = () => {
   });
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
+  const [itemFormError, setItemFormError] = useState<string | null>(null);
   const [boxTagInput, setBoxTagInput] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [itemUpgraderOnlyFilter, setItemUpgraderOnlyFilter] = useState(false);
@@ -1736,7 +1737,24 @@ export const AdminPanel: React.FC = () => {
   }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters, boxItemSearchQuery]);
 
   const handleSaveItem = async () => {
-      if(!newItem.name || !newItem.price) return;
+      const name = newItem.name?.trim() ?? '';
+      const price = Number(newItem.price ?? 0);
+      const chance = Number(newItem.chance ?? 0);
+
+      if (!name) {
+          setItemFormError('Item name is required.');
+          return;
+      }
+      if (!Number.isFinite(price) || price < 0) {
+          setItemFormError('Item price must be 0 or higher.');
+          return;
+      }
+      if (!Number.isFinite(chance) || chance < 0 || chance > 100) {
+          setItemFormError('Default chance must be between 0 and 100.');
+          return;
+      }
+
+      setItemFormError(null);
       const brand = newItem.brand?.trim() ?? '';
       const category = newItem.category?.trim() ?? '';
       const tags = normalizeTagList(newItem.tags ?? []);
@@ -1750,11 +1768,11 @@ export const AdminPanel: React.FC = () => {
 
       const item: CaseItem = {
           id: editingItemId || `custom-item-${Date.now()}`,
-          name: newItem.name!,
-          price: Number(newItem.price),
+          name,
+          price,
           image: newItem.image || 'https://picsum.photos/200',
           rarity: newItem.rarity as any || 'common',
-          chance: Number(newItem.chance),
+          chance,
           color: newItem.color || '#9ca3af',
           brand,
           category,
@@ -1800,6 +1818,7 @@ export const AdminPanel: React.FC = () => {
       });
       setItemTagInput('');
       setItemSizeInput('');
+      setItemFormError(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1833,6 +1852,7 @@ export const AdminPanel: React.FC = () => {
       });
       setItemTagInput('');
       setItemSizeInput('');
+      setItemFormError(null);
   };
 
   const resetPackageForm = () => {
@@ -3745,7 +3765,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <Input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
-                            <Input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
+                            <Input type="number" min={0} placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price ?? ''} onChange={e => setNewItem({...newItem, price: e.target.value === '' ? undefined : Number(e.target.value)})} />
                             <Input type="text" placeholder="Brand (e.g. Nike)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.brand ?? ''} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
                             <Input type="text" placeholder="Category (e.g. sneakers)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.category ?? ''} onChange={e => setNewItem({...newItem, category: e.target.value})} />
                             <Select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
@@ -3777,7 +3797,7 @@ export const AdminPanel: React.FC = () => {
                                 )}
                             </Select>
                             <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
-                            <Input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
+                            <Input type="number" min={0} max={100} placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance ?? ''} onChange={e => setNewItem({...newItem, chance: e.target.value === '' ? undefined : Number(e.target.value)})} />
                             <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
                                 <Checkbox
                                   checked={newItem.redeemable ?? true}
@@ -3936,7 +3956,12 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <p className="mt-2 text-[10px] text-gray-500">If provided, winners receive a random size from this list.</p>
                         </div>
-                        <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded`}>
+                        {itemFormError && (
+                            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                                {itemFormError}
+                            </div>
+                        )}
+                        <button onClick={handleSaveItem} className={`w-full px-6 py-3 sm:w-auto sm:py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded`}>
                             {editingItemId ? 'Update Item' : 'Add Item'}
                         </button>
                     </div>
