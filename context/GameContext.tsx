@@ -3248,12 +3248,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               await setDoc(doc(db, 'items', id), itemData, { merge: true });
               itemId = id;
           } else {
-              const docRef = await addDoc(collection(db, 'items'), itemData);
-              itemId = docRef.id;
+              itemId = itemId || `custom-item-${Date.now()}`;
+              await setDoc(doc(db, 'items', itemId), itemData, { merge: true });
           }
       } catch (error) {
           console.error('Failed to save item to Firebase', error);
-          itemId = itemId || `local-item-${Date.now()}`;
+          throw error;
       }
 
       setItems(prev => {
@@ -3275,6 +3275,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await setDoc(doc(db, 'items', id), itemData, { merge: true });
       } catch (error) {
           console.error('Failed to update item in Firebase', error);
+          throw error;
       }
 
       setItems(prev => prev.map(i => i.id === id ? { ...itemData, id } : i));

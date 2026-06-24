@@ -1792,14 +1792,23 @@ export const AdminPanel: React.FC = () => {
           upgraderFeatured: newItem.upgraderFeatured === true
       };
 
-      if (editingItemId) {
-          await updateItem(item);
-          alert("Item Updated!");
-      } else {
-          await createItem(item);
-          alert("Item Created!");
+      console.log("CATALOG ITEM SAVE CLICKED", item);
+      console.log("WRITING CATALOG ITEM PATH", `items/${item.id}`);
+      try {
+          if (editingItemId) {
+              await updateItem(item);
+              console.log("CATALOG ITEM SAVE SUCCESS", item.id);
+              alert("Item Updated!");
+          } else {
+              await createItem(item);
+              console.log("CATALOG ITEM SAVE SUCCESS", item.id);
+              alert("Item Created!");
+          }
+          resetItemForm();
+      } catch (error: any) {
+          console.error("CATALOG ITEM SAVE FAILED", error?.code, error?.message, error);
+          setItemFormError(error?.message ? `Firestore save failed: ${error.message}` : 'Firestore save failed. Please verify your admin permissions and try again.');
       }
-      resetItemForm();
   };
 
   const handleEditItem = (item: CaseItem) => {
@@ -6553,6 +6562,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+
 
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

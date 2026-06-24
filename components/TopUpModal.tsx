@@ -88,6 +88,7 @@ export const TopUpModal: React.FC = () => {
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
+    if (pack.firstTimeDepositOnly && bonusPercent === 50) return '50% DEPOSIT MATCH';
     return `+${bonusPercent}% BONUS`;
   };
   const getBonusSummaryLabel = (pack?: typeof displayedPackages[number]) => {
@@ -96,6 +97,7 @@ export const TopUpModal: React.FC = () => {
     const bonusCoins = Math.max(0, Number(pack.bonusCoins ?? 0));
     if (!baseCoins || bonusCoins <= 0) return '';
     const bonusPercent = Math.round((bonusCoins / baseCoins) * 100);
+    if (pack.firstTimeDepositOnly && bonusPercent === 50) return '(50% DEPOSIT MATCH)';
     return `(+${bonusPercent}% BONUS)`;
   };
   const getBadgeClasses = (badge?: string) => {
@@ -289,7 +291,6 @@ export const TopUpModal: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold text-white">Add Coins</h2>
-                        <p className="mt-1 text-xs text-slate-400">Select a coin package</p>
                       </div>
                     </div>
                     <button 
@@ -327,8 +328,7 @@ export const TopUpModal: React.FC = () => {
                             <Sparkles className="h-5 w-5" />
                           </span>
                           <span className="min-w-0">
-                            <span className="block text-sm font-extrabold text-white">First deposit deals</span>
-                            <span className="block text-[11px] leading-4 text-slate-300">Unlock starter-only coin packages before your first deposit.</span>
+                            <span className="block text-sm font-extrabold text-white">First time deposit offers</span>
                           </span>
                         </span>
                         <span className={`relative h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${showFirstDepositPackages ? 'bg-amber-300' : 'bg-slate-700'}`}>
@@ -337,9 +337,9 @@ export const TopUpModal: React.FC = () => {
                       </button>
                     )}
                     {/* Amount Selector */}
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Select a pack</label>
-                    <div className="mb-3 max-h-[min(44dvh,320px)] overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
-                    <div className="flex flex-col gap-2.5">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-200">Select a pack</label>
+                    <div className="mb-3 max-h-[min(44dvh,320px)] overflow-y-auto overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch]">
+                    <div className="flex flex-col gap-3">
                         {displayedPackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             {showFirstDepositPackages ? 'No first-time deposit packages available right now.' : 'No packages available right now.'}
@@ -348,7 +348,7 @@ export const TopUpModal: React.FC = () => {
                           displayedPackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
-                            const bonusLabel = getBonusLabel(pack);
+                            const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
                             const badgeText = pack.badge?.trim() ?? '';
                             return (
                               <button
@@ -358,21 +358,21 @@ export const TopUpModal: React.FC = () => {
                                     setHasUserSelectedPackage(true);
                                     playSound('click');
                                   }}
-                                  className={`relative flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
-                                    ${isSelected ? 'scale-[1.02] border-[#7C5CFF] shadow-[0_0_12px_rgba(124,92,255,0.4)]' : 'border-white/10'}`}
+                                  className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
+                                    ${isSelected ? 'border-[#f7b733] shadow-[inset_0_0_0_1px_rgba(247,183,51,0.75),0_0_18px_rgba(247,183,51,0.25)]' : 'border-white/10'}`}
                               >
-                                  {badgeText && (
-                                    <span
-                                      className={`absolute -top-2 right-3 rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
-                                    >
-                                      {getBadgeLabel(badgeText)}
-                                    </span>
-                                  )}
-                                  <div className="flex flex-col">
+                                  <div className="flex min-w-0 flex-col">
+                                    {badgeText && (
+                                      <span
+                                        className={`mb-1 w-fit rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
+                                      >
+                                        {getBadgeLabel(badgeText)}
+                                      </span>
+                                    )}
                                     <CoinAmount amount={pack.coins} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-bold text-white" iconClassName="h-4 w-4" />
-                                    {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-bold uppercase tracking-wide text-cyan-300">{bonusLabel}</span>}
+                                    {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-200">{bonusLabel}</span>}
                                   </div>
-                                  <span className="text-base font-bold text-white">{pack.displayPrice}</span>
+                                  <span className="shrink-0 text-base font-bold text-white">{pack.displayPrice}</span>
                               </button>
                             );
                           })

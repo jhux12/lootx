@@ -16,11 +16,11 @@ type HomeBanner = {
 };
 
 const FIRST_DEPOSIT_BANNER: HomeBanner = {
-  title: '100% First deposit match',
-  eyebrow: 'Limited welcome offer',
-  description: 'Double your first top up with a 100% deposit match and start opening more boxes.',
+  title: 'Get a 50% Bonus on Your First Deposit',
+  eyebrow: 'First deposit bonus',
+  description: 'Deposit for the first time and receive 50% extra coins instantly. More coins means more boxes, more pulls.',
   image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Announce.png?alt=media&token=9394b72b-d4f2-4207-9989-3e3dbb0e347e',
-  cta: 'Claim offer',
+  cta: 'Claim bonus',
   action: 'claim-first-deposit',
   accent: 'orange'
 };
