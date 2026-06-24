@@ -329,8 +329,7 @@ export const TopUpModal: React.FC = () => {
                             <Sparkles className="h-5 w-5" />
                           </span>
                           <span className="min-w-0">
-                            <span className="block text-sm font-extrabold text-white">50% deposit match</span>
-                            <span className="block text-[11px] leading-4 text-slate-200">First deposit packs include 50% extra coins instantly.</span>
+                            <span className="block text-sm font-extrabold text-white">First time deposit offers</span>
                           </span>
                         </span>
                         <span className={`relative h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${showFirstDepositPackages ? 'bg-amber-300' : 'bg-slate-700'}`}>
@@ -350,7 +349,7 @@ export const TopUpModal: React.FC = () => {
                           displayedPackages.map((pack) => {
                             const isSelected = selectedPackage?.id === pack.id;
                             const bonusCoins = pack.bonusCoins ?? 0;
-                            const bonusLabel = getBonusLabel(pack);
+                            const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
                             const badgeText = pack.badge?.trim() ?? '';
                             return (
                               <button
