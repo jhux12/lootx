@@ -5,7 +5,7 @@ import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
 import { toast } from '../src/ui/toast/toast';
-import { getSellBackValue } from '../utils/sellBack';
+import { getProtectedSellBackValue, getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { SIGNATURE_REQUIRED_CENTS, formatShippingAddOnPrice, formatShippingTierSummary, getShipmentShippingRate, getShippingProtectionRate } from '../utils/shippingRates';
 import { CoinAmount } from './CoinAmount';
@@ -831,6 +831,7 @@ export const Profile: React.FC = () => {
   };
 
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
+  const tradeInProtectedSellBack = tradeInModalItem ? getProtectedSellBackValue(tradeInModalItem) : null;
 
   return (
     <div className="min-h-screen bg-[#1b2024] px-4 py-4 md:px-6 md:py-6">
@@ -928,8 +929,13 @@ export const Profile: React.FC = () => {
               <button onClick={() => setTradeInModalItemId(null)}><X className="h-5 w-5 text-gray-400" /></button>
             </div>
             <p className="text-sm text-gray-300">{tradeInModalItem.name}</p>
+            {tradeInProtectedSellBack !== null && (
+              <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-100">
+                100% Buyback Available — protected sellback amount shown below.
+              </div>
+            )}
             <p className="mt-2 text-sm text-gray-400">You receive:</p>
-            <CoinAmount amount={getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem))} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-bold text-emerald-400" iconClassName="h-5 w-5" />
+            <CoinAmount amount={tradeInProtectedSellBack ?? getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem))} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-bold text-emerald-400" iconClassName="h-5 w-5" />
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setTradeInModalItemId(null)}>Cancel</button>
               <button className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 py-2 text-sm font-bold text-white" onClick={handleConfirmTradeIn}>{isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}</button>

@@ -108,7 +108,10 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       openCurrencyType: typed.openCurrencyType === 'XP' ? 'XP' : typed.openCurrencyType === 'COIN' ? 'COIN' : undefined,
       freeShipping: typed.freeShipping === true,
       shippingCostOverrideCoins: typed.shippingCostOverrideCoins == null ? undefined : Number(typed.shippingCostOverrideCoins),
-      shippingCostOverrideCents: typed.shippingCostOverrideCents == null ? undefined : Number(typed.shippingCostOverrideCents)
+      shippingCostOverrideCents: typed.shippingCostOverrideCents == null ? undefined : Number(typed.shippingCostOverrideCents),
+    firstDepositBuybackProtected: typed.firstDepositBuybackProtected === true,
+    protectedSellBackCoins: typed.protectedSellBackCoins == null ? undefined : Number(typed.protectedSellBackCoins),
+    protectedSellBackReason: typeof typed.protectedSellBackReason === 'string' ? typed.protectedSellBackReason : undefined
     };
   });
 };
@@ -268,7 +271,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabPublishFeeCoins: 0,
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
-  boxTagIcons: {}
+  boxTagIcons: {},
+  firstDepositBuybackOfferEnabled: true
 };
 
 const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
@@ -328,7 +332,8 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
             .map(([tag, iconClass]) => [tag.trim().toLowerCase(), iconClass.trim().replace(/\s+/g, ' ')])
             .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
         )
-      : {}
+      : {},
+    firstDepositBuybackOfferEnabled: settings.firstDepositBuybackOfferEnabled !== false
   };
 };
 
@@ -3248,12 +3253,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               await setDoc(doc(db, 'items', id), itemData, { merge: true });
               itemId = id;
           } else {
-              const docRef = await addDoc(collection(db, 'items'), itemData);
-              itemId = docRef.id;
+              itemId = itemId || `custom-item-${Date.now()}`;
+              await setDoc(doc(db, 'items', itemId), itemData, { merge: true });
           }
       } catch (error) {
           console.error('Failed to save item to Firebase', error);
-          itemId = itemId || `local-item-${Date.now()}`;
+          throw error;
       }
 
       setItems(prev => {
@@ -3275,6 +3280,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await setDoc(doc(db, 'items', id), itemData, { merge: true });
       } catch (error) {
           console.error('Failed to update item in Firebase', error);
+          throw error;
       }
 
       setItems(prev => prev.map(i => i.id === id ? { ...itemData, id } : i));

@@ -35,6 +35,8 @@ export interface User {
   totalDepositedCents?: number;
   depositCount?: number;
   lastDepositAt?: any;
+  firstDepositBuybackOfferAvailable?: boolean;
+  firstDepositBuybackOfferUsed?: boolean;
   rakebackBalance?: number;
   rakebackEarnedToday?: number;
   rakebackEarnedAt?: number;
@@ -200,6 +202,7 @@ export interface StripeSettings {
   caseLabSellBackPercent: number;
   caseLabVisibleBoxIds: string[];
   boxTagIcons: Record<string, string>;
+  firstDepositBuybackOfferEnabled: boolean;
 }
 
 export interface InventoryItem extends CaseItem {
@@ -224,6 +227,9 @@ export interface InventoryItem extends CaseItem {
   freeShipping?: boolean;
   shippingCostOverrideCoins?: number;
   shippingCostOverrideCents?: number;
+  firstDepositBuybackProtected?: boolean;
+  protectedSellBackCoins?: number;
+  protectedSellBackReason?: 'first_deposit_100_percent_buyback' | string;
 }
 
 export type ShipmentStatus = 'pending_payment' | 'shipping_requested' | 'shipping' | 'shipped' | 'cancelled';

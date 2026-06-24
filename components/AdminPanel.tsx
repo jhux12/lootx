@@ -639,7 +639,8 @@ export const AdminPanel: React.FC = () => {
       shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
       caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
       caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
-      caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
+      caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds,
+      firstDepositBuybackOfferEnabled: stripeSettings.firstDepositBuybackOfferEnabled
   });
   const [stripeSettingsNotice, setStripeSettingsNotice] = useState(false);
 
@@ -1565,7 +1566,8 @@ export const AdminPanel: React.FC = () => {
           shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
           caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
           caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
-          caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
+          caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds,
+          firstDepositBuybackOfferEnabled: stripeSettings.firstDepositBuybackOfferEnabled
       });
   }, [stripeSettings]);
 
@@ -1792,14 +1794,23 @@ export const AdminPanel: React.FC = () => {
           upgraderFeatured: newItem.upgraderFeatured === true
       };
 
-      if (editingItemId) {
-          await updateItem(item);
-          alert("Item Updated!");
-      } else {
-          await createItem(item);
-          alert("Item Created!");
+      console.log("CATALOG ITEM SAVE CLICKED", item);
+      console.log("WRITING CATALOG ITEM PATH", `items/${item.id}`);
+      try {
+          if (editingItemId) {
+              await updateItem(item);
+              console.log("CATALOG ITEM SAVE SUCCESS", item.id);
+              alert("Item Updated!");
+          } else {
+              await createItem(item);
+              console.log("CATALOG ITEM SAVE SUCCESS", item.id);
+              alert("Item Created!");
+          }
+          resetItemForm();
+      } catch (error: any) {
+          console.error("CATALOG ITEM SAVE FAILED", error?.code, error?.message, error);
+          setItemFormError(error?.message ? `Firestore save failed: ${error.message}` : 'Firestore save failed. Please verify your admin permissions and try again.');
       }
-      resetItemForm();
   };
 
   const handleEditItem = (item: CaseItem) => {
@@ -3511,6 +3522,7 @@ export const AdminPanel: React.FC = () => {
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
           caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
           caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds)),
+          firstDepositBuybackOfferEnabled: stripeSettingsDraft.firstDepositBuybackOfferEnabled,
           boxTagIcons: stripeSettings.boxTagIcons
       });
       setStripeSettingsNotice(true);
@@ -6551,6 +6563,31 @@ export const AdminPanel: React.FC = () => {
                                             Optional. Used only for Stripe reporting.
                                         </p>
                                     </div>
+                                </div>
+                            </div>
+
+
+                            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <h4 className="text-sm font-bold text-white">Activate 100% Buyback Offer</h4>
+                                        <p className="text-xs text-gray-300">Globally enable protection for each eligible user's first paid spin after their first successful deposit.</p>
+                                    </div>
+                                    <label htmlFor="first-deposit-buyback-offer-enabled" className="flex min-h-11 items-center gap-3 rounded-lg border border-emerald-400/30 bg-[#131720] px-4 py-3 text-sm font-semibold text-gray-100">
+                                        <Input
+                                            id="first-deposit-buyback-offer-enabled"
+                                            type="checkbox"
+                                            checked={stripeSettingsDraft.firstDepositBuybackOfferEnabled}
+                                            onChange={(event) =>
+                                                setStripeSettingsDraft((prev) => ({
+                                                    ...prev,
+                                                    firstDepositBuybackOfferEnabled: event.target.checked
+                                                }))
+                                            }
+                                            className="h-4 w-4 rounded border-gray-700 bg-[#0b0e14] text-emerald-500 focus:ring-emerald-500"
+                                        />
+                                        Activate 100% Buyback Offer
+                                    </label>
                                 </div>
                             </div>
 

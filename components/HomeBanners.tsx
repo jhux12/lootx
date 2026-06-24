@@ -16,11 +16,11 @@ type HomeBanner = {
 };
 
 const FIRST_DEPOSIT_BANNER: HomeBanner = {
-  title: '100% First deposit match',
-  eyebrow: 'Limited welcome offer',
-  description: 'Double your first top up with a 100% deposit match and start opening more boxes.',
+  title: 'Your First Spin Is Protected',
+  eyebrow: '100% Buyback Offer',
+  description: 'Deposit once and your first paid spin is backed by our 100% Buyback Offer.',
   image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Announce.png?alt=media&token=9394b72b-d4f2-4207-9989-3e3dbb0e347e',
-  cta: 'Claim offer',
+  cta: 'Activate offer',
   action: 'claim-first-deposit',
   accent: 'orange'
 };

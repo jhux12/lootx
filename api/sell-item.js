@@ -147,8 +147,12 @@ export default async function handler(req, res) {
           item: inventoryItem
         });
       }
+      const protectedSellBackCoins = Number(inventoryItem.protectedSellBackCoins);
+      const hasProtectedBuyback = inventoryItem.firstDepositBuybackProtected === true
+        && Number.isFinite(protectedSellBackCoins)
+        && protectedSellBackCoins > 0;
       const sellBackRate = toSellBackRate(inventoryItem.sellBackRate);
-      const creditCoins = Math.floor(coinValue * sellBackRate);
+      const creditCoins = hasProtectedBuyback ? Math.floor(protectedSellBackCoins) : Math.floor(coinValue * sellBackRate);
 
       const currentCoins = toFiniteNumber(userSnap.data()?.coins ?? userSnap.data()?.balance ?? 0, 0);
 
@@ -209,7 +213,9 @@ export default async function handler(req, res) {
         metadata: {
           itemName: inventoryItem.name ?? 'inventory item',
           sellBackRate,
-          coinValue
+          coinValue,
+          firstDepositBuybackProtected: hasProtectedBuyback,
+          protectedSellBackCoins: hasProtectedBuyback ? creditCoins : null
         }
       });
       transaction.set(userRef, userPatch, { merge: true });
