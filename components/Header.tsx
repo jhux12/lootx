@@ -155,14 +155,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const activeDesktopSection = useMemo<
-    "home" | "cases" | "upgrader" | "leaderboard" | "rewards" | "profile" | null
+    "home" | "cases" | "upgrader" | "leaderboard" | "dailySpin" | "rewards" | "profile" | null
   >(() => {
     if (view.type === "HOME") return "home";
     if (view.type === "BOXES" || view.type === "CASE_OPENING") return "cases";
     if (view.type === "PLINKO") return "upgrader";
     if (view.type === "LEADERBOARD") return "leaderboard";
+    if (view.type === "BONUSES") return "dailySpin";
     if (
-      view.type === "BONUSES" ||
       view.type === "QUESTS" ||
       view.type === "POLLS" ||
       view.type === "REFERRALS"
@@ -400,6 +400,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       type:
         | "HOME"
         | "BOXES"
+        | "SPIN"
         | "PLINKO"
         | "BONUSES"
         | "LEADERBOARD"
@@ -567,6 +568,21 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     }
                   >
                     Leaderboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("BONUSES")}
+                    className={`${
+                      activeDesktopSection === "dailySpin"
+                        ? desktopActiveNavButtonClass
+                        : desktopNavButtonClass
+                    } gap-2`}
+                  >
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    <span>Daily Spin</span>
+                    {showDailySpinReady ? (
+                      <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#54f5b3] shadow-[0_0_12px_rgba(84,245,179,0.8)]" />
+                    ) : null}
                   </button>
                 </div>
               </div>
@@ -835,6 +851,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <Trophy className="h-5 w-5 text-[#54f5b3]" />
                 Leaderboard
+              </button>
+              <button
+                onClick={() => navigate("BONUSES")}
+                className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+              >
+                <RefreshCw className="h-5 w-5 text-[#54f5b3]" />
+                <span className="min-w-0 flex-1">Daily Spin</span>
+                {showDailySpinReady ? (
+                  <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#54f5b3]">Ready</span>
+                ) : null}
               </button>
               <button
                 onClick={() => navigate("PROFILE")}
