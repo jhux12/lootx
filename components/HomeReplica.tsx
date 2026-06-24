@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, CreditCard, Flame, Package, ShieldCheck, Sparkles, Trophy, Truck, X, Zap } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Package, ShieldCheck, Sparkles, Trophy, Truck, X, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -394,7 +394,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   useEffect(() => {
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
-    }, 5000);
+    }, 10000);
     return () => window.clearInterval(heroTimer);
   }, []);
 
@@ -540,13 +540,26 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_24%,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />First deposit bonus</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Get a 50% Bonus on Your First Deposit</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Deposit for the first time and receive 50% extra coins instantly. More coins means more boxes, more pulls</p>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
+              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
+                  <Coins
+                    key={`hero-raining-coin-${coinIndex}`}
+                    className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
+                    style={{
+                      left: `${8 + ((coinIndex * 8) % 86)}%`,
+                      animationDelay: `${coinIndex * -0.45}s`,
+                      animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
+                      transform: `rotate(${coinIndex * 23}deg)`
+                    }}
+                  />
+                ))}
               </div>
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="First deposit bonus offer" className="absolute right-[-18px] top-1/2 h-[118px] w-[198px] -translate-y-1/2 object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-3 sm:h-[150px] sm:w-[250px] lg:right-8 lg:h-[210px] lg:w-[350px]" loading="eager" />
+              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
+                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
+              </div>
+              <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
