@@ -395,6 +395,7 @@ export const AdminPanel: React.FC = () => {
   });
   const [itemTagInput, setItemTagInput] = useState('');
   const [itemSizeInput, setItemSizeInput] = useState('');
+  const [itemFormError, setItemFormError] = useState<string | null>(null);
   const [boxTagInput, setBoxTagInput] = useState('');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [itemUpgraderOnlyFilter, setItemUpgraderOnlyFilter] = useState(false);
@@ -442,6 +443,7 @@ export const AdminPanel: React.FC = () => {
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
   const [itemTagFilters, setItemTagFilters] = useState<string[]>([]);
+  const [boxItemSearchQuery, setBoxItemSearchQuery] = useState('');
   const [deletingBoxId, setDeletingBoxId] = useState<string | null>(null);
   const [isUploadingSpinnerBackground, setIsUploadingSpinnerBackground] = useState(false);
   const [isUploadingBoxCatalogHero, setIsUploadingBoxCatalogHero] = useState(false);
@@ -671,11 +673,13 @@ export const AdminPanel: React.FC = () => {
       rarity: 'common',
       status: 'available'
   });
+  const [inventorySaveError, setInventorySaveError] = useState<string | null>(null);
   const [spreadsheetStatus, setSpreadsheetStatus] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const [isSpreadsheetUploading, setIsSpreadsheetUploading] = useState(false);
   const spreadsheetInputRef = useRef<HTMLInputElement | null>(null);
   const EV_TOLERANCE = 0.01;
   const safeTargetEVInput = Number.isFinite(targetEV) ? targetEV : 0.85;
+  const isRealSelectedUserId = (userId: string | null | undefined) => Boolean(userId && userId.trim() && userId !== 'loading');
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
 
   useEffect(() => {
@@ -1141,7 +1145,10 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       if (users.length === 0) return;
 
-      setSelectedUserId((current) => current ?? users[0].id);
+      setSelectedUserId((current) => {
+          if (isRealSelectedUserId(current) && users.some((profile) => profile.id === current)) return current;
+          return null;
+      });
 
       setUserStatuses((prev) => {
           const next = { ...prev };
@@ -1517,7 +1524,8 @@ export const AdminPanel: React.FC = () => {
   }, []);
 
   useEffect(() => {
-      if (!selectedUserId) return;
+      console.log('SELECTED USER', selectedUserId);
+      if (!isRealSelectedUserId(selectedUserId)) return;
       const inventoryPathLabel = `users/${selectedUserId}/inventory`;
       console.log('READING FIRESTORE PATH', inventoryPathLabel);
       const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
@@ -1708,6 +1716,7 @@ export const AdminPanel: React.FC = () => {
       const normalizedBrand = itemBrandFilter.trim().toLowerCase();
       const normalizedCategory = itemCategoryFilter.trim().toLowerCase();
       const normalizedTagFilters = itemTagFilters.map((tag) => tag.toLowerCase());
+      const query = boxItemSearchQuery.trim().toLowerCase();
 
       return items.filter((item) => {
           const brand = item.brand?.toLowerCase() ?? '';
@@ -1716,12 +1725,42 @@ export const AdminPanel: React.FC = () => {
           const matchesBrand = !normalizedBrand || brand === normalizedBrand;
           const matchesCategory = !normalizedCategory || category === normalizedCategory;
           const matchesTags = normalizedTagFilters.length === 0 || normalizedTagFilters.some((tag) => tags.includes(tag));
-          return matchesBrand && matchesCategory && matchesTags;
+          const haystack = [
+              item.name,
+              item.brand,
+              item.category,
+              item.rarity,
+              item.upgraderCategory,
+              ...(item.tags ?? []),
+              ...(item.sizes ?? [])
+          ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+          const matchesSearch = !query || haystack.includes(query);
+          return matchesBrand && matchesCategory && matchesTags && matchesSearch;
       });
-  }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters]);
+  }, [items, itemBrandFilter, itemCategoryFilter, itemTagFilters, boxItemSearchQuery]);
 
   const handleSaveItem = async () => {
-      if(!newItem.name || !newItem.price) return;
+      const name = newItem.name?.trim() ?? '';
+      const price = Number(newItem.price ?? 0);
+      const chance = Number(newItem.chance ?? 0);
+
+      if (!name) {
+          setItemFormError('Item name is required.');
+          return;
+      }
+      if (!Number.isFinite(price) || price < 0) {
+          setItemFormError('Item price must be 0 or higher.');
+          return;
+      }
+      if (!Number.isFinite(chance) || chance < 0 || chance > 100) {
+          setItemFormError('Default chance must be between 0 and 100.');
+          return;
+      }
+
+      setItemFormError(null);
       const brand = newItem.brand?.trim() ?? '';
       const category = newItem.category?.trim() ?? '';
       const tags = normalizeTagList(newItem.tags ?? []);
@@ -1735,11 +1774,11 @@ export const AdminPanel: React.FC = () => {
 
       const item: CaseItem = {
           id: editingItemId || `custom-item-${Date.now()}`,
-          name: newItem.name!,
-          price: Number(newItem.price),
+          name,
+          price,
           image: newItem.image || 'https://picsum.photos/200',
           rarity: newItem.rarity as any || 'common',
-          chance: Number(newItem.chance),
+          chance,
           color: newItem.color || '#9ca3af',
           brand,
           category,
@@ -1785,6 +1824,7 @@ export const AdminPanel: React.FC = () => {
       });
       setItemTagInput('');
       setItemSizeInput('');
+      setItemFormError(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1818,6 +1858,7 @@ export const AdminPanel: React.FC = () => {
       });
       setItemTagInput('');
       setItemSizeInput('');
+      setItemFormError(null);
   };
 
   const resetPackageForm = () => {
@@ -2334,69 +2375,155 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleAddInventoryItem = async () => {
-      if (!selectedUserId) return;
+      const targetUserId = selectedUserId?.trim() ?? '';
       const name = inventoryDraft.name.trim();
       const price = Number(inventoryDraft.price);
-      if (!name || !Number.isFinite(price)) return;
-      const rarity = inventoryDraft.rarity as InventoryItem['rarity'];
+      const rarity = (inventoryDraft.rarity || 'common') as InventoryItem['rarity'];
       const now = Date.now();
       const instanceId = makeId('inv-instance');
+      const inventoryPath = targetUserId ? `users/${targetUserId}/inventory/${instanceId}` : 'users/<missing>/inventory/<pending>';
+
+      console.log('SAVE ITEM CLICKED', {
+          selectedUserId: targetUserId || null,
+          firestorePath: inventoryPath
+      });
+
+      if (!targetUserId || targetUserId === 'loading') {
+          const message = 'Select a real user before adding an inventory item.';
+          setInventorySaveError(message);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId || null,
+              firestorePath: inventoryPath,
+              code: 'invalid-selected-user',
+              message
+          });
+          return;
+      }
+      if (!name || !Number.isFinite(price) || price < 0) {
+          const message = 'Enter an item name and a non-negative value before saving.';
+          setInventorySaveError(message);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              code: 'invalid-item-payload',
+              message
+          });
+          return;
+      }
+
+      const image = inventoryDraft.image.trim() || 'https://picsum.photos/200';
+      const history: InventoryHistoryEntry[] = [
+          {
+              id: makeId('history'),
+              action: 'added',
+              createdAt: now,
+              note: 'Added by admin',
+              adminUid: adminUser?.id ?? 'admin'
+          }
+      ];
       const newItem: InventoryItem = {
-          id: makeId('inv'),
+          id: instanceId,
           instanceId,
           name,
           price,
-          image: inventoryDraft.image.trim() || 'https://picsum.photos/200',
+          image,
           rarity,
           chance: 0,
           color: rarityColorMap[rarity] ?? '#9ca3af',
           obtainedAt: now,
-          status: inventoryDraft.status as InventoryItem['status'],
+          status: 'available',
           locked: false,
-          history: [
-              {
-                  id: makeId('history'),
-                  action: 'added',
-                  createdAt: now,
-                  note: 'Added by admin',
-                  adminUid: adminUser?.id ?? 'admin'
-              }
-          ]
+          shippable: true,
+          source: 'admin',
+          provenance: {
+              sourceType: 'admin_adjustment',
+              sourceId: instanceId
+          },
+          history
+      };
+      const itemPayload = {
+          name: newItem.name,
+          value: newItem.price,
+          price: newItem.price,
+          image: newItem.image,
+          cardImage: newItem.image,
+          rarity: newItem.rarity,
+          status: 'available',
+          shippable: true,
+          locked: false,
+          obtainedAt: newItem.obtainedAt,
+          createdAt: now,
+          source: 'admin',
+          history,
+          provenance: newItem.provenance,
+          redeemable: true,
+          sellBackRate: 0
       };
 
-      try {
-          await setDoc(doc(db, 'users', selectedUserId, 'inventory', instanceId), {
-              name: newItem.name,
-              value: newItem.price,
-              image: newItem.image,
-              rarity: newItem.rarity,
-              status: newItem.status,
-              obtainedAt: newItem.obtainedAt,
-              locked: newItem.locked,
-              history: newItem.history ?? [],
-              provenance: newItem.provenance ?? null,
-              redeemable: newItem.redeemable ?? true,
-              sellBackRate: newItem.sellBackRate ?? 0
-          });
-      } catch (error) {
-          console.error('Failed to add inventory item to Firebase', error);
-      }
-
-      updateInventoryRecords(selectedUserId, (items) => [newItem, ...items]);
-      logAdminAction(
-          selectedUserId,
-          'inventory_add',
-          {},
-          { instanceId: newItem.instanceId, name: newItem.name, price: newItem.price },
-          'Added inventory item'
-      );
-      setInventoryDraft({
-          name: '',
-          price: '',
-          image: '',
-          rarity: 'common',
-          status: 'available'
+      console.log('SAVE ITEM PAYLOAD', {
+          selectedUserId: targetUserId,
+          firestorePath: inventoryPath,
+          itemPayload
       });
+
+      try {
+          await setDoc(doc(db, 'users', targetUserId, 'inventory', instanceId), itemPayload);
+
+          const adminLogPath = `users/${targetUserId}/adminLogs`;
+          const auditLogPath = 'auditLogs';
+          const logPayload = {
+              adminUid: adminUser?.id ?? 'admin',
+              targetUserUid: targetUserId,
+              actionType: 'inventory_add',
+              before: {},
+              after: { instanceId: newItem.instanceId, name: newItem.name, price: newItem.price },
+              reason: 'Added inventory item',
+              createdAt: now
+          };
+          console.log('SAVE ITEM ADMIN LOG PATHS', {
+              selectedUserId: targetUserId,
+              adminLogPath,
+              auditLogPath
+          });
+          const adminLogRef = await addDoc(collection(db, 'users', targetUserId, 'adminLogs'), logPayload);
+          await addDoc(collection(db, 'auditLogs'), {
+              ...logPayload,
+              userAdminLogId: adminLogRef.id
+          });
+
+          setInventoryState((prev) => ({
+              ...prev,
+              [targetUserId]: [newItem, ...(prev[targetUserId] ?? []).filter((item) => item.instanceId !== instanceId)]
+          }));
+          setAdminLogs((prev) => ({
+              ...prev,
+              [targetUserId]: [{ id: adminLogRef.id, ...logPayload }, ...(prev[targetUserId] ?? [])]
+          }));
+          setInventorySaveError(null);
+          console.log('SAVE ITEM SUCCESS', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              adminLogPath: `${adminLogPath}/${adminLogRef.id}`
+          });
+          setInventoryDraft({
+              name: '',
+              price: '',
+              image: '',
+              rarity: 'common',
+              status: 'available'
+          });
+      } catch (error: any) {
+          const code = error?.code ?? 'unknown';
+          const message = error?.message ?? String(error);
+          console.error('SAVE ITEM FAILED', {
+              selectedUserId: targetUserId,
+              firestorePath: inventoryPath,
+              code,
+              message,
+              error
+          });
+          setInventorySaveError(`Failed to add inventory item: ${code} ${message}`);
+      }
   };
 
   const handleRemoveInventoryItem = async (targetUserId: string, instanceId: string) => {
@@ -2646,7 +2773,7 @@ export const AdminPanel: React.FC = () => {
       void updateUserAdminData(userId, { adminNotes: note }); // TODO: replace with dedicated admin notes collection when available.
   };
 
-  const selectedUser = useMemo(() => users.find((profile) => profile.id === selectedUserId), [users, selectedUserId]);
+  const selectedUser = useMemo(() => isRealSelectedUserId(selectedUserId) ? users.find((profile) => profile.id === selectedUserId) : undefined, [users, selectedUserId]);
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const getUserLabels = (profile: (typeof users)[number]) => {
       const profileLabels = (profile as unknown as { internalLabels?: string[] }).internalLabels ?? [];
@@ -2749,10 +2876,10 @@ export const AdminPanel: React.FC = () => {
       });
   }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
   const selectedLedgerEntries = useMemo(() => {
-      if (!selectedUserId) return [];
+      if (!isRealSelectedUserId(selectedUserId)) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
   }, [ledgerEntries, selectedUser, selectedUserId]);
-  const selectedInventory = selectedUserId ? inventoryState[selectedUserId] ?? [] : [];
+  const selectedInventory = isRealSelectedUserId(selectedUserId) ? inventoryState[selectedUserId!] ?? [] : [];
   const selectedShippableInventory = selectedInventory.filter((item) => item.status === 'available' && !item.locked && item.shippable !== false);
   const selectedShippableInventoryValue = selectedShippableInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   useEffect(() => {
@@ -2784,7 +2911,7 @@ export const AdminPanel: React.FC = () => {
       void run();
   }, [selectedUserId]);
   const selectedBalanceAudits = useMemo(() => {
-      if (!selectedUserId) return [];
+      if (!isRealSelectedUserId(selectedUserId)) return [];
       const searchValue = balanceAuditSearch.trim().toLowerCase();
       return (balanceAuditEntries[selectedUserId] ?? []).filter((entry) => {
           if (balanceAuditCurrencyFilter !== 'all' && entry.currency !== balanceAuditCurrencyFilter) return false;
@@ -2799,7 +2926,7 @@ export const AdminPanel: React.FC = () => {
       () => Array.from(new Set(selectedBalanceAudits.map((entry) => entry.reason))).sort((a, b) => a.localeCompare(b)),
       [selectedBalanceAudits]
   );
-  const selectedAdminLogs = selectedUserId ? adminLogs[selectedUserId] ?? [] : [];
+  const selectedAdminLogs = isRealSelectedUserId(selectedUserId) ? adminLogs[selectedUserId!] ?? [] : [];
   const ledgerNetChange = selectedLedgerEntries.reduce((sum, entry) => sum + entry.amount, 0);
   const ledgerSearchValue = ledgerSearch.trim().toLowerCase();
 
@@ -3113,16 +3240,33 @@ export const AdminPanel: React.FC = () => {
   };
 
   const toggleItemSelection = (item: CaseItem) => {
-      const exists = selectedItems.find(i => i.id === item.id);
-      if(exists) {
-          setSelectedItems(prev => prev.filter(i => i.id !== item.id));
-      } else {
-          setSelectedItems(prev => [...prev, {
-              ...item,
-              boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
-              originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
-          }]);
-      }
+      setSelectedItems((prev) => {
+          const exists = prev.some((entry) => entry.id === item.id);
+          const nextItems = exists
+              ? prev.filter((entry) => entry.id !== item.id)
+              : [
+                  ...prev,
+                  {
+                      ...item,
+                      boxValueOverrideCoins: Number(item.boxValueOverrideCoins ?? item.price ?? 0),
+                      originalPriceCoins: Number(item.originalPriceCoins ?? item.price ?? 0)
+                  }
+              ];
+
+          if (nextItems.length === 0) {
+              return nextItems;
+          }
+
+          const { updatedItems, calculatedPrice } = getAutoCalculatedBoxItems(nextItems);
+          if (!hasExplicitBoxPrice) {
+              setNewBox((current) => ({
+                  ...current,
+                  [isXpBox ? 'priceXP' : 'price']: parseFloat(calculatedPrice.toFixed(2))
+              }));
+          }
+          return updatedItems;
+      });
+      setOddsEditorMode('auto');
   };
 
   const getCatalogItemPrice = (item: CaseItem) => {
@@ -3713,7 +3857,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <Input type="text" placeholder="Item Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} />
-                            <Input type="number" placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price || ''} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})} />
+                            <Input type="number" min={0} placeholder="Price (coins)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.price ?? ''} onChange={e => setNewItem({...newItem, price: e.target.value === '' ? undefined : Number(e.target.value)})} />
                             <Input type="text" placeholder="Brand (e.g. Nike)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.brand ?? ''} onChange={e => setNewItem({...newItem, brand: e.target.value})} />
                             <Input type="text" placeholder="Category (e.g. sneakers)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.category ?? ''} onChange={e => setNewItem({...newItem, category: e.target.value})} />
                             <Select className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-gray-300" value={newItem.rarity} onChange={e => setNewItem({...newItem, rarity: e.target.value as any})}>
@@ -3745,7 +3889,7 @@ export const AdminPanel: React.FC = () => {
                                 )}
                             </Select>
                             <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
-                            <Input type="number" placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance} onChange={e => setNewItem({...newItem, chance: Number(e.target.value)})} />
+                            <Input type="number" min={0} max={100} placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance ?? ''} onChange={e => setNewItem({...newItem, chance: e.target.value === '' ? undefined : Number(e.target.value)})} />
                             <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
                                 <Checkbox
                                   checked={newItem.redeemable ?? true}
@@ -3904,7 +4048,12 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             <p className="mt-2 text-[10px] text-gray-500">If provided, winners receive a random size from this list.</p>
                         </div>
-                        <button onClick={handleSaveItem} className={`px-6 py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded`}>
+                        {itemFormError && (
+                            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                                {itemFormError}
+                            </div>
+                        )}
+                        <button onClick={handleSaveItem} className={`w-full px-6 py-3 sm:w-auto sm:py-2 ${editingItemId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded`}>
                             {editingItemId ? 'Update Item' : 'Add Item'}
                         </button>
                     </div>
@@ -4408,19 +4557,33 @@ export const AdminPanel: React.FC = () => {
                                              ))}
                                          </Select>
                                      </label>
-                                     <div className="flex items-end">
-                                         <button
-                                             type="button"
-                                             onClick={() => {
-                                                 setItemBrandFilter('');
-                                                 setItemCategoryFilter('');
-                                                 setItemTagFilters([]);
-                                             }}
-                                             className="w-full rounded border border-gray-700 px-3 py-2 text-[11px] font-semibold uppercase text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
-                                         >
-                                             Clear Filters
-                                         </button>
+                                     <label className="text-[10px] uppercase text-gray-500 font-bold sm:col-span-2 lg:col-span-1">
+                                         Search
+                                         <Input
+                                             type="text"
+                                             value={boxItemSearchQuery}
+                                             onChange={(event) => setBoxItemSearchQuery(event.target.value)}
+                                             placeholder="Search name, tag, category..."
+                                             className="mt-1 w-full bg-[#131720] border border-gray-800 rounded p-2 text-xs text-gray-200"
+                                         />
+                                     </label>
+                                 </div>
+                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                     <div className="text-[11px] text-gray-500">
+                                         Showing <span className="font-semibold text-gray-300">{filteredItemsForBox.length}</span> of {items.length} catalog items.
                                      </div>
+                                     <button
+                                         type="button"
+                                         onClick={() => {
+                                             setItemBrandFilter('');
+                                             setItemCategoryFilter('');
+                                             setItemTagFilters([]);
+                                             setBoxItemSearchQuery('');
+                                         }}
+                                         className="w-full rounded border border-gray-700 px-3 py-2 text-[11px] font-semibold uppercase text-gray-400 transition hover:border-gray-500 hover:text-gray-200 sm:w-auto"
+                                     >
+                                         Clear Filters
+                                     </button>
                                  </div>
                                  <div>
                                      <div className="text-[10px] uppercase text-gray-500 font-bold mb-2">Tags (match any)</div>
@@ -4450,7 +4613,7 @@ export const AdminPanel: React.FC = () => {
                                         <div
                                             key={item.id}
                                             onClick={() => toggleItemSelection(item)}
-                                            className={`p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
+                                            className={`relative p-2 rounded border cursor-pointer flex flex-col items-center gap-2 text-center transition-all ${isSelected ? 'bg-blue-600/10 border-blue-500' : 'bg-[#131720] border-gray-800 hover:border-gray-600'}`}
                                         >
                                             <img src={item.image} alt={item.name} className="w-8 h-8 object-contain" />
                                             <div className="w-full">
@@ -4474,8 +4637,17 @@ export const AdminPanel: React.FC = () => {
                                      <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
-                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700">
-                                                 <img src={item.image} alt={item.name} className="w-5 h-5 object-contain" />
+                                             <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700 sm:flex-nowrap">
+                                                 <button
+                                                     type="button"
+                                                     onClick={() => toggleItemSelection(item)}
+                                                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 text-red-300 transition hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-400"
+                                                     aria-label={`Remove ${item.name} from box`}
+                                                     title="Remove item from box"
+                                                 >
+                                                     <X className="h-4 w-4" />
+                                                 </button>
+                                                 <img src={item.image} alt={item.name} className="w-8 h-8 object-contain sm:w-5 sm:h-5" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
                                                  <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
                                                      <div className="flex items-center justify-between gap-2">
@@ -4824,7 +4996,7 @@ export const AdminPanel: React.FC = () => {
                                             return (
                                                 <tr
                                                     key={profile.id}
-                                                    onClick={() => setSelectedUserId(profile.id)}
+                                                    onClick={() => setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null)}
                                                     className={`cursor-pointer transition-colors hover:bg-[#182033] ${isSelected ? 'bg-blue-500/10' : ''}`}
                                                 >
                                                     <td className="px-3 py-3">
@@ -4853,7 +5025,7 @@ export const AdminPanel: React.FC = () => {
                                                     <td className="px-3 py-3">
                                                         <div className="flex items-center gap-2 text-[11px]">
                                                             {locked && <span className="rounded bg-red-500/10 px-1.5 py-0.5 text-red-300">Locked</span>}
-                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(profile.id); }}>Inspect</button>
+                                                            <button type="button" className="text-blue-300" onClick={(event) => { event.stopPropagation(); setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null); }}>Inspect</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -4866,7 +5038,7 @@ export const AdminPanel: React.FC = () => {
                                 {filteredUsers.map((profile) => {
                                     const metrics = getUserMetrics(profile);
                                     return (
-                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(profile.id)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
+                                        <button type="button" key={profile.id} onClick={() => setSelectedUserId(isRealSelectedUserId(profile.id) ? profile.id : null)} className={`w-full rounded-xl border p-3 text-left ${selectedUserId === profile.id ? 'border-blue-500/50 bg-blue-500/10' : 'border-gray-800 bg-[#0b0e14]'}`}>
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <div className="text-sm font-semibold text-white">{profile.name}</div>
@@ -4881,7 +5053,7 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
-                    {selectedUser ? (
+                    {selectedUser && isRealSelectedUserId(selectedUserId) ? (
                         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
                             <div className="space-y-6">
                                 <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5">
@@ -5027,7 +5199,19 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mt-1 text-lg font-bold text-white">{selectedInventory.length}</div>
                                                     </div>
                                                 </div>
-                                                {isEditingInventory && <div className="grid grid-cols-1 gap-2"><Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="number" value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /><button onClick={handleAddInventoryItem} className="rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300">Add Inventory Item</button></div>}
+                                                {isEditingInventory && (
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        <Input type="text" value={inventoryDraft.name} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, name: event.target.value }))} placeholder="Item name" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        <Input type="number" min={0} value={inventoryDraft.price} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, price: event.target.value }))} placeholder="Value" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        <Input type="text" value={inventoryDraft.image} onChange={(event) => setInventoryDraft((prev) => ({ ...prev, image: event.target.value }))} placeholder="Image URL" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" />
+                                                        {inventorySaveError && (
+                                                            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                                                                {inventorySaveError}
+                                                            </div>
+                                                        )}
+                                                        <button type="button" onClick={handleAddInventoryItem} className="w-full rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-semibold text-blue-300 sm:w-auto">Add Inventory Item</button>
+                                                    </div>
+                                                )}
                                                 <div className="max-h-72 space-y-2 overflow-auto pr-1">
                                                     {selectedShippableInventory.map((item) => (
                                                         <div key={item.instanceId} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
@@ -5159,7 +5343,7 @@ export const AdminPanel: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user to open the operator inspector panel.</div>
+                        <div className="rounded-2xl border border-dashed border-gray-700 bg-[#131720] p-8 text-center text-sm text-gray-500">Select a user</div>
                     )}
                 </div>
             )}

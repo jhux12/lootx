@@ -5,14 +5,6 @@ import { XP_ICON } from '../../constants';
 import { AnimatedNumber } from '../../src/ui/numbers/AnimatedNumber';
 import { CoinAmount } from '../CoinAmount';
 
-interface QuickAction {
-  label: string;
-  onClick: () => void;
-  primary?: boolean;
-  isNew?: boolean;
-  active?: boolean;
-}
-
 type AccountPanel = 'overview' | 'security' | 'settings';
 
 interface SecurityForm {
@@ -30,7 +22,6 @@ interface AccountViewProps {
   memberSince: string;
   xp: number;
   balance: number;
-  quickActions: QuickAction[];
   activePanel: AccountPanel;
   onSelectPanel: (panel: AccountPanel) => void;
   addressForm: ShippingAddress;
@@ -56,7 +47,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
   memberSince,
   xp,
   balance,
-  quickActions,
   activePanel,
   onSelectPanel,
   addressForm,
@@ -167,27 +157,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
                 </button>
               </div>
             </article>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-            <p className="text-[11px] uppercase tracking-wide text-gray-400">Shortcuts</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {quickActions.map((action) => (
-                <button
-                  key={action.label}
-                  type="button"
-                  onClick={action.onClick}
-                  className={`rounded-xl px-3 py-2 text-sm transition ${
-                    action.active
-                      ? 'border border-blue-400/50 bg-blue-500/20 text-white'
-                      : 'border border-white/10 text-gray-200 hover:bg-white/[0.05]'
-                  }`}
-                >
-                  <span>{action.label}</span>
-                  {action.isNew ? <span className="ml-2 rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold">NEW</span> : null}
-                </button>
-              ))}
-            </div>
           </div>
         </section>
       )}

@@ -777,6 +777,8 @@ const AUTH_LOADING_USER: User = {
   termsFlagged: false
 };
 
+const isRealFirebaseUid = (uid: string | null | undefined) => Boolean(uid && uid.trim() && uid !== 'loading' && uid !== 'guest');
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
 const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
@@ -1425,6 +1427,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const subscribeToInventory = useCallback((uid: string) => {
     if (inventoryUnsubscribeRef.current) return;
+    if (!isRealFirebaseUid(uid)) {
+      console.log('SKIPPING INVENTORY SUBSCRIPTION FOR PLACEHOLDER USER', uid);
+      return;
+    }
 
     const inventoryPath = `users/${uid}/inventory?limit=200`;
     console.log('READING FIRESTORE PATH', inventoryPath);
@@ -1489,6 +1495,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Realtime inventory stays attached for the authenticated user's session so the
   // navbar, profile, inventory, and balance-adjacent UI all update without refresh.
   const refreshInventory = useCallback(async (uid: string, options?: { limitCount?: number }) => {
+    if (!isRealFirebaseUid(uid)) {
+      console.log('SKIPPING INVENTORY REFRESH FOR PLACEHOLDER USER', uid);
+      return;
+    }
     const cappedLimit = Math.max(10, Math.min(200, Number(options?.limitCount ?? 120)));
     const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
     console.log('READING FIRESTORE PATH', inventoryPath);

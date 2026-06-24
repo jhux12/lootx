@@ -896,7 +896,6 @@ export const Profile: React.FC = () => {
               memberSince={joinedDate}
               xp={xp}
               balance={balance}
-              quickActions={quickActions}
               activePanel={activeAccountPanel}
               onSelectPanel={setActiveAccountPanel}
               addressForm={addressForm}
