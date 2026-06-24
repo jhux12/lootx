@@ -536,24 +536,28 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
   return (
     <div className="animate-in fade-in duration-500">
-      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative h-[122px] w-full overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[142px] lg:h-[164px]">
+      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-4 lg:p-5">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_77%_22%,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:text-[9px]"><Sparkles className="h-3 w-3" />100% buyback</div>
-              <h1 className="relative z-10 mt-2 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-white sm:max-w-[240px] sm:text-[28px] lg:max-w-[320px] lg:text-[36px]">Your First Spin Is Protected</h1>
-              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">Deposit once and your first paid spin is backed by our 100% Buyback Offer.</p>
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% buyback offer" className="absolute right-[-2px] top-2 h-[108px] w-[176px] object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-4 sm:h-[126px] sm:w-[210px] lg:right-10 lg:top-3 lg:h-[150px] lg:w-[250px]" loading="eager" />
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_24%,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
+              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />100% buyback</div>
+                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Your First Spin Is Protected</h1>
+                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Deposit once and your first paid spin is backed by our 100% Buyback Offer.</p>
+              </div>
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% buyback offer" className="absolute right-[-18px] top-1/2 h-[118px] w-[198px] -translate-y-1/2 object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-3 sm:h-[150px] sm:w-[250px] lg:right-8 lg:h-[210px] lg:w-[350px]" loading="eager" />
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-4 lg:p-5">
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
-              <div className="relative z-10 inline-flex items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:text-[9px]"><Flame className="h-3 w-3" />Trending boxes</div>
-              <h1 className="relative z-10 mt-2 max-w-[170px] text-[20px] font-black uppercase leading-none tracking-tight text-white sm:max-w-[250px] sm:text-[28px] lg:max-w-[330px] lg:text-[36px]">Trending Boxes</h1>
-              <p className="relative z-10 mt-1 max-w-[150px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[230px] sm:text-[10px] lg:max-w-[280px] lg:text-xs">Open the boxes everyone is watching right now.</p>
-              <div className="absolute -right-6 top-2 flex gap-2 sm:right-4 lg:right-10">
+              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
+                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
+                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
+              </div>
+              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
                 {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[108px] w-[72px] place-items-center overflow-visible rounded-xl p-0 sm:h-[124px] sm:w-[86px] lg:h-[146px] lg:w-[104px]">
+                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
                     {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
                   </div>
                 ))}
