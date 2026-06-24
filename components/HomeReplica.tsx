@@ -542,11 +542,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_24%,rgba(255,255,255,0.24),transparent_30%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
               <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />100% buyback</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Your First Spin Is Protected</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Deposit once and your first paid spin is backed by our 100% Buyback Offer.</p>
+                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />First deposit bonus</div>
+                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Get a 50% Bonus on Your First Deposit</h1>
+                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Deposit for the first time and receive 50% extra coins instantly. More coins means more boxes, more pulls</p>
               </div>
-              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="100% buyback offer" className="absolute right-[-18px] top-1/2 h-[118px] w-[198px] -translate-y-1/2 object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-3 sm:h-[150px] sm:w-[250px] lg:right-8 lg:h-[210px] lg:w-[350px]" loading="eager" />
+              <img src={MOBILE_DEPOSIT_MATCH_IMAGE} alt="First deposit bonus offer" className="absolute right-[-18px] top-1/2 h-[118px] w-[198px] -translate-y-1/2 object-contain drop-shadow-[0_14px_20px_rgba(23,34,51,0.28)] sm:right-3 sm:h-[150px] sm:w-[250px] lg:right-8 lg:h-[210px] lg:w-[350px]" loading="eager" />
             </div>
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
@@ -564,10 +564,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
               </div>
             </div>
           </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim 100% buyback offer' : 'View trending boxes'}</span>
+          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? '100% buyback offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
         </div>
       </section>
 
@@ -682,7 +682,7 @@ const MobileGameRow = ({ title, icon, children }: { title: string; icon: React.R
 );
 
 const FirstDepositBanner = memo(({ onClaim, onDismiss }: { onClaim: () => void; onDismiss: () => void }) => (
-  <section className="relative overflow-hidden rounded-2xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(247,183,51,0.16),rgba(124,92,255,0.14),rgba(32,93,215,0.12))] p-4 shadow-[0_16px_40px_rgba(5,8,12,0.28)] sm:p-5" aria-label="100% buyback offer">
+  <section className="relative overflow-hidden rounded-2xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(247,183,51,0.16),rgba(124,92,255,0.14),rgba(32,93,215,0.12))] p-4 shadow-[0_16px_40px_rgba(5,8,12,0.28)] sm:p-5" aria-label="First deposit bonus offer">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_0%,rgba(247,183,51,0.22),transparent_32%),radial-gradient(circle_at_88%_100%,rgba(56,189,248,0.16),transparent_36%)]" />
     <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
@@ -695,7 +695,7 @@ const FirstDepositBanner = memo(({ onClaim, onDismiss }: { onClaim: () => void; 
       </div>
       <div className="flex items-center gap-2 sm:shrink-0">
         <button type="button" onClick={onClaim} className="min-h-11 flex-1 rounded-xl bg-gradient-to-r from-[#7C5CFF] via-[#205DD7] to-sky-400 px-5 py-3 text-sm font-black text-white shadow-[0_10px_26px_rgba(32,93,215,0.36)] transition hover:brightness-110 active:scale-[0.98] sm:flex-none">Claim Bonus</button>
-        <button type="button" onClick={onDismiss} aria-label="Dismiss 100% buyback offer" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"><X className="h-4 w-4" /></button>
+        <button type="button" onClick={onDismiss} aria-label="Dismiss First deposit bonus offer" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"><X className="h-4 w-4" /></button>
       </div>
     </div>
   </section>

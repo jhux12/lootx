@@ -108,10 +108,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       openCurrencyType: typed.openCurrencyType === 'XP' ? 'XP' : typed.openCurrencyType === 'COIN' ? 'COIN' : undefined,
       freeShipping: typed.freeShipping === true,
       shippingCostOverrideCoins: typed.shippingCostOverrideCoins == null ? undefined : Number(typed.shippingCostOverrideCoins),
-      shippingCostOverrideCents: typed.shippingCostOverrideCents == null ? undefined : Number(typed.shippingCostOverrideCents),
-    firstDepositBuybackProtected: typed.firstDepositBuybackProtected === true,
-    protectedSellBackCoins: typed.protectedSellBackCoins == null ? undefined : Number(typed.protectedSellBackCoins),
-    protectedSellBackReason: typeof typed.protectedSellBackReason === 'string' ? typed.protectedSellBackReason : undefined
+      shippingCostOverrideCents: typed.shippingCostOverrideCents == null ? undefined : Number(typed.shippingCostOverrideCents)
     };
   });
 };
@@ -271,8 +268,7 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabPublishFeeCoins: 0,
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
-  boxTagIcons: {},
-  firstDepositBuybackOfferEnabled: true
+  boxTagIcons: {}
 };
 
 const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
@@ -332,8 +328,7 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
             .map(([tag, iconClass]) => [tag.trim().toLowerCase(), iconClass.trim().replace(/\s+/g, ' ')])
             .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
         )
-      : {},
-    firstDepositBuybackOfferEnabled: settings.firstDepositBuybackOfferEnabled !== false
+      : {}
   };
 };
 

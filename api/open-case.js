@@ -93,7 +93,6 @@ export default async function handler(req, res) {
     const userRef = firestore.collection('users').doc(decoded.uid);
     const provablyRef = firestore.collection('provablyFair').doc(decoded.uid);
     const bonusSettingsRef = firestore.collection('settings').doc('bonus-settings');
-    const stripeSettingsRef = firestore.collection('settings').doc('stripe-settings');
     const economySettingsRef = firestore.collection('settings').doc('economy');
     const pullPassSettingsRef = firestore.collection('settings').doc('pullPass');
     const inventoryRef = userRef.collection('inventory').doc();
@@ -108,12 +107,11 @@ export default async function handler(req, res) {
     let responsePayload;
 
     await firestore.runTransaction(async (transaction) => {
-      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, stripeSettingsSnap, economySettingsSnap, pullPassSettingsSnap, processedOpSnap, pullPassInventorySnap] = await Promise.all([
+      const [boxSnap, userSnap, provablySnap, bonusSettingsSnap, economySettingsSnap, pullPassSettingsSnap, processedOpSnap, pullPassInventorySnap] = await Promise.all([
         transaction.get(boxRef),
         transaction.get(userRef),
         transaction.get(provablyRef),
         transaction.get(bonusSettingsRef),
-        transaction.get(stripeSettingsRef),
         transaction.get(economySettingsRef),
         transaction.get(pullPassSettingsRef),
         transaction.get(processedOpRef),
@@ -328,26 +326,9 @@ export default async function handler(req, res) {
       };
 
       const freeBoxClaimedAt = isFree ? Date.now() : null;
-      const stripeSettings = stripeSettingsSnap.exists ? stripeSettingsSnap.data() ?? {} : {};
-      const firstDepositBuybackOfferEnabled = stripeSettings.firstDepositBuybackOfferEnabled !== false;
-      const firstDepositBuybackAvailable = userData.firstDepositBuybackOfferAvailable === true;
-      const firstDepositBuybackUsed = userData.firstDepositBuybackOfferUsed === true;
-      const firstDepositBuybackApplies = firstDepositBuybackOfferEnabled
-        && firstDepositBuybackAvailable
-        && !firstDepositBuybackUsed
-        && coinCost > 0
-        && !isFree
-        && !isPullPassRewardOpen
-        && !paidWithXp;
-
       const nextUserPatch = sanitizeForFirestore({
         ...(!userSnap.exists ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
-        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {}),
-        ...(firstDepositBuybackApplies ? {
-          firstDepositBuybackOfferUsed: true,
-          firstDepositBuybackOfferAvailable: false,
-          firstDepositBuybackOfferUsedAt: admin.firestore.FieldValue.serverTimestamp()
-        } : {})
+        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
       });
 
       if (coinCost > 0) {
@@ -504,12 +485,7 @@ export default async function handler(req, res) {
         obtainedAt,
         sellBackRate: appliedSellBackRate,
         redeemable: prize.redeemable ?? true,
-        forceFullSellBack: prizeForcesFullSellBack,
-        ...(firstDepositBuybackApplies ? {
-          firstDepositBuybackProtected: true,
-          protectedSellBackCoins: Math.max(0, Math.floor(coinCost)),
-          protectedSellBackReason: 'first_deposit_100_percent_buyback'
-        } : {})
+        forceFullSellBack: prizeForcesFullSellBack
       };
       if (selectedSize) {
         inventoryPayload.size = selectedSize;

@@ -159,12 +159,8 @@ export default async function handler(req, res) {
           return;
         }
 
-        const settingsRef = firestore.collection('settings').doc('stripe-settings');
-        const [userSnap, settingsSnap] = await Promise.all([transaction.get(userRef), transaction.get(settingsRef)]);
+        const userSnap = await transaction.get(userRef);
         const userData = userSnap.exists ? userSnap.data() ?? {} : {};
-        const settingsData = settingsSnap.exists ? settingsSnap.data() ?? {} : {};
-        const isFirstSuccessfulDeposit = Math.max(0, Number(userData.depositCount ?? 0)) === 0 && Math.max(0, Number(userData.totalDepositedCents ?? 0)) === 0;
-        const enableBuybackOffer = settingsData.firstDepositBuybackOfferEnabled !== false;
         const { balanceAfter: nextCoins } = await recordBalanceChange({
           transaction,
           uid,
@@ -201,12 +197,7 @@ export default async function handler(req, res) {
         transaction.set(userRef, {
           totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
           depositCount: admin.firestore.FieldValue.increment(1),
-          lastDepositAt: admin.firestore.FieldValue.serverTimestamp(),
-          ...(isFirstSuccessfulDeposit && enableBuybackOffer ? {
-            firstDepositBuybackOfferAvailable: true,
-            firstDepositBuybackOfferUsed: false,
-            firstDepositBuybackOfferGrantedAt: admin.firestore.FieldValue.serverTimestamp()
-          } : {})
+          lastDepositAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
         transaction.set(creditRef, {
