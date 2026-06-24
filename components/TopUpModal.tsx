@@ -291,7 +291,6 @@ export const TopUpModal: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-lg font-semibold text-white">Add Coins</h2>
-                        <p className="mt-1 text-xs font-semibold text-slate-300">50% deposit match available on eligible first-deposit packs.</p>
                       </div>
                     </div>
                     <button 
