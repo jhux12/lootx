@@ -2505,7 +2505,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                 {visibleDropItems.map((item) => {
                   const rarityKey = normalizeRarityKey(item.rarity);
                   const rarityAccent = dropTableRarityAccent[rarityKey] ?? dropTableRarityAccent.common;
@@ -2514,37 +2514,36 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className={`group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] transition-all hover:border-white/20`}
+                        className={`group relative flex min-h-[13.5rem] overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] transition-all hover:border-white/20 active:scale-[0.99] sm:min-h-[14.5rem]`}
                     >
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
-                        <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
-                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" width={160} height={160} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
-                            {item.redeemable === false && (
-                              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
-                                i
-                              </span>
-                            )}
-                        </div>
-                        <div className="relative border-t border-white/10 bg-black/15 p-3">
-                            <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <CoinAmount
-                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-sm font-bold text-gray-200"
-                                    iconClassName="w-3.5 h-3.5"
-                                  />
-                                  <p className="mt-0.5 text-[9px] leading-tight text-gray-400">{formatUsdValueFromCoins(toCoins(item.price, PRICE_UNIT_MODE))}</p>
-                                </div>
-                                {!hideDropTableOdds && (
-                                  <span
-                                    className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                                    style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
-                                  >
-                                    {item.chance}%
-                                  </span>
-                                )}
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.26),transparent_42%),linear-gradient(180deg,transparent_48%,rgba(0,0,0,0.46))]" />
+                        <div className="relative flex min-h-0 flex-1 flex-col justify-between p-2.5 sm:p-3">
+                            <div className="flex items-start justify-between gap-2">
+                              {!hideDropTableOdds ? (
+                                <span
+                                  className="rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-sm backdrop-blur"
+                                  style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1f` }}
+                                >
+                                  {item.chance}%
+                                </span>
+                              ) : <span aria-hidden="true" />}
+                              {item.redeemable === false && (
+                                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100 shadow-sm backdrop-blur" aria-label="Not redeemable for coins" title="Not redeemable for coins">
+                                  i
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-1 items-center justify-center py-1">
+                              <BlurImage src={item.image} alt={item.name} className="h-36 w-full object-contain drop-shadow-[0_14px_18px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-105 sm:h-40" loading="lazy" width={192} height={192} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
+                            </div>
+                            <div className="min-w-0 rounded-lg border border-white/10 bg-black/20 px-2.5 py-2 backdrop-blur-sm">
+                              <div className="truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
+                              <CoinAmount
+                                amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="mt-1 text-sm font-bold text-gray-200"
+                                iconClassName="w-3.5 h-3.5"
+                              />
                             </div>
                         </div>
                     </button>
