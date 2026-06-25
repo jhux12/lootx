@@ -888,21 +888,71 @@ const mapBoxData = (boxId: string, rawData: Record<string, unknown>, mode: BoxLo
   };
 };
 
-const fullBoxCache = new Map<string, MysteryBox>();
+const FULL_BOX_CACHE_TTL_MS = 60 * 1000;
+
+interface FullBoxCacheEntry {
+  box: MysteryBox;
+  expiresAt: number;
+}
+
+const fullBoxCache = new Map<string, FullBoxCacheEntry>();
 const fullBoxRequests = new Map<string, Promise<MysteryBox | null>>();
 
-const loadFullBoxById = async (boxId: string, includeAdminFields: boolean): Promise<MysteryBox | null> => {
+const getCachedFullBox = (boxId: string) => {
   const cached = fullBoxCache.get(boxId);
-  if (cached) return cached;
-  const existing = fullBoxRequests.get(boxId);
-  if (existing) return existing;
+  if (!cached) return null;
+  if (Date.now() >= cached.expiresAt) {
+    fullBoxCache.delete(boxId);
+    return null;
+  }
+  return cached.box;
+};
+
+const setCachedFullBox = (box: MysteryBox) => {
+  fullBoxCache.set(box.id, { box, expiresAt: Date.now() + FULL_BOX_CACHE_TTL_MS });
+};
+
+const invalidateFullBoxCache = (boxId?: string) => {
+  if (boxId) {
+    fullBoxCache.delete(boxId);
+    fullBoxRequests.delete(boxId);
+    return;
+  }
+  fullBoxCache.clear();
+  fullBoxRequests.clear();
+};
+
+const loadFullBoxById = async (boxId: string, includeAdminFields: boolean, options?: { forceRefresh?: boolean }): Promise<MysteryBox | null> => {
+  if (!options?.forceRefresh) {
+    const cached = getCachedFullBox(boxId);
+    if (cached) return cached;
+    const existing = fullBoxRequests.get(boxId);
+    if (existing) return existing;
+  }
+
+  if (options?.forceRefresh) {
+    invalidateFullBoxCache(boxId);
+  }
+
   const request = (async () => {
-    const boxPath = `boxes/${boxId}`;
-    console.log('READING FIRESTORE PATH', boxPath);
-    const snapshot = await getDoc(doc(db, 'boxes', boxId));
-    if (!snapshot.exists()) return null;
-    const fullBox = mapBoxData(snapshot.id, snapshot.data() as Record<string, unknown>, 'full', includeAdminFields);
-    fullBoxCache.set(boxId, fullBox);
+    if (includeAdminFields) {
+      const boxPath = `boxes/${boxId}`;
+      console.log('READING FIRESTORE PATH', boxPath);
+      const snapshot = await getDoc(doc(db, 'boxes', boxId));
+      if (!snapshot.exists()) return null;
+      const fullBox = mapBoxData(snapshot.id, snapshot.data() as Record<string, unknown>, 'full', true);
+      setCachedFullBox(fullBox);
+      return fullBox;
+    }
+
+    const boxPath = `/api/boxes/${encodeURIComponent(boxId)}`;
+    console.log('READING API PATH', boxPath);
+    const response = await fetch(boxPath);
+    if (!response.ok) return null;
+    const payload = await response.json() as { box?: Record<string, unknown> & { id?: string } };
+    if (!payload.box?.id) return null;
+    const fullBox = mapBoxData(payload.box.id, payload.box as Record<string, unknown>, 'full', false);
+    setCachedFullBox(fullBox);
     return fullBox;
   })().finally(() => {
     fullBoxRequests.delete(boxId);
@@ -3538,6 +3588,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           boxId = boxId || `local-box-${Date.now()}`;
       }
 
+      invalidateFullBoxCache(boxId);
       upsertAdminBox({ ...boxData, id: boxId });
   };
 
@@ -3557,6 +3608,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Missing published box id');
       }
 
+      invalidateFullBoxCache(response.boxId);
       setBoxes(prev => [...prev, { ...userBox, id: response.boxId }]);
 
       const nextCoins = Number(response?.newCoins);
@@ -3582,6 +3634,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.error('Failed to update box in Firebase', error);
       }
 
+      invalidateFullBoxCache(id);
       upsertAdminBox({ ...boxData, id });
   };
 
@@ -3592,6 +3645,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.error('Failed to delete box from Firebase', error);
       }
 
+      invalidateFullBoxCache(boxId);
       removeAdminBox(boxId);
   };
 
@@ -3933,10 +3987,11 @@ export const useBoxes = () => {
 
 export const useBoxDetails = (boxId: string | undefined) => {
   const { user, boxes } = useGame();
+  const [refreshKey, setRefreshKey] = useState(0);
   const summaryBox = useMemo(() => boxes.find((box) => box.id === boxId), [boxes, boxId]);
   const [box, setBox] = useState<MysteryBox | null>(() => {
     if (summaryBox?.items.length) return summaryBox;
-    return boxId ? fullBoxCache.get(boxId) ?? null : null;
+    return boxId ? getCachedFullBox(boxId) : null;
   });
   const [loading, setLoading] = useState(Boolean(boxId && !box?.items.length));
   const [error, setError] = useState<Error | null>(null);
@@ -3956,7 +4011,7 @@ export const useBoxDetails = (boxId: string | undefined) => {
       return;
     }
 
-    const cached = fullBoxCache.get(boxId);
+    const cached = getCachedFullBox(boxId);
     if (cached) {
       setBox(cached);
       setLoading(false);
@@ -3967,7 +4022,7 @@ export const useBoxDetails = (boxId: string | undefined) => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void loadFullBoxById(boxId, Boolean(user.isAdmin))
+    void loadFullBoxById(boxId, Boolean(user.isAdmin), { forceRefresh: refreshKey > 0 })
       .then((loadedBox) => {
         if (cancelled) return;
         setBox(loadedBox);
@@ -3983,9 +4038,14 @@ export const useBoxDetails = (boxId: string | undefined) => {
     return () => {
       cancelled = true;
     };
-  }, [boxId, summaryBox, user.isAdmin]);
+  }, [boxId, refreshKey, summaryBox, user.isAdmin]);
 
-  return { box, summaryBox, loading, error };
+  const retry = useCallback(() => {
+    if (boxId) invalidateFullBoxCache(boxId);
+    setRefreshKey((value) => value + 1);
+  }, [boxId]);
+
+  return { box, summaryBox, loading, error, retry };
 };
 
 export const useInventory = () => {

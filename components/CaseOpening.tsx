@@ -323,7 +323,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
 
-  const { box: loadedBox, summaryBox, loading: isBoxDetailsLoading, error: boxDetailsError } = useBoxDetails(boxId);
+  const { box: loadedBox, summaryBox, loading: isBoxDetailsLoading, error: boxDetailsError, retry: retryBoxDetails } = useBoxDetails(boxId);
   const matchedBox = loadedBox ?? summaryBox ?? boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];
 
@@ -1953,6 +1953,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <p className="text-gray-400 text-sm mt-2">
               {boxDetailsError ? 'Unable to load this box. Please refresh and try again.' : 'We&apos;re syncing the drops and odds for this box.'}
             </p>
+            {boxDetailsError && (
+              <button
+                type="button"
+                onClick={retryBoxDetails}
+                className="mt-4 min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
+              >
+                Retry
+              </button>
+            )}
           </div>
         </div>
       ) : (
