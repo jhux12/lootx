@@ -5,8 +5,8 @@ import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
+import { BlurImage } from '../src/ui/images/BlurImage';
 import { useGame } from '../context/GameContext';
-import { CASE_ITEMS } from '../constants';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -51,7 +51,19 @@ const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
-    {win.image ? <img src={win.image} alt="" className="absolute inset-x-0 bottom-2 top-3 z-10 mx-auto h-[96px] w-[96px] object-contain drop-shadow-[0_13px_16px_rgba(0,0,0,0.42)]" loading="lazy" /> : null}
+    {win.image ? (
+      <BlurImage
+        src={win.image}
+        alt=""
+        className="h-full w-full object-contain drop-shadow-[0_13px_16px_rgba(0,0,0,0.42)]"
+        ratioClassName="absolute inset-x-0 bottom-2 top-3 z-10 mx-auto h-[96px] w-[96px] max-w-[calc(100%-0.75rem)]"
+        loading="lazy"
+        width={96}
+        height={96}
+        showPlaceholder={false}
+        retryOnError
+      />
+    ) : null}
     <div className="absolute bottom-2 left-2 z-30 rounded bg-black/20 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{win.rarity}</div>
     <div className="absolute bottom-2 right-2 z-30 rounded bg-white/18 px-1.5 py-0.5 text-[6px] font-black uppercase text-white/85">{win.timeAgo}</div>
   </button>
@@ -117,7 +129,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const cards = boxes.slice(0, 6);
-  const originals = cards.length ? cards.slice(0, 3) : [];
   const trendingBoxes = useMemo(() => {
     const selected = trendingBoxIds
       .map((id) => boxes.find((box) => box.id === id))
@@ -128,7 +139,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     const fallbackBoxId = boxes[0]?.id ?? '';
     const itemPool = (boxes.some((box) => box.items.length > 0)
       ? boxes.flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
-      : (catalogItems.length ? catalogItems : CASE_ITEMS).map((item) => ({ item, boxId: fallbackBoxId }))
+      : catalogItems.map((item) => ({ item, boxId: fallbackBoxId }))
     ).filter(({ item, boxId }) => boxId && item.image && item.name);
 
     if (!itemPool.length) return [];
@@ -430,8 +441,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         </div>
         <div className="overflow-hidden">
           <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeLiveWinIndex * 108}px,0,0)` }}>
-            {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
-            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+            {displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />) : null}
+            {!displayedLiveWins.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
           </div>
         </div>
       </section>

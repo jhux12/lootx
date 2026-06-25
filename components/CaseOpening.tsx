@@ -1202,7 +1202,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setIsSpinnerAssetsLoading(true);
     const preloadLimit = options.preloadAll ? Number.POSITIVE_INFINITY : (reduceMobileEffects ? 10 : 28);
     const loadTimeoutMs = options.preloadAll ? (reduceMobileEffects ? 3200 : 5000) : (reduceMobileEffects ? 900 : 1400);
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
+    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image?.trim()).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
 
     const loadSource = (src: string) => {
       const cachedLoad = preloadedSpinnerImagesRef.current.get(src);
@@ -1210,6 +1210,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       let timedOut = false;
       const loadPromise = new Promise<void>((resolve) => {
+        let attempts = 0;
         const img = new Image();
         const timeoutId = window.setTimeout(() => {
           timedOut = true;
@@ -1219,12 +1220,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           window.clearTimeout(timeoutId);
           resolve();
         };
+        const tryLoad = (source: string) => {
+          img.decoding = 'async';
+          img.loading = 'eager';
+          img.onload = settle;
+          img.onerror = () => {
+            if (attempts < 1) {
+              attempts += 1;
+              const separator = source.includes('?') ? '&' : '?';
+              img.src = `${source}${separator}retry=${Date.now()}`;
+              return;
+            }
+            settle();
+          };
+          img.src = source;
+        };
 
-        img.decoding = 'async';
-        img.loading = 'eager';
-        img.onload = settle;
-        img.onerror = settle;
-        img.src = src;
+        tryLoad(src);
 
         if (img.complete && img.naturalWidth > 0) {
           settle();
@@ -2103,8 +2115,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   loading={isSpinning || idx < 8 || Math.abs(idx - reelWinnerIndex) <= 2 ? 'eager' : 'lazy'}
                                   fetchPriority={isSpinning || idx < 4 || Math.abs(idx - reelWinnerIndex) <= 1 ? 'high' : 'low'}
                                   showPlaceholder={false}
-                                  staticRender={reduceMobileEffects || isSpinning}
-                                  retryOnError={!(reduceMobileEffects || isSpinning)}
+                                  staticRender={false}
+                                  retryOnError
                                   className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
