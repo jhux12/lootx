@@ -867,8 +867,6 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
           <FirstDepositBanner onClaim={handleClaimFirstDepositBonus} onDismiss={handleDismissFirstDepositBanner} />
         )}
 
-        <LiveCommunitySection />
-
         <HomeBanners />
 
         <section aria-label="Available boxes" className="rounded-[1.35rem] border border-white/[0.06] bg-[#20262b]/72 p-4 shadow-[0_18px_44px_rgba(5,8,12,0.22)] sm:p-5">
@@ -887,14 +885,16 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
                 <div className="relative flex h-[168px] items-center justify-center p-2 sm:h-[205px] lg:h-[220px]">
                   <BlurImage src={box.image} alt={box.name} className="mx-auto max-h-full w-auto object-contain drop-shadow-[0_18px_30px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-out group-hover:scale-110 group-active:scale-105" loading={index < 2 ? 'eager' : 'lazy'} fetchPriority={index < 2 ? 'high' : 'low'} showPlaceholder={false} staticRender={performanceMode.isMobile || performanceMode.isLowPower} width={260} height={260} />
                 </div>
-                <div className="relative mt-2 flex items-center justify-between gap-2 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2">
-                  <p className="min-w-0 truncate text-left text-xs font-bold text-slate-200 sm:text-sm">{box.name}</p>
-                  <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-sm font-black text-white" iconClassName="h-4 w-4" />
+                <div className="relative mt-2 flex min-h-[66px] flex-col items-center justify-center gap-1.5 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2 text-center sm:min-h-[72px]">
+                  <p className="w-full truncate text-xs font-bold text-slate-200 sm:text-sm">{box.name}</p>
+                  <CoinAmount amount={Math.round(box.price)} className="justify-center text-sm font-black text-white" iconClassName="h-4 w-4" />
                 </div>
               </button>
             ))}
           </div>
         </section>
+
+        <LiveCommunitySection />
 
         <section aria-label="Live recent wins" className="min-h-[470px] overflow-hidden rounded-[1.35rem] border border-white/5 bg-[#171918] shadow-[0_18px_44px_rgba(5,8,12,0.28)] sm:min-h-[514px]">
           <div className="flex flex-col gap-1 border-b border-white/[0.06] bg-[#171918] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
