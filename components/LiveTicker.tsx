@@ -1,14 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useGame } from '../context/GameContext';
 import { LiveDrop, User } from '../types';
-import { CASE_ITEMS } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import { BlurImage } from '../src/ui/images/BlurImage';
+import { usePublicRecentWins } from '../src/hooks/usePublicRecentWins';
 
 export const LiveTicker: React.FC = () => {
-  const { items, users } = useGame();
+  const { wins } = usePublicRecentWins(16);
   const tickerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -25,52 +23,24 @@ export const LiveTicker: React.FC = () => {
   }, []);
 
   const drops = useMemo(() => {
-    const publicUsers = users.filter((user) => user.hiddenFromPublicDisplay !== true);
-    const availableUsers: User[] = publicUsers.length ? publicUsers : [{
+    const playerUser: User = {
       id: 'guest',
       name: 'Player',
-      avatar: 'https://picsum.photos/seed/guest/100/100',
+      avatar: '',
       level: 1,
       xp: 0
-    }];
-
-    const liveWins = publicUsers.flatMap((user) => {
-      const inventoryItems = user.inventory?.length ? user.inventory : user.topPulls ?? [];
-      return inventoryItems.map((item) => ({
-        item,
-        user
-      }));
-    })
-      .filter(({ item }) => ['legendary', 'epic', 'rare'].includes(item.rarity))
-      .sort((a, b) => (b.item.obtainedAt ?? 0) - (a.item.obtainedAt ?? 0))
-      .slice(0, 12);
-
-    const mapped = liveWins.length
-      ? liveWins.map(({ item, user }) => ({
-          id: item.instanceId ?? item.id,
-          itemName: item.name,
-          itemImage: item.image,
-          value: toCoins(item.price, PRICE_UNIT_MODE),
-          user,
-          rarity: item.rarity
-        }))
-      : (items.length ? items : CASE_ITEMS)
-          .filter(item => ['legendary', 'epic', 'rare'].includes(item.rarity))
-          .sort((a, b) => {
-            const rarityRank = { epic: 0, rare: 1, legendary: 2, uncommon: 3, common: 4 } as const;
-            return (rarityRank[a.rarity] ?? 5) - (rarityRank[b.rarity] ?? 5);
-          })
-          .map((item, index) => ({
-            id: item.id,
-            itemName: item.name,
-            itemImage: item.image,
-            value: toCoins(item.price, PRICE_UNIT_MODE),
-            user: availableUsers[index % availableUsers.length],
-            rarity: item.rarity
-          }));
+    };
+    const mapped = wins.map((win) => ({
+      id: win.id,
+      itemName: win.itemName,
+      itemImage: win.itemImage,
+      value: win.itemValue,
+      user: { ...playerUser, id: `public-${win.id}`, name: win.displayName || 'Player' },
+      rarity: win.rarity
+    }));
 
     return mapped.length ? [...mapped, ...mapped, ...mapped] : [];
-  }, [items, users]);
+  }, [wins]);
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
     switch (rarity) {
