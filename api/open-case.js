@@ -307,7 +307,11 @@ export default async function handler(req, res) {
       }
 
       const { roll, rollHash, message } = computeRoll(serverSeed, clientSeed, nonce, boxId);
-      const prize = pickPrizeByWeight(prizes, roll);
+      const legendaryPrizes = prizes.filter((entry) => String(entry?.rarity ?? '').toLowerCase() === 'legendary');
+      const shouldGuaranteeLegendary = userData.guaranteedLegendaryNextSpin === true && legendaryPrizes.length > 0;
+      const prize = shouldGuaranteeLegendary
+        ? legendaryPrizes[Math.floor(roll * legendaryPrizes.length) % legendaryPrizes.length]
+        : pickPrizeByWeight(prizes, roll);
       const prizeForcesFullSellBack = prize?.forceFullSellBack === true;
       const appliedSellBackRate = isFree || prizeForcesFullSellBack ? 1 : sellBackRate;
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
@@ -328,7 +332,8 @@ export default async function handler(req, res) {
       const freeBoxClaimedAt = isFree ? Date.now() : null;
       const nextUserPatch = sanitizeForFirestore({
         ...(!userSnap.exists ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
-        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
+        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {}),
+        ...(shouldGuaranteeLegendary ? { guaranteedLegendaryNextSpin: false } : {})
       });
 
       if (coinCost > 0) {
@@ -535,6 +540,7 @@ export default async function handler(req, res) {
           forceFullSellBack: prizeForcesFullSellBack,
           size: selectedSize || null
         },
+        guaranteedLegendaryApplied: shouldGuaranteeLegendary,
         createdAt: obtainedAt,
         provablyFair: {
           serverSeedHash,
@@ -589,6 +595,8 @@ export default async function handler(req, res) {
         newXpBalance,
         xpAwarded: totalXpAward,
         pullPassXpAwarded: pullPassXpAward,
+        guaranteedLegendaryApplied: shouldGuaranteeLegendary,
+        suppressGoldSpin: shouldGuaranteeLegendary,
         xpSettingsUsed: {
           xpPer100: xpPer100CoinsWagered,
           xpPerOpen: xpPerCaseOpened,

@@ -54,6 +54,7 @@ export interface User {
   topPullsPublic?: boolean;
   hiddenFromLeaderboard?: boolean;
   hiddenFromPublicDisplay?: boolean;
+  guaranteedLegendaryNextSpin?: boolean;
   topPulls?: InventoryItem[];
   createdAt?: number;
   challengeStatsDay?: string;

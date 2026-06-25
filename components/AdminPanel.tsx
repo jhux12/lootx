@@ -2619,6 +2619,20 @@ export const AdminPanel: React.FC = () => {
       );
   };
 
+  const handleGuaranteedLegendaryToggle = (targetUserId: string) => {
+      const targetUser = users.find((profile) => profile.id === targetUserId);
+      const previousValue = targetUser?.guaranteedLegendaryNextSpin === true;
+      const nextValue = !previousValue;
+      void updateUserAdminData(targetUserId, { guaranteedLegendaryNextSpin: nextValue });
+      logAdminAction(
+          targetUserId,
+          'guaranteed_legendary_toggle',
+          { guaranteedLegendaryNextSpin: previousValue },
+          { guaranteedLegendaryNextSpin: nextValue },
+          nextValue ? 'Enabled next-spin guaranteed legendary' : 'Disabled next-spin guaranteed legendary'
+      );
+  };
+
   const handleLockToggle = (targetUserId: string, lockKey: keyof UserLocks) => {
       setUserLocks((prev) => {
           const currentLocks = prev[targetUserId] ?? { ...DEFAULT_LOCKS };
@@ -5150,6 +5164,17 @@ export const AdminPanel: React.FC = () => {
                                                     <span className="min-w-0">
                                                         <span className="block font-semibold text-white">Hide from leaderboard and public display</span>
                                                         <span className="mt-1 block text-xs leading-5 text-gray-400">Removes this account from public leaderboards and live public win displays. Use for test, staff, or privacy-sensitive accounts.</span>
+                                                    </span>
+                                                </label>
+                                                <label className="flex flex-col gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100 sm:flex-row sm:items-start">
+                                                    <Checkbox
+                                                        checked={selectedUser.guaranteedLegendaryNextSpin === true}
+                                                        onChange={() => handleGuaranteedLegendaryToggle(selectedUser.id)}
+                                                        className="mt-0.5 h-5 w-5 shrink-0"
+                                                    />
+                                                    <span className="min-w-0">
+                                                        <span className="block font-semibold text-amber-100">Guarantee legendary on next spinner</span>
+                                                        <span className="mt-1 block text-xs leading-5 text-amber-100/75">The next eligible case open lands on a legendary item and then clears this flag. It does not trigger the gold-ticket spin flow.</span>
                                                     </span>
                                                 </label>
                                                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
