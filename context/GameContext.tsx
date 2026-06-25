@@ -4076,27 +4076,11 @@ export const useAdminGame = () => {
 
 export const useBoxDetails = (boxId: string | undefined) => {
   const { user } = useAuth();
-  const { boxes, items: catalogItems } = useBoxes();
+  const { boxes } = useBoxes();
   const [refreshKey, setRefreshKey] = useState(0);
   const summaryBox = useMemo(() => boxes.find((box) => box.id === boxId), [boxes, boxId]);
-  const fallbackItems = useMemo(() => {
-    const sourceItems = catalogItems.length ? catalogItems : CASE_ITEMS;
-    return sourceItems.map((item, index) => ({
-      ...item,
-      id: item.id || `${boxId ?? 'fallback'}-item-${index}`,
-      chance: Number(item.chance ?? 0),
-      brand: item.brand ?? '',
-      category: item.category ?? '',
-      tags: Array.isArray(item.tags) ? item.tags : []
-    }));
-  }, [boxId, catalogItems]);
-  const fallbackSummaryBox = useMemo<MysteryBox | null>(() => {
-    if (!summaryBox) return null;
-    if (summaryBox.items.length) return summaryBox;
-    return { ...summaryBox, items: fallbackItems };
-  }, [fallbackItems, summaryBox]);
   const [box, setBox] = useState<MysteryBox | null>(() => {
-    if (fallbackSummaryBox?.items.length) return fallbackSummaryBox;
+    if (summaryBox?.items.length) return summaryBox;
     return boxId ? getCachedFullBox(boxId) : null;
   });
   const [loading, setLoading] = useState(Boolean(boxId && !box?.items.length));
@@ -4126,23 +4110,15 @@ export const useBoxDetails = (boxId: string | undefined) => {
     }
 
     let cancelled = false;
-    if (fallbackSummaryBox) setBox(fallbackSummaryBox);
-    setLoading(!fallbackSummaryBox);
+    setLoading(true);
     setError(null);
     void loadFullBoxById(boxId, Boolean(user.isAdmin), { forceRefresh: refreshKey > 0 })
       .then((loadedBox) => {
         if (cancelled) return;
-        setBox(loadedBox ?? fallbackSummaryBox);
-        if (loadedBox || fallbackSummaryBox) setError(null);
+        setBox(loadedBox);
       })
       .catch((loadError: unknown) => {
         if (cancelled) return;
-        if (fallbackSummaryBox) {
-          console.warn('Falling back to summary box details after full box load failed', loadError);
-          setBox(fallbackSummaryBox);
-          setError(null);
-          return;
-        }
         setError(loadError instanceof Error ? loadError : new Error('Failed to load box details'));
       })
       .finally(() => {
@@ -4152,7 +4128,7 @@ export const useBoxDetails = (boxId: string | undefined) => {
     return () => {
       cancelled = true;
     };
-  }, [boxId, fallbackSummaryBox, refreshKey, summaryBox, user.isAdmin]);
+  }, [boxId, refreshKey, summaryBox, user.isAdmin]);
 
   const retry = useCallback(() => {
     if (boxId) invalidateFullBoxCache(boxId);
