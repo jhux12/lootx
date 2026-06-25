@@ -3,7 +3,7 @@ import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, W
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
-import { useAuth, useBoxDetails, useBoxes, useInventory, useSettings, useUI, useWallet, useAdminGame } from '../context/GameContext';
+import { useBoxDetails, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
 import { getSellBackValue } from '../utils/sellBack';
@@ -302,13 +302,24 @@ const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false, inventoryId, pullPassClaimTier }) => {
-  const { user, authInitialized, isAuthenticated, openAuthModal } = useAuth();
-  const { balance, syncBalance, registerSpend } = useWallet();
-  const { showTopUpModal, setShowTopUpModal, setTopUpModalIntent, setView } = useUI();
-  const { addInventoryItemFromServer, sellItem } = useInventory();
-  const { boxes } = useBoxes();
-  const { bonusSettings } = useSettings();
-  const { claimFreeBox } = useAdminGame();
+  const {
+    user,
+    balance,
+    authInitialized,
+    showTopUpModal,
+    setShowTopUpModal,
+    setTopUpModalIntent,
+    addInventoryItemFromServer,
+    syncBalance,
+    sellItem,
+    setView,
+    boxes,
+    bonusSettings,
+    isAuthenticated,
+    openAuthModal,
+    claimFreeBox,
+    registerSpend
+  } = useGame();
   const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
 
