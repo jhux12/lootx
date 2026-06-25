@@ -779,12 +779,28 @@ const AUTH_LOADING_USER: User = {
 
 const isRealFirebaseUid = (uid: string | null | undefined) => Boolean(uid && uid.trim() && uid !== 'loading' && uid !== 'guest');
 
+type AuthContextType = Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'>;
+type WalletContextType = Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'>;
+type BoxesContextType = Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox'>;
+type InventoryContextType = Pick<GameContextType, 'inventory' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem'>;
+type ShipmentsContextType = Pick<GameContextType, 'shipments' | 'shipItem' | 'updateShipmentStatus' | 'cancelShipmentAsAdmin'>;
+type NotificationsContextType = Pick<GameContextType, 'notifications' | 'addNotification' | 'dismissNotification' | 'clearNotifications' | 'sendAdminNotification'>;
+type UIContextType = Pick<GameContextType, 'view' | 'setView' | 'showTopUpModal' | 'setShowTopUpModal' | 'topUpModalIntent' | 'setTopUpModalIntent'>;
+type SettingsContextType = Pick<GameContextType, 'coinPackages' | 'bonusSettings' | 'stripeSettings' | 'createCoinPackage' | 'updateCoinPackage' | 'deleteCoinPackage' | 'updateBonusSettings' | 'updateStripeSettings'>;
+type BattlesContextType = Pick<GameContextType, 'battles' | 'createBattle' | 'joinBattle' | 'updateBattle'>;
+type AdminContextType = Pick<GameContextType, 'users' | 'followUser' | 'unfollowUser' | 'updateAddress' | 'updateUserInfo' | 'updateUserFlags' | 'updateUserAdminData' | 'updateUserBalance' | 'createItem' | 'updateItem' | 'deleteItem' | 'claimFreeBox' | 'claimRakeback' | 'generateAffiliateCode' | 'updateUserProgress'>;
+
 const GameContext = createContext<GameContextType | undefined>(undefined);
-const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
-const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
-const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
-const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
-const UIContext = createContext<Pick<GameContextType, 'view' | 'setView' | 'notifications' | 'addNotification' | 'dismissNotification' | 'clearNotifications' | 'showTopUpModal' | 'setShowTopUpModal' | 'topUpModalIntent' | 'setTopUpModalIntent'> | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
+const BoxesContext = createContext<BoxesContextType | undefined>(undefined);
+const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
+const ShipmentsContext = createContext<ShipmentsContextType | undefined>(undefined);
+const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
+const UIContext = createContext<UIContextType | undefined>(undefined);
+const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const BattlesContext = createContext<BattlesContextType | undefined>(undefined);
+const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
 // Guest / Loading User
 const GUEST_USER: User = {
@@ -3968,9 +3984,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal]);
 
   const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
-  const boxesContextValue = useMemo(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView]);
-  const inventoryContextValue = useMemo(() => ({ inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem }), [inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem]);
-  const uiContextValue = useMemo(() => ({ view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, setShowTopUpModal, topUpModalIntent, setTopUpModalIntent }), [view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, topUpModalIntent]);
+  const boxesContextValue = useMemo<BoxesContextType>(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox }), [boxes, items, createBox, createUserBox, updateBox, deleteBox]);
+  const inventoryContextValue = useMemo<InventoryContextType>(() => ({ inventory, addToInventory, addInventoryItemFromServer, sellItem }), [inventory, addToInventory, addInventoryItemFromServer, sellItem]);
+  const shipmentsContextValue = useMemo<ShipmentsContextType>(() => ({ shipments, shipItem, updateShipmentStatus, cancelShipmentAsAdmin }), [shipments, shipItem, updateShipmentStatus, cancelShipmentAsAdmin]);
+  const notificationsContextValue = useMemo<NotificationsContextType>(() => ({ notifications, addNotification, dismissNotification, clearNotifications, sendAdminNotification }), [notifications, addNotification, dismissNotification, clearNotifications, sendAdminNotification]);
+  const uiContextValue = useMemo<UIContextType>(() => ({ view, setView, showTopUpModal, setShowTopUpModal, topUpModalIntent, setTopUpModalIntent }), [view, setView, showTopUpModal, topUpModalIntent]);
+  const settingsContextValue = useMemo<SettingsContextType>(() => ({ coinPackages, bonusSettings, stripeSettings, createCoinPackage, updateCoinPackage, deleteCoinPackage, updateBonusSettings, updateStripeSettings }), [coinPackages, bonusSettings, stripeSettings, createCoinPackage, updateCoinPackage, deleteCoinPackage, updateBonusSettings, updateStripeSettings]);
+  const battlesContextValue = useMemo<BattlesContextType>(() => ({ battles, createBattle, joinBattle, updateBattle }), [battles, createBattle, joinBattle, updateBattle]);
+  const adminContextValue = useMemo<AdminContextType>(() => ({ users, followUser, unfollowUser, updateAddress, updateUserInfo, updateUserFlags, updateUserAdminData, updateUserBalance, createItem, updateItem, deleteItem, claimFreeBox, claimRakeback, generateAffiliateCode, updateUserProgress }), [users, followUser, unfollowUser, updateAddress, updateUserInfo, updateUserFlags, updateUserAdminData, updateUserBalance, createItem, updateItem, deleteItem, claimFreeBox, claimRakeback, generateAffiliateCode, updateUserProgress]);
 
   return (
     <GameContext.Provider value={gameContextValue}>
@@ -3978,7 +3999,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         <WalletContext.Provider value={walletContextValue}>
           <BoxesContext.Provider value={boxesContextValue}>
             <InventoryContext.Provider value={inventoryContextValue}>
-              <UIContext.Provider value={uiContextValue}>{children}</UIContext.Provider>
+              <ShipmentsContext.Provider value={shipmentsContextValue}>
+                <NotificationsContext.Provider value={notificationsContextValue}>
+                  <UIContext.Provider value={uiContextValue}>
+                    <SettingsContext.Provider value={settingsContextValue}>
+                      <BattlesContext.Provider value={battlesContextValue}>
+                        <AdminContext.Provider value={adminContextValue}>{children}</AdminContext.Provider>
+                      </BattlesContext.Provider>
+                    </SettingsContext.Provider>
+                  </UIContext.Provider>
+                </NotificationsContext.Provider>
+              </ShipmentsContext.Provider>
             </InventoryContext.Provider>
           </BoxesContext.Provider>
         </WalletContext.Provider>
@@ -4013,8 +4044,39 @@ export const useBoxes = () => {
   return context;
 };
 
+export const useShipments = () => {
+  const context = useContext(ShipmentsContext);
+  if (!context) throw new Error('useShipments must be used within a GameProvider');
+  return context;
+};
+
+export const useNotifications = () => {
+  const context = useContext(NotificationsContext);
+  if (!context) throw new Error('useNotifications must be used within a GameProvider');
+  return context;
+};
+
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) throw new Error('useSettings must be used within a GameProvider');
+  return context;
+};
+
+export const useBattles = () => {
+  const context = useContext(BattlesContext);
+  if (!context) throw new Error('useBattles must be used within a GameProvider');
+  return context;
+};
+
+export const useAdminGame = () => {
+  const context = useContext(AdminContext);
+  if (!context) throw new Error('useAdminGame must be used within a GameProvider');
+  return context;
+};
+
 export const useBoxDetails = (boxId: string | undefined) => {
-  const { user, boxes } = useGame();
+  const { user } = useAuth();
+  const { boxes } = useBoxes();
   const [refreshKey, setRefreshKey] = useState(0);
   const summaryBox = useMemo(() => boxes.find((box) => box.id === boxId), [boxes, boxId]);
   const [box, setBox] = useState<MysteryBox | null>(() => {
