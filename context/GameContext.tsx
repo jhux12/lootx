@@ -1403,7 +1403,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const pendingSoldIdsRef = useRef<Set<string>>(new Set());
   const pendingBalanceRef = useRef<number | null>(null);
   const activeUserIdRef = useRef<string | null>(null);
-  const activeViewTypeRef = useRef<ViewState['type']>('HOME');
   const emailVerificationDismissedRef = useRef(false);
   const userUnsubscribeRef = useRef<(() => void) | null>(null);
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
@@ -1452,7 +1451,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     return getViewFromLocation(window.location.pathname, window.location.search);
   });
-  activeViewTypeRef.current = view.type;
 
   const scrollToTop = () => {
     if (typeof window === 'undefined') return;
@@ -1558,19 +1556,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const isInventoryVisibleView = (viewType: ViewState['type']) =>
-    viewType === 'INVENTORY' || viewType === 'PROFILE' || viewType === 'PLINKO';
-
-  const isShipmentsNeededView = (viewType: ViewState['type']) =>
-    viewType === 'PROFILE' || viewType === 'INVENTORY';
-
-  const unsubscribeFromInventory = useCallback(() => {
-    if (inventoryUnsubscribeRef.current) {
-      inventoryUnsubscribeRef.current();
-      inventoryUnsubscribeRef.current = null;
-    }
-  }, []);
-
   const subscribeToInventory = useCallback((uid: string) => {
     if (inventoryUnsubscribeRef.current) return;
     if (!isRealFirebaseUid(uid)) {
@@ -1638,8 +1623,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, []);
 
-  // Inventory is intentionally route-scoped: attach realtime only while an
-  // inventory/profile/shipping-capable screen is visible, and detach on unmount.
+  // Realtime inventory stays attached for the authenticated user's session so the
+  // navbar, profile, inventory, and balance-adjacent UI all update without refresh.
   const refreshInventory = useCallback(async (uid: string, options?: { limitCount?: number }) => {
     if (!isRealFirebaseUid(uid)) {
       console.log('SKIPPING INVENTORY REFRESH FOR PLACEHOLDER USER', uid);
@@ -1665,6 +1650,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (isSameUser && userUnsubscribeRef.current) {
       setIsAuthenticated(true);
+      subscribeToInventory(uid);
       subscribeToNotifications(uid);
       return;
     }
@@ -1733,7 +1719,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
       }));
       setBalance(resolvedBalance);
-      if (isInventoryVisibleView(activeViewTypeRef.current) && !hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
+      if (!hasInventorySubcollectionRef.current && Array.isArray(data.inventory)) {
         const legacyInventory = normalizeInventoryItems(data.inventory);
         setInventory(legacyInventory);
         const nextTopPulls = rankTopPullsByValue(legacyInventory);
@@ -1748,6 +1734,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
+    subscribeToInventory(uid);
     subscribeToNotifications(uid);
   };
 
@@ -2082,12 +2069,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [adminDirectoryUsers, isAuthenticated, user]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isShipmentsNeededView(view.type)) {
+    if (!isAuthenticated) {
       setShipments([]);
       return;
     }
 
-    let cancelled = false;
     void (async () => {
       try {
         const shipmentsPath = user.isAdmin ? 'shipments?limit=200' : `shipments?uid=${user.id}&limit=100`;
@@ -2096,21 +2082,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           ? query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200))
           : query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
         const snapshot = await getDocs(shipmentsQuery);
-        if (cancelled) return;
         const loaded = snapshot.docs
           .map(mapShipmentDoc)
           .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
         setShipments(loaded);
       } catch (error) {
         console.error('Failed to load shipments', error);
-        if (!cancelled) setShipments([]);
+        setShipments([]);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, user.id, user.isAdmin, view.type]);
+  }, [isAuthenticated, user.id, user.isAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -2315,21 +2296,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isAuthenticated, user.id]);
 
   useEffect(() => {
-    activeViewTypeRef.current = view.type;
-    if (!isAuthenticated || !auth.currentUser || !isInventoryVisibleView(view.type)) {
-      unsubscribeFromInventory();
-      if (view.type !== 'CASE_OPENING') {
-        setInventory([]);
-      }
-      return;
-    }
-
-    subscribeToInventory(auth.currentUser.uid);
-
-    return () => {
-      unsubscribeFromInventory();
-    };
-  }, [isAuthenticated, subscribeToInventory, unsubscribeFromInventory, view.type]);
+    if (!isAuthenticated || !auth.currentUser) return;
+    if (view.type !== 'INVENTORY' && view.type !== 'PROFILE') return;
+    void refreshInventory(auth.currentUser.uid).catch((error) => {
+      console.error('Failed to load inventory for inventory/profile view', error);
+    });
+  }, [isAuthenticated, refreshInventory, view.type]);
 
 
   // Cost-control: the battle list is fetched in a bounded one-time query.
