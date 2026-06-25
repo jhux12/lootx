@@ -2,7 +2,7 @@ import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useStat
 import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { useGame } from '../context/GameContext';
+import { useAuth, useBoxes, useSettings, useUI, useWallet } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
@@ -193,7 +193,11 @@ const isCategoryIconUrl = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance, user, isAuthenticated } = useGame();
+  const { boxes } = useBoxes();
+  const { setView } = useUI();
+  const { stripeSettings } = useSettings();
+  const { balance, user } = useWallet();
+  const { isAuthenticated } = useAuth();
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
   const [activeCategory, setActiveCategory] = useState('all');
