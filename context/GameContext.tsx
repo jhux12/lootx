@@ -4044,13 +4044,6 @@ export const useBoxes = () => {
   return context;
 };
 
-
-export const useInventory = () => {
-  const context = useContext(InventoryContext);
-  if (!context) throw new Error('useInventory must be used within a GameProvider');
-  return context;
-};
-
 export const useShipments = () => {
   const context = useContext(ShipmentsContext);
   if (!context) throw new Error('useShipments must be used within a GameProvider');
