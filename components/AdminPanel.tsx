@@ -341,6 +341,40 @@ const toMillis = (value: unknown, fallback = 0): number => {
     return fallback;
 };
 
+
+const mapAdminShipmentDoc = (id: string, data: Record<string, unknown>): Shipment => {
+    const itemData = typeof data.item === 'object' && data.item !== null ? data.item as Record<string, unknown> : {};
+    return {
+        id,
+        uid: String(data.uid ?? ''),
+        inventoryId: typeof data.inventoryId === 'string' ? data.inventoryId : undefined,
+        item: {
+            name: typeof itemData.name === 'string' ? itemData.name : 'Mystery Item',
+            value: Number(itemData.value ?? 0),
+            image: typeof itemData.image === 'string' ? itemData.image : 'https://picsum.photos/200',
+            rarity: (typeof itemData.rarity === 'string' ? itemData.rarity : 'common') as Shipment['item']['rarity'],
+            sellBackRate: Number(itemData.sellBackRate ?? 0),
+            size: typeof itemData.size === 'string' ? itemData.size : null,
+            boxId: typeof itemData.boxId === 'string' ? itemData.boxId : null,
+            prizeId: typeof itemData.prizeId === 'string' ? itemData.prizeId : null
+        },
+        shippingInfo: typeof data.shippingInfo === 'object' && data.shippingInfo !== null ? data.shippingInfo as Shipment['shippingInfo'] : undefined,
+        shippingCost: Number(data.shippingCost ?? 0),
+        shippingPaid: data.shippingPaid === true,
+        shippingPaymentMethod: typeof data.shippingPaymentMethod === 'string' ? data.shippingPaymentMethod as Shipment['shippingPaymentMethod'] : undefined,
+        shippingCashAmountCents: Number(data.shippingCashAmountCents ?? 0),
+        shippingBatchId: typeof data.shippingBatchId === 'string' ? data.shippingBatchId : undefined,
+        shippingBatchCost: Number(data.shippingBatchCost ?? 0),
+        shippingBatchCostCents: Number(data.shippingBatchCostCents ?? 0),
+        shippingBatchValueCoins: Number(data.shippingBatchValueCoins ?? 0),
+        shippingRateTier: typeof data.shippingRateTier === 'string' ? data.shippingRateTier : undefined,
+        status: (typeof data.status === 'string' ? data.status : 'shipping_requested') as Shipment['status'],
+        trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
+        createdAt: data.createdAt ? toMillis(data.createdAt, Date.now()) : undefined,
+        updatedAt: data.updatedAt ? toMillis(data.updatedAt, 0) : undefined
+    };
+};
+
 export const AdminPanel: React.FC = () => {
   const {
     user: adminUser,
@@ -357,7 +391,7 @@ export const AdminPanel: React.FC = () => {
     items,
     boxes,
     users,
-    shipments,
+    shipments: contextShipments,
     updateUserProgress,
     sendAdminNotification,
     updateShipmentStatus,
@@ -370,6 +404,36 @@ export const AdminPanel: React.FC = () => {
     updateStripeSettings
   } = useGame();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [adminShipments, setAdminShipments] = useState<Shipment[]>([]);
+  const shipments = activeTab === 'shipments' ? adminShipments : contextShipments;
+
+  useEffect(() => {
+      if (activeTab !== 'shipments') {
+          setAdminShipments([]);
+          return;
+      }
+
+      let cancelled = false;
+      const shipmentsPath = 'shipments?limit=200';
+      console.log('READING FIRESTORE PATH', shipmentsPath);
+      void getDocs(query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200)))
+          .then((snapshot) => {
+              if (cancelled) return;
+              console.log('QUERY OK', { path: shipmentsPath, size: snapshot.size });
+              const loaded = snapshot.docs
+                  .map((docSnap) => mapAdminShipmentDoc(docSnap.id, docSnap.data() as Record<string, unknown>))
+                  .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+              setAdminShipments(loaded);
+          })
+          .catch((error) => {
+              console.error('Failed to load admin shipments', error);
+              if (!cancelled) setAdminShipments([]);
+          });
+
+      return () => {
+          cancelled = true;
+      };
+  }, [activeTab]);
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1526,9 +1590,9 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
       console.log('SELECTED USER', selectedUserId);
       if (!isRealSelectedUserId(selectedUserId)) return;
-      const inventoryPathLabel = `users/${selectedUserId}/inventory`;
+      const inventoryPathLabel = `users/${selectedUserId}/inventory?limit=200`;
       console.log('READING FIRESTORE PATH', inventoryPathLabel);
-      const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
+      const inventoryRef = query(collection(db, 'users', selectedUserId, 'inventory'), orderBy('obtainedAt', 'desc'), limit(200));
       const unsubscribe = onSnapshot(inventoryRef, (snapshot) => {
           console.log('SNAPSHOT OK', {
               path: inventoryPathLabel,
