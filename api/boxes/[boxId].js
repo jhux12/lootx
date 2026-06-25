@@ -1,6 +1,6 @@
-import { admin, firestore } from '../_lib/firebaseAdmin.js';
+import { firestore } from '../_lib/firebaseAdmin.js';
 import { sendJson } from '../_lib/http.js';
-import { isPublicBoxDocument, mapPublicBoxDetails, PUBLIC_BOX_SELECT_FIELDS } from '../_lib/boxesPublic.js';
+import { isPublicBoxDocument, mapPublicBoxDetails } from '../_lib/boxesPublic.js';
 
 const BOX_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -16,14 +16,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const snapshot = await firestore
-      .collection('boxes')
-      .where(admin.firestore.FieldPath.documentId(), '==', boxId)
-      .select(...PUBLIC_BOX_SELECT_FIELDS, 'items', 'prizes')
-      .get();
-    const docSnapshot = snapshot.docs[0];
+    const docSnapshot = await firestore.collection('boxes').doc(boxId).get();
 
-    if (!docSnapshot || !isPublicBoxDocument(docSnapshot.data() || {})) {
+    if (!docSnapshot.exists || !isPublicBoxDocument(docSnapshot.data() || {})) {
       return sendJson(res, 404, { error: 'BOX_NOT_FOUND', message: 'Box not found.' });
     }
 
