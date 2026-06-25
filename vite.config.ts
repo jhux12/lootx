@@ -33,8 +33,12 @@ const vendorChunkGroups: VendorChunkGroup[] = [
     packages: ['motion', 'framer-motion'],
   },
   {
-    name: 'vendor-payments-analytics',
-    packages: ['@stripe', '@vercel/analytics'],
+    name: 'vendor-stripe',
+    packages: ['@stripe'],
+  },
+  {
+    name: 'vendor-vercel-analytics',
+    packages: ['@vercel/analytics'],
   },
   {
     name: 'vendor-ui',

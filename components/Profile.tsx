@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
+import { getStripe } from '../utils/stripeClient';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Coins, Copy, CreditCard, ExternalLink, Filter, Info, Package, PackageCheck, Plus, Search, ShieldCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
@@ -17,7 +17,6 @@ import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
 import { MobileBottomNav } from './profile/MobileBottomNav';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
 
@@ -765,7 +764,7 @@ export const Profile: React.FC = () => {
         setShippingRequestConfirmed(true);
         return;
       }
-      const stripe = await stripePromise;
+      const stripe = await getStripe();
       if (!stripe) throw new Error('Stripe failed to initialize.');
       const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
       if (result.error) throw result.error;
