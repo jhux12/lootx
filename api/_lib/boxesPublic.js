@@ -40,7 +40,7 @@ export const mapPublicBoxSummary = (doc) => {
     price: Number(data.price ?? 0),
     priceXP: data.priceXP != null ? Number(data.priceXP) : undefined,
     currencyType: data.currencyType,
-    image: data.image ?? 'https://picsum.photos/300',
+    image: typeof data.image === 'string' ? data.image : '',
     spinnerBackgroundImage: typeof data.spinnerBackgroundImage === 'string' ? data.spinnerBackgroundImage : undefined,
     accentColor: data.accentColor ?? '#3b82f6',
     tag: data.tag,
@@ -60,11 +60,12 @@ export const mapPublicBoxSummary = (doc) => {
 const mapPublicPrize = (rawItem, index, boxId) => {
   const item = rawItem && typeof rawItem === 'object' ? rawItem : {};
   const price = Number(item.value ?? item.price ?? 0);
+  const image = typeof item.image === 'string' ? item.image : (typeof item.imageUrl === 'string' ? item.imageUrl : '');
   return {
     id: String(item.id ?? `${boxId}-item-${index}`),
     name: item.name ?? 'Mystery Item',
     price,
-    image: item.image ?? 'https://picsum.photos/300',
+    image,
     rarity: item.rarity ?? 'common',
     chance: Number(item.weight ?? item.chance ?? 0),
     color: item.color,

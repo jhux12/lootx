@@ -855,11 +855,12 @@ const mapBoxData = (boxId: string, rawData: Record<string, unknown>, mode: BoxLo
     const item = rawItem && typeof rawItem === 'object' ? rawItem as Record<string, unknown> : {};
     const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
     const price = Number(item.value ?? item.price ?? 0);
+    const image = typeof item.image === 'string' ? item.image : (typeof item.imageUrl === 'string' ? item.imageUrl : '');
     return {
       id: String(item.id ?? `${boxId}-item-${index}`),
       name: String(item.name ?? 'Mystery Item'),
       price,
-      image: String(item.image ?? 'https://picsum.photos/300'),
+      image,
       rarity,
       chance: Number(item.weight ?? item.chance ?? 0),
       color: String(item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af'),
@@ -886,7 +887,7 @@ const mapBoxData = (boxId: string, rawData: Record<string, unknown>, mode: BoxLo
       priceXP: rawData.priceXP != null ? Number(rawData.priceXP) : undefined,
       price: rawData.price != null ? Number(rawData.price) : undefined
     }),
-    image: String(rawData.image ?? 'https://picsum.photos/300'),
+    image: typeof rawData.image === 'string' ? rawData.image : '',
     spinnerBackgroundImage: typeof rawData.spinnerBackgroundImage === 'string' ? rawData.spinnerBackgroundImage : undefined,
     accentColor: String(rawData.accentColor ?? '#3b82f6'),
     tag: rawData.tag as MysteryBox['tag'],
@@ -928,6 +929,30 @@ const setCachedFullBox = (box: MysteryBox) => {
   fullBoxCache.set(box.id, { box, expiresAt: Date.now() + FULL_BOX_CACHE_TTL_MS });
 };
 
+const assertFullBoxPayload = (box: MysteryBox | null, boxId: string): MysteryBox => {
+  if (!box) {
+    throw new Error(`Box ${boxId} was not found.`);
+  }
+  if (!Array.isArray(box.items) || box.items.length === 0) {
+    throw new Error(`Box ${boxId} has no public prize items.`);
+  }
+  const malformedIndex = box.items.findIndex((item) => (
+    !item
+    || typeof item.id !== 'string'
+    || !item.id
+    || typeof item.name !== 'string'
+    || !item.name
+    || typeof item.image !== 'string'
+    || !item.image
+    || !Number.isFinite(Number(item.price))
+    || !Number.isFinite(Number(item.chance))
+  ));
+  if (malformedIndex >= 0) {
+    throw new Error(`Box ${boxId} has malformed prize data at index ${malformedIndex}.`);
+  }
+  return box;
+};
+
 const invalidateFullBoxCache = (boxId?: string) => {
   if (boxId) {
     fullBoxCache.delete(boxId);
@@ -955,8 +980,9 @@ const loadFullBoxById = async (boxId: string, includeAdminFields: boolean, optio
       const boxPath = `boxes/${boxId}`;
       console.log('READING FIRESTORE PATH', boxPath);
       const snapshot = await getDoc(doc(db, 'boxes', boxId));
-      if (!snapshot.exists()) return null;
+      if (!snapshot.exists()) throw new Error(`Box ${boxId} was not found.`);
       const fullBox = mapBoxData(snapshot.id, snapshot.data() as Record<string, unknown>, 'full', true);
+      assertFullBoxPayload(fullBox, boxId);
       setCachedFullBox(fullBox);
       return fullBox;
     }
@@ -964,10 +990,20 @@ const loadFullBoxById = async (boxId: string, includeAdminFields: boolean, optio
     const boxPath = `/api/boxes/${encodeURIComponent(boxId)}`;
     console.log('READING API PATH', boxPath);
     const response = await fetch(boxPath);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      let message = `Failed to load box ${boxId}: ${response.status}`;
+      try {
+        const errorPayload = await response.json() as { message?: unknown; error?: unknown };
+        message = String(errorPayload.message || errorPayload.error || message);
+      } catch {
+        // Use the status-derived message when the response is not JSON.
+      }
+      throw new Error(message);
+    }
     const payload = await response.json() as { box?: Record<string, unknown> & { id?: string } };
-    if (!payload.box?.id) return null;
+    if (!payload.box?.id) throw new Error(`Box ${boxId} response did not include a box payload.`);
     const fullBox = mapBoxData(payload.box.id, payload.box as Record<string, unknown>, 'full', false);
+    assertFullBoxPayload(fullBox, boxId);
     setCachedFullBox(fullBox);
     return fullBox;
   })().finally(() => {
@@ -4076,27 +4112,15 @@ export const useAdminGame = () => {
 
 export const useBoxDetails = (boxId: string | undefined) => {
   const { user } = useAuth();
-  const { boxes, items: catalogItems } = useBoxes();
+  const { boxes } = useBoxes();
   const [refreshKey, setRefreshKey] = useState(0);
   const summaryBox = useMemo(() => boxes.find((box) => box.id === boxId), [boxes, boxId]);
-  const fallbackItems = useMemo(() => {
-    const sourceItems = catalogItems.length ? catalogItems : CASE_ITEMS;
-    return sourceItems.map((item, index) => ({
-      ...item,
-      id: item.id || `${boxId ?? 'fallback'}-item-${index}`,
-      chance: Number(item.chance ?? 0),
-      brand: item.brand ?? '',
-      category: item.category ?? '',
-      tags: Array.isArray(item.tags) ? item.tags : []
-    }));
-  }, [boxId, catalogItems]);
   const fallbackSummaryBox = useMemo<MysteryBox | null>(() => {
     if (!summaryBox) return null;
     if (summaryBox.items.length) return summaryBox;
-    return { ...summaryBox, items: fallbackItems };
-  }, [fallbackItems, summaryBox]);
+    return { ...summaryBox, items: [] };
+  }, [summaryBox]);
   const [box, setBox] = useState<MysteryBox | null>(() => {
-    if (fallbackSummaryBox?.items.length) return fallbackSummaryBox;
     return boxId ? getCachedFullBox(boxId) : null;
   });
   const [loading, setLoading] = useState(Boolean(boxId && !box?.items.length));
@@ -4127,22 +4151,17 @@ export const useBoxDetails = (boxId: string | undefined) => {
 
     let cancelled = false;
     if (fallbackSummaryBox) setBox(fallbackSummaryBox);
-    setLoading(!fallbackSummaryBox);
+    setLoading(true);
     setError(null);
     void loadFullBoxById(boxId, Boolean(user.isAdmin), { forceRefresh: refreshKey > 0 })
       .then((loadedBox) => {
         if (cancelled) return;
-        setBox(loadedBox ?? fallbackSummaryBox);
-        if (loadedBox || fallbackSummaryBox) setError(null);
+        setBox(loadedBox);
+        setError(null);
       })
       .catch((loadError: unknown) => {
         if (cancelled) return;
-        if (fallbackSummaryBox) {
-          console.warn('Falling back to summary box details after full box load failed', loadError);
-          setBox(fallbackSummaryBox);
-          setError(null);
-          return;
-        }
+        setBox(fallbackSummaryBox);
         setError(loadError instanceof Error ? loadError : new Error('Failed to load box details'));
       })
       .finally(() => {

@@ -6,7 +6,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
-import { CASE_ITEMS } from '../constants';
+import { usePublicRecentWins } from '../src/hooks/usePublicRecentWins';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -105,7 +105,8 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
 );
 
 const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
-  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user, items: catalogItems } = useGame();
+  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
+  const { wins: recentWins } = usePublicRecentWins(16);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
@@ -125,58 +126,18 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     return (selected.length ? selected : boxes).slice(0, 6);
   }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
-    const fallbackBoxId = boxes[0]?.id ?? '';
-    const itemPool = (boxes.some((box) => box.items.length > 0)
-      ? boxes.flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
-      : (catalogItems.length ? catalogItems : CASE_ITEMS).map((item) => ({ item, boxId: fallbackBoxId }))
-    ).filter(({ item, boxId }) => boxId && item.image && item.name);
-
-    if (!itemPool.length) return [];
-
-    const rarityTargets: Array<{ rarity: MobileLiveWin['rarity']; count: number }> = [
-      { rarity: 'common', count: 4 },
-      { rarity: 'uncommon', count: 2 },
-      { rarity: 'rare', count: 2 },
-      { rarity: 'epic', count: 1 },
-      { rarity: 'legendary', count: 1 }
-    ];
-    const selected: typeof itemPool = [];
-    const usedKeys = new Set<string>();
-    const shuffledPool = [...itemPool].sort(() => Math.random() - 0.5);
-
-    rarityTargets.forEach(({ rarity, count }) => {
-      shuffledPool
-        .filter(({ item }) => item.rarity === rarity)
-        .slice(0, count)
-        .forEach((entry) => {
-          const key = `${entry.boxId}-${entry.item.id}`;
-          if (!usedKeys.has(key)) {
-            usedKeys.add(key);
-            selected.push(entry);
-          }
-        });
-    });
-
-    if (selected.length < 10) {
-      shuffledPool.forEach((entry) => {
-        if (selected.length >= 10) return;
-        const key = `${entry.boxId}-${entry.item.id}`;
-        if (!usedKeys.has(key)) {
-          usedKeys.add(key);
-          selected.push(entry);
-        }
-      });
-    }
-
-    return selected.slice(0, 10).sort(() => Math.random() - 0.5).map(({ item, boxId }, index) => ({
-      id: `${boxId}-${item.id}-${index}`,
-      title: item.name,
-      image: item.image,
-      rarity: item.rarity,
-      timeAgo: index === 0 ? 'now' : `${index + 1}m`,
-      boxId
-    }));
-  }, [boxes, catalogItems]);
+    return recentWins
+      .filter((win) => win.boxId && win.itemName)
+      .slice(0, 10)
+      .map((win, index) => ({
+        id: win.id,
+        title: win.itemName,
+        image: win.itemImage,
+        rarity: win.rarity,
+        timeAgo: index === 0 ? 'now' : `${index + 1}m`,
+        boxId: win.boxId
+      }));
+  }, [recentWins]);
   const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
   const customerReviewCards = customerReviews.length
     ? customerReviews
