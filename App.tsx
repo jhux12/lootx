@@ -15,7 +15,7 @@ import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
-import { usePerformanceMode } from './src/lib/performance';
+import { PerformanceModeProvider, usePerformanceMode } from './src/lib/performance';
 
 type ClarityWindow = Window &
   typeof globalThis & {
@@ -728,16 +728,18 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
 function App() {
   return (
-    <SoundProvider>
-      <GameProvider>
-        <PreviewProvider>
-          <ToastProvider>
-            <AppShell />
-            <DeferredAnalytics />
-          </ToastProvider>
-        </PreviewProvider>
-      </GameProvider>
-    </SoundProvider>
+    <PerformanceModeProvider>
+      <SoundProvider>
+        <GameProvider>
+          <PreviewProvider>
+            <ToastProvider>
+              <AppShell />
+              <DeferredAnalytics />
+            </ToastProvider>
+          </PreviewProvider>
+        </GameProvider>
+      </SoundProvider>
+    </PerformanceModeProvider>
   );
 }
 

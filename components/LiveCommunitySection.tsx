@@ -4,6 +4,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { COIN_ICON } from '../constants';
 import { useGame } from '../context/GameContext';
+import { usePerformanceMode } from '../src/lib/performance';
 import type { User } from '../types';
 
 export type LiveCommunityStory = {
@@ -105,7 +106,7 @@ export const LiveCommunitySection: React.FC = () => {
   const [stories, setStories] = useState<LiveCommunityStory[]>([]);
   const [shouldConnectRealtime, setShouldConnectRealtime] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [progress, setProgress] = useState(0);
+  const [isStoryPaused, setIsStoryPaused] = useState(false);
   const holdRef = useRef(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   const [storyDragOffset, setStoryDragOffset] = useState(0);
@@ -117,6 +118,7 @@ export const LiveCommunitySection: React.FC = () => {
   const [submitPreviewUrl, setSubmitPreviewUrl] = useState<string | null>(null);
   const [submitNotice, setSubmitNotice] = useState<{ tone: 'success' | 'error'; message: string } | null>(null);
   const [isSubmittingPull, setIsSubmittingPull] = useState(false);
+  const performanceMode = usePerformanceMode();
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -219,17 +221,16 @@ export const LiveCommunitySection: React.FC = () => {
   }, [shouldConnectRealtime]);
 
   useEffect(() => {
-    if (activeIndex === null || holdRef.current) return;
-    const id = window.setInterval(() => setProgress((p) => Math.min(100, p + 2)), 80);
-    return () => window.clearInterval(id);
-  }, [activeIndex]);
-
-  useEffect(() => {
-    if (progress < 100 || activeIndex === null) return;
-    if (activeIndex >= stories.length - 1) setActiveIndex(null);
-    else setActiveIndex((v) => (v === null ? 0 : v + 1));
-    setProgress(0);
-  }, [progress, activeIndex, stories.length]);
+    if (activeIndex === null || isStoryPaused || performanceMode.isHidden || performanceMode.prefersReducedMotion) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setActiveIndex((current) => {
+        if (current === null) return current;
+        if (current >= stories.length - 1) return null;
+        return current + 1;
+      });
+    }, 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [activeIndex, isStoryPaused, performanceMode.isHidden, performanceMode.prefersReducedMotion, stories.length]);
 
 
 
@@ -250,12 +251,14 @@ export const LiveCommunitySection: React.FC = () => {
     holdRef.current = false;
     touchStartRef.current = null;
     setStoryDragOffset(0);
+    setIsStoryPaused(false);
     setActiveIndex(null);
   };
 
   const handleStoryTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     if (event.touches.length > 1) {
       holdRef.current = false;
+      setIsStoryPaused(false);
       touchStartRef.current = null;
       setStoryDragOffset(0);
       return;
@@ -264,6 +267,7 @@ export const LiveCommunitySection: React.FC = () => {
     const touch = event.touches[0];
     if (!touch) return;
     holdRef.current = true;
+    setIsStoryPaused(true);
     touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
     setStoryDragOffset(0);
   };
@@ -271,6 +275,7 @@ export const LiveCommunitySection: React.FC = () => {
   const handleStoryTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
     if (event.touches.length > 1) {
       holdRef.current = false;
+      setIsStoryPaused(false);
       touchStartRef.current = null;
       setStoryDragOffset(0);
       return;
@@ -290,6 +295,7 @@ export const LiveCommunitySection: React.FC = () => {
 
   const handleStoryTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     holdRef.current = false;
+    setIsStoryPaused(false);
     const start = touchStartRef.current;
     touchStartRef.current = null;
     if (!start) {
@@ -313,7 +319,6 @@ export const LiveCommunitySection: React.FC = () => {
     }
 
     if (Math.abs(deltaX) > 54 && Math.abs(deltaX) > Math.abs(deltaY) * 1.25) {
-      setProgress(0);
       setActiveIndex((current) => {
         if (current === null) return current;
         if (deltaX < 0) return current >= stories.length - 1 ? null : current + 1;
@@ -329,8 +334,8 @@ export const LiveCommunitySection: React.FC = () => {
   const handleOpenStory = async (index: number) => {
     const story = stories[index];
     if (!story) return;
+    setIsStoryPaused(false);
     setActiveIndex(index);
-    setProgress(0);
     setStoryDragOffset(0);
 
     if (viewedStoryIdsRef.current.has(story.id)) return;
@@ -589,16 +594,16 @@ export const LiveCommunitySection: React.FC = () => {
           onTouchEnd={handleStoryTouchEnd}
           style={{ transform: storyDragOffset ? `translateY(${storyDragOffset}px)` : undefined, transition: storyDragOffset ? undefined : 'transform 180ms ease-out' }}
         >
-          <div className="mb-3 flex gap-1.5">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full bg-white" style={{ width: `${idx < activeIndex ? 100 : idx === activeIndex ? progress : 0}%` }} /></div>)}</div>
+          <style>{`@keyframes pullzStoryProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }`}</style>
+          <div className="mb-3 flex gap-1.5">{stories.map((_, idx) => <div key={idx} className="h-1 flex-1 overflow-hidden rounded bg-white/20"><div className="h-full origin-left bg-white" style={idx < activeIndex ? { transform: 'scaleX(1)' } : idx === activeIndex ? { animation: 'pullzStoryProgress 4000ms linear forwards', animationPlayState: isStoryPaused || performanceMode.isHidden || performanceMode.prefersReducedMotion ? 'paused' : 'running' } : { transform: 'scaleX(0)' }} /></div>)}</div>
           <div className="mb-3 flex items-center justify-between gap-3 text-sm text-white"><span className="min-w-0 truncate font-semibold">{stories[activeIndex].username} · {stories[activeIndex].timestampLabel ?? formatStoryTimeLabel(stories[activeIndex])}</span><button type="button" aria-label="Close story" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-lg font-bold text-white transition hover:bg-white/20" onClick={closeStory}>✕</button></div>
-          <div className="relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#080a12] shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:max-h-[calc(100dvh-8rem)] sm:rounded-[2rem]" onMouseDown={() => { holdRef.current = true; }} onMouseUp={() => { holdRef.current = false; }} onMouseLeave={() => { holdRef.current = false; }}>
+          <div className="relative mx-auto flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#080a12] shadow-[0_24px_80px_rgba(0,0,0,0.55)] sm:max-h-[calc(100dvh-8rem)] sm:rounded-[2rem]" onMouseDown={() => { holdRef.current = true; setIsStoryPaused(true); }} onMouseUp={() => { holdRef.current = false; setIsStoryPaused(false); }} onMouseLeave={() => { holdRef.current = false; setIsStoryPaused(false); }}>
             {stories[activeIndex].mediaType === 'video' ? <video src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-cover" autoPlay muted playsInline controls /> : <img src={stories[activeIndex].mediaUrl} className="h-full max-h-full w-full object-cover" alt={stories[activeIndex].caption || 'Live community story'} onError={() => { void handleStoryImageError(stories[activeIndex]); }} />}
             <button
               type="button"
               aria-label="Previous story"
               className={`absolute inset-y-0 left-0 w-1/3 bg-transparent ${canNavigateStories ? 'cursor-pointer' : 'cursor-default'}`}
               onClick={() => {
-                setProgress(0);
                 setActiveIndex((current) => {
                   if (current === null) return current;
                   if (current <= 0) return 0;
@@ -611,7 +616,6 @@ export const LiveCommunitySection: React.FC = () => {
               aria-label="Next story"
               className={`absolute inset-y-0 right-0 w-1/3 bg-transparent ${canNavigateStories ? 'cursor-pointer' : 'cursor-default'}`}
               onClick={() => {
-                setProgress(0);
                 setActiveIndex((current) => {
                   if (current === null) return current;
                   if (current >= stories.length - 1) return null;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type PerformanceMode = {
   isMobile: boolean;
@@ -44,7 +44,9 @@ export const applyPerformanceClasses = (mode: PerformanceMode) => {
   root.classList.toggle('pullz-tab-hidden', mode.isHidden);
 };
 
-export const usePerformanceMode = () => {
+const PerformanceModeContext = createContext<PerformanceMode | null>(null);
+
+const usePerformanceModeSampler = () => {
   const [mode, setMode] = useState<PerformanceMode>(() => resolveInitialMode());
 
   useEffect(() => {
@@ -72,14 +74,14 @@ export const usePerformanceMode = () => {
     };
 
     const sampleFps = () => {
-      if (!mobileMedia.matches || motionMedia.matches) return;
+      if (!mobileMedia.matches || motionMedia.matches || document.visibilityState === 'hidden') return;
       let frames = 0;
       let startedAt = performance.now();
       let previous = startedAt;
       let droppedFrames = 0;
 
       const tick = (now: number) => {
-        if (cancelled) return;
+        if (cancelled || document.visibilityState === 'hidden') return;
         frames += 1;
         if (now - previous > 34) droppedFrames += 1;
         previous = now;
@@ -126,3 +128,10 @@ export const usePerformanceMode = () => {
 
   return mode;
 };
+
+export const PerformanceModeProvider = ({ children }: { children: ReactNode }) => {
+  const mode = usePerformanceModeSampler();
+  return createElement(PerformanceModeContext.Provider, { value: mode }, children);
+};
+
+export const usePerformanceMode = () => useContext(PerformanceModeContext) ?? resolveInitialMode();
