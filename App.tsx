@@ -1,5 +1,4 @@
 import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Analytics } from '@vercel/analytics/react';
 import { Header } from './components/Header';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
@@ -124,11 +123,17 @@ const ProtectedPageLoading: React.FC = () => (
 );
 
 const DeferredAnalytics = React.memo(() => {
-  const [isReady, setIsReady] = useState(false);
+  const [AnalyticsComponent, setAnalyticsComponent] = useState<React.ComponentType | null>(null);
 
-  useEffect(() => runAfterIdleOrInteraction(() => setIsReady(true), 6500), []);
+  useEffect(() => runAfterIdleOrInteraction(() => {
+    void import('@vercel/analytics/react')
+      .then((module) => setAnalyticsComponent(() => module.Analytics))
+      .catch((error: unknown) => {
+        console.warn('Vercel Analytics failed to load', error);
+      });
+  }, 6500), []);
 
-  return isReady ? <Analytics /> : null;
+  return AnalyticsComponent ? <AnalyticsComponent /> : null;
 });
 DeferredAnalytics.displayName = 'DeferredAnalytics';
 type MainContentProps = {

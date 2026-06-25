@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { X, Wallet, Loader2, CheckCircle, Sparkles } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
+import { getStripe } from '../utils/stripeClient';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
@@ -11,7 +11,6 @@ import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 const generateCheckoutEventId = () => {
   const random = Math.random().toString(36).slice(2, 10);
@@ -253,7 +252,7 @@ export const TopUpModal: React.FC = () => {
             throw new Error(message || 'Unable to start checkout.');
           }
           const data = await response.json();
-          const stripe = await stripePromise;
+          const stripe = await getStripe();
           if (!stripe) {
             throw new Error('Stripe failed to initialize.');
           }
@@ -261,8 +260,8 @@ export const TopUpModal: React.FC = () => {
           if (result.error) {
             throw result.error;
           }
-      } catch (error: any) {
-          setErrorMessage(error?.message ?? 'Checkout failed. Please try again.');
+      } catch (error: unknown) {
+          setErrorMessage(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
           setIsLoading(false);
       }
   };
