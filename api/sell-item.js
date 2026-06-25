@@ -35,6 +35,22 @@ const isItemSellableStatus = (status) => {
   return normalized === 'available';
 };
 
+const buildReviewPatch = ({ userData = {}, nextBalance = 0, lifetimeSellback = 0 }) => {
+  const lifetimeDeposits = Math.max(0, Math.floor(Number(userData.lifetimeDeposits ?? userData.depositCoinsLifetime ?? 0) || 0));
+  const pullPassXp = Math.max(0, Math.floor(Number(userData.pullPassSeasonXp ?? userData.pullPassXp ?? 0) || 0));
+  const inventoryValue = Math.max(0, Math.floor(Number(userData.inventoryValue ?? 0) || 0));
+  const flags = [];
+  if (lifetimeDeposits === 0 && pullPassXp > 100) flags.push('zero_deposit_pull_pass_xp');
+  if (lifetimeDeposits === 0 && nextBalance + inventoryValue + lifetimeSellback > 5000) flags.push('zero_deposit_high_value');
+  if (!flags.length) return {};
+  return {
+    accountReviewStatus: 'Under Review',
+    underReview: true,
+    reviewFlags: admin.firestore.FieldValue.arrayUnion(...flags),
+    reviewFlaggedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+};
+
 const isXpItem = (inventoryItem = {}) => (
   inventoryItem.xpPurchased === true
   || inventoryItem.source === 'XP_SHOP'
@@ -212,7 +228,13 @@ export default async function handler(req, res) {
           coinValue
         }
       });
-      transaction.set(userRef, userPatch, { merge: true });
+      const nextLifetimeSellback = Math.max(0, Math.floor(toFiniteNumber(userData.lifetimeSellback, 0))) + creditCoins;
+      transaction.set(userRef, {
+        ...userPatch,
+        sellbackCoins: admin.firestore.FieldValue.increment(creditCoins),
+        lifetimeSellback: admin.firestore.FieldValue.increment(creditCoins),
+        ...buildReviewPatch({ userData, nextBalance: newCoins, lifetimeSellback: nextLifetimeSellback })
+      }, { merge: true });
       appendLedgerEntry({
         transaction,
         userRef,

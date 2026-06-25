@@ -195,6 +195,10 @@ export default async function handler(req, res) {
           ? Math.max(0, Math.round(amountTotalCents))
           : 0;
         transaction.set(userRef, {
+          depositCoins: admin.firestore.FieldValue.increment(Math.max(0, Math.floor(baseCoins))),
+          bonusCoins: admin.firestore.FieldValue.increment(Math.max(0, Math.floor(bonusCoins))),
+          lifetimeDeposits: admin.firestore.FieldValue.increment(Math.max(0, Math.floor(baseCoins))),
+          depositCoinsLifetime: admin.firestore.FieldValue.increment(Math.max(0, Math.floor(baseCoins))),
           totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
           depositCount: admin.firestore.FieldValue.increment(1),
           lastDepositAt: admin.firestore.FieldValue.serverTimestamp()
