@@ -56,8 +56,8 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
 const SPINNER_MOTION = {
   preWinnerItems: 64,
   postWinnerItems: 14,
-  spinDurationMs: 11200,
-  quickSpinDurationMs: 900,
+  spinDurationMs: 6200,
+  quickSpinDurationMs: 2800,
   goldTicketDurationMs: 10400,
   quickGoldTicketDurationMs: 650,
   goldFinalDurationMs: 9600,
@@ -65,15 +65,16 @@ const SPINNER_MOTION = {
   goldStageDelayMs: 700,
   quickGoldStageDelayMs: 120,
   settleDurationMs: 2200,
-  minSpinDurationMs: 6200,
-  quickMinSpinDurationMs: 550,
-  overshootPx: 10,
+  minSpinDurationMs: 5400,
+  quickMinSpinDurationMs: 2600,
+  overshootPx: 34,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
   approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  preSpinAnticipationDelayMs: 225
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -481,10 +482,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const showXpOpenUi = false;
   const canOpenMain = isRewardOpen || isFree || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
-  const spinnerCardWidth = DESKTOP_CARD_WIDTH;
-  const spinnerCardHeight = DESKTOP_CARD_HEIGHT;
+  const spinnerCardWidth = performanceMode.isMobile ? 132 : DESKTOP_CARD_WIDTH;
+  const spinnerCardHeight = performanceMode.isMobile ? 172 : DESKTOP_CARD_HEIGHT;
   const spinnerGap = DESKTOP_GAP_WIDTH;
-  const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
+  const spinnerViewportHeight = performanceMode.isMobile ? 204 : DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
   const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
@@ -1281,6 +1282,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     });
   });
 
+  const waitForMs = (delayMs: number) => new Promise<void>((resolve) => {
+    window.setTimeout(resolve, delayMs);
+  });
+
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
     resetSpinnerAnimation();
     setHasSpinSettled(false);
@@ -1623,6 +1628,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         const goldTicketDuration = isQuick ? SPINNER_MOTION.quickGoldTicketDurationMs : SPINNER_MOTION.goldTicketDurationMs;
         const goldFinalDuration = isQuick ? SPINNER_MOTION.quickGoldFinalDurationMs : SPINNER_MOTION.goldFinalDurationMs;
         const goldStageDelay = isQuick ? SPINNER_MOTION.quickGoldStageDelayMs : SPINNER_MOTION.goldStageDelayMs;
+        settleSoundPlayedRef.current = true;
+        playSound('spin-start');
+        await waitForMs(SPINNER_MOTION.preSpinAnticipationDelayMs);
         animateSpin(ticketReelResult.winnerIndex, goldTicketDuration, () => {
             // Stage 1 Complete: Activate Gold Mode
             playSound('gold-mode');
@@ -1650,6 +1658,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
         await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
 
+        settleSoundPlayedRef.current = true;
+        playSound('spin-start');
+        await waitForMs(SPINNER_MOTION.preSpinAnticipationDelayMs);
         animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
         });
@@ -2015,10 +2026,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Spinner Window */}
-            <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
+            <div className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f18]/80 shadow-[0_18px_60px_rgba(0,0,0,0.38)] backdrop-blur-sm" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
+              className="absolute inset-0 flex h-full w-full items-center overflow-hidden"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {isSpinnerAssetsLoading && (
@@ -2033,8 +2044,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#0b0f18] via-[#0b0f18]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#0b0f18] via-[#0b0f18]/75 to-transparent sm:w-14"></div>
 
                 {/* Center Indicator */}
                 <i
@@ -2058,7 +2069,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
                       transformStyle: 'flat',
-                      WebkitTransformStyle: 'flat'
+                      WebkitTransformStyle: 'flat',
+                      filter: isSpinning && !prefersReducedMotion
+                        ? (reduceMobileEffects ? 'saturate(1.08) blur(0.3px)' : 'saturate(1.16) blur(0.6px)')
+                        : 'none'
                     }}
                 >
                     {reelItems.map((item, idx) => (
@@ -2086,6 +2100,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   : 'none',
                                 opacity: 1,
                                 filter: 'none',
+                                transform: isSettledWinner ? 'scale(1.08)' : 'scale(1)',
+                                transition: prefersReducedMotion ? 'none' : 'transform 280ms ease-out, box-shadow 280ms ease-out',
                                 zIndex: isFocusedItem ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
