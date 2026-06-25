@@ -6,7 +6,6 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
-import { CASE_ITEMS } from '../constants';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -105,7 +104,7 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
 );
 
 const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
-  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user, items: catalogItems } = useGame();
+  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
@@ -125,11 +124,9 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     return (selected.length ? selected : boxes).slice(0, 6);
   }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
-    const fallbackBoxId = boxes[0]?.id ?? '';
-    const itemPool = (boxes.some((box) => box.items.length > 0)
-      ? boxes.flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
-      : (catalogItems.length ? catalogItems : CASE_ITEMS).map((item) => ({ item, boxId: fallbackBoxId }))
-    ).filter(({ item, boxId }) => boxId && item.image && item.name);
+    const itemPool = boxes
+      .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
+      .filter(({ item }) => item.image && item.name);
 
     if (!itemPool.length) return [];
 
@@ -176,7 +173,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       timeAgo: index === 0 ? 'now' : `${index + 1}m`,
       boxId
     }));
-  }, [boxes, catalogItems]);
+  }, [boxes]);
   const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
   const customerReviewCards = customerReviews.length
     ? customerReviews
