@@ -830,6 +830,87 @@ const normalizeTimestamp = (value: unknown, fallback: number) => {
   return fallback;
 };
 
+
+type BoxLoadMode = 'summary' | 'full';
+
+const mapBoxData = (boxId: string, rawData: Record<string, unknown>, mode: BoxLoadMode, includeAdminFields: boolean): MysteryBox => {
+  const prizeSource = Array.isArray(rawData.items) ? rawData.items : rawData.prizes;
+  const items = mode === 'full' && Array.isArray(prizeSource) ? prizeSource.map((rawItem, index) => {
+    const item = rawItem && typeof rawItem === 'object' ? rawItem as Record<string, unknown> : {};
+    const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
+    const price = Number(item.value ?? item.price ?? 0);
+    return {
+      id: String(item.id ?? `${boxId}-item-${index}`),
+      name: String(item.name ?? 'Mystery Item'),
+      price,
+      image: String(item.image ?? 'https://picsum.photos/300'),
+      rarity,
+      chance: Number(item.weight ?? item.chance ?? 0),
+      color: String(item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af'),
+      brand: typeof item.brand === 'string' ? item.brand : '',
+      category: typeof item.category === 'string' ? item.category : '',
+      tags: Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === 'string') : [],
+      sizes: Array.isArray(item.sizes) ? item.sizes.filter((size): size is string => typeof size === 'string') : [],
+      redeemable: item.redeemable ?? true,
+      forceFullSellBack: item.forceFullSellBack === true,
+      valueUsd: item.valueUsd !== undefined ? Number(item.valueUsd) : undefined,
+      valueCoins: item.valueCoins !== undefined ? Number(item.valueCoins) : price,
+      sellBackCoins: item.sellBackCoins !== undefined ? Number(item.sellBackCoins) : undefined,
+      marketPricing: includeAdminFields ? item.marketPricing : undefined
+    } as CaseItem;
+  }) : [];
+  const createdAt = rawData.createdAt ? normalizeTimestamp(rawData.createdAt, Date.now()) : undefined;
+  return {
+    id: boxId,
+    name: String(rawData.name ?? 'Mystery Box'),
+    price: Number(rawData.price ?? 0),
+    priceXP: rawData.priceXP != null ? Number(rawData.priceXP) : undefined,
+    currencyType: getBoxCurrencyType({
+      currencyType: rawData.currencyType as MysteryBox['currencyType'],
+      priceXP: rawData.priceXP != null ? Number(rawData.priceXP) : undefined,
+      price: rawData.price != null ? Number(rawData.price) : undefined
+    }),
+    image: String(rawData.image ?? 'https://picsum.photos/300'),
+    spinnerBackgroundImage: typeof rawData.spinnerBackgroundImage === 'string' ? rawData.spinnerBackgroundImage : undefined,
+    accentColor: String(rawData.accentColor ?? '#3b82f6'),
+    tag: rawData.tag as MysteryBox['tag'],
+    tags: Array.isArray(rawData.tags) ? rawData.tags.filter((tag): tag is string => typeof tag === 'string') : undefined,
+    isDaily: rawData.isDaily === true,
+    isPullPassBox: rawData.isPullPassBox === true,
+    pullPassBoxType: typeof rawData.pullPassBoxType === 'string' ? rawData.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
+    targetEV: rawData.targetEV !== undefined ? Number(rawData.targetEV) : undefined,
+    riskLevel: rawData.riskLevel !== undefined ? Number(rawData.riskLevel) : undefined,
+    items,
+    isUserCreated: rawData.isUserCreated === true,
+    sellBackRate: rawData.sellBackRate !== undefined ? Number(rawData.sellBackRate) : undefined,
+    marketValueAudit: includeAdminFields ? rawData.marketValueAudit as MysteryBox['marketValueAudit'] : undefined,
+    createdAt
+  };
+};
+
+const fullBoxCache = new Map<string, MysteryBox>();
+const fullBoxRequests = new Map<string, Promise<MysteryBox | null>>();
+
+const loadFullBoxById = async (boxId: string, includeAdminFields: boolean): Promise<MysteryBox | null> => {
+  const cached = fullBoxCache.get(boxId);
+  if (cached) return cached;
+  const existing = fullBoxRequests.get(boxId);
+  if (existing) return existing;
+  const request = (async () => {
+    const boxPath = `boxes/${boxId}`;
+    console.log('READING FIRESTORE PATH', boxPath);
+    const snapshot = await getDoc(doc(db, 'boxes', boxId));
+    if (!snapshot.exists()) return null;
+    const fullBox = mapBoxData(snapshot.id, snapshot.data() as Record<string, unknown>, 'full', includeAdminFields);
+    fullBoxCache.set(boxId, fullBox);
+    return fullBox;
+  })().finally(() => {
+    fullBoxRequests.delete(boxId);
+  });
+  fullBoxRequests.set(boxId, request);
+  return request;
+};
+
 const USER_PROFILE_SAFE_KEYS = [
   'uid',
   'email',
@@ -1704,7 +1785,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Initialize Items
-  const [items, setItems] = useState<CaseItem[]>(() => CASE_ITEMS);
+  const [items, setItems] = useState<CaseItem[]>([]);
 
   const [bonusSettings, setBonusSettings] = useState<BonusSettings>(() => getStoredBonusSettings());
 
@@ -1987,9 +2068,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (cancelled) return;
       void (async () => {
       try {
-        const itemsPath = 'items?limit=500';
+        const itemLimit = user.isAdmin ? 500 : 100;
+        const itemsPath = `items?limit=${itemLimit}`;
         console.log('READING FIRESTORE PATH', itemsPath);
-        const snapshot = await getDocs(query(collection(db, 'items'), limit(500)));
+        const snapshot = await getDocs(query(collection(db, 'items'), orderBy('price', 'asc'), limit(itemLimit)));
         const loaded: CaseItem[] = snapshot.docs
         .map((docSnap, index) => {
           const data = docSnap.data();
@@ -2037,86 +2119,48 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     const idleId = 'requestIdleCallback' in window
       ? window.requestIdleCallback(loadItems, { timeout: 2500 })
-      : window.setTimeout(loadItems, 1200);
+      : globalThis.setTimeout(loadItems, 1200);
     return () => {
       cancelled = true;
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
-      else window.clearTimeout(idleId as number);
+      else globalThis.clearTimeout(idleId as number);
     };
-  }, []);
+  }, [user.isAdmin]);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     void (async () => {
       try {
-        const boxesPath = 'boxes?limit=250';
+        const boxLimit = user.isAdmin ? 250 : 120;
+        const boxMode: BoxLoadMode = user.isAdmin ? 'full' : 'summary';
+        const boxesPath = `boxes?limit=${boxLimit}&mode=${boxMode}`;
         console.log('READING FIRESTORE PATH', boxesPath);
-        const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
+        const docs = user.isAdmin
+          ? (await getDocs(query(collection(db, 'boxes'), orderBy('price', 'asc'), limit(boxLimit)))).docs.map((docSnap) => ({
+            id: docSnap.id,
+            data: docSnap.data() as Record<string, unknown>
+          }))
+          : await (async () => {
+            const response = await fetch(`/api/boxes?limit=${boxLimit}`);
+            if (!response.ok) throw new Error('Failed to load box summaries');
+            const payload = await response.json() as { boxes?: Array<Record<string, unknown> & { id?: string }> };
+            return (payload.boxes ?? [])
+              .filter((entry): entry is Record<string, unknown> & { id: string } => typeof entry.id === 'string')
+              .map((entry) => ({ id: entry.id, data: entry as Record<string, unknown> }));
+          })();
       const expiredUserBoxIds: string[] = [];
-      const firebaseBoxes = snapshot.docs
+      const firebaseBoxes = docs
         .map((docSnap) => {
-          const data = docSnap.data();
-          const prizeSource = Array.isArray(data.items) ? data.items : data.prizes;
-          const items = Array.isArray(prizeSource) ? prizeSource.map((item: any, index: number) => {
-            const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
-            const price = Number(item.value ?? item.price ?? 0);
-            return {
-              id: item.id ?? `${docSnap.id}-item-${index}`,
-              name: item.name ?? 'Mystery Item',
-              price,
-              image: item.image ?? 'https://picsum.photos/300',
-              rarity,
-              chance: Number(item.weight ?? item.chance ?? 0),
-              color: item.color ?? RARITY_COLORS[rarity] ?? '#9ca3af',
-              brand: typeof item.brand === 'string' ? item.brand : '',
-              category: typeof item.category === 'string' ? item.category : '',
-              tags: Array.isArray(item.tags) ? (item.tags as CaseItem['tags']) : [],
-              sizes: Array.isArray(item.sizes) ? item.sizes.filter((size: unknown) => typeof size === 'string') : [],
-              redeemable: item.redeemable ?? true,
-              forceFullSellBack: item.forceFullSellBack === true,
-              valueUsd: item.valueUsd !== undefined ? Number(item.valueUsd) : undefined,
-              valueCoins: item.valueCoins !== undefined ? Number(item.valueCoins) : price,
-              sellBackCoins: item.sellBackCoins !== undefined ? Number(item.sellBackCoins) : undefined,
-              marketPricing: user.isAdmin ? item.marketPricing : undefined
-            };
-          }) : [];
-          const createdAt = data.createdAt ? normalizeTimestamp(data.createdAt, Date.now()) : undefined;
+          const box = mapBoxData(docSnap.id, docSnap.data, boxMode, user.isAdmin);
           if (
-            data.isUserCreated &&
-            createdAt &&
-            Date.now() - createdAt >= USER_BOX_EXPIRY_MS
+            box.isUserCreated &&
+            box.createdAt &&
+            Date.now() - box.createdAt >= USER_BOX_EXPIRY_MS
           ) {
             expiredUserBoxIds.push(docSnap.id);
           }
-
-          return {
-            id: docSnap.id,
-            name: data.name ?? 'Mystery Box',
-            price: Number(data.price ?? 0),
-            priceXP: data.priceXP != null ? Number(data.priceXP) : undefined,
-            currencyType: getBoxCurrencyType({
-              currencyType: data.currencyType,
-              priceXP: data.priceXP,
-              price: data.price
-            }),
-            image: data.image ?? 'https://picsum.photos/300',
-            spinnerBackgroundImage:
-              typeof data.spinnerBackgroundImage === 'string' ? data.spinnerBackgroundImage : undefined,
-            accentColor: data.accentColor ?? '#3b82f6',
-            tag: data.tag as MysteryBox['tag'],
-            tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,
-            isDaily: data.isDaily ?? false,
-            isPullPassBox: data.isPullPassBox === true,
-            pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
-            targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
-            riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
-            items,
-            isUserCreated: data.isUserCreated ?? false,
-            sellBackRate: data.sellBackRate !== undefined ? Number(data.sellBackRate) : undefined,
-            marketValueAudit: user.isAdmin ? data.marketValueAudit : undefined,
-            createdAt
-          } as MysteryBox;
+          return box;
         })
         .filter((box) => !box.isUserCreated || (box.createdAt && Date.now() - box.createdAt < USER_BOX_EXPIRY_MS))
         .sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
@@ -3885,6 +3929,63 @@ export const useBoxes = () => {
   const context = useContext(BoxesContext);
   if (!context) throw new Error('useBoxes must be used within a GameProvider');
   return context;
+};
+
+export const useBoxDetails = (boxId: string | undefined) => {
+  const { user, boxes } = useGame();
+  const summaryBox = useMemo(() => boxes.find((box) => box.id === boxId), [boxes, boxId]);
+  const [box, setBox] = useState<MysteryBox | null>(() => {
+    if (summaryBox?.items.length) return summaryBox;
+    return boxId ? fullBoxCache.get(boxId) ?? null : null;
+  });
+  const [loading, setLoading] = useState(Boolean(boxId && !box?.items.length));
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!boxId) {
+      setBox(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    if (summaryBox?.items.length) {
+      setBox(summaryBox);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    const cached = fullBoxCache.get(boxId);
+    if (cached) {
+      setBox(cached);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    void loadFullBoxById(boxId, Boolean(user.isAdmin))
+      .then((loadedBox) => {
+        if (cancelled) return;
+        setBox(loadedBox);
+      })
+      .catch((loadError: unknown) => {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError : new Error('Failed to load box details'));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [boxId, summaryBox, user.isAdmin]);
+
+  return { box, summaryBox, loading, error };
 };
 
 export const useInventory = () => {

@@ -3,7 +3,7 @@ import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, W
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem } from '../types';
-import { useGame } from '../context/GameContext';
+import { useBoxDetails, useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
 import { getSellBackValue } from '../utils/sellBack';
@@ -323,15 +323,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
 
-  const matchedBox = boxes.find(b => b.id === boxId);
+  const { box: loadedBox, summaryBox, loading: isBoxDetailsLoading, error: boxDetailsError } = useBoxDetails(boxId);
+  const matchedBox = loadedBox ?? summaryBox ?? boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];
 
   useEffect(() => {
-    if (boxes.length === 0) return;
+    if (isBoxDetailsLoading || boxes.length === 0) return;
     if (!matchedBox) {
       setView({ type: 'HOME' });
     }
-  }, [boxes.length, matchedBox, setView]);
+  }, [boxes.length, isBoxDetailsLoading, matchedBox, setView]);
 
   const items = box?.items ?? [];
   const hasItems = items.length > 0;
@@ -343,7 +344,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     : (Number.isFinite(rawSellBackRate)
       ? Math.min(1, Math.max(0, rawSellBackRate))
       : 0.82);
-  const isReady = Boolean(box) && hasItems;
+  const isReady = Boolean(box) && hasItems && !isBoxDetailsLoading && !boxDetailsError;
   const isAdmin = Boolean(user?.isAdmin);
   const hideDropTableOdds = Boolean(isFree && box?.isDaily);
   const cheapestPaidBox = useMemo(() => {
@@ -1949,7 +1950,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
             <p className="text-white text-lg font-semibold">Loading box...</p>
-            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this box.</p>
+            <p className="text-gray-400 text-sm mt-2">
+              {boxDetailsError ? 'Unable to load this box. Please refresh and try again.' : 'We&apos;re syncing the drops and odds for this box.'}
+            </p>
           </div>
         </div>
       ) : (
