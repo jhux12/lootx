@@ -1398,6 +1398,27 @@ const mapShipmentDoc = (docSnap: QueryDocumentSnapshot) => {
   } as Shipment;
 };
 
+const GOOGLE_REMEMBER_STORAGE_KEY = 'pullz_google_remember_me';
+
+const persistGoogleRememberChoice = (remember: boolean) => {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(GOOGLE_REMEMBER_STORAGE_KEY, remember ? '1' : '0');
+};
+
+const consumeGoogleRememberChoice = () => {
+  if (typeof window === 'undefined') return true;
+  const stored = window.sessionStorage.getItem(GOOGLE_REMEMBER_STORAGE_KEY);
+  window.sessionStorage.removeItem(GOOGLE_REMEMBER_STORAGE_KEY);
+  return stored === '0' ? false : true;
+};
+
+const removeQueryParams = (params: string[]) => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  params.forEach((param) => url.searchParams.delete(param));
+  window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+};
+
 const persistUserData = async (payload: PersistUserData) => {
   const currentUser = auth.currentUser;
   if (!currentUser) return;
@@ -1425,6 +1446,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const inventoryUnsubscribeRef = useRef<(() => void) | null>(null);
   const notificationsUnsubscribeRef = useRef<(() => void) | null>(null);
   const authStateEventRef = useRef(0);
+  const customTokenSignInInProgressRef = useRef(false);
   const legacyProfileBackfillInFlightRef = useRef<Set<string>>(new Set());
   const syncAdminClaim = async (firebaseUser: FirebaseUser | null) => {
     if (!firebaseUser) {
@@ -1876,17 +1898,31 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!customToken) return;
 
     console.log('Custom token detected');
+    customTokenSignInInProgressRef.current = true;
     void (async () => {
+      const remember = consumeGoogleRememberChoice();
       try {
+        await setPersistence(
+          auth,
+          remember ? browserLocalPersistence : browserSessionPersistence
+        );
         await signInWithCustomToken(auth, customToken);
         console.log('Custom token sign-in success');
-        url.searchParams.delete('customToken');
-        window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+        removeQueryParams(['customToken']);
         setShowLoginModal(false);
         const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
         resolveEmailRedirect(redirectPath);
       } catch (error) {
         console.error('Custom token sign-in failed', error);
+        removeQueryParams(['customToken']);
+      } finally {
+        customTokenSignInInProgressRef.current = false;
+        if (!auth.currentUser) {
+          clearUserSubscriptions();
+          activeUserIdRef.current = null;
+          resetAuthenticatedState();
+        }
+        setAuthInitialized(true);
       }
     })();
   }, []);
@@ -1987,6 +2023,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!firebaseUser) {
         console.log('No user');
+        if (customTokenSignInInProgressRef.current) {
+          return;
+        }
         clearUserSubscriptions();
         activeUserIdRef.current = null;
         resetAuthenticatedState();
@@ -2653,6 +2692,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         auth,
         remember ? browserLocalPersistence : browserSessionPersistence
       );
+      persistGoogleRememberChoice(remember);
       trackEvent('google_oauth_started');
       console.log('Google server auth start');
       if (typeof window !== 'undefined') {
