@@ -59,6 +59,10 @@ export const SpinLandingPage: React.FC = () => {
   }, []);
 
   const hasPrizeItems = showcaseItems.length > 0;
+  const carouselItems = hasPrizeItems ? [...showcaseItems, ...showcaseItems] : [];
+  const carouselStyle = {
+    '--spin-prize-item-count': showcaseItems.length
+  } as React.CSSProperties;
 
   return (
     <section className="relative min-h-[calc(100vh-64px)] overflow-hidden bg-[#1b2024] px-4 py-8 text-white sm:px-6 sm:py-10">
@@ -76,28 +80,37 @@ export const SpinLandingPage: React.FC = () => {
           <div className="relative mx-auto mt-6 max-w-5xl overflow-hidden rounded-2xl border border-white/5 bg-[#1b2024] px-3 py-4 sm:mt-8 sm:px-4">
             <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#1b2024] to-transparent" />
             <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#1b2024] to-transparent" />
-            <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pt-1 sm:gap-4">
+            <div
+              className={hasPrizeItems ? 'spin-prize-carousel overflow-hidden py-1' : 'flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pt-1 sm:gap-4'}
+              aria-label="Featured prizes"
+              style={hasPrizeItems ? carouselStyle : undefined}
+            >
               {hasPrizeItems
-                ? showcaseItems.map((item) => (
-                    <article
-                      key={item.showcaseId}
-                      className="group min-w-[136px] snap-start rounded-2xl border border-white/5 bg-[#252c32] p-3 shadow-[0_10px_26px_rgba(5,8,12,0.18)] transition hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_14px_30px_rgba(5,8,12,0.32)] sm:min-w-[164px]"
-                    >
-                      <div className="flex h-24 items-center justify-center rounded-xl bg-black/20 p-2 sm:h-28">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            loading="lazy"
-                            className="mx-auto h-20 w-20 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-24 sm:w-24"
-                          />
-                        ) : (
-                          <div className="h-20 w-20 animate-pulse rounded-lg bg-white/[0.06] sm:h-24 sm:w-24" aria-hidden="true" />
-                        )}
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-center text-xs font-semibold text-white sm:text-sm">{item.name}</p>
-                    </article>
-                  ))
+                ? carouselItems.map((item, index) => {
+                    const isDuplicate = index >= showcaseItems.length;
+
+                    return (
+                      <article
+                        key={`${item.showcaseId}-${index}`}
+                        className="spin-prize-card group rounded-2xl border border-white/5 bg-[#252c32] p-3 shadow-[0_10px_26px_rgba(5,8,12,0.18)] transition hover:-translate-y-1 hover:border-slate-400/35 hover:shadow-[0_14px_30px_rgba(5,8,12,0.32)]"
+                        aria-hidden={isDuplicate}
+                      >
+                        <div className="flex h-24 items-center justify-center rounded-xl bg-black/20 p-2 sm:h-28">
+                          {item.image ? (
+                            <img
+                              src={item.image}
+                              alt={isDuplicate ? '' : item.name}
+                              loading="lazy"
+                              className="mx-auto h-20 w-20 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-24 sm:w-24"
+                            />
+                          ) : (
+                            <div className="h-20 w-20 animate-pulse rounded-lg bg-white/[0.06] sm:h-24 sm:w-24" aria-hidden="true" />
+                          )}
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-center text-xs font-semibold text-white sm:text-sm">{item.name}</p>
+                      </article>
+                    );
+                  })
                 : Array.from({ length: PRIZE_SKELETON_COUNT }).map((_, index) => (
                     <article
                       key={`prize-skeleton-${index}`}
