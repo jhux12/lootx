@@ -16,6 +16,8 @@ interface InventoryFiltersProps {
 }
 
 const selectClass = 'h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#111720] px-4 pr-10 text-sm font-bold text-white outline-none transition focus:border-purple-300/40 focus:ring-2 focus:ring-purple-500/20';
+const reviewButtonBase = 'group/review relative mt-3 flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-[10px] border px-4 text-sm font-black shadow-[0_14px_34px_rgba(0,0,0,0.22)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d131c] active:scale-[0.99] sm:rounded-[11px] sm:text-base';
+const reviewButtonShine = 'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/review:opacity-95';
 
 export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   search,
@@ -72,8 +74,9 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
         </div>
       ) : null}
 
-      <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`mt-3 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border text-sm font-black transition sm:text-base ${reviewDisabled ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500' : 'border-purple-400/40 bg-purple-500/15 text-white shadow-[0_0_20px_rgba(168,85,247,0.18)] hover:bg-purple-500/25'}`}>
-        <Package className="h-5 w-5" /> Review Shipping ({selectedCount}) <ChevronDown className="h-4 w-4 -rotate-90" />
+      <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`${reviewButtonBase} ${reviewDisabled ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none' : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'}`}>
+        {!reviewDisabled ? <span aria-hidden="true" className={reviewButtonShine} /> : null}
+        <Package className="relative z-10 h-5 w-5 shrink-0" /> <span className="relative z-10 truncate">Review Shipping ({selectedCount})</span> <ChevronDown className="relative z-10 h-4 w-4 shrink-0 -rotate-90" />
       </button>
     </div>
   );
