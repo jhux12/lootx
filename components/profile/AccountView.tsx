@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { User, ShippingAddress } from '../../types';
 import { UserAvatar } from '../UserAvatar';
 import { XP_ICON } from '../../constants';
@@ -15,6 +15,21 @@ interface SecurityForm {
   confirmPassword: string;
   avatar: string;
 }
+
+
+interface PlaceSuggestion {
+  placeId: string;
+  text: string;
+}
+
+interface PlaceDetailsResponse {
+  address?: Partial<ShippingAddress> & { formattedAddress?: string };
+}
+
+const createPlacesSessionToken = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `places-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
 
 interface AccountViewProps {
   user: User;
@@ -83,6 +98,88 @@ export const AccountView: React.FC<AccountViewProps> = ({
     { id: 'security', label: 'Security' },
     { id: 'settings', label: 'Settings' }
   ];
+  const [addressQuery, setAddressQuery] = useState(addressForm.street || '');
+  const [placeSuggestions, setPlaceSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
+  const [placesError, setPlacesError] = useState<string | null>(null);
+  const [placesSessionToken, setPlacesSessionToken] = useState(() => createPlacesSessionToken());
+  const latestAutocompleteRequest = useRef(0);
+  const trimmedAddressQuery = useMemo(() => addressQuery.trim(), [addressQuery]);
+
+  useEffect(() => {
+    setAddressQuery(addressForm.street || '');
+  }, [addressForm.street]);
+
+  useEffect(() => {
+    if (trimmedAddressQuery.length < 3) {
+      setPlaceSuggestions([]);
+      setIsLoadingPlaces(false);
+      setPlacesError(null);
+      return;
+    }
+
+    const requestId = latestAutocompleteRequest.current + 1;
+    latestAutocompleteRequest.current = requestId;
+    setIsLoadingPlaces(true);
+    setPlacesError(null);
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        const response = await fetch('/api/google-places-autocomplete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ input: trimmedAddressQuery, sessionToken: placesSessionToken })
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload?.error || 'Autocomplete failed');
+        if (latestAutocompleteRequest.current === requestId) {
+          setPlaceSuggestions(payload.suggestions || []);
+        }
+      } catch (error) {
+        if (latestAutocompleteRequest.current === requestId) {
+          setPlaceSuggestions([]);
+          setPlacesError('Address suggestions are unavailable. You can still type your address manually.');
+        }
+      } finally {
+        if (latestAutocompleteRequest.current === requestId) setIsLoadingPlaces(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeout);
+  }, [placesSessionToken, trimmedAddressQuery]);
+
+  const handleStreetChange = (value: string) => {
+    setAddressQuery(value);
+    setAddressForm({ ...addressForm, street: value });
+  };
+
+  const handleSelectSuggestion = async (suggestion: PlaceSuggestion) => {
+    setAddressQuery(suggestion.text);
+    setPlaceSuggestions([]);
+    setPlacesError(null);
+
+    try {
+      const response = await fetch('/api/google-place-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: suggestion.placeId, sessionToken: placesSessionToken })
+      });
+      const payload: PlaceDetailsResponse = await response.json();
+      if (!response.ok) throw new Error('Place details failed');
+      setAddressForm({
+        ...addressForm,
+        street: payload.address?.street || suggestion.text,
+        city: payload.address?.city || addressForm.city,
+        state: payload.address?.state || addressForm.state,
+        zipCode: payload.address?.zipCode || addressForm.zipCode,
+        country: payload.address?.country || addressForm.country
+      });
+      setPlacesSessionToken(createPlacesSessionToken());
+    } catch (error) {
+      setAddressForm({ ...addressForm, street: suggestion.text });
+      setPlacesError('We could not fill every address field. Please review the address before saving.');
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -227,7 +324,30 @@ export const AccountView: React.FC<AccountViewProps> = ({
               ] as Array<[keyof ShippingAddress, string]>).map(([key, label]) => (
                 <label key={key} className={key === 'street' ? 'sm:col-span-2' : undefined}>
                   <span className="mb-1 block text-xs font-semibold text-gray-300">{label}</span>
-                  <input value={addressForm[key]} onChange={(event) => setAddressForm({ ...addressForm, [key]: event.target.value })} placeholder={label} className={inputClassName} />
+                  {key === 'street' ? (
+                    <div className="relative">
+                      <input value={addressQuery} onChange={(event) => handleStreetChange(event.target.value)} placeholder="Start typing your street address" className={inputClassName} autoComplete="street-address" />
+                      {(isLoadingPlaces || placeSuggestions.length > 0 || placesError) && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+0.35rem)] z-20 overflow-hidden rounded-2xl border border-white/10 bg-[#121821] shadow-2xl shadow-black/40">
+                          {isLoadingPlaces && <div className="px-3 py-2 text-xs text-gray-300">Finding addresses...</div>}
+                          {placeSuggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.placeId}
+                              type="button"
+                              onClick={() => { void handleSelectSuggestion(suggestion); }}
+                              className="block w-full border-t border-white/5 px-3 py-3 text-left text-sm text-white transition hover:bg-blue-500/15 focus:bg-blue-500/15 focus:outline-none"
+                            >
+                              {suggestion.text}
+                            </button>
+                          ))}
+                          {placesError && <div className="border-t border-white/5 px-3 py-2 text-xs text-amber-200">{placesError}</div>}
+                          {placeSuggestions.length > 0 && <div className="border-t border-white/5 px-3 py-1.5 text-right text-[10px] font-semibold uppercase tracking-wide text-gray-400">Powered by Google</div>}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <input value={addressForm[key]} onChange={(event) => setAddressForm({ ...addressForm, [key]: event.target.value })} placeholder={label} className={inputClassName} autoComplete={key === 'city' ? 'address-level2' : key === 'state' ? 'address-level1' : key === 'zipCode' ? 'postal-code' : key === 'country' ? 'country-name' : 'name'} />
+                  )}
                 </label>
               ))}
             </div>
