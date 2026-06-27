@@ -19,6 +19,10 @@ interface InventoryCardProps {
   layoutMode?: 'grid' | 'list';
 }
 
+
+const primaryActionButtonBase = 'group/action relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-[10px] border px-3 text-sm font-black shadow-[0_14px_34px_rgba(0,0,0,0.22)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10151c] active:scale-[0.99] sm:rounded-[11px]';
+const primaryActionShineClass = 'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/action:opacity-95';
+
 const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string; image: string }> = {
   common: {
     card: 'border-gray-400/35 bg-gradient-to-b from-gray-500/14 via-[#151a21] to-[#10151c]',
@@ -132,13 +136,14 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
             onAction();
           }}
           disabled={actionDisabled}
-          className={`flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-black transition ${
+          className={`${primaryActionButtonBase} ${
             actionDisabled
-              ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500'
-              : 'border-purple-400/55 bg-purple-500/20 text-white shadow-[0_0_22px_rgba(168,85,247,0.18)] hover:bg-purple-500/30'
+              ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none'
+              : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'
           }`}
         >
-          <Package className="h-5 w-5" /> {actionLabel}
+          {!actionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
+          <Package className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{actionLabel}</span>
         </button>
 
         {secondaryActionLabel && onSecondaryAction && (
@@ -149,13 +154,14 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
               onSecondaryAction();
             }}
             disabled={secondaryActionDisabled}
-            className={`mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-black transition ${
+            className={`mt-2 ${primaryActionButtonBase} ${
               secondaryActionDisabled
-                ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500'
-                : 'border-emerald-400/35 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/20'
+                ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none'
+                : 'border-emerald-300/40 bg-[linear-gradient(135deg,rgba(16,185,129,0.82)_0%,rgba(5,150,105,0.78)_100%)] text-emerald-50 shadow-[0_14px_34px_rgba(16,185,129,0.20)] hover:scale-[1.01] hover:border-emerald-200/60 hover:shadow-[0_18px_42px_rgba(16,185,129,0.26)]'
             }`}
           >
-            <ArrowLeftRight className="h-5 w-5" /> {secondaryActionLabel}
+            {!secondaryActionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
+            <ArrowLeftRight className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{secondaryActionLabel}</span>
           </button>
         )}
       </div>

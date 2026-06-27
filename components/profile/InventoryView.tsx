@@ -114,11 +114,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       </div>
 
       {selectedIds.length > 0 && (
-        <div className="sticky bottom-16 z-30 flex items-center justify-between rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 backdrop-blur md:bottom-4">
+        <div className="sticky bottom-16 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 backdrop-blur md:bottom-4">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:flex-none">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
-            <button onClick={onReviewShipping} className="rounded-xl bg-gradient-to-r from-purple-600 to-violet-500 px-3 py-2 text-xs font-bold text-white">Review Shipping</button>
+            <button onClick={onReviewShipping} className="group/review relative inline-flex min-h-10 items-center justify-center overflow-hidden rounded-[10px] border border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] px-3 py-2 text-xs font-black text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] outline-none transition-all duration-200 hover:scale-[1.01] hover:border-purple-200/65 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111824] active:scale-[0.99]"><span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/review:opacity-95" /><span className="relative z-10 whitespace-nowrap">Review Shipping</span></button>
           </div>
         </div>
       )}
