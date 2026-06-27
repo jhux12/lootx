@@ -1,3 +1,59 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .spin-prize-carousel {
+    --spin-prize-gap: 0.75rem;
+    --spin-prize-card-width: 136px;
+    --spin-prize-item-count: 12;
+    --spin-prize-scroll-distance: calc((var(--spin-prize-card-width) + var(--spin-prize-gap)) * var(--spin-prize-item-count));
+  }
+
+  .spin-prize-carousel {
+    display: flex;
+    gap: var(--spin-prize-gap);
+    width: max-content;
+    animation: spin-prize-marquee 34s linear infinite;
+    will-change: transform;
+  }
+
+  .spin-prize-carousel:hover {
+    animation-play-state: paused;
+  }
+
+  .spin-prize-card {
+    width: var(--spin-prize-card-width);
+    flex: 0 0 var(--spin-prize-card-width);
+  }
+
+  @media (min-width: 640px) {
+    .spin-prize-carousel {
+      --spin-prize-gap: 1rem;
+      --spin-prize-card-width: 164px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spin-prize-carousel {
+      width: auto;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      animation: none;
+    }
+
+    .spin-prize-card {
+      scroll-snap-align: start;
+    }
+  }
+}
+
+@keyframes spin-prize-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(calc(var(--spin-prize-scroll-distance) * -1), 0, 0);
+  }
+}
