@@ -40,7 +40,13 @@ export default async function handler(req, res) {
       return sendJson(res, 403, { error: 'Forbidden' });
     }
 
-    const amountCents = Number(creditData.amountTotalCents ?? 0);
+    const canonicalCreditId = typeof creditData.canonicalStripeCreditId === 'string' && creditData.canonicalStripeCreditId.trim()
+      ? creditData.canonicalStripeCreditId.trim()
+      : creditRef.id;
+    const stripePaymentId = typeof creditData.stripePaymentId === 'string' && creditData.stripePaymentId.trim()
+      ? creditData.stripePaymentId.trim()
+      : canonicalCreditId;
+    const amountCents = Number(creditData.amountTotalCents ?? creditData.amount ?? 0);
     const purchaseValue = Number.isFinite(amountCents) ? Math.max(0, amountCents / 100) : 0;
     const packageName = typeof creditData.packageName === 'string' && creditData.packageName.trim()
       ? creditData.packageName.trim()
@@ -50,16 +56,42 @@ export default async function handler(req, res) {
       : (typeof creditData.packageId === 'string' && creditData.packageId.trim() ? creditData.packageId.trim() : sessionId);
 
     if (req.method === 'PATCH') {
+      const purchaseTracked = body?.purchaseTracked === true;
+      const firstDepositTracked = body?.firstDepositTracked === true;
+      if (!purchaseTracked && !firstDepositTracked) {
+        return sendJson(res, 400, { error: 'No tracking flags provided' });
+      }
+
       await firestore.runTransaction(async (transaction) => {
         const latest = await transaction.get(creditRef);
         const latestData = latest.exists ? latest.data() ?? {} : {};
-        if (!latest.exists || latestData.uid !== decoded.uid || latestData.metaPurchasePixelTrackedAt) {
+        if (!latest.exists || latestData.uid !== decoded.uid) {
           return;
         }
 
-        transaction.set(creditRef, {
-          metaPurchasePixelTrackedAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const canonicalId = typeof latestData.canonicalStripeCreditId === 'string' && latestData.canonicalStripeCreditId.trim()
+          ? latestData.canonicalStripeCreditId.trim()
+          : creditRef.id;
+        const canonicalRef = firestore.collection('stripe_credits').doc(canonicalId);
+        const canonicalSnap = canonicalId === creditRef.id ? latest : await transaction.get(canonicalRef);
+        const canonicalData = canonicalSnap.exists ? canonicalSnap.data() ?? {} : latestData;
+        if (canonicalData.uid !== decoded.uid) {
+          return;
+        }
+
+        const patch = {};
+        if (purchaseTracked && !canonicalData.metaPurchasePixelTrackedAt) {
+          patch.metaPurchasePixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (firstDepositTracked && canonicalData.isFirstDeposit === true && !canonicalData.metaFirstDepositPixelTrackedAt) {
+          patch.metaFirstDepositPixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (Object.keys(patch).length > 0) {
+          transaction.set(canonicalRef, patch, { merge: true });
+          if (canonicalId !== creditRef.id) {
+            transaction.set(creditRef, patch, { merge: true });
+          }
+        }
       });
 
       return sendJson(res, 200, { ok: true });
@@ -69,7 +101,13 @@ export default async function handler(req, res) {
       status: 'ready',
       purchase: {
         alreadyTracked: Boolean(creditData.metaPurchasePixelTrackedAt),
-        eventID: `purchase_${sessionId}`,
+        eventID: `purchase_${stripePaymentId}`,
+        firstDepositAlreadyTracked: Boolean(creditData.metaFirstDepositPixelTrackedAt),
+        firstDepositEventID: `first_deposit_${stripePaymentId}`,
+        isFirstDeposit: creditData.isFirstDeposit === true,
+        depositSequence: Number(creditData.depositSequence ?? 0),
+        stripePaymentId,
+        userId: decoded.uid,
         currency: normalizeCurrency(creditData.currency),
         value: purchaseValue,
         content_name: packageName,
