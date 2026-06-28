@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getStripe } from '../utils/stripeClient';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Coins, Copy, CreditCard, ExternalLink, Filter, Info, Package, PackageCheck, Plus, Search, ShieldCheck, Truck, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Coins, Copy, CreditCard, Edit3, ExternalLink, Filter, Info, MapPin, Package, PackageCheck, Plus, Search, ShieldCheck, Truck, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { auth } from '../firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateFirebaseEmail, updatePassword as updateFirebasePassword } from 'firebase/auth';
@@ -562,6 +562,14 @@ export const Profile: React.FC = () => {
     ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_14px_rgba(16,185,129,0.18)]'
     : 'border-blue-500 bg-blue-500/10 shadow-[0_0_14px_rgba(32,93,215,0.18)]';
   const activeCheckClass = shippingAccent === 'green' ? 'bg-emerald-500' : 'bg-blue-500';
+  const savedShippingAddress = user.shippingAddress;
+  const hasCompleteShippingAddress = Boolean(
+    savedShippingAddress?.fullName
+    && savedShippingAddress?.street
+    && savedShippingAddress?.city
+    && savedShippingAddress?.zipCode
+    && savedShippingAddress?.country
+  );
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -607,6 +615,14 @@ export const Profile: React.FC = () => {
     setShippingRequestConfirmed(false);
     setShowShippingReview(false);
     setActiveTab('inventory');
+  };
+
+  const handleEditShippingAddress = () => {
+    setShowShippingRateTooltip(false);
+    setShippingRequestConfirmed(false);
+    setShowShippingReview(false);
+    setActiveTab('account');
+    setActiveAccountPanel('settings');
   };
 
   const handleSaveAddress = async () => {
@@ -938,8 +954,8 @@ export const Profile: React.FC = () => {
       )}
 
       {showShippingReview && (
-        <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/85 p-3 backdrop-blur-sm">
-          <div className="max-h-[calc(100dvh-1.5rem)] w-full max-w-[21.5rem] overflow-y-auto rounded-[1.4rem] border border-white/15 bg-[#1f252c]/95 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:max-w-[23rem] sm:p-5">
+        <div className="fixed inset-0 z-[260] flex items-end justify-center bg-black/80 p-2 backdrop-blur-sm sm:items-center sm:p-3">
+          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-[24rem] overflow-y-auto rounded-t-[1.4rem] border border-white/10 bg-[#1b2024]/98 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[1.4rem] sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#205DD7]/25 to-slate-800/80 text-blue-300 shadow-lg shadow-blue-900/20">
@@ -1043,13 +1059,53 @@ export const Profile: React.FC = () => {
               </div>
             )}
 
+            <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 gap-2.5">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/5 text-slate-300">
+                    <MapPin className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Ship to</p>
+                    {hasCompleteShippingAddress && savedShippingAddress ? (
+                      <div className="mt-1 space-y-0.5 text-sm leading-5 text-slate-300">
+                        <p className="truncate font-black text-white">{savedShippingAddress.fullName}</p>
+                        <p>{savedShippingAddress.street}</p>
+                        <p>{savedShippingAddress.city}, {savedShippingAddress.state} {savedShippingAddress.zipCode}</p>
+                        <p>{savedShippingAddress.country}</p>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-sm font-semibold text-amber-200">Add a shipping address before confirming.</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-[#262d35] px-3 py-1.5 text-xs font-black text-white transition hover:border-blue-300/40 hover:bg-[#2d3540] focus:outline-none focus:ring-2 focus:ring-blue-300/50"
+                  onClick={handleEditShippingAddress}
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              </div>
+            </div>
+
             {!isFreeOnlySelection && (
               <div className="mt-4 space-y-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Add-ons</p>
                 <div className={`rounded-xl border transition ${shippingProtectionSelected ? activeAddOnClass : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                   <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
-                    <input id="shipping-protection-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={shippingProtectionSelected} onChange={(event) => setShippingProtectionSelected(event.target.checked)} />
-                    <label htmlFor="shipping-protection-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Shipping protection</label>
+                    <button
+                      id="shipping-protection-addon"
+                      type="button"
+                      role="switch"
+                      aria-checked={shippingProtectionSelected}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-blue-300/60 ${shippingProtectionSelected ? activeCheckClass : 'bg-slate-700'}`}
+                      onClick={() => setShippingProtectionSelected((selected) => !selected)}
+                    >
+                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${shippingProtectionSelected ? 'left-6' : 'left-1'}`} />
+                    </button>
+                    <label className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm" onClick={() => setShippingProtectionSelected((selected) => !selected)}>Shipping protection</label>
                     <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(protectionRate.cashCents, activeShippingMethod)}</span>
                     <button type="button" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white" aria-label="Toggle shipping protection details" aria-expanded={showShippingProtectionInfo} onClick={() => setShowShippingProtectionInfo((open) => !open)}>
                       <ChevronDown className={`h-4 w-4 transition-transform ${showShippingProtectionInfo ? 'rotate-180' : ''}`} />
@@ -1063,8 +1119,17 @@ export const Profile: React.FC = () => {
                 </div>
                 <div className={`rounded-xl border transition ${signatureRequiredSelected ? activeAddOnClass : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
                   <div className="flex min-h-10 items-center gap-2 px-2.5 py-2">
-                    <input id="signature-required-addon" type="checkbox" className="h-4 w-4 shrink-0 accent-blue-500" checked={signatureRequiredSelected} onChange={(event) => setSignatureRequiredSelected(event.target.checked)} />
-                    <label htmlFor="signature-required-addon" className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm">Signature required</label>
+                    <button
+                      id="signature-required-addon"
+                      type="button"
+                      role="switch"
+                      aria-checked={signatureRequiredSelected}
+                      className={`relative h-6 w-11 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-blue-300/60 ${signatureRequiredSelected ? activeCheckClass : 'bg-slate-700'}`}
+                      onClick={() => setSignatureRequiredSelected((selected) => !selected)}
+                    >
+                      <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${signatureRequiredSelected ? 'left-6' : 'left-1'}`} />
+                    </button>
+                    <label className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm" onClick={() => setSignatureRequiredSelected((selected) => !selected)}>Signature required</label>
                     <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(SIGNATURE_REQUIRED_CENTS, activeShippingMethod)}</span>
                     <button type="button" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white" aria-label="Toggle signature required details" aria-expanded={showSignatureRequiredInfo} onClick={() => setShowSignatureRequiredInfo((open) => !open)}>
                       <ChevronDown className={`h-4 w-4 transition-transform ${showSignatureRequiredInfo ? 'rotate-180' : ''}`} />
