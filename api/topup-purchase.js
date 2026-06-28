@@ -56,6 +56,12 @@ export default async function handler(req, res) {
       : (typeof creditData.packageId === 'string' && creditData.packageId.trim() ? creditData.packageId.trim() : sessionId);
 
     if (req.method === 'PATCH') {
+      const purchaseTracked = body?.purchaseTracked === true;
+      const firstDepositTracked = body?.firstDepositTracked === true;
+      if (!purchaseTracked && !firstDepositTracked) {
+        return sendJson(res, 400, { error: 'No tracking flags provided' });
+      }
+
       await firestore.runTransaction(async (transaction) => {
         const latest = await transaction.get(creditRef);
         const latestData = latest.exists ? latest.data() ?? {} : {};
@@ -63,15 +69,28 @@ export default async function handler(req, res) {
           return;
         }
 
+        const canonicalId = typeof latestData.canonicalStripeCreditId === 'string' && latestData.canonicalStripeCreditId.trim()
+          ? latestData.canonicalStripeCreditId.trim()
+          : creditRef.id;
+        const canonicalRef = firestore.collection('stripe_credits').doc(canonicalId);
+        const canonicalSnap = canonicalId === creditRef.id ? latest : await transaction.get(canonicalRef);
+        const canonicalData = canonicalSnap.exists ? canonicalSnap.data() ?? {} : latestData;
+        if (canonicalData.uid !== decoded.uid) {
+          return;
+        }
+
         const patch = {};
-        if (!latestData.metaPurchasePixelTrackedAt) {
+        if (purchaseTracked && !canonicalData.metaPurchasePixelTrackedAt) {
           patch.metaPurchasePixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
         }
-        if (latestData.isFirstDeposit === true && !latestData.metaFirstDepositPixelTrackedAt) {
+        if (firstDepositTracked && canonicalData.isFirstDeposit === true && !canonicalData.metaFirstDepositPixelTrackedAt) {
           patch.metaFirstDepositPixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
         }
         if (Object.keys(patch).length > 0) {
-          transaction.set(creditRef, patch, { merge: true });
+          transaction.set(canonicalRef, patch, { merge: true });
+          if (canonicalId !== creditRef.id) {
+            transaction.set(creditRef, patch, { merge: true });
+          }
         }
       });
 

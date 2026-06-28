@@ -399,6 +399,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         const normalizedCurrency = typeof purchase.currency === 'string' && purchase.currency.trim() ? purchase.currency.trim().toUpperCase() : 'USD';
         const stripePaymentId = typeof purchase.stripePaymentId === 'string' ? purchase.stripePaymentId : sessionId;
 
+        let purchaseTracked = purchase.alreadyTracked === true;
+        let firstDepositTracked = purchase.firstDepositAlreadyTracked === true;
+
         if (purchase.alreadyTracked !== true) {
           const purchaseEventData: Record<string, unknown> = {
             currency: normalizedCurrency,
@@ -420,6 +423,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
           try {
             trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
+            purchaseTracked = true;
             console.log('[Meta] Purchase fired:', {
               value: purchaseValue,
               currency: normalizedCurrency,
@@ -451,6 +455,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
           try {
             trackMetaEvent('FirstDeposit', firstDepositEventData, { eventID: firstDepositEventId });
+            firstDepositTracked = true;
             console.log('[Meta] FirstDeposit fired:', {
               value: purchaseValue,
               currency: normalizedCurrency,
@@ -461,14 +466,20 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           }
         }
 
-        if (purchase.alreadyTracked !== true || (purchase.isFirstDeposit === true && purchase.firstDepositAlreadyTracked !== true)) {
+        const newlyTrackedPurchase = purchase.alreadyTracked !== true && purchaseTracked;
+        const newlyTrackedFirstDeposit = purchase.firstDepositAlreadyTracked !== true && firstDepositTracked;
+        if (newlyTrackedPurchase || newlyTrackedFirstDeposit) {
           await fetch('/api/topup-purchase', {
             method: 'PATCH',
             headers: {
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ sessionId })
+            body: JSON.stringify({
+              sessionId,
+              purchaseTracked: newlyTrackedPurchase,
+              firstDepositTracked: newlyTrackedFirstDeposit
+            })
           }).catch(() => undefined);
         }
 
