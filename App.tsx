@@ -389,22 +389,27 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           : `purchase_${sessionId}`;
         const purchaseValue = Number(purchase.value);
 
+        if (!Number.isFinite(purchaseValue) || purchaseValue <= 0) {
+          trackedPurchaseSessionsRef.current.delete(sessionId);
+          return;
+        }
+
+        console.log('[Meta] Purchase candidate data:', purchase);
+
+        const normalizedCurrency = typeof purchase.currency === 'string' && purchase.currency.trim() ? purchase.currency.trim().toUpperCase() : 'USD';
+        const stripePaymentId = typeof purchase.stripePaymentId === 'string' ? purchase.stripePaymentId : sessionId;
+
         if (purchase.alreadyTracked !== true) {
-          if (!Number.isFinite(purchaseValue) || purchaseValue <= 0) {
-            trackedPurchaseSessionsRef.current.delete(sessionId);
-            return;
-          }
-
-          console.log('[Meta] Purchase candidate data:', purchase);
-
-          const normalizedCurrency = 'USD';
           const purchaseEventData: Record<string, unknown> = {
             currency: normalizedCurrency,
             value: purchaseValue,
             content_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
             content_ids: Array.isArray(purchase.content_ids) ? purchase.content_ids : undefined,
             content_type: 'product',
-            num_items: 1
+            num_items: 1,
+            is_first_deposit: purchase.isFirstDeposit === true,
+            deposit_sequence: Number(purchase.depositSequence ?? 0),
+            stripe_payment_id: stripePaymentId
           };
           if (user.email) {
             purchaseEventData.em = user.email;
@@ -423,7 +428,40 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           } catch (err) {
             console.warn('Meta Purchase tracking failed', err);
           }
+        }
 
+        const firstDepositEventId = typeof purchase.firstDepositEventID === 'string' && purchase.firstDepositEventID.trim()
+          ? purchase.firstDepositEventID.trim()
+          : `first_deposit_${stripePaymentId}`;
+
+        if (purchase.isFirstDeposit === true && purchase.firstDepositAlreadyTracked !== true) {
+          const firstDepositEventData: Record<string, unknown> = {
+            currency: normalizedCurrency,
+            value: purchaseValue,
+            deposit_sequence: 1,
+            stripe_payment_id: stripePaymentId,
+            user_id: typeof purchase.userId === 'string' ? purchase.userId : user.id
+          };
+          if (user.email) {
+            firstDepositEventData.em = user.email;
+          }
+          if (user.id) {
+            firstDepositEventData.external_id = user.id;
+          }
+
+          try {
+            trackMetaEvent('FirstDeposit', firstDepositEventData, { eventID: firstDepositEventId });
+            console.log('[Meta] FirstDeposit fired:', {
+              value: purchaseValue,
+              currency: normalizedCurrency,
+              eventID: firstDepositEventId
+            });
+          } catch (err) {
+            console.warn('Meta FirstDeposit tracking failed', err);
+          }
+        }
+
+        if (purchase.alreadyTracked !== true || (purchase.isFirstDeposit === true && purchase.firstDepositAlreadyTracked !== true)) {
           await fetch('/api/topup-purchase', {
             method: 'PATCH',
             headers: {

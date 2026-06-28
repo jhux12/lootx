@@ -101,6 +101,14 @@ export default async function handler(req, res) {
       return sendJson(res, 200, { received: true });
     }
 
+    if (session.payment_status && session.payment_status !== 'paid') {
+      console.warn('stripe-webhook ignoring unpaid checkout session', {
+        sessionId: session.id,
+        paymentStatus: session.payment_status
+      });
+      return sendJson(res, 200, { received: true });
+    }
+
     const uid = metadata.uid;
     const fbp = typeof metadata.fbp === 'string' ? metadata.fbp.trim() : '';
     const fbc = typeof metadata.fbc === 'string' ? metadata.fbc.trim() : '';
@@ -149,14 +157,24 @@ export default async function handler(req, res) {
       bonusCoins = 0;
     }
 
-    const creditRef = firestore.collection('stripe_credits').doc(session.id);
+    const stripePaymentId = typeof session.payment_intent === 'string' && session.payment_intent.trim()
+      ? session.payment_intent.trim()
+      : session.id;
+    const creditRef = firestore.collection('stripe_credits').doc(stripePaymentId);
+    const legacyCreditRef = firestore.collection('stripe_credits').doc(session.id);
     const userRef = firestore.collection('users').doc(uid);
+    let recordedDeposit = null;
 
     try {
-      await firestore.runTransaction(async (transaction) => {
+      recordedDeposit = await firestore.runTransaction(async (transaction) => {
         const creditSnap = await transaction.get(creditRef);
         if (creditSnap.exists) {
-          return;
+          return { created: false, data: creditSnap.data() ?? {} };
+        }
+
+        const legacyCreditSnap = stripePaymentId === session.id ? null : await transaction.get(legacyCreditRef);
+        if (legacyCreditSnap?.exists) {
+          return { created: false, data: legacyCreditSnap.data() ?? {} };
         }
 
         const userSnap = await transaction.get(userRef);
@@ -194,14 +212,22 @@ export default async function handler(req, res) {
         const creditedDepositCents = Number.isFinite(amountTotalCents)
           ? Math.max(0, Math.round(amountTotalCents))
           : 0;
+        const previousDepositCount = Math.max(0, Number(userData.depositCount ?? 0));
+        const depositSequence = previousDepositCount + 1;
+        const isFirstDeposit = depositSequence === 1;
         transaction.set(userRef, {
           totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
           depositCount: admin.firestore.FieldValue.increment(1),
           lastDepositAt: admin.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
-        transaction.set(creditRef, {
+        const completedAt = admin.firestore.FieldValue.serverTimestamp();
+        const depositRecord = {
           uid,
+          userId: uid,
+          email: typeof session.customer_details?.email === 'string' && session.customer_details.email.trim()
+            ? session.customer_details.email.trim()
+            : (typeof userData.email === 'string' && userData.email.trim() ? userData.email.trim() : null),
           coins: totalCoins,
           baseCoins,
           bonusCoins,
@@ -211,8 +237,20 @@ export default async function handler(req, res) {
           amountTotalCents: Number.isFinite(amountTotalCents) ? Math.max(0, Math.round(amountTotalCents)) : 0,
           currency: sessionCurrency,
           paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+          stripePaymentId,
+          stripeCheckoutSessionId: session.id,
+          isFirstDeposit,
+          depositSequence,
+          completedAt,
+          amount: Number.isFinite(amountTotalCents) ? Math.max(0, Math.round(amountTotalCents)) : 0,
+          status: 'completed',
+          createdAt: completedAt
+        };
+        transaction.set(creditRef, depositRecord);
+        if (stripePaymentId !== session.id) {
+          transaction.set(legacyCreditRef, { ...depositRecord, canonicalStripeCreditId: stripePaymentId }, { merge: true });
+        }
+        return { created: true, data: { ...depositRecord, completedAt: Date.now(), createdAt: Date.now() } };
       });
     } catch (error) {
       console.error('stripe-webhook failed to credit coins', error);
@@ -220,14 +258,22 @@ export default async function handler(req, res) {
     }
 
 
+    if (recordedDeposit?.created !== true) {
+      return sendJson(res, 200, { received: true });
+    }
+
     try {
       await markReferralDepositQualified({ referredUid: uid, depositCoins: totalCoins });
     } catch (referralError) {
       console.error('stripe-webhook failed to evaluate referral deposit qualification', referralError);
     }
+
     const amountTotal = Number(session.amount_total ?? 0);
     const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
-    const eventId = `purchase_${session.id}`;
+    const eventId = `purchase_${stripePaymentId}`;
+    const firstDepositEventId = `first_deposit_${stripePaymentId}`;
+    const depositSequence = Number(recordedDeposit?.data?.depositSequence ?? 0);
+    const isFirstDeposit = recordedDeposit?.data?.isFirstDeposit === true;
 
     try {
       const userSnap = uid ? await firestore.collection('users').doc(uid).get() : null;
@@ -254,7 +300,10 @@ export default async function handler(req, res) {
           content_name: packageName ?? (packageId ? `Package ${packageId}` : 'Top Up'),
           content_ids: stripePriceId ? [stripePriceId] : (packageId ? [String(packageId)] : undefined),
           content_type: 'product',
-          num_items: 1
+          num_items: 1,
+          is_first_deposit: isFirstDeposit,
+          deposit_sequence: depositSequence,
+          stripe_payment_id: stripePaymentId
         },
         test_event_code: process.env.META_TEST_EVENT_CODE
       });
@@ -265,6 +314,38 @@ export default async function handler(req, res) {
           status: metaResult.status,
           error: metaResult.error
         });
+      }
+
+      if (isFirstDeposit) {
+        const firstDepositResult = await sendMetaEvent({
+          req,
+          event_name: 'FirstDeposit',
+          event_id: firstDepositEventId,
+          event_source_url: `${process.env.APP_URL}/top-up`,
+          user: {
+            email,
+            phone,
+            external_id: String(uid),
+            fbp,
+            fbc
+          },
+          custom_data: {
+            currency: sessionCurrency || 'USD',
+            value: purchaseValue,
+            deposit_sequence: 1,
+            stripe_payment_id: stripePaymentId,
+            user_id: String(uid)
+          },
+          test_event_code: process.env.META_TEST_EVENT_CODE
+        });
+
+        if (!firstDepositResult.ok && !firstDepositResult.skipped) {
+          console.warn('stripe-webhook meta first deposit event failed', {
+            eventId: firstDepositEventId,
+            status: firstDepositResult.status,
+            error: firstDepositResult.error
+          });
+        }
       }
     } catch (metaError) {
       console.error('stripe-webhook meta purchase event error', {

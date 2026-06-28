@@ -40,7 +40,13 @@ export default async function handler(req, res) {
       return sendJson(res, 403, { error: 'Forbidden' });
     }
 
-    const amountCents = Number(creditData.amountTotalCents ?? 0);
+    const canonicalCreditId = typeof creditData.canonicalStripeCreditId === 'string' && creditData.canonicalStripeCreditId.trim()
+      ? creditData.canonicalStripeCreditId.trim()
+      : creditRef.id;
+    const stripePaymentId = typeof creditData.stripePaymentId === 'string' && creditData.stripePaymentId.trim()
+      ? creditData.stripePaymentId.trim()
+      : canonicalCreditId;
+    const amountCents = Number(creditData.amountTotalCents ?? creditData.amount ?? 0);
     const purchaseValue = Number.isFinite(amountCents) ? Math.max(0, amountCents / 100) : 0;
     const packageName = typeof creditData.packageName === 'string' && creditData.packageName.trim()
       ? creditData.packageName.trim()
@@ -53,13 +59,20 @@ export default async function handler(req, res) {
       await firestore.runTransaction(async (transaction) => {
         const latest = await transaction.get(creditRef);
         const latestData = latest.exists ? latest.data() ?? {} : {};
-        if (!latest.exists || latestData.uid !== decoded.uid || latestData.metaPurchasePixelTrackedAt) {
+        if (!latest.exists || latestData.uid !== decoded.uid) {
           return;
         }
 
-        transaction.set(creditRef, {
-          metaPurchasePixelTrackedAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const patch = {};
+        if (!latestData.metaPurchasePixelTrackedAt) {
+          patch.metaPurchasePixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (latestData.isFirstDeposit === true && !latestData.metaFirstDepositPixelTrackedAt) {
+          patch.metaFirstDepositPixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (Object.keys(patch).length > 0) {
+          transaction.set(creditRef, patch, { merge: true });
+        }
       });
 
       return sendJson(res, 200, { ok: true });
@@ -69,7 +82,13 @@ export default async function handler(req, res) {
       status: 'ready',
       purchase: {
         alreadyTracked: Boolean(creditData.metaPurchasePixelTrackedAt),
-        eventID: `purchase_${sessionId}`,
+        eventID: `purchase_${stripePaymentId}`,
+        firstDepositAlreadyTracked: Boolean(creditData.metaFirstDepositPixelTrackedAt),
+        firstDepositEventID: `first_deposit_${stripePaymentId}`,
+        isFirstDeposit: creditData.isFirstDeposit === true,
+        depositSequence: Number(creditData.depositSequence ?? 0),
+        stripePaymentId,
+        userId: decoded.uid,
         currency: normalizeCurrency(creditData.currency),
         value: purchaseValue,
         content_name: packageName,
