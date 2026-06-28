@@ -954,8 +954,8 @@ export const Profile: React.FC = () => {
       )}
 
       {showShippingReview && (
-        <div className="fixed inset-0 z-[260] flex items-end justify-center bg-black/80 p-2 backdrop-blur-sm sm:items-center sm:p-3">
-          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-[24rem] overflow-y-auto rounded-t-[1.4rem] border border-white/10 bg-[#1b2024]/98 p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[1.4rem] sm:p-5">
+        <div className="fixed inset-0 z-[260] flex items-end justify-center bg-black/85 p-2 backdrop-blur-sm sm:items-center sm:p-3">
+          <div className="max-h-[calc(100dvh-1rem)] w-full max-w-[24rem] overflow-y-auto rounded-t-[1.4rem] border border-white/10 bg-[#1f252c] p-4 shadow-2xl shadow-black/40 ring-1 ring-white/5 sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[1.4rem] sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#205DD7]/25 to-slate-800/80 text-blue-300 shadow-lg shadow-blue-900/20">
