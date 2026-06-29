@@ -47,10 +47,12 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
-const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_CARD_WIDTH = 195;
+const DESKTOP_CARD_HEIGHT = 195;
+const DESKTOP_GAP_WIDTH = 0;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 250;
+const VIRTUAL_REEL_ITEM_COUNT = 13;
+const VIRTUAL_REEL_CENTER_INDEX = Math.floor(VIRTUAL_REEL_ITEM_COUNT / 2);
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -873,8 +875,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
-    const preWinnerItems = reduceMobileEffects ? 42 : SPINNER_MOTION.preWinnerItems;
-    const postWinnerItems = reduceMobileEffects ? 8 : SPINNER_MOTION.postWinnerItems;
+    const preWinnerItems = VIRTUAL_REEL_CENTER_INDEX;
+    const postWinnerItems = VIRTUAL_REEL_ITEM_COUNT - VIRTUAL_REEL_CENTER_INDEX - 1;
     const winnerIndex = preWinnerItems;
     const reelLength = preWinnerItems + 1 + postWinnerItems;
     const newReel: CaseItem[] = [];
@@ -1019,131 +1021,101 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       return;
     }
 
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
-    const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
-    const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
-    const resolvedDuration = Math.max(minDuration, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
-
-    resetSpinnerAnimation();
-
-    container.style.transition = 'none';
-    container.style.transform = 'translate3d(0px, 0, 0)';
-    container.style.backfaceVisibility = 'hidden';
-    container.style.willChange = 'transform';
-
-    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
-    await waitForNextPaint();
-    await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
-    void container.getBoundingClientRect();
-    updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    lastTickedCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
-
-    const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
-    const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
-      spinRequestLockRef.current = false;
-      setIsSpinning(false);
+    const cards = Array.from(container.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+    if (!cards.length) {
+      onComplete();
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
+    const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
+    const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
+    const resolvedDuration = Math.max(minDuration, duration + durationVariance);
+    const stepWidth = spinnerCardWidth + spinnerGap;
+    const totalWidth = stepWidth * cards.length;
+    const itemsToScroll = Math.max(8, Math.round(resolvedDuration / 112));
+    const fastDistance = Math.max(stepWidth, (itemsToScroll - 20) * stepWidth);
+    const settleDistance = 20 * stepWidth;
+    const centerTranslateX = -spinnerCardWidth / 2;
+    const initialX = (index: number) => (index - VIRTUAL_REEL_CENTER_INDEX) * stepWidth + centerTranslateX;
+    const wrapX = (x: number) => {
+      const shifted = x - centerTranslateX + (VIRTUAL_REEL_CENTER_INDEX * stepWidth);
+      const wrapped = ((shifted % totalWidth) + totalWidth) % totalWidth;
+      return wrapped - (VIRTUAL_REEL_CENTER_INDEX * stepWidth) + centerTranslateX;
+    };
+    const applyPositions = (distance: number, settled = false) => {
+      cards.forEach((card, index) => {
+        const x = wrapX(initialX(index) - distance);
+        const isCentered = Math.abs(x - centerTranslateX) < stepWidth / 2;
+        card.style.transform = `translate(${x}px, ${-spinnerCardHeight / 2}px) scale(${isCentered && settled ? 1.25 : 1})`;
+        card.style.zIndex = isCentered ? '4' : '1';
+      });
+    };
+
+    resetSpinnerAnimation();
+    container.style.transition = 'none';
+    container.style.transform = 'translate3d(0px, 0, 0)';
+    container.style.willChange = 'contents';
+    setHasSpinSettled(false);
     setAnimationPhase('spinning');
+    setCurrentCenterIndex(VIRTUAL_REEL_CENTER_INDEX);
+    lastCenterIndexRef.current = VIRTUAL_REEL_CENTER_INDEX;
+    lastTickedCenterIndexRef.current = VIRTUAL_REEL_CENTER_INDEX;
 
-    const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-      ],
-      {
-        duration: resolvedDuration,
-        fill: 'forwards',
-        composite: 'replace'
+    await waitForNextPaint();
+    applyPositions(0);
+
+    const fastDuration = Math.max(120, resolvedDuration - SPINNER_MOTION.settleDurationMs);
+    const settleDuration = Math.min(SPINNER_MOTION.settleDurationMs, Math.max(240, resolvedDuration - fastDuration));
+    const startTime = performance.now();
+    const easeOutPower2 = (t: number) => 1 - Math.pow(1 - t, 2);
+    let previousCentered = VIRTUAL_REEL_CENTER_INDEX;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      let distance = 0;
+      if (elapsed <= fastDuration) {
+        distance = (elapsed / fastDuration) * fastDistance;
+      } else {
+        setAnimationPhase('settling');
+        const settleT = Math.min(1, (elapsed - fastDuration) / settleDuration);
+        distance = fastDistance + easeOutPower2(settleT) * settleDistance;
       }
-    );
+      applyPositions(distance);
 
-    spinnerAnimationRef.current = animation;
-    let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
+      const centeredIndex = cards.reduce((closestIndex, card, index) => {
+        const matrix = new DOMMatrixReadOnly(window.getComputedStyle(card).transform);
+        const closestMatrix = new DOMMatrixReadOnly(window.getComputedStyle(cards[closestIndex]).transform);
+        return Math.abs(matrix.m41 - centerTranslateX) < Math.abs(closestMatrix.m41 - centerTranslateX) ? index : closestIndex;
+      }, 0);
+      if (centeredIndex !== previousCentered) {
+        previousCentered = centeredIndex;
+        lastCenterIndexRef.current = centeredIndex;
+        if (isSpinningRef.current && centeredIndex !== lastTickedCenterIndexRef.current) {
           playSound('spin-tick');
-          lastTickedCenterIndexRef.current = index;
+          lastTickedCenterIndexRef.current = centeredIndex;
         }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
-        }
-      }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
-    };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
-    const decelerationTimer = window.setTimeout(
-      () => setAnimationPhase('settling'),
-      Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
-    );
-
-    animation.onfinish = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
+        if (!reduceSpinnerRerenders) setCurrentCenterIndex(centeredIndex);
       }
 
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
+      if (elapsed >= fastDuration + settleDuration) {
+        applyPositions(fastDistance + settleDistance, true);
+        setCurrentCenterIndex(VIRTUAL_REEL_CENTER_INDEX);
+        lastCenterIndexRef.current = VIRTUAL_REEL_CENTER_INDEX;
+        setHasSpinSettled(true);
+        setAnimationPhase('idle');
+        container.style.willChange = 'auto';
+        tickFrameRef.current = null;
+        spinRequestLockRef.current = false;
+        onComplete();
+        return;
       }
-      animation.cancel();
-      container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
-      container.style.willChange = 'auto';
-      setCurrentCenterIndex(winnerIndex);
-      lastCenterIndexRef.current = winnerIndex;
-      setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      tickFrameRef.current = null;
 
-      setAnimationPhase('idle');
-      spinnerAnimationRef.current = null;
-      spinRequestLockRef.current = false;
-      onComplete();
+      tickFrameRef.current = window.requestAnimationFrame(tick);
     };
 
-    animation.oncancel = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      tickFrameRef.current = null;
-      setAnimationPhase('idle');
-      container.style.willChange = 'auto';
-      spinnerAnimationRef.current = null;
-      spinRequestLockRef.current = false;
-    };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+    tickFrameRef.current = window.requestAnimationFrame(tick);
+  }, [playSound, reduceSpinnerRerenders, resetSpinnerAnimation, spinnerCardHeight, spinnerCardWidth, spinnerGap]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1292,17 +1264,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.style.transition = 'none';
     }
 
-    await preloadReelImages(nextReelItems, { preloadAll: true });
+    const winner = nextReelItems[winnerIndex] ?? nextReelItems[VIRTUAL_REEL_CENTER_INDEX];
+    const virtualReelItems = Array.from({ length: VIRTUAL_REEL_ITEM_COUNT }, (_, index) => {
+      if (index === VIRTUAL_REEL_CENTER_INDEX) return winner;
+      const sourceIndex = index < VIRTUAL_REEL_CENTER_INDEX
+        ? Math.max(0, winnerIndex - (VIRTUAL_REEL_CENTER_INDEX - index))
+        : Math.min(nextReelItems.length - 1, winnerIndex + (index - VIRTUAL_REEL_CENTER_INDEX));
+      return nextReelItems[sourceIndex] ?? winner;
+    });
 
-    reelItemsRef.current = nextReelItems;
-    setReelItems(nextReelItems);
-    setReelWinnerIndex(winnerIndex);
+    await preloadReelImages(virtualReelItems, { preloadAll: true });
+
+    reelItemsRef.current = virtualReelItems;
+    setReelItems(virtualReelItems);
+    setReelWinnerIndex(VIRTUAL_REEL_CENTER_INDEX);
     await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
+    lastCenterIndexRef.current = VIRTUAL_REEL_CENTER_INDEX;
+    setCurrentCenterIndex(VIRTUAL_REEL_CENTER_INDEX);
   }, [getCenteredIndexFromTranslate, preloadReelImages, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
@@ -2018,7 +1998,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-clip"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {isSpinnerAssetsLoading && (
@@ -2051,9 +2031,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {/* The Moving Reel */}
                 <div
                     ref={scrollContainerRef}
-                    className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
+                    className="pullz-spinner-track relative flex will-change-transform transition-opacity duration-300 opacity-100"
                     style={{
-                      gap: `${spinnerGap}px`,
+                      width: '0px',
+                      height: '0px',
                       transform: 'translate3d(0,0,0)',
                       backfaceVisibility: 'hidden',
                       WebkitBackfaceVisibility: 'hidden',
@@ -2075,10 +2056,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className="pullz-spinner-card group absolute flex items-center justify-center overflow-visible"
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
+                                minWidth: `${spinnerCardWidth}px`,
+                                minHeight: `${spinnerCardHeight}px`,
+                                maxWidth: `${spinnerCardWidth}px`,
+                                maxHeight: `${spinnerCardHeight}px`,
+                                transform: `translate(${(idx - VIRTUAL_REEL_CENTER_INDEX) * (spinnerCardWidth + spinnerGap) - (spinnerCardWidth / 2)}px, ${-spinnerCardHeight / 2}px) scale(${isFocusedItem && hasSpinSettled ? 1.25 : 1})`,
+                                transition: isSpinning ? 'none' : 'transform 200ms ease, box-shadow 200ms ease',
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
                                 boxShadow: isFocusedItem && allowHeavyHighlight
@@ -2095,7 +2082,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className="flex h-[55%] w-[55%] items-center justify-center transition-transform duration-200">
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2107,6 +2094,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
+                            </div>
+                            <div
+                              className={`pointer-events-none absolute flex max-w-full flex-col items-center rounded-md bg-gray-700/40 px-2 transition-opacity duration-200 ${isFocusedItem && hasSpinSettled ? 'opacity-100' : 'opacity-0'}`}
+                              style={{ transform: `translate(0px, ${spinnerCardHeight * 0.4}px)`, maxWidth: `${spinnerCardWidth}px` }}
+                            >
+                              <p className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm font-black text-white sm:text-base">{item.name}</p>
+                              <p className="text-sm font-black text-white sm:text-base">${Number(item.price ?? 0).toFixed(2)}</p>
                             </div>
                         </div>
                           );
