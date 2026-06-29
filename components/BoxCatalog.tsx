@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X, Package, Zap } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -464,36 +464,51 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
+      <div className="relative isolate mx-auto max-w-[1320px] overflow-hidden px-3 pb-6 pt-5 sm:px-5 sm:pb-8 sm:pt-8">
+        <div className="pointer-events-none absolute inset-0 z-0 rounded-b-[2rem] border-b border-white/5 bg-[radial-gradient(circle_at_18%_20%,rgba(45,115,255,0.18),transparent_30%),radial-gradient(circle_at_78%_30%,rgba(154,136,255,0.18),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none absolute left-1/2 top-6 z-0 h-32 w-[78vw] max-w-4xl -translate-x-1/2 rounded-full bg-[#346dff]/10 blur-3xl sm:h-40" />
+        <div className="relative z-10 grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
           <div className="order-2 lg:order-1">
-            <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#5da0ff]/20 bg-[#2d73ff]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-[#9ec4ff] shadow-[0_0_24px_rgba(45,115,255,0.16)]">
+              <Zap className="h-3.5 w-3.5" />
+              Fresh pulls live
+            </div>
+            <h1 className="mt-3 text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
             <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
               Open premium mystery boxes and win <span className="text-[#5da0ff]">real items</span>.
             </p>
             <div className="mt-5 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 backdrop-blur">
                 <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
                 Provably Fair
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 backdrop-blur">
                 <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
                 Real Items
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200 backdrop-blur">
                 <Tag className="h-3.5 w-3.5 text-[#67a6ff]" />
                 Sell Back
               </span>
             </div>
           </div>
           <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
+            <div className="relative w-full max-w-[460px] py-5 sm:py-7">
+              <div className="pointer-events-none absolute inset-x-4 top-1/2 h-44 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.50)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.40)_0%,rgba(122,77,255,0.15)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.14)_8%,rgba(95,71,255,0.22)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:h-64" />
+              <div className="pointer-events-none absolute left-1/2 top-1/2 h-52 w-52 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#7aa6ff]/20 motion-safe:animate-[catalogHeroOrbit_18s_linear_infinite] sm:h-72 sm:w-72">
+                <span className="absolute -right-2 top-8 flex h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-[#1b2432]/80 text-[#9ec4ff] shadow-lg shadow-blue-950/40 backdrop-blur sm:h-10 sm:w-10">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                </span>
+                <span className="absolute -left-2 bottom-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white/15 bg-[#1b2432]/80 text-[#9a88ff] shadow-lg shadow-purple-950/40 backdrop-blur sm:h-10 sm:w-10">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+                </span>
+              </div>
+              <div className="pointer-events-none absolute inset-x-10 bottom-3 h-10 rounded-full bg-[#10151f]/70 blur-lg" />
               {stripeSettings.boxCatalogHeroImageUrl ? (
                 <img
                   src={stripeSettings.boxCatalogHeroImageUrl}
                   alt="Box catalog hero"
-                  className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
+                  className="relative mx-auto h-44 w-full object-contain drop-shadow-[0_18px_34px_rgba(24,64,160,0.45)] motion-safe:animate-[catalogHeroFloat_5.5s_ease-in-out_infinite] sm:h-56 lg:h-64"
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
@@ -501,9 +516,17 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   height={256}
                 />
               ) : null}
+              <div className="pointer-events-none absolute left-5 top-8 h-2 w-2 rounded-full bg-[#67a6ff] shadow-[0_0_20px_6px_rgba(103,166,255,0.28)] motion-safe:animate-[catalogHeroSpark_3.8s_ease-in-out_infinite] sm:left-10" />
+              <div className="pointer-events-none absolute right-10 top-16 h-1.5 w-1.5 rounded-full bg-[#c0b7ff] shadow-[0_0_18px_5px_rgba(154,136,255,0.30)] motion-safe:animate-[catalogHeroSpark_4.6s_ease-in-out_infinite_0.6s] sm:right-16" />
+              <div className="pointer-events-none absolute bottom-12 right-7 h-2.5 w-2.5 rounded-full bg-[#5da0ff] shadow-[0_0_22px_6px_rgba(93,160,255,0.25)] motion-safe:animate-[catalogHeroSpark_4.2s_ease-in-out_infinite_1.1s] sm:right-12" />
             </div>
           </div>
         </div>
+        <style>{`
+          @keyframes catalogHeroFloat { 0%, 100% { transform: translate3d(0,0,0) rotate(-1deg); } 50% { transform: translate3d(0,-10px,0) rotate(1deg); } }
+          @keyframes catalogHeroOrbit { from { transform: translate(-50%,-50%) rotate(0deg); } to { transform: translate(-50%,-50%) rotate(360deg); } }
+          @keyframes catalogHeroSpark { 0%, 100% { opacity: .45; transform: translate3d(0,0,0) scale(.85); } 50% { opacity: 1; transform: translate3d(0,-12px,0) scale(1.12); } }
+        `}</style>
       </div>
 
       <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#1b2024]/95 backdrop-blur">
