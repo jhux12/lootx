@@ -184,6 +184,12 @@ export interface CoinPackage {
   updatedAt?: number;
 }
 
+export interface ShippingRateTierSetting {
+  maxValueCoinsExclusive: number | null;
+  cashCents: number;
+  label: string;
+}
+
 export interface StripeSettings {
   boxCatalogHeroImageUrl: string;
   authPopupImageUrl: string;
@@ -195,6 +201,9 @@ export interface StripeSettings {
   shippingFlatRateCents: number;
   shippingCoinEnabled: boolean;
   shippingCoinCostCoins: number;
+  shippingRateTiers: ShippingRateTierSetting[];
+  shippingProtectionTiers: ShippingRateTierSetting[];
+  signatureRequiredCents: number;
   stripeShippingProductId: string;
   caseLabPublishFeeCoins: number;
   caseLabSellBackPercent: number;

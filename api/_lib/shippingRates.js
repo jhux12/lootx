@@ -12,9 +12,27 @@ export const SHIPPING_PROTECTION_TIERS = [
 
 export const SIGNATURE_REQUIRED_CENTS = 399;
 
-export const getShipmentShippingRate = (shipmentValueCoins) => {
+const normalizeRateTiers = (tiers, fallback) => {
+  if (!Array.isArray(tiers) || tiers.length === 0) return fallback;
+
+  const normalized = tiers
+    .map((tier) => ({
+      maxValueCoinsExclusive: tier?.maxValueCoinsExclusive === null
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, Math.round(Number(tier?.maxValueCoinsExclusive) || 0)),
+      cashCents: Math.max(0, Math.round(Number(tier?.cashCents) || 0)),
+      label: typeof tier?.label === 'string' && tier.label.trim() ? tier.label.trim() : 'Custom tier'
+    }))
+    .filter((tier) => tier.maxValueCoinsExclusive === Number.POSITIVE_INFINITY || tier.maxValueCoinsExclusive > 0)
+    .sort((a, b) => a.maxValueCoinsExclusive - b.maxValueCoinsExclusive);
+
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+export const getShipmentShippingRate = (shipmentValueCoins, tiers) => {
   const safeValueCoins = Math.max(0, Math.round(Number(shipmentValueCoins) || 0));
-  const tier = SHIPPING_RATE_TIERS.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? SHIPPING_RATE_TIERS[SHIPPING_RATE_TIERS.length - 1];
+  const rateTiers = normalizeRateTiers(tiers, SHIPPING_RATE_TIERS);
+  const tier = rateTiers.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? rateTiers[rateTiers.length - 1];
   return {
     cashCents: tier.cashCents,
     coinCost: tier.cashCents,
@@ -22,13 +40,18 @@ export const getShipmentShippingRate = (shipmentValueCoins) => {
   };
 };
 
-
-export const getShippingProtectionRate = (shipmentValueCoins) => {
+export const getShippingProtectionRate = (shipmentValueCoins, tiers) => {
   const safeValueCoins = Math.max(0, Math.round(Number(shipmentValueCoins) || 0));
-  const tier = SHIPPING_PROTECTION_TIERS.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? SHIPPING_PROTECTION_TIERS[SHIPPING_PROTECTION_TIERS.length - 1];
+  const rateTiers = normalizeRateTiers(tiers, SHIPPING_PROTECTION_TIERS);
+  const tier = rateTiers.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? rateTiers[rateTiers.length - 1];
   return {
     cashCents: tier.cashCents,
     coinCost: tier.cashCents,
     tierLabel: tier.label
   };
 };
+
+export const getSignatureRequiredCents = (settings = {}) => Math.max(
+  0,
+  Math.round(Number(settings.signatureRequiredCents ?? SIGNATURE_REQUIRED_CENTS) || 0)
+);
