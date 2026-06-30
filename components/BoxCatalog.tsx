@@ -100,20 +100,20 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   staticImages: boolean;
   onOpen: (boxId: string) => void;
 }) => {
-  const { box, primaryTag, tagClass, topItemPreviews } = model;
+  const { box, primaryTag, tagClass } = model;
   const isPriority = index < 4;
 
   return (
     <button
       type="button"
       onClick={() => onOpen(box.id)}
-      className="group flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-[#18212b] to-[#101820] p-2 text-left shadow-[0_18px_42px_-30px_rgba(0,0,0,0.9)] transition hover:-translate-y-0.5 hover:border-violet-300/35 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/70 [content-visibility:auto] [contain-intrinsic-size:300px] sm:rounded-2xl sm:p-3"
+      className="group flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#20262b] p-2 text-left shadow-[0_18px_42px_-32px_rgba(0,0,0,0.85)] transition hover:-translate-y-0.5 hover:border-slate-300/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/60 [content-visibility:auto] [contain-intrinsic-size:240px] sm:rounded-2xl sm:p-3"
     >
       <div className="relative">
         {primaryTag && (
           <span className={`absolute left-0 top-0 z-10 rounded-md px-2 py-1 text-[10px] font-extrabold uppercase leading-none tracking-wide shadow-lg ${tagClass}`}>{primaryTag}</span>
         )}
-        <div className="mx-auto aspect-[1.45] w-full">
+        <div className="mx-auto aspect-[1.35] w-full">
           <BlurImage
             src={box.image}
             fallbackSrc="/android-chrome-512x512.png"
@@ -132,17 +132,8 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       </div>
       <div className="flex flex-1 flex-col px-0.5 pb-0.5 pt-1.5 sm:px-1">
         <div className="line-clamp-1 text-[15px] font-bold leading-tight text-slate-100 sm:text-base">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-bold text-slate-100 sm:text-[15px]" iconClassName="h-4 w-4" />
-        <p className="mt-0.5 text-[11px] font-medium leading-none text-slate-400">Top pulls</p>
-        <div className="mt-2 grid grid-cols-3 gap-1.5">
-          {topItemPreviews.map((item) => (
-            <div key={`${box.id}-${item.id}`} className="flex h-9 items-center justify-center rounded-md border border-slate-600/55 bg-[#121a24] p-1 sm:h-11">
-              <BlurImage src={item.image} fallbackSrc="/android-chrome-512x512.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
-            </div>
-          ))}
-        </div>
-        <span className="mt-2.5 inline-flex min-h-9 w-full items-center justify-center rounded-md bg-gradient-to-r from-[#8b43ff] via-[#7237f4] to-[#6030df] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-14px_rgba(124,72,255,0.95)] transition group-hover:brightness-110 sm:mt-3">
-          Open
+        <span className="mt-2.5 inline-flex min-h-9 w-full items-center justify-center rounded-md bg-gradient-to-r from-[#7c3cff] to-[#5f2eea] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-14px_rgba(124,72,255,0.95)] transition group-hover:brightness-110 sm:mt-3">
+          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-sm font-extrabold text-white" iconClassName="h-4 w-4" />
         </span>
       </div>
     </button>
@@ -386,7 +377,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="w-full bg-[#050a0f] pb-20 text-white">
+    <div className="w-full bg-[#1b2024] pb-20 text-white">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -467,36 +458,36 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto max-w-[1320px] px-4 pb-5 pt-6 sm:px-5 sm:pt-8">
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(125px,42vw)] items-center gap-3 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
-          <div>
+      <div className="relative mx-auto max-w-[1320px] px-4 pb-4 pt-5 sm:px-5 sm:pt-8">
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#20262b] px-4 py-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(260px,430px)] sm:items-center sm:gap-6 sm:rounded-3xl sm:px-6 lg:px-8">
+          <div className="relative z-10">
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Boxes</h1>
-            <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
-              Open premium mystery boxes and win <span className="text-[#7c5cff]">real items</span>.
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-lg">
+              Open premium mystery boxes and win <span className="text-slate-100">real items</span>.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+            <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
                 <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
                 Provably Fair
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
                 <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
                 Real Items
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
                 <Truck className="h-3.5 w-3.5 text-[#67a6ff]" />
                 Fast Shipping
               </span>
             </div>
           </div>
-          <div className="flex justify-end">
-            <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
+          <div className="mt-4 flex justify-center sm:mt-0 sm:justify-end">
+            <div className="relative w-full max-w-[280px] sm:max-w-[460px]">
+              <div className="pointer-events-none absolute inset-x-4 top-1/2 h-28 -translate-y-1/2 rounded-full bg-slate-500/15 blur-2xl sm:h-56" />
               {stripeSettings.boxCatalogHeroImageUrl ? (
                 <img
                   src={stripeSettings.boxCatalogHeroImageUrl}
                   alt="Box catalog hero"
-                  className="relative mx-auto h-32 w-full object-contain sm:h-56 lg:h-64"
+                  className="relative mx-auto h-28 w-full object-contain sm:h-56 lg:h-64"
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
@@ -509,7 +500,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="relative z-30 w-full bg-[#050a0f]">
+      <div className="relative z-30 w-full bg-[#1b2024]">
         <div className="mx-auto max-w-[1320px] px-4 py-3 sm:px-5">
           <div className="mb-3 flex w-full items-center gap-3 sm:mb-2 sm:max-w-[920px]">
               <div className="flex min-w-0 flex-1 items-center rounded-2xl border border-white/10 bg-[#151d26] px-3 py-3.5 shadow-inner shadow-black/20">
@@ -537,7 +528,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-[#121a22] p-2 sm:flex sm:items-center sm:gap-2">
+          <div className="rounded-2xl border border-white/10 bg-[#20262b] p-2 sm:flex sm:items-center sm:gap-2">
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide pb-2 sm:pb-0">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
@@ -549,8 +540,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   onClick={() => setActiveCategory(cat.id)}
                   className={`flex items-center justify-center whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-bold transition ${
                     isActive
-                      ? 'border-transparent bg-gradient-to-r from-[#1f6cff] to-[#5d39ff] text-white'
-                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
+                      ? 'border-slate-400/20 bg-slate-500/25 text-white'
+                      : 'border-white/10 bg-[#151b21] text-slate-300 hover:border-white/20 hover:text-white'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -570,7 +561,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             })}
             </div>
             <label className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200 sm:w-auto sm:justify-start">
-              <span className={`relative inline-flex h-6 w-10 items-center rounded-full border transition ${showAffordableOnly ? 'border-violet-400/60 bg-violet-500/40' : 'border-white/15 bg-white/10'}`}>
+              <span className={`relative inline-flex h-6 w-10 items-center rounded-full border transition ${showAffordableOnly ? 'border-slate-300/50 bg-slate-400/30' : 'border-white/15 bg-white/10'}`}>
                 <input
                   type="checkbox"
                   checked={showAffordableOnly}
