@@ -491,6 +491,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
+  const hasInlineSpinResult = Boolean(wonItem && hasSpinSettled && animationPhase === 'idle' && !isSpinning);
+  const showRealSpinActions = Boolean(hasInlineSpinResult && wonItem && !isDemoSpin);
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -1728,7 +1730,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
 
-    setShowWinModal(true);
+    setShowWinModal(false);
     if (!winSoundPlayedRef.current) {
       const rarity = String(item.rarity ?? 'common').toLowerCase();
       winSoundTimerRef.current = window.setTimeout(() => {
@@ -1774,6 +1776,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setShowWinModal(false);
     resetReelTrackPosition();
     setWonInventoryItem(null);
+    setWonItem(null);
 
     const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
     if (shouldRedirectToCatalog) {
@@ -2069,6 +2072,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isCenteredItem = idx === currentCenterIndex;
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
+                          const isInlineWinner = hasInlineSpinResult && idx === reelWinnerIndex;
                           const showItemGlow = true;
                           const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
@@ -2086,13 +2090,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   : 'none',
                                 opacity: 1,
                                 filter: 'none',
-                                zIndex: isFocusedItem ? 4 : 1
+                                zIndex: isFocusedItem ? 4 : 1,
+                                transform: isInlineWinner ? 'scale(1.06)' : 'scale(1)',
+                                transition: 'transform 260ms ease, box-shadow 260ms ease'
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
                             <div
-                              className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-60 blur-2xl sm:blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
+                              className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-4 top-3 bottom-8 rounded-[44%] ${showItemGlow ? (isInlineWinner ? 'opacity-90 blur-2xl sm:blur-3xl' : 'opacity-60 blur-2xl sm:blur-3xl') : 'opacity-0 blur-none'} ${rarityGlow}`}
+                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 ${isInlineWinner ? 34 : 20}px ${item.color}55` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
                               <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
@@ -2104,9 +2110,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                   showPlaceholder={false}
                                   staticRender={reduceMobileEffects || isSpinning}
                                   retryOnError={!(reduceMobileEffects || isSpinning)}
-                                  className={`h-full w-full object-contain ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
+                                  className={`h-full w-full object-contain transition-transform duration-300 ease-out ${isInlineWinner ? 'scale-110' : 'scale-100'} ${reduceMobileEffects || isSpinning ? '' : 'drop-shadow-[0_8px_18px_rgba(0,0,0,0.55)]'} ${item.id === 'golden-ticket' && animationPhase === 'idle' && !reduceMobileEffects ? 'animate-pulse' : ''}`}
                               />
                               </div>
+                              {isInlineWinner && (
+                                <p className="absolute bottom-2 left-1/2 w-[min(150px,88vw)] -translate-x-1/2 truncate px-2 text-center text-xs font-semibold leading-tight text-white sm:text-sm" aria-live="polite">
+                                  {item.name}
+                                </p>
+                              )}
                             </div>
                         </div>
                           );
@@ -2117,11 +2128,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
+            <div className="relative z-20 mt-4 flex flex-col items-stretch justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:flex-row sm:items-center sm:px-4">
                  <button
-                    onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
-                    disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    onClick={() => {
+                      if (showRealSpinActions) {
+                        handleKeep();
+                        return;
+                      }
+                      handleSpin({ isQuick: isQuickSpinEnabled });
+                    }}
+                    disabled={!showRealSpinActions && (isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading)}
+                    className={`w-full px-8 py-3 sm:min-w-[220px] sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2130,6 +2147,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
                       ) : isBalanceLoading ? (
                         'Loading balance...'
+                      ) : showRealSpinActions ? (
+                        <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4" />Add to Inventory</span>
                       ) : isRewardOpen ? (
                         'Open Reward Box'
                       ) : isFree ? (
@@ -2161,12 +2180,39 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       )}
                     </span>
                  </button>
-                {!isFree && !isRewardOpen && (
-                  <div className="flex items-center gap-2">
+                {showRealSpinActions ? (
+                  wonItem?.redeemable !== false && (
+                    <button
+                      onClick={handleSell}
+                      disabled={isSellingItem}
+                      className="inline-flex h-12 w-full items-center justify-center whitespace-nowrap rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[170px]"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2">
+                        <Wallet className="h-4 w-4 flex-none" />
+                        {isSellingItem ? (
+                          'Selling item...'
+                        ) : (
+                          <>
+                            <span>Quick Sell</span>
+                            {wonItem && (
+                              <CoinAmount
+                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                formatOptions={{ maximumFractionDigits: 0 }}
+                                className="text-emerald-50"
+                                iconClassName="h-4 w-4"
+                              />
+                            )}
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  )
+                ) : (!isFree && !isRewardOpen && (
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                     <button
                       onClick={handleTryFree}
                       disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                      className="inline-flex min-h-12 flex-1 items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none sm:px-4 sm:text-sm"
                     >
                       Demo Spin
                     </button>
@@ -2176,14 +2222,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         playSound('click');
                         setIsQuickSpinEnabled((prev) => !prev);
                       }}
-                      className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
+                      className={`inline-flex h-12 w-12 flex-none items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
                       aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
                       title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
                     >
                       <Zap className="h-4 w-4" />
                     </button>
                   </div>
-                )}
+                ))}
             </div>
             {spinFeedbackMessage && (
               <div className="px-2 pb-4">
