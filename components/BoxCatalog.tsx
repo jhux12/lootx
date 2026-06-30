@@ -26,6 +26,9 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
   { id: 'price-desc', label: 'Price: High to Low' }
 ];
 
+const DEFAULT_BOX_CATALOG_HERO_IMAGE =
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
+
 const TAG_STYLES: Record<string, string> = {
   top: 'bg-violet-600/90 text-white',
   new: 'bg-sky-500/90 text-white',
@@ -464,47 +467,53 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
-          <div className="order-2 lg:order-1">
-            <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
-            <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
-              Open premium mystery boxes and win <span className="text-[#5da0ff]">real items</span>.
+      <section className="relative mx-auto max-w-[1320px] overflow-hidden px-3 pb-7 pt-4 sm:px-5 sm:pb-8 sm:pt-7" aria-labelledby="boxes-catalog-heading">
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 top-3 rounded-[2rem] bg-[#171c23]/65 [background-image:radial-gradient(circle_at_22%_44%,rgba(136,58,255,0.18),transparent_34%),radial-gradient(circle_at_78%_42%,rgba(45,135,255,0.18),transparent_32%),linear-gradient(rgba(125,155,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(125,155,255,0.04)_1px,transparent_1px)] [background-size:auto,auto,44px_44px,44px_44px]" aria-hidden="true" />
+        <div className="pointer-events-none absolute left-[8%] top-12 h-40 w-40 rounded-full border border-violet-300/10 sm:h-56 sm:w-56" aria-hidden="true" />
+        <div className="pointer-events-none absolute right-[10%] top-9 h-28 w-28 rounded-full border border-sky-300/10 sm:h-44 sm:w-44" aria-hidden="true" />
+        <div className="relative grid items-center gap-3 rounded-[2rem] px-2 py-3 sm:gap-5 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,430px)] lg:py-6">
+          <div className="order-2 text-center lg:order-1 lg:text-left">
+            <h1 id="boxes-catalog-heading" className="bg-gradient-to-b from-white via-sky-100 to-[#8dbbff] bg-clip-text text-5xl font-black uppercase leading-none tracking-[-0.04em] text-transparent drop-shadow-[0_0_20px_rgba(80,145,255,0.28)] sm:text-6xl lg:text-7xl">
+              BOXES
+            </h1>
+            <p className="mx-auto mt-3 max-w-xl text-base font-medium leading-7 text-slate-300 sm:text-lg lg:mx-0">
+              Open premium mystery boxes and win<span className="text-[#32a8ff]"> real items.</span>
             </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 lg:justify-start">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/25 bg-[#111827]/70 px-3 py-1.5 text-xs font-bold text-white shadow-[0_0_24px_rgba(56,119,255,0.12)] backdrop-blur sm:px-4 sm:py-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" aria-hidden="true" />
                 Provably Fair
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-400/25 bg-[#111827]/70 px-3 py-1.5 text-xs font-bold text-white shadow-[0_0_24px_rgba(129,83,255,0.12)] backdrop-blur sm:px-4 sm:py-2">
+                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" aria-hidden="true" />
                 Real Items
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Tag className="h-3.5 w-3.5 text-[#67a6ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-400/25 bg-[#111827]/70 px-3 py-1.5 text-xs font-bold text-white shadow-[0_0_24px_rgba(56,119,255,0.12)] backdrop-blur sm:px-4 sm:py-2">
+                <Tag className="h-3.5 w-3.5 text-[#67a6ff]" aria-hidden="true" />
                 Sell Back
               </span>
             </div>
           </div>
-          <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
-              {stripeSettings.boxCatalogHeroImageUrl ? (
-                <img
-                  src={stripeSettings.boxCatalogHeroImageUrl}
-                  alt="Box catalog hero"
-                  className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                  width={460}
-                  height={256}
-                />
-              ) : null}
+          <div className="order-1 flex min-w-0 justify-center lg:order-2 lg:justify-end">
+            <div className="relative flex h-[250px] w-full max-w-[430px] items-center justify-center sm:h-[285px] lg:h-[300px]">
+              <div className="pointer-events-none absolute inset-x-6 top-1/2 h-44 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_50%,rgba(142,54,255,0.54),transparent_45%),radial-gradient(circle_at_66%_50%,rgba(34,132,255,0.5),transparent_48%)] blur-3xl sm:h-56" aria-hidden="true" />
+              <div className="pointer-events-none absolute left-10 top-10 h-36 w-36 rounded-full bg-violet-500/20 blur-2xl sm:left-8 sm:h-48 sm:w-48" aria-hidden="true" />
+              <div className="pointer-events-none absolute right-9 top-12 h-36 w-36 rounded-full bg-sky-400/20 blur-2xl sm:right-4 sm:h-48 sm:w-48" aria-hidden="true" />
+              <div className="pointer-events-none absolute inset-x-10 bottom-9 h-20 rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(165,78,255,0.22),transparent_68%)] blur-xl" aria-hidden="true" />
+              <img
+                src={stripeSettings.boxCatalogHeroImageUrl || DEFAULT_BOX_CATALOG_HERO_IMAGE}
+                alt="Transparent purple and blue Pullz.gg mystery box"
+                className="relative z-10 h-auto w-[250px] max-w-[86vw] object-contain drop-shadow-[0_22px_45px_rgba(0,0,0,0.5)] sm:w-[310px] lg:w-[360px]"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                width={460}
+                height={256}
+              />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#1b2024]/95 backdrop-blur">
         <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
