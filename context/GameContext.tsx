@@ -3,6 +3,7 @@ import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, Vi
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
+import { SHIPPING_PROTECTION_TIERS, SHIPPING_RATE_TIERS, SIGNATURE_REQUIRED_CENTS } from '../utils/shippingRates';
 import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
@@ -264,11 +265,37 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   shippingFlatRateCents: 0,
   shippingCoinEnabled: false,
   shippingCoinCostCoins: 0,
+  shippingRateTiers: SHIPPING_RATE_TIERS.map((tier) => ({ maxValueCoinsExclusive: Number.isFinite(tier.maxValueCoinsExclusive) ? tier.maxValueCoinsExclusive : null, cashCents: tier.cashCents, label: tier.label })),
+  shippingProtectionTiers: SHIPPING_PROTECTION_TIERS.map((tier) => ({ maxValueCoinsExclusive: Number.isFinite(tier.maxValueCoinsExclusive) ? tier.maxValueCoinsExclusive : null, cashCents: tier.cashCents, label: tier.label })),
+  signatureRequiredCents: SIGNATURE_REQUIRED_CENTS,
   stripeShippingProductId: '',
   caseLabPublishFeeCoins: 0,
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
   boxTagIcons: {}
+};
+
+
+const normalizeEditableShippingTiers = (tiers: unknown, fallback: StripeSettings['shippingRateTiers']): StripeSettings['shippingRateTiers'] => {
+  if (!Array.isArray(tiers)) return fallback;
+
+  const normalized = tiers
+    .map((tier) => {
+      if (!tier || typeof tier !== 'object') return null;
+      const source = tier as { maxValueCoinsExclusive?: unknown; cashCents?: unknown; label?: unknown };
+      const maxValue = source.maxValueCoinsExclusive === null
+        ? null
+        : Math.max(0, Math.round(Number(source.maxValueCoinsExclusive) || 0));
+      return {
+        maxValueCoinsExclusive: maxValue,
+        cashCents: Math.max(0, Math.round(Number(source.cashCents) || 0)),
+        label: typeof source.label === 'string' && source.label.trim() ? source.label.trim() : 'Custom tier'
+      };
+    })
+    .filter((tier): tier is StripeSettings['shippingRateTiers'][number] => Boolean(tier) && (tier.maxValueCoinsExclusive === null || tier.maxValueCoinsExclusive > 0))
+    .sort((a, b) => (a.maxValueCoinsExclusive ?? Number.POSITIVE_INFINITY) - (b.maxValueCoinsExclusive ?? Number.POSITIVE_INFINITY));
+
+  return normalized.length > 0 ? normalized : fallback;
 };
 
 const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSettings => {
@@ -314,6 +341,9 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
     shippingFlatRateCents: Math.max(0, Math.round(Number(settings.shippingFlatRateCents) || 0)),
     shippingCoinEnabled: settings.shippingCoinEnabled === true,
     shippingCoinCostCoins: Math.max(0, Math.round(Number(settings.shippingCoinCostCoins) || 0)),
+    shippingRateTiers: normalizeEditableShippingTiers(settings.shippingRateTiers, DEFAULT_STRIPE_SETTINGS.shippingRateTiers),
+    shippingProtectionTiers: normalizeEditableShippingTiers(settings.shippingProtectionTiers, DEFAULT_STRIPE_SETTINGS.shippingProtectionTiers),
+    signatureRequiredCents: Math.max(0, Math.round(Number(settings.signatureRequiredCents ?? SIGNATURE_REQUIRED_CENTS) || 0)),
     stripeShippingProductId:
       typeof settings.stripeShippingProductId === 'string' ? settings.stripeShippingProductId : legacyProductId,
     caseLabPublishFeeCoins: Math.max(0, Math.round(Number(settings.caseLabPublishFeeCoins) || 0)),

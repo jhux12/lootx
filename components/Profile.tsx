@@ -7,7 +7,7 @@ import { EmailAuthProvider, reauthenticateWithCredential, updateEmail as updateF
 import { toast } from '../src/ui/toast/toast';
 import { getSellBackValue } from '../utils/sellBack';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
-import { SIGNATURE_REQUIRED_CENTS, formatShippingAddOnPrice, formatShippingTierSummary, getShipmentShippingRate, getShippingProtectionRate } from '../utils/shippingRates';
+import { formatShippingAddOnPrice, formatShippingTierSummary, getShipmentShippingRate, getShippingProtectionRate } from '../utils/shippingRates';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { InventoryItem, Shipment, ShippingAddress } from '../types';
@@ -540,9 +540,10 @@ export const Profile: React.FC = () => {
   const hiddenShipmentItemCount = Math.max(0, selectedShipmentItems.length - shipmentPreviewItems.length);
   const selectedShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const paidShipmentValue = selectedShipmentItems.reduce((sum, item) => sum + (isFreeShippingItem(item) ? 0 : toCoins(item.price, PRICE_UNIT_MODE)), 0);
-  const shipmentRate = getShipmentShippingRate(paidShipmentValue);
-  const protectionRate = getShippingProtectionRate(paidShipmentValue);
-  const addOnCashTotalCents = (shippingProtectionSelected ? protectionRate.cashCents : 0) + (signatureRequiredSelected ? SIGNATURE_REQUIRED_CENTS : 0);
+  const shippingRateDisplayTiers = stripeSettings.shippingRateTiers.length > 0 ? stripeSettings.shippingRateTiers : [];
+  const shipmentRate = getShipmentShippingRate(paidShipmentValue, stripeSettings.shippingRateTiers);
+  const protectionRate = getShippingProtectionRate(paidShipmentValue, stripeSettings.shippingProtectionTiers);
+  const addOnCashTotalCents = (shippingProtectionSelected ? protectionRate.cashCents : 0) + (signatureRequiredSelected ? stripeSettings.signatureRequiredCents : 0);
   const shippingCoinTotal = shipmentRate.coinCost + addOnCashTotalCents;
   const shippingCashTotalCents = shipmentRate.cashCents + addOnCashTotalCents;
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
@@ -1079,7 +1080,7 @@ export const Profile: React.FC = () => {
                   {!isFreeOnlySelection && (
                     <button
                       type="button"
-                      aria-label={`Shipment cost details. ${formatShippingTierSummary()}`}
+                      aria-label={`Shipment cost details. ${formatShippingTierSummary(stripeSettings.shippingRateTiers)}`}
                       aria-expanded={showShippingRateTooltip}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-300/20 bg-blue-400/10 text-blue-100 transition hover:bg-blue-400/20 focus:outline-none focus:ring-2 focus:ring-blue-300/60"
                       onClick={() => setShowShippingRateTooltip((open) => !open)}
@@ -1097,9 +1098,15 @@ export const Profile: React.FC = () => {
                 <div className="relative space-y-2">
                   <div className="font-black text-blue-100">Shipment rate for {shipmentRate.tierLabel}</div>
                   <div className="grid grid-cols-1 gap-1.5 text-slate-300 sm:grid-cols-3">
-                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">&lt;$20</span><span className="float-right font-black text-blue-300">$3.99</span></div>
-                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">$20–$75</span><span className="float-right font-black text-blue-300">$6.99</span></div>
-                    <div className="rounded-lg bg-white/5 px-2.5 py-2"><span className="font-bold text-white">$75+</span><span className="float-right font-black text-blue-300">$12.99</span></div>
+                    {shippingRateDisplayTiers.map((tier) => {
+                      const isActiveTier = tier.label === shipmentRate.tierLabel;
+                      return (
+                        <div key={`${tier.label}-${tier.cashCents}-${tier.maxValueCoinsExclusive ?? 'open'}`} className={`rounded-lg px-2.5 py-2 ${isActiveTier ? 'bg-blue-400/15 ring-1 ring-blue-300/30' : 'bg-white/5'}`}>
+                          <span className="font-bold text-white">{tier.label}</span>
+                          <span className="float-right font-black text-blue-300">{formatShippingAddOnPrice(tier.cashCents, activeShippingMethod)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -1176,7 +1183,7 @@ export const Profile: React.FC = () => {
                       <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${signatureRequiredSelected ? 'left-6' : 'left-1'}`} />
                     </button>
                     <label className="min-w-0 flex-1 cursor-pointer text-xs font-black text-white sm:text-sm" onClick={() => setSignatureRequiredSelected((selected) => !selected)}>Signature required</label>
-                    <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(SIGNATURE_REQUIRED_CENTS, activeShippingMethod)}</span>
+                    <span className="shrink-0 rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-black text-blue-200">{formatShippingAddOnPrice(stripeSettings.signatureRequiredCents, activeShippingMethod)}</span>
                     <button type="button" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white" aria-label="Toggle signature required details" aria-expanded={showSignatureRequiredInfo} onClick={() => setShowSignatureRequiredInfo((open) => !open)}>
                       <ChevronDown className={`h-4 w-4 transition-transform ${showSignatureRequiredInfo ? 'rotate-180' : ''}`} />
                     </button>

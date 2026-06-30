@@ -637,6 +637,9 @@ export const AdminPanel: React.FC = () => {
       stripeShippingProductId: stripeSettings.stripeShippingProductId,
       shippingCoinEnabled: stripeSettings.shippingCoinEnabled,
       shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
+      shippingRateTiers: stripeSettings.shippingRateTiers.map((tier) => ({ ...tier })),
+      shippingProtectionTiers: stripeSettings.shippingProtectionTiers.map((tier) => ({ ...tier })),
+      signatureRequiredInput: (stripeSettings.signatureRequiredCents / 100).toFixed(2),
       caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
       caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
       caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
@@ -1563,6 +1566,9 @@ export const AdminPanel: React.FC = () => {
           stripeShippingProductId: stripeSettings.stripeShippingProductId,
           shippingCoinEnabled: stripeSettings.shippingCoinEnabled,
           shippingCoinCostCoins: stripeSettings.shippingCoinCostCoins,
+      shippingRateTiers: stripeSettings.shippingRateTiers.map((tier) => ({ ...tier })),
+      shippingProtectionTiers: stripeSettings.shippingProtectionTiers.map((tier) => ({ ...tier })),
+      signatureRequiredInput: (stripeSettings.signatureRequiredCents / 100).toFixed(2),
           caseLabPublishFeeCoins: stripeSettings.caseLabPublishFeeCoins,
           caseLabSellBackPercent: stripeSettings.caseLabSellBackPercent,
           caseLabVisibleBoxIds: stripeSettings.caseLabVisibleBoxIds
@@ -3502,6 +3508,24 @@ export const AdminPanel: React.FC = () => {
       }
   };
 
+
+  const updateShippingRateTierDraft = (
+      group: 'shippingRateTiers' | 'shippingProtectionTiers',
+      index: number,
+      field: 'label' | 'cashCents' | 'maxValueCoinsExclusive',
+      value: string
+  ) => {
+      setStripeSettingsDraft((prev) => ({
+          ...prev,
+          [group]: prev[group].map((tier, tierIndex) => {
+              if (tierIndex !== index) return tier;
+              if (field === 'label') return { ...tier, label: value };
+              if (field === 'cashCents') return { ...tier, cashCents: Math.max(0, Math.round((Number(value) || 0) * 100)) };
+              return { ...tier, maxValueCoinsExclusive: value.trim() === '' ? null : Math.max(0, Math.round(Number(value) || 0)) };
+          })
+      }));
+  };
+
   const handleSaveStripeSettings = () => {
       const rawRate = Number(stripeSettingsDraft.shippingFlatRateInput);
       const shippingFlatRateCents = Number.isFinite(rawRate) ? Math.max(0, Math.round(rawRate * 100)) : 0;
@@ -3517,6 +3541,17 @@ export const AdminPanel: React.FC = () => {
           stripeShippingProductId: stripeSettingsDraft.stripeShippingProductId,
           shippingCoinEnabled: stripeSettingsDraft.shippingCoinEnabled,
           shippingCoinCostCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.shippingCoinCostCoins) || 0)),
+          shippingRateTiers: stripeSettingsDraft.shippingRateTiers.map((tier) => ({
+              maxValueCoinsExclusive: tier.maxValueCoinsExclusive === null ? null : Math.max(0, Math.round(Number(tier.maxValueCoinsExclusive) || 0)),
+              cashCents: Math.max(0, Math.round(Number(tier.cashCents) || 0)),
+              label: tier.label.trim() || 'Custom tier'
+          })),
+          shippingProtectionTiers: stripeSettingsDraft.shippingProtectionTiers.map((tier) => ({
+              maxValueCoinsExclusive: tier.maxValueCoinsExclusive === null ? null : Math.max(0, Math.round(Number(tier.maxValueCoinsExclusive) || 0)),
+              cashCents: Math.max(0, Math.round(Number(tier.cashCents) || 0)),
+              label: tier.label.trim() || 'Custom tier'
+          })),
+          signatureRequiredCents: Math.max(0, Math.round((Number(stripeSettingsDraft.signatureRequiredInput) || 0) * 100)),
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
           caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
           caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds)),
@@ -6500,7 +6535,7 @@ export const AdminPanel: React.FC = () => {
                                     <div>
                                         <h4 className="text-sm font-bold text-white">Cash Shipping</h4>
                                         <p className="text-xs text-gray-400">
-                                            Enable Stripe Checkout and set the flat rate per shipment.
+                                            Enable Stripe Checkout and edit the tiered shipping rates customers see.
                                         </p>
                                     </div>
                                     <div className={`text-xs font-semibold px-3 py-1 rounded-full ${stripeSettingsDraft.shippingCashEnabled ? 'bg-emerald-500/10 text-emerald-300' : 'bg-gray-800 text-gray-400'}`}>
@@ -6541,6 +6576,53 @@ export const AdminPanel: React.FC = () => {
                                             className="w-full bg-[#131720] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                             placeholder="6.99"
                                         />
+                                    </div>
+
+                                    <div className="lg:col-span-3 rounded-lg border border-emerald-500/10 bg-emerald-500/[0.03] p-4">
+                                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <h5 className="text-sm font-bold text-white">Base shipping tiers</h5>
+                                                <p className="text-xs text-gray-400">Leave the final max value blank for the open-ended tier.</p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 grid grid-cols-1 gap-3">
+                                            {stripeSettingsDraft.shippingRateTiers.map((tier, index) => (
+                                                <div key={`shipping-rate-${index}`} className="grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-[#131720] p-3 sm:grid-cols-3">
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold uppercase text-gray-500">Label</label>
+                                                        <Input value={tier.label} onChange={(event) => updateShippingRateTierDraft('shippingRateTiers', index, 'label', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold uppercase text-gray-500">Max value (coins)</label>
+                                                        <Input type="number" min={0} step={1} value={tier.maxValueCoinsExclusive ?? ''} onChange={(event) => updateShippingRateTierDraft('shippingRateTiers', index, 'maxValueCoinsExclusive', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="No limit" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold uppercase text-gray-500">Price (USD)</label>
+                                                        <Input type="number" min={0} step={0.01} value={(tier.cashCents / 100).toFixed(2)} onChange={(event) => updateShippingRateTierDraft('shippingRateTiers', index, 'cashCents', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="lg:col-span-3 rounded-lg border border-blue-500/10 bg-blue-500/[0.03] p-4">
+                                        <h5 className="text-sm font-bold text-white">Shipping add-ons</h5>
+                                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                            {stripeSettingsDraft.shippingProtectionTiers.map((tier, index) => (
+                                                <div key={`protection-rate-${index}`} className="rounded-lg border border-gray-800 bg-[#131720] p-3">
+                                                    <label className="block text-[11px] font-bold uppercase text-gray-500">Protection label</label>
+                                                    <Input value={tier.label} onChange={(event) => updateShippingRateTierDraft('shippingProtectionTiers', index, 'label', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                                                    <label className="mt-3 block text-[11px] font-bold uppercase text-gray-500">Max value (coins)</label>
+                                                    <Input type="number" min={0} step={1} value={tier.maxValueCoinsExclusive ?? ''} onChange={(event) => updateShippingRateTierDraft('shippingProtectionTiers', index, 'maxValueCoinsExclusive', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="No limit" />
+                                                    <label className="mt-3 block text-[11px] font-bold uppercase text-gray-500">Protection price (USD)</label>
+                                                    <Input type="number" min={0} step={0.01} value={(tier.cashCents / 100).toFixed(2)} onChange={(event) => updateShippingRateTierDraft('shippingProtectionTiers', index, 'cashCents', event.target.value)} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                                                </div>
+                                            ))}
+                                            <div className="rounded-lg border border-gray-800 bg-[#131720] p-3">
+                                                <label className="block text-[11px] font-bold uppercase text-gray-500">Signature required (USD)</label>
+                                                <Input type="number" min={0} step={0.01} value={stripeSettingsDraft.signatureRequiredInput} onChange={(event) => setStripeSettingsDraft((prev) => ({ ...prev, signatureRequiredInput: event.target.value }))} className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                                                <p className="mt-2 text-xs text-gray-500">Applied when customers select signature confirmation.</p>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="lg:col-span-3">
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Stripe Shipping Product ID</label>

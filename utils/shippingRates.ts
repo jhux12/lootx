@@ -14,9 +14,31 @@ export const SHIPPING_PROTECTION_TIERS = [
 
 export const SIGNATURE_REQUIRED_CENTS = 399;
 
-export const getShipmentShippingRate = (shipmentValueCoins: number) => {
+export type EditableShippingRateTier = {
+  maxValueCoinsExclusive: number | null;
+  cashCents: number;
+  label: string;
+};
+
+const normalizeRateTiers = (tiers: readonly EditableShippingRateTier[] | undefined, fallback: readonly EditableShippingRateTier[]) => {
+  if (!Array.isArray(tiers) || tiers.length === 0) return fallback;
+
+  const normalized = tiers
+    .map((tier) => ({
+      maxValueCoinsExclusive: tier.maxValueCoinsExclusive === null ? Infinity : Math.max(0, Math.round(Number(tier.maxValueCoinsExclusive) || 0)),
+      cashCents: Math.max(0, Math.round(Number(tier.cashCents) || 0)),
+      label: typeof tier.label === 'string' && tier.label.trim() ? tier.label.trim() : 'Custom tier'
+    }))
+    .filter((tier) => tier.maxValueCoinsExclusive === Infinity || tier.maxValueCoinsExclusive > 0)
+    .sort((a, b) => a.maxValueCoinsExclusive - b.maxValueCoinsExclusive);
+
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+export const getShipmentShippingRate = (shipmentValueCoins: number, tiers?: readonly EditableShippingRateTier[]) => {
   const safeValueCoins = Math.max(0, Math.round(Number(shipmentValueCoins) || 0));
-  const tier = SHIPPING_RATE_TIERS.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? SHIPPING_RATE_TIERS[SHIPPING_RATE_TIERS.length - 1];
+  const rateTiers = normalizeRateTiers(tiers, SHIPPING_RATE_TIERS);
+  const tier = rateTiers.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? rateTiers[rateTiers.length - 1];
   return {
     cashCents: tier.cashCents,
     coinCost: tier.cashCents,
@@ -24,11 +46,14 @@ export const getShipmentShippingRate = (shipmentValueCoins: number) => {
   };
 };
 
-export const formatShippingTierSummary = () => '<$20: $3.99 • $20–$75: $6.99 • $75+: $12.99';
+export const formatShippingTierSummary = (tiers?: readonly EditableShippingRateTier[]) => normalizeRateTiers(tiers, SHIPPING_RATE_TIERS)
+  .map((tier) => `${tier.label}: $${(tier.cashCents / 100).toFixed(2)}`)
+  .join(' • ');
 
-export const getShippingProtectionRate = (shipmentValueCoins: number) => {
+export const getShippingProtectionRate = (shipmentValueCoins: number, tiers?: readonly EditableShippingRateTier[]) => {
   const safeValueCoins = Math.max(0, Math.round(Number(shipmentValueCoins) || 0));
-  const tier = SHIPPING_PROTECTION_TIERS.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? SHIPPING_PROTECTION_TIERS[SHIPPING_PROTECTION_TIERS.length - 1];
+  const rateTiers = normalizeRateTiers(tiers, SHIPPING_PROTECTION_TIERS);
+  const tier = rateTiers.find((entry) => safeValueCoins < entry.maxValueCoinsExclusive) ?? rateTiers[rateTiers.length - 1];
   return {
     cashCents: tier.cashCents,
     coinCost: tier.cashCents,

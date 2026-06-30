@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { SIGNATURE_REQUIRED_CENTS, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
+import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -126,10 +126,10 @@ export default async function handler(req, res) {
 
       const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
       paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
-      const rate = getShipmentShippingRate(paidShipmentValueCoins);
-      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins);
+      const rate = getShipmentShippingRate(paidShipmentValueCoins, settings.shippingRateTiers);
+      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins, settings.shippingProtectionTiers);
       const shippingProtectionCostCents = paidShipmentItems.length > 0 && wantsShippingProtection ? protectionRate.cashCents : 0;
-      const signatureRequiredCostCents = paidShipmentItems.length > 0 && wantsSignatureRequired ? SIGNATURE_REQUIRED_CENTS : 0;
+      const signatureRequiredCostCents = paidShipmentItems.length > 0 && wantsSignatureRequired ? getSignatureRequiredCents(settings) : 0;
       shippingTotalCents = paidShipmentItems.length > 0 ? rate.cashCents + shippingProtectionCostCents + signatureRequiredCostCents : 0;
       shippingRateTier = paidShipmentItems.length > 0 ? rate.tierLabel : 'Free';
       const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? shipmentRefs[0]?.id;

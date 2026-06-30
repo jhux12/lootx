@@ -1,7 +1,7 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
-import { SIGNATURE_REQUIRED_CENTS, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
+import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
@@ -109,10 +109,10 @@ export default async function handler(req, res) {
 
       const paidShipmentItems = shipmentItems.filter((item) => !item.freeShipping);
       const paidShipmentValueCoins = paidShipmentItems.reduce((sum, item) => sum + getInventoryValueCoins(item.inventoryItem), 0);
-      const rate = getShipmentShippingRate(paidShipmentValueCoins);
-      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins);
+      const rate = getShipmentShippingRate(paidShipmentValueCoins, settings.shippingRateTiers);
+      const protectionRate = getShippingProtectionRate(paidShipmentValueCoins, settings.shippingProtectionTiers);
       const shippingProtectionCost = paidShipmentItems.length > 0 && wantsShippingProtection ? protectionRate.coinCost : 0;
-      const signatureRequiredCost = paidShipmentItems.length > 0 && wantsSignatureRequired ? SIGNATURE_REQUIRED_CENTS : 0;
+      const signatureRequiredCost = paidShipmentItems.length > 0 && wantsSignatureRequired ? getSignatureRequiredCents(settings) : 0;
       const effectiveShippingCost = paidShipmentItems.length > 0 ? rate.coinCost + shippingProtectionCost + signatureRequiredCost : 0;
       const shippingPaymentMethod = effectiveShippingCost > 0 ? 'coins' : 'FREE_XP';
       const firstPaidShipmentId = paidShipmentItems[0]?.shipmentRef.id ?? primaryShipmentId;
