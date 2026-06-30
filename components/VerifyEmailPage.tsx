@@ -60,7 +60,7 @@ export const VerifyEmailPage: React.FC = () => {
         if (!isMounted) return;
         setStatus('success');
         setMessage(auth.currentUser
-          ? 'Your email is verified. Redirecting you to your profile...'
+          ? 'Your email is verified. You can now request shipment. Redirecting you to your profile...'
           : 'Your email is verified. You can sign in now. Redirecting you home...');
 
         redirectTimer = window.setTimeout(() => {

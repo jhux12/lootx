@@ -35,6 +35,16 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    const authUser = await adminAuth.getUser(decoded.uid);
+    if (!authUser.email || authUser.emailVerified !== true) {
+      return sendJson(res, 403, {
+        error: 'EMAIL_VERIFICATION_REQUIRED',
+        message: authUser.email
+          ? 'Verify your email before requesting shipment.'
+          : 'Add and verify an email address before requesting shipment.'
+      });
+    }
+
     const body = await readJsonBody(req);
     const inventoryIds = Array.isArray(body?.inventoryIds)
       ? Array.from(new Set(body.inventoryIds.filter((id) => typeof id === 'string' && id.trim()).map((id) => id.trim())))

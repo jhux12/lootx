@@ -714,7 +714,7 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
-  shipItem: (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => Promise<{ shipmentId?: string; shipmentBatchId?: string } | void>;
+  shipItem: (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => Promise<{ shipmentId?: string; shipmentBatchId?: string; requiresEmailVerification?: boolean } | void>;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
@@ -1834,16 +1834,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      if (requiresVerification) {
-        if (activeUserIdRef.current !== firebaseUser.uid) {
-          clearUserSubscriptions();
-          activeUserIdRef.current = null;
-        }
-        resetAuthenticatedState();
-        if (isCurrentAuthEvent()) setAuthInitialized(true);
-        return;
-      }
-
       try {
         await firebaseUser.getIdToken();
         if (!isCurrentAuthEvent() || auth.currentUser?.uid !== firebaseUser.uid) return;
@@ -2459,23 +2449,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const dismissEmailVerificationModal = async () => {
     emailVerificationDismissedRef.current = true;
     setShowEmailVerificationModal(false);
-
-    const firebaseUser = auth.currentUser;
-    const isPendingPasswordVerification = Boolean(
-      firebaseUser &&
-      !firebaseUser.emailVerified &&
-      firebaseUser.providerData.some((provider) => provider.providerId === 'password')
-    );
-
-    if (!isPendingPasswordVerification) {
-      return;
-    }
-
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Failed to sign out pending email verification user', error);
-    }
   };
 
   const login = async (email: string, pass: string, remember: boolean = true) => {
@@ -2487,16 +2460,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
         setPendingEmailVerification(redirectPath);
-        try {
-          await sendCustomVerificationEmail(credential.user);
-        } catch (error) {
-          console.error('Verification email resend failed during login', error);
-        }
         setEmailVerificationStatus('pending');
-        emailVerificationDismissedRef.current = false;
-        setShowEmailVerificationModal(false);
-        setShowLoginModal(true);
-        return { requiresEmailVerification: true };
       }
       setShowLoginModal(false);
   };
@@ -2628,7 +2592,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       await tryApplyPendingReferralAttribution();
 
-      setShowLoginModal(true);
+      setShowLoginModal(false);
       setEmailVerificationStatus('pending');
       emailVerificationDismissedRef.current = false;
       setShowEmailVerificationModal(false);
@@ -2636,17 +2600,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
         try {
-          const signInCredential = await signInWithEmailAndPassword(auth, email, pass);
-          if (!signInCredential.user.emailVerified) {
-            const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
-            setPendingEmailVerification(redirectPath);
-            await sendCustomVerificationEmail(signInCredential.user);
-            setEmailVerificationStatus('pending');
-            emailVerificationDismissedRef.current = false;
-            setShowEmailVerificationModal(false);
-            setShowLoginModal(true);
-            return { requiresEmailVerification: true };
-          }
+          await signInWithEmailAndPassword(auth, email, pass);
           throw new Error('That email is already registered. Please sign in.');
         } catch (signInError: any) {
           const signInCode = signInError?.code;
@@ -3028,6 +2982,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
+      await auth.currentUser.reload();
+      if (!auth.currentUser.emailVerified) {
+        setPendingEmailVerification(getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
+        setEmailVerificationStatus('pending');
+        emailVerificationDismissedRef.current = false;
+        return { requiresEmailVerification: true };
+      }
+
       const data = await authedFetch<{ newCoins?: number; shipmentId?: string; shipmentBatchId?: string }>('/api/request-shipment', {
         method: 'POST',
         body: JSON.stringify({
@@ -3069,8 +3031,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Failed to refresh inventory after shipment request', refreshError);
       });
       return { shipmentId: data.shipmentId, shipmentBatchId: data.shipmentBatchId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to request shipment', error);
+      if (error?.code === 'EMAIL_VERIFICATION_REQUIRED') {
+        setPendingEmailVerification(getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
+        setEmailVerificationStatus('pending');
+        emailVerificationDismissedRef.current = false;
+        return { requiresEmailVerification: true };
+      }
       alert('Unable to request shipment right now. Please try again.');
     }
   };

@@ -11,7 +11,6 @@ import { SIGNATURE_REQUIRED_CENTS, formatShippingAddOnPrice, formatShippingTierS
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { InventoryItem, Shipment, ShippingAddress } from '../types';
-import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
@@ -307,7 +306,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
+  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo, resendEmailVerification } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -322,12 +321,16 @@ export const Profile: React.FC = () => {
   const [signatureRequiredSelected, setSignatureRequiredSelected] = useState(false);
   const [showShippingProtectionInfo, setShowShippingProtectionInfo] = useState(false);
   const [showSignatureRequiredInfo, setShowSignatureRequiredInfo] = useState(false);
-  const [withdrawLockedModalOpen, setWithdrawLockedModalOpen] = useState(false);
   const [tradeInModalItemId, setTradeInModalItemId] = useState<string | null>(null);
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
+  const [shippingVerificationNotice, setShippingVerificationNotice] = useState<string | null>(null);
+  const [shippingVerificationMessage, setShippingVerificationMessage] = useState<string | null>(null);
+  const [isSendingShippingVerification, setIsSendingShippingVerification] = useState(false);
+  const [shippingVerificationResendAt, setShippingVerificationResendAt] = useState(0);
+  const [shippingVerificationNow, setShippingVerificationNow] = useState(() => Date.now());
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
@@ -550,7 +553,6 @@ export const Profile: React.FC = () => {
   const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
   const hasShippingMethodToggle = canUseCoinShipping && canUseCashShipping;
   const activeShippingMethod = hasShippingMethodToggle ? shippingPaymentMethod : canUseCashShipping ? 'cash' : 'coins';
-  const hasMadeDeposit = hasUserMadeDeposit(user);
   const selectedShippingCostLabel = activeShippingMethod === 'cash'
     ? `$${(shippingCashTotalCents / 100).toFixed(2)}`
     : shippingCoinTotal.toLocaleString();
@@ -570,6 +572,38 @@ export const Profile: React.FC = () => {
     && savedShippingAddress?.zipCode
     && savedShippingAddress?.country
   );
+  const shippingVerificationEmail = auth.currentUser?.email ?? user.email ?? '';
+  const shippingVerificationCooldownSeconds = Math.max(0, Math.ceil((shippingVerificationResendAt - shippingVerificationNow) / 1000));
+  const isShippingVerificationCoolingDown = shippingVerificationCooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!isShippingVerificationCoolingDown) return;
+    const interval = window.setInterval(() => setShippingVerificationNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [isShippingVerificationCoolingDown]);
+
+  const showShippingVerificationText = (message = 'Verify your email before requesting shipment.') => {
+    setShippingVerificationNotice(message);
+    setShippingVerificationMessage(null);
+  };
+
+  const handleResendShippingVerification = async () => {
+    if (isShippingVerificationCoolingDown || isSendingShippingVerification) return;
+    setIsSendingShippingVerification(true);
+    setShippingVerificationMessage(null);
+    try {
+      await resendEmailVerification();
+      setShippingVerificationResendAt(Date.now() + 60000);
+      setShippingVerificationNow(Date.now());
+      setShippingVerificationMessage(`Verification email sent${shippingVerificationEmail ? ` to ${shippingVerificationEmail}` : ''}.`);
+    } catch (error: any) {
+      console.error('Failed to send shipment verification email', error);
+      setShippingVerificationMessage(error?.message || 'Unable to send verification email right now.');
+    } finally {
+      setIsSendingShippingVerification(false);
+    }
+  };
+
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -607,12 +641,16 @@ export const Profile: React.FC = () => {
     setSignatureRequiredSelected(false);
     setShowShippingProtectionInfo(false);
     setShowSignatureRequiredInfo(false);
+    setShippingVerificationNotice(null);
+    setShippingVerificationMessage(null);
     setShowShippingReview(true);
   };
 
   const handleAddMoreShipmentItems = () => {
     setShowShippingRateTooltip(false);
     setShippingRequestConfirmed(false);
+    setShippingVerificationNotice(null);
+    setShippingVerificationMessage(null);
     setShowShippingReview(false);
     setActiveTab('inventory');
   };
@@ -724,10 +762,6 @@ export const Profile: React.FC = () => {
   };
 
   const handleConfirmShipping = async () => {
-    if (!hasMadeDeposit) {
-      toast.info('Make your first deposit to unlock shipping.');
-      return;
-    }
     if (!user.shippingAddress) {
       toast.info('Please add a shipping address before requesting shipment.');
       setActiveTab('account');
@@ -738,7 +772,13 @@ export const Profile: React.FC = () => {
     setIsSubmittingShipment(true);
     try {
       const shipmentResult = await shipItem(itemsToShip.map((item) => item.instanceId), { shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected });
+      if (shipmentResult?.requiresEmailVerification) {
+        showShippingVerificationText('Verify your email before requesting shipment.');
+        return;
+      }
       if (!shipmentResult) return;
+      setShippingVerificationNotice(null);
+      setShippingVerificationMessage(null);
       setSelectedShipments([]);
       setShippingRequestConfirmed(true);
     } catch {
@@ -749,10 +789,6 @@ export const Profile: React.FC = () => {
   };
 
   const handleCashShipping = async () => {
-    if (!hasMadeDeposit) {
-      toast.info('Make your first deposit to unlock shipping.');
-      return;
-    }
     if (!auth.currentUser) {
       openAuthModal('login');
       return;
@@ -766,16 +802,30 @@ export const Profile: React.FC = () => {
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
     setIsSubmittingCashShipping(true);
     try {
+      await auth.currentUser.reload();
+      if (!auth.currentUser.emailVerified) {
+        showShippingVerificationText('Verify your email before requesting shipment.');
+        return;
+      }
       const token = await auth.currentUser.getIdToken();
       const response = await fetch('/api/create-shipping-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ inventoryIds: itemsToShip.map((item) => item.instanceId), shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected })
       });
-      if (!response.ok) throw new Error('Unable to start checkout.');
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        if (payload?.error === 'EMAIL_VERIFICATION_REQUIRED') {
+          showShippingVerificationText(payload?.message || 'Verify your email before requesting shipment.');
+          return;
+        }
+        throw new Error('Unable to start checkout.');
+      }
       const data = await response.json();
       if (typeof data.shipmentBatchId === 'string') window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
       if (!data.sessionId) {
+        setShippingVerificationNotice(null);
+        setShippingVerificationMessage(null);
         setSelectedShipments([]);
         setShippingRequestConfirmed(true);
         return;
@@ -830,10 +880,6 @@ export const Profile: React.FC = () => {
         label: 'Ship Item',
         disabled: false,
         onClick: () => {
-          if (!hasMadeDeposit) {
-            setWithdrawLockedModalOpen(true);
-            return;
-          }
           handleOpenShippingReview([item.instanceId]);
         },
         secondaryLabel: canSell ? 'Trade In' : undefined,
@@ -1172,11 +1218,28 @@ export const Profile: React.FC = () => {
               </div>
             )}
 
+            {shippingVerificationNotice && (
+              <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-5 text-amber-100 sm:text-[13px]">
+                <p>
+                  {shippingVerificationNotice} You can keep using Pullz, but shipping requires a verified email{shippingVerificationEmail ? ` (${shippingVerificationEmail})` : ''}.
+                </p>
+                {shippingVerificationMessage && <p className="mt-1 text-amber-200/90">{shippingVerificationMessage}</p>}
+                <button
+                  type="button"
+                  onClick={handleResendShippingVerification}
+                  disabled={isSendingShippingVerification || isShippingVerificationCoolingDown}
+                  className="mt-1 text-[11px] font-bold text-amber-200 underline decoration-amber-200/50 underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSendingShippingVerification ? 'Sending...' : isShippingVerificationCoolingDown ? `Send again in ${shippingVerificationCooldownSeconds}s` : 'Send verification email'}
+                </button>
+              </div>
+            )}
+
             <div className="mt-4 space-y-2">
               {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping || !hasMadeDeposit}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
+                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
               ) : (
-                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment || !hasMadeDeposit}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
+                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
               )}
               <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
@@ -1187,18 +1250,6 @@ export const Profile: React.FC = () => {
         </div>
       )}
 
-      {withdrawLockedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#1f252c] p-4">
-            <h3 className="text-lg font-bold text-white">Withdrawals Locked</h3>
-            <p className="mt-2 text-sm text-gray-300">Make your first deposit to unlock withdrawals.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setWithdrawLockedModalOpen(false)}>Not now</button>
-              <button className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 py-2 text-sm font-bold text-white" onClick={() => { setWithdrawLockedModalOpen(false); setView({ type: 'BONUSES' }); }}>Add Coins</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+   </div>
   );
 };
