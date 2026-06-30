@@ -152,8 +152,10 @@ export default async function handler(req, res) {
     const creditRef = firestore.collection('stripe_credits').doc(session.id);
     const userRef = firestore.collection('users').doc(uid);
 
+    let creditedPayment = null;
+
     try {
-      await firestore.runTransaction(async (transaction) => {
+      creditedPayment = await firestore.runTransaction(async (transaction) => {
         const creditSnap = await transaction.get(creditRef);
         if (creditSnap.exists) {
           return;
@@ -161,6 +163,16 @@ export default async function handler(req, res) {
 
         const userSnap = await transaction.get(userRef);
         const userData = userSnap.exists ? userSnap.data() ?? {} : {};
+        const previousDepositCount = Math.max(
+          0,
+          Number(userData.depositCount ?? 0)
+        );
+        const previousDepositedCents = Math.max(
+          0,
+          Number(userData.totalDepositedCents ?? 0)
+        );
+        const isFirstDeposit = previousDepositCount === 0 && previousDepositedCents === 0;
+
         const { balanceAfter: nextCoins } = await recordBalanceChange({
           transaction,
           uid,
@@ -211,8 +223,11 @@ export default async function handler(req, res) {
           amountTotalCents: Number.isFinite(amountTotalCents) ? Math.max(0, Math.round(amountTotalCents)) : 0,
           currency: sessionCurrency,
           paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+          isFirstDeposit,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
+
+        return { isFirstDeposit };
       });
     } catch (error) {
       console.error('stripe-webhook failed to credit coins', error);
@@ -225,6 +240,7 @@ export default async function handler(req, res) {
     } catch (referralError) {
       console.error('stripe-webhook failed to evaluate referral deposit qualification', referralError);
     }
+    const isFirstDeposit = creditedPayment?.isFirstDeposit === true;
     const amountTotal = Number(session.amount_total ?? 0);
     const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
     const eventId = `purchase_${session.id}`;
@@ -265,6 +281,40 @@ export default async function handler(req, res) {
           status: metaResult.status,
           error: metaResult.error
         });
+      }
+
+      if (isFirstDeposit) {
+        const firstDepositEventId = `first_deposit_${session.id}`;
+        const firstDepositResult = await sendMetaEvent({
+          req,
+          event_name: 'FirstDeposit',
+          event_id: firstDepositEventId,
+          event_source_url: `${process.env.APP_URL}/top-up`,
+          user: {
+            email,
+            phone,
+            external_id: String(uid),
+            fbp,
+            fbc
+          },
+          custom_data: {
+            currency: sessionCurrency || 'USD',
+            value: purchaseValue,
+            content_name: packageName ?? (packageId ? `Package ${packageId}` : 'Top Up'),
+            content_ids: stripePriceId ? [stripePriceId] : (packageId ? [String(packageId)] : undefined),
+            content_type: 'product',
+            num_items: 1
+          },
+          test_event_code: process.env.META_TEST_EVENT_CODE
+        });
+
+        if (!firstDepositResult.ok && !firstDepositResult.skipped) {
+          console.warn('stripe-webhook meta first deposit event failed', {
+            eventId: firstDepositEventId,
+            status: firstDepositResult.status,
+            error: firstDepositResult.error
+          });
+        }
       }
     } catch (metaError) {
       console.error('stripe-webhook meta purchase event error', {

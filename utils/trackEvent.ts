@@ -32,7 +32,7 @@ declare global {
 }
 
 export const trackEvent = (eventName: string, data?: TrackEventData) => {
-  trackMetaEvent(eventName, data);
+  return trackMetaEvent(eventName, data);
 };
 
 export const trackMetaEvent = (
@@ -41,13 +41,13 @@ export const trackMetaEvent = (
   options?: TrackEventOptions
 ) => {
   if (typeof window === 'undefined' || typeof window.fbq !== 'function' || document.visibilityState === 'hidden') {
-    return;
+    return false;
   }
 
   const eventKey = `${eventName}:${options?.eventID ?? JSON.stringify(data ?? {})}`;
   const now = performance.now();
   const lastFiredAt = recentEventKeys.get(eventKey) ?? 0;
-  if (now - lastFiredAt < DUPLICATE_EVENT_WINDOW_MS) return;
+  if (now - lastFiredAt < DUPLICATE_EVENT_WINDOW_MS) return false;
   recentEventKeys.set(eventKey, now);
   if (recentEventKeys.size > 80) {
     const cutoff = now - 5000;
@@ -62,20 +62,21 @@ export const trackMetaEvent = (
 
   if (hasData && hasOptions) {
     window.fbq(action, eventName, data, options);
-    return;
+    return true;
   }
 
   if (hasData) {
     window.fbq(action, eventName, data);
-    return;
+    return true;
   }
 
   if (hasOptions) {
     window.fbq(action, eventName, undefined, options);
-    return;
+    return true;
   }
 
   window.fbq(action, eventName);
+  return true;
 };
 
 export const readCookieValue = (name: string): string => {
