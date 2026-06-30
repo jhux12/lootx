@@ -467,7 +467,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <section className="relative mx-auto max-w-[1320px] overflow-hidden px-3 pb-7 pt-4 sm:px-5 sm:pb-8 sm:pt-7" aria-labelledby="boxes-catalog-heading">
+      <section className="boxes-hero relative mx-auto max-w-[1320px] px-3 pb-7 pt-4 sm:px-5 sm:pb-8 sm:pt-7" aria-labelledby="boxes-catalog-heading">
         <div className="pointer-events-none absolute inset-x-3 bottom-3 top-3 rounded-[2rem] bg-[#171c23]/65 [background-image:radial-gradient(circle_at_22%_44%,rgba(136,58,255,0.18),transparent_34%),radial-gradient(circle_at_78%_42%,rgba(45,135,255,0.18),transparent_32%),linear-gradient(rgba(125,155,255,0.045)_1px,transparent_1px),linear-gradient(90deg,rgba(125,155,255,0.04)_1px,transparent_1px)] [background-size:auto,auto,44px_44px,44px_44px]" aria-hidden="true" />
         <div className="pointer-events-none absolute left-[8%] top-12 h-40 w-40 rounded-full border border-violet-300/10 sm:h-56 sm:w-56" aria-hidden="true" />
         <div className="pointer-events-none absolute right-[10%] top-9 h-28 w-28 rounded-full border border-sky-300/10 sm:h-44 sm:w-44" aria-hidden="true" />
@@ -494,12 +494,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </span>
             </div>
           </div>
-          <div className="order-1 flex min-w-0 justify-center lg:order-2 lg:justify-end">
-            <div className="relative flex h-[250px] w-full max-w-[430px] items-center justify-center sm:h-[285px] lg:h-[300px]">
-              <div className="pointer-events-none absolute inset-x-6 top-1/2 h-44 -translate-y-1/2 rounded-full bg-[radial-gradient(circle_at_35%_50%,rgba(142,54,255,0.54),transparent_45%),radial-gradient(circle_at_66%_50%,rgba(34,132,255,0.5),transparent_48%)] blur-3xl sm:h-56" aria-hidden="true" />
-              <div className="pointer-events-none absolute left-10 top-10 h-36 w-36 rounded-full bg-violet-500/20 blur-2xl sm:left-8 sm:h-48 sm:w-48" aria-hidden="true" />
-              <div className="pointer-events-none absolute right-9 top-12 h-36 w-36 rounded-full bg-sky-400/20 blur-2xl sm:right-4 sm:h-48 sm:w-48" aria-hidden="true" />
-              <div className="pointer-events-none absolute inset-x-10 bottom-9 h-20 rounded-[50%] bg-[radial-gradient(ellipse_at_center,rgba(165,78,255,0.22),transparent_68%)] blur-xl" aria-hidden="true" />
+          <div className="order-1 flex min-w-0 justify-center overflow-visible lg:order-2 lg:justify-end">
+            <div className="boxes-hero-art relative flex h-[250px] w-full max-w-[430px] items-center justify-center overflow-visible sm:h-[285px] lg:h-[300px]">
+              <div className="boxes-hero-glow" aria-hidden="true" />
               <img
                 src={stripeSettings.boxCatalogHeroImageUrl || DEFAULT_BOX_CATALOG_HERO_IMAGE}
                 alt="Transparent purple and blue Pullz.gg mystery box"
