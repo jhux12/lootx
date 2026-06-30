@@ -463,12 +463,27 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           }).catch(() => undefined);
         }
 
-        const nextParams = new URLSearchParams(window.location.search);
-        nextParams.delete('topup');
-        nextParams.delete('session_id');
-        const nextSearch = nextParams.toString();
-        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
-        window.history.replaceState({}, '', nextUrl);
+        const purchaseComplete =
+          purchase.alreadyTracked === true ||
+          markPurchaseTracked;
+        const firstDepositComplete =
+          purchase.isFirstDeposit !== true ||
+          purchase.firstDepositAlreadyTracked === true ||
+          markFirstDepositTracked;
+
+        if (purchaseComplete && firstDepositComplete) {
+          const nextParams = new URLSearchParams(window.location.search);
+          nextParams.delete('topup');
+          nextParams.delete('session_id');
+          const nextSearch = nextParams.toString();
+          const nextUrl =
+            `${window.location.pathname}` +
+            `${nextSearch ? `?${nextSearch}` : ''}` +
+            `${window.location.hash}`;
+          window.history.replaceState({}, '', nextUrl);
+        } else {
+          trackedPurchaseSessionsRef.current.delete(sessionId);
+        }
       } catch (error) {
         trackedPurchaseSessionsRef.current.delete(sessionId);
         console.warn('Unable to finalize Meta purchase tracking', error);

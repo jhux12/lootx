@@ -171,7 +171,14 @@ export default async function handler(req, res) {
           0,
           Number(userData.totalDepositedCents ?? 0)
         );
-        const isFirstDeposit = previousDepositCount === 0 && previousDepositedCents === 0;
+        const previousTotalSpent = Math.max(
+          0,
+          Number(userData.totalSpent ?? 0)
+        );
+        const isFirstDeposit =
+          previousDepositCount === 0 &&
+          previousDepositedCents === 0 &&
+          previousTotalSpent === 0;
 
         const { balanceAfter: nextCoins } = await recordBalanceChange({
           transaction,

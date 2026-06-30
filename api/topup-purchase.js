@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     const isFirstDeposit = creditData.isFirstDeposit === true;
 
     if (req.method === 'PATCH') {
-      const markPurchaseTracked = body?.markPurchaseTracked !== false;
+      const markPurchaseTracked = body?.markPurchaseTracked === true;
       const markFirstDepositTracked = body?.markFirstDepositTracked === true;
 
       await firestore.runTransaction(async (transaction) => {
