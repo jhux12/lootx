@@ -158,7 +158,11 @@ export default async function handler(req, res) {
       creditedPayment = await firestore.runTransaction(async (transaction) => {
         const creditSnap = await transaction.get(creditRef);
         if (creditSnap.exists) {
-          return;
+          const existingCredit = creditSnap.data() ?? {};
+          return {
+            isFirstDeposit: existingCredit.isFirstDeposit === true,
+            newlyCredited: false
+          };
         }
 
         const userSnap = await transaction.get(userRef);
@@ -234,7 +238,10 @@ export default async function handler(req, res) {
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        return { isFirstDeposit };
+        return {
+          isFirstDeposit,
+          newlyCredited: true
+        };
       });
     } catch (error) {
       console.error('stripe-webhook failed to credit coins', error);
@@ -242,10 +249,13 @@ export default async function handler(req, res) {
     }
 
 
-    try {
-      await markReferralDepositQualified({ referredUid: uid, depositCoins: totalCoins });
-    } catch (referralError) {
-      console.error('stripe-webhook failed to evaluate referral deposit qualification', referralError);
+    const newlyCredited = creditedPayment?.newlyCredited === true;
+    if (newlyCredited) {
+      try {
+        await markReferralDepositQualified({ referredUid: uid, depositCoins: totalCoins });
+      } catch (referralError) {
+        console.error('stripe-webhook failed to evaluate referral deposit qualification', referralError);
+      }
     }
     const isFirstDeposit = creditedPayment?.isFirstDeposit === true;
     const amountTotal = Number(session.amount_total ?? 0);
