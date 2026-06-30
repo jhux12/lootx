@@ -7,6 +7,7 @@ import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
 import { PaymentMethodIcons } from './PaymentMethodIcons';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
+import { trackGaEvent } from '../utils/googleAnalytics';
 import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
@@ -252,6 +253,19 @@ export const TopUpModal: React.FC = () => {
             throw new Error(message || 'Unable to start checkout.');
           }
           const data = await response.json();
+          trackGaEvent('begin_checkout', {
+            currency: 'USD',
+            value: priceValue,
+            items: [
+              {
+                item_id: selectedPackage.id,
+                item_name: selectedPackage.name ?? 'Coin Package',
+                item_category: 'coin_package',
+                price: priceValue,
+                quantity: 1
+              }
+            ]
+          });
           const stripe = await getStripe();
           if (!stripe) {
             throw new Error('Stripe failed to initialize.');
