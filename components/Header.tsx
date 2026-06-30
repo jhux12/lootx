@@ -25,6 +25,7 @@ import {
   Plus,
   RefreshCw,
   BarChart3,
+  Backpack,
   Bell,
   Box,
   Clock3,
@@ -50,6 +51,7 @@ import {
 import { UserAvatar } from "./UserAvatar";
 import { resolveUserDisplayName } from "../utils/userIdentity";
 import { lockPageScroll } from "../utils/scrollLock";
+import { PRICE_UNIT_MODE, toCoins } from "../utils/coins";
 
 const ActivityDrawer = lazy(() =>
   import("../src/ui/activity/ActivityDrawer").then((module) => ({
@@ -118,9 +120,15 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     showTopUpModal,
     logout,
     boxes,
+    inventory,
+    sellItem,
+    shipItem,
   } = useGame();
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileInventoryOpen, setIsMobileInventoryOpen] = useState(false);
+  const [selectedMobileInventoryIds, setSelectedMobileInventoryIds] = useState<string[]>([]);
+  const [isMobileInventoryBusy, setIsMobileInventoryBusy] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
   const [questReadyCount, setQuestReadyCount] = useState(0);
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
@@ -132,6 +140,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
   const gamesMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileInventoryPanelRef = useRef<HTMLDivElement | null>(null);
   const resolvedDisplayName = useMemo(
     () => (authInitialized ? resolveUserDisplayName(user) : ""),
     [authInitialized, user],
@@ -195,6 +204,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       ) {
         setIsGamesMenuOpen(false);
       }
+
+      if (
+        isMobileInventoryOpen &&
+        mobileInventoryPanelRef.current &&
+        !mobileInventoryPanelRef.current.contains(target)
+      ) {
+        setIsMobileInventoryOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", handleDocumentClick);
@@ -203,7 +220,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       document.removeEventListener("mousedown", handleDocumentClick);
       document.removeEventListener("touchstart", handleDocumentClick);
     };
-  }, [isGamesMenuOpen]);
+  }, [isGamesMenuOpen, isMobileInventoryOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -223,6 +240,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMobileMenuOpen(false);
+        setIsMobileInventoryOpen(false);
       }
     };
 
@@ -246,10 +264,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         detail: { isOpen: isMobileMenuOpen },
       }),
     );
-    if (!isMobileMenuOpen) return undefined;
+    if (!isMobileMenuOpen && !isMobileInventoryOpen) return undefined;
 
     return lockPageScroll({ preserveScrollPosition: true });
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, isMobileInventoryOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -434,6 +452,123 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     [isAuthenticated, openAuthModal, playSound, setView],
   );
 
+  const mobileInventoryItems = useMemo(
+    () =>
+      inventory
+        .filter(
+          (item) =>
+            item.status !== "sold" &&
+            item.status !== "shipping" &&
+            item.status !== "shipping_requested" &&
+            item.status !== "shipped",
+        )
+        .sort((a, b) => Number(b.obtainedAt ?? 0) - Number(a.obtainedAt ?? 0)),
+    [inventory],
+  );
+
+  const selectableMobileInventoryIds = useMemo(
+    () =>
+      new Set(
+        mobileInventoryItems
+          .filter(
+            (item) =>
+              item.status === "available" &&
+              !item.locked &&
+              item.shippable !== false &&
+              !(item.source === "pullPassBoxReward" && item.boxId),
+          )
+          .map((item) => item.instanceId),
+      ),
+    [mobileInventoryItems],
+  );
+
+  const sellableMobileInventoryIds = useMemo(
+    () =>
+      new Set(
+        mobileInventoryItems
+          .filter(
+            (item) =>
+              item.status === "available" &&
+              !item.locked &&
+              item.redeemable !== false &&
+              item.acquisitionCurrencyType !== "XP" &&
+              item.openCurrencyType !== "XP" &&
+              item.source !== "xpShop" &&
+              !item.sourceItemId &&
+              !item.sourceRedemptionId,
+          )
+          .map((item) => item.instanceId),
+      ),
+    [mobileInventoryItems],
+  );
+
+  useEffect(() => {
+    setSelectedMobileInventoryIds((prev) =>
+      prev.filter((id) =>
+        mobileInventoryItems.some((item) => item.instanceId === id),
+      ),
+    );
+  }, [mobileInventoryItems]);
+
+  const selectedMobileItems = useMemo(
+    () =>
+      mobileInventoryItems.filter((item) =>
+        selectedMobileInventoryIds.includes(item.instanceId),
+      ),
+    [mobileInventoryItems, selectedMobileInventoryIds],
+  );
+
+  const toggleMobileInventoryItem = useCallback((instanceId: string) => {
+    setSelectedMobileInventoryIds((prev) =>
+      prev.includes(instanceId)
+        ? prev.filter((id) => id !== instanceId)
+        : [...prev, instanceId],
+    );
+  }, []);
+
+  const handleMobileShipSelected = useCallback(async () => {
+    const ids = selectedMobileInventoryIds.filter((id) =>
+      selectableMobileInventoryIds.has(id),
+    );
+    if (ids.length === 0 || isMobileInventoryBusy) return;
+    if (!user.shippingAddress) {
+      setIsMobileInventoryOpen(false);
+      navigate("PROFILE");
+      window.setTimeout(() => alert("Please add a shipping address before requesting shipment."), 0);
+      return;
+    }
+    setIsMobileInventoryBusy(true);
+    try {
+      const result = await shipItem(ids);
+      if (result) {
+        setSelectedMobileInventoryIds([]);
+        setIsMobileInventoryOpen(false);
+      }
+    } finally {
+      setIsMobileInventoryBusy(false);
+    }
+  }, [isMobileInventoryBusy, navigate, selectableMobileInventoryIds, selectedMobileInventoryIds, shipItem, user.shippingAddress]);
+
+  const handleMobileSellSelected = useCallback(async () => {
+    const ids = selectedMobileInventoryIds.filter((id) =>
+      sellableMobileInventoryIds.has(id),
+    );
+    if (ids.length === 0 || isMobileInventoryBusy) return;
+    setIsMobileInventoryBusy(true);
+    let totalCredit = 0;
+    try {
+      for (const id of ids) {
+        const result = await sellItem(id);
+        totalCredit += Number(result?.creditCoins ?? 0);
+      }
+      setSelectedMobileInventoryIds([]);
+      setIsMobileInventoryOpen(false);
+      alert(`Sold ${ids.length} item${ids.length === 1 ? "" : "s"} for ${totalCredit.toLocaleString()} coins.`);
+    } finally {
+      setIsMobileInventoryBusy(false);
+    }
+  }, [isMobileInventoryBusy, selectedMobileInventoryIds, sellableMobileInventoryIds, sellItem]);
+
   const openTopUp = useCallback(() => {
     playSound("click");
     setShowTopUpModal(true);
@@ -499,19 +634,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           <div className="pt-[env(safe-area-inset-top,0px)]">
             <nav className="relative mx-auto flex h-[52px] max-w-7xl items-center justify-between px-3 sm:h-[56px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
               <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen((open) => !open)}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#3a4146]/70 bg-[#242b31] text-slate-300 transition-colors hover:text-white lg:hidden"
-                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  aria-expanded={isMobileMenuOpen}
-                >
-                  {isMobileMenuOpen ? (
-                    <X className="h-4 w-4" />
-                  ) : (
-                    <Menu className="h-4 w-4" />
-                  )}
-                </button>
                 <button
                   type="button"
                   onClick={() => navigate("HOME")}
@@ -718,6 +840,15 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                       <LogIn className="h-4 w-4" />
                     </button>
                     {startPullingButton}
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileMenuOpen((open) => !open)}
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200"
+                      aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                      aria-expanded={isMobileMenuOpen}
+                    >
+                      {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                    </button>
                   </div>
                 )}
 
@@ -746,12 +877,145 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         </button>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setIsMobileInventoryOpen((open) => !open);
+                      }}
+                      className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.045] text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-white/10 hover:text-white"
+                      aria-label="Open inventory menu"
+                      aria-expanded={isMobileInventoryOpen}
+                    >
+                      <Backpack className="h-4 w-4" />
+                      {mobileInventoryItems.length > 0 ? (
+                        <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-[#54f5b3] px-1 text-[10px] font-black leading-4 text-[#111720]">
+                          {Math.min(mobileInventoryItems.length, 99)}
+                        </span>
+                      ) : null}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileInventoryOpen(false);
+                        setIsMobileMenuOpen((open) => !open);
+                      }}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#3a4146]/70 bg-[#242b31] text-slate-300 transition-colors hover:text-white"
+                      aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                      aria-expanded={isMobileMenuOpen}
+                    >
+                      {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+                    </button>
                   </div>
                 )}
               </div>
             </nav>
           </div>
         </header>
+
+        {isMobileInventoryOpen ? (
+          <div
+            ref={mobileInventoryPanelRef}
+            className={`fixed inset-x-3 z-[245] overflow-hidden rounded-3xl border border-white/10 bg-[#10161f]/95 shadow-[0_22px_70px_rgba(0,0,0,0.55)] backdrop-blur-xl lg:hidden ${
+              isSticky ? "top-[calc(var(--pullz-header-height)+0.5rem)]" : "top-16"
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile inventory menu"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#54f5b3]">Backpack</p>
+                <p className="text-xs font-semibold text-slate-400">Select items to ship or sell back.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileInventoryOpen(false)}
+                className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 text-slate-200"
+                aria-label="Close inventory menu"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="max-h-[min(58vh,420px)] space-y-2 overflow-y-auto overscroll-contain p-3">
+              {mobileInventoryItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center text-sm font-semibold text-slate-400">
+                  Your backpack is empty. Open a box to add items.
+                </div>
+              ) : (
+                mobileInventoryItems.map((item) => {
+                  const selected = selectedMobileInventoryIds.includes(item.instanceId);
+                  const canSelect = selectableMobileInventoryIds.has(item.instanceId) || sellableMobileInventoryIds.has(item.instanceId);
+                  return (
+                    <button
+                      key={item.instanceId}
+                      type="button"
+                      onClick={() => canSelect && toggleMobileInventoryItem(item.instanceId)}
+                      disabled={!canSelect || isMobileInventoryBusy}
+                      className={`flex w-full items-center gap-3 rounded-2xl border p-2.5 text-left transition ${
+                        selected
+                          ? "border-[#54f5b3]/70 bg-[#54f5b3]/10 ring-1 ring-[#54f5b3]/25"
+                          : "border-white/10 bg-white/[0.04] hover:bg-white/[0.07]"
+                      } ${canSelect ? "" : "opacity-55"}`}
+                    >
+                      <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 bg-[#070b12]">
+                        <img src={item.image} alt="" className="h-full w-full object-contain p-1.5" loading="lazy" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-black text-white">{item.name}</span>
+                        <span className="mt-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                          <span>{item.rarity}</span>
+                          <CoinAmount
+                            amount={toCoins(item.price, PRICE_UNIT_MODE)}
+                            formatOptions={{ maximumFractionDigits: 0 }}
+                            className="text-[11px] text-slate-300"
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                        </span>
+                      </span>
+                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? "border-[#54f5b3] bg-[#54f5b3] text-[#10161f]" : "border-white/20 text-transparent"}`}>
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="border-t border-white/10 bg-[#0d121a]/95 p-3">
+              <div className="mb-3 flex items-center justify-between text-xs font-bold text-slate-300">
+                <span>{selectedMobileItems.length} selected</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMobileInventoryIds([])}
+                  className="text-slate-400 underline-offset-4 hover:text-white hover:underline"
+                  disabled={selectedMobileItems.length === 0 || isMobileInventoryBusy}
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleMobileShipSelected}
+                  disabled={isMobileInventoryBusy || selectedMobileInventoryIds.every((id) => !selectableMobileInventoryIds.has(id))}
+                  className="rounded-2xl bg-[#205DD7] px-3 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Ship
+                </button>
+                <button
+                  type="button"
+                  onClick={handleMobileSellSelected}
+                  disabled={isMobileInventoryBusy || selectedMobileInventoryIds.every((id) => !sellableMobileInventoryIds.has(id))}
+                  className="rounded-2xl bg-emerald-500 px-3 py-3 text-sm font-black text-[#07120d] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Sell back
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <button
           type="button"
@@ -806,6 +1070,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   onClick={() => {
                     playSound("click");
                     setIsMobileMenuOpen(false);
+        setIsMobileInventoryOpen(false);
                     void logout();
                   }}
                   className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-[#2d353c]"
