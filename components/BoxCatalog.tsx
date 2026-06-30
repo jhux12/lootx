@@ -459,48 +459,51 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       )}
       <div className="relative mx-auto max-w-[1320px] px-4 pb-4 pt-5 sm:px-5 sm:pt-8">
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#20262b] px-4 py-5 shadow-[0_18px_48px_-36px_rgba(0,0,0,0.9)] sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(260px,430px)] sm:items-center sm:gap-6 sm:rounded-3xl sm:px-6 lg:px-8">
-          <div className="relative z-10">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">Boxes</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-300 sm:text-lg">
-              Open premium mystery boxes and win <span className="text-slate-100">real items</span>.
+        <div className="relative min-h-[230px] overflow-hidden rounded-2xl border border-violet-300/20 bg-[#160b3d] px-4 py-5 shadow-[0_24px_70px_-42px_rgba(95,47,255,0.95)] sm:min-h-[280px] sm:rounded-3xl sm:px-6 sm:py-7 lg:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(255,255,255,0.16),transparent_18%),radial-gradient(circle_at_78%_20%,rgba(250,204,21,0.22),transparent_16%),linear-gradient(105deg,rgba(48,16,119,0.98)_0%,rgba(66,24,143,0.92)_42%,rgba(16,10,35,0.88)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:34px_34px]" />
+          <div className="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full border border-white/10 bg-white/5 blur-[1px] sm:h-44 sm:w-44" />
+          <div className="pointer-events-none absolute right-[6%] top-5 h-14 w-14 rounded-full border border-yellow-300/30 bg-yellow-300/10 shadow-[0_0_40px_rgba(250,204,21,0.22)] sm:h-20 sm:w-20" />
+          <div className="pointer-events-none absolute bottom-5 right-[34%] hidden h-10 w-10 rotate-12 rounded-lg border border-white/10 bg-white/5 sm:block" />
+          {stripeSettings.boxCatalogHeroImageUrl ? (
+            <img
+              src={stripeSettings.boxCatalogHeroImageUrl}
+              alt="Box catalog hero"
+              className="pointer-events-none absolute bottom-0 right-[-44px] z-0 h-[150px] w-[250px] object-contain opacity-55 drop-shadow-[0_24px_34px_rgba(0,0,0,0.55)] sm:right-2 sm:h-[255px] sm:w-[420px] sm:opacity-95 lg:right-10 lg:h-[290px] lg:w-[500px]"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              width={500}
+              height={290}
+            />
+          ) : null}
+          <div className="relative z-10 max-w-[21rem] sm:max-w-xl">
+            <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.26em] text-yellow-300/90 sm:text-xs">Pullz catalog</p>
+            <h1 className="text-[2.35rem] font-black leading-[0.92] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              Where Big Pulls Turn Into <span className="text-yellow-300">Bigger Wins</span>
+            </h1>
+            <p className="mt-3 max-w-md text-xs font-medium leading-5 text-violet-100/85 sm:mt-4 sm:text-base sm:leading-7">
+              Open premium mystery boxes and chase real collectibles, tech, sneakers, slabs, and more.
             </p>
             <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <ShieldCheck className="h-3.5 w-3.5 text-yellow-300" />
                 Provably Fair
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
                 Real Items
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#151b21] px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Truck className="h-3.5 w-3.5 text-[#67a6ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <Truck className="h-3.5 w-3.5 text-yellow-300" />
                 Fast Shipping
               </span>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-center sm:mt-0 sm:justify-end">
-            <div className="relative w-full max-w-[280px] sm:max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-4 top-1/2 h-28 -translate-y-1/2 rounded-full bg-slate-500/15 blur-2xl sm:h-56" />
-              {stripeSettings.boxCatalogHeroImageUrl ? (
-                <img
-                  src={stripeSettings.boxCatalogHeroImageUrl}
-                  alt="Box catalog hero"
-                  className="relative mx-auto h-28 w-full object-contain sm:h-56 lg:h-64"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                  width={460}
-                  height={256}
-                />
-              ) : null}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="relative z-30 w-full bg-[#1b2024]">
+      <div id="box-catalog-controls" className="relative z-30 w-full bg-[#1b2024]">
         <div className="mx-auto max-w-[1320px] px-4 py-3 sm:px-5">
           <div className="mb-3 flex w-full items-center gap-3 sm:mb-2 sm:max-w-[920px]">
               <div className="flex min-w-0 flex-1 items-center rounded-2xl border border-white/10 bg-[#151d26] px-3 py-3.5 shadow-inner shadow-black/20">
