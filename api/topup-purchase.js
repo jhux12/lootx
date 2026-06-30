@@ -48,18 +48,30 @@ export default async function handler(req, res) {
     const contentId = typeof creditData.stripePriceId === 'string' && creditData.stripePriceId.trim()
       ? creditData.stripePriceId.trim()
       : (typeof creditData.packageId === 'string' && creditData.packageId.trim() ? creditData.packageId.trim() : sessionId);
+    const isFirstDeposit = creditData.isFirstDeposit === true;
 
     if (req.method === 'PATCH') {
+      const markPurchaseTracked = body?.markPurchaseTracked === true;
+      const markFirstDepositTracked = body?.markFirstDepositTracked === true;
+
       await firestore.runTransaction(async (transaction) => {
         const latest = await transaction.get(creditRef);
         const latestData = latest.exists ? latest.data() ?? {} : {};
-        if (!latest.exists || latestData.uid !== decoded.uid || latestData.metaPurchasePixelTrackedAt) {
+        if (!latest.exists || latestData.uid !== decoded.uid) {
           return;
         }
 
-        transaction.set(creditRef, {
-          metaPurchasePixelTrackedAt: admin.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
+        const update = {};
+        if (markPurchaseTracked && !latestData.metaPurchasePixelTrackedAt) {
+          update.metaPurchasePixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (markFirstDepositTracked && latestData.isFirstDeposit === true && !latestData.metaFirstDepositPixelTrackedAt) {
+          update.metaFirstDepositPixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+
+        if (Object.keys(update).length > 0) {
+          transaction.set(creditRef, update, { merge: true });
+        }
       });
 
       return sendJson(res, 200, { ok: true });
@@ -73,7 +85,10 @@ export default async function handler(req, res) {
         currency: normalizeCurrency(creditData.currency),
         value: purchaseValue,
         content_name: packageName,
-        content_ids: [contentId]
+        content_ids: [contentId],
+        isFirstDeposit,
+        firstDepositAlreadyTracked: Boolean(creditData.metaFirstDepositPixelTrackedAt),
+        firstDepositEventID: `first_deposit_${sessionId}`
       }
     });
   } catch (error) {

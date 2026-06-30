@@ -387,59 +387,103 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         const eventId = typeof purchase.eventID === 'string' && purchase.eventID.trim()
           ? purchase.eventID.trim()
           : `purchase_${sessionId}`;
+        const firstDepositEventId = typeof purchase.firstDepositEventID === 'string' && purchase.firstDepositEventID.trim()
+          ? purchase.firstDepositEventID.trim()
+          : `first_deposit_${sessionId}`;
         const purchaseValue = Number(purchase.value);
 
-        if (purchase.alreadyTracked !== true) {
-          if (!Number.isFinite(purchaseValue) || purchaseValue <= 0) {
-            trackedPurchaseSessionsRef.current.delete(sessionId);
-            return;
-          }
+        if (!Number.isFinite(purchaseValue) || purchaseValue <= 0) {
+          trackedPurchaseSessionsRef.current.delete(sessionId);
+          return;
+        }
 
+        const normalizedCurrency = 'USD';
+        const purchaseEventData: Record<string, unknown> = {
+          currency: normalizedCurrency,
+          value: purchaseValue,
+          content_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
+          content_ids: Array.isArray(purchase.content_ids) ? purchase.content_ids : undefined,
+          content_type: 'product',
+          num_items: 1
+        };
+        if (user.email) {
+          purchaseEventData.em = user.email;
+        }
+        if (user.id) {
+          purchaseEventData.external_id = user.id;
+        }
+
+        let markPurchaseTracked = false;
+        let markFirstDepositTracked = false;
+
+        if (purchase.alreadyTracked !== true) {
           console.log('[Meta] Purchase candidate data:', purchase);
 
-          const normalizedCurrency = 'USD';
-          const purchaseEventData: Record<string, unknown> = {
-            currency: normalizedCurrency,
-            value: purchaseValue,
-            content_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
-            content_ids: Array.isArray(purchase.content_ids) ? purchase.content_ids : undefined,
-            content_type: 'product',
-            num_items: 1
-          };
-          if (user.email) {
-            purchaseEventData.em = user.email;
-          }
-          if (user.id) {
-            purchaseEventData.external_id = user.id;
-          }
-
           try {
-            trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
-            console.log('[Meta] Purchase fired:', {
-              value: purchaseValue,
-              currency: normalizedCurrency,
-              eventID: eventId
-            });
+            markPurchaseTracked = trackMetaEvent('Purchase', purchaseEventData, { eventID: eventId });
+            if (markPurchaseTracked) {
+              console.log('[Meta] Purchase fired:', {
+                value: purchaseValue,
+                currency: normalizedCurrency,
+                eventID: eventId
+              });
+            }
           } catch (err) {
             console.warn('Meta Purchase tracking failed', err);
           }
+        }
 
+        if (purchase.isFirstDeposit === true && purchase.firstDepositAlreadyTracked !== true) {
+          try {
+            markFirstDepositTracked = trackMetaEvent('FirstDeposit', purchaseEventData, { eventID: firstDepositEventId });
+            if (markFirstDepositTracked) {
+              console.log('[Meta] FirstDeposit fired:', {
+                value: purchaseValue,
+                currency: normalizedCurrency,
+                eventID: firstDepositEventId
+              });
+            }
+          } catch (err) {
+            console.warn('Meta FirstDeposit tracking failed', err);
+          }
+        }
+
+        if (markPurchaseTracked || markFirstDepositTracked) {
           await fetch('/api/topup-purchase', {
             method: 'PATCH',
             headers: {
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ sessionId })
+            body: JSON.stringify({
+              sessionId,
+              markPurchaseTracked,
+              markFirstDepositTracked
+            })
           }).catch(() => undefined);
         }
 
-        const nextParams = new URLSearchParams(window.location.search);
-        nextParams.delete('topup');
-        nextParams.delete('session_id');
-        const nextSearch = nextParams.toString();
-        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`;
-        window.history.replaceState({}, '', nextUrl);
+        const purchaseComplete =
+          purchase.alreadyTracked === true ||
+          markPurchaseTracked;
+        const firstDepositComplete =
+          purchase.isFirstDeposit !== true ||
+          purchase.firstDepositAlreadyTracked === true ||
+          markFirstDepositTracked;
+
+        if (purchaseComplete && firstDepositComplete) {
+          const nextParams = new URLSearchParams(window.location.search);
+          nextParams.delete('topup');
+          nextParams.delete('session_id');
+          const nextSearch = nextParams.toString();
+          const nextUrl =
+            `${window.location.pathname}` +
+            `${nextSearch ? `?${nextSearch}` : ''}` +
+            `${window.location.hash}`;
+          window.history.replaceState({}, '', nextUrl);
+        } else {
+          trackedPurchaseSessionsRef.current.delete(sessionId);
+        }
       } catch (error) {
         trackedPurchaseSessionsRef.current.delete(sessionId);
         console.warn('Unable to finalize Meta purchase tracking', error);
