@@ -307,7 +307,7 @@ const normalizeItems = (items: InventoryItem[]) =>
   });
 
 export const Profile: React.FC = () => {
-  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo } = useGame();
+  const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, updateAddress, updateUserInfo, resendEmailVerification } = useGame();
 
   const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
   const [search, setSearch] = useState('');
@@ -328,6 +328,11 @@ export const Profile: React.FC = () => {
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
   const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
+  const [shippingVerificationNotice, setShippingVerificationNotice] = useState<string | null>(null);
+  const [shippingVerificationMessage, setShippingVerificationMessage] = useState<string | null>(null);
+  const [isSendingShippingVerification, setIsSendingShippingVerification] = useState(false);
+  const [shippingVerificationResendAt, setShippingVerificationResendAt] = useState(0);
+  const [shippingVerificationNow, setShippingVerificationNow] = useState(() => Date.now());
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
@@ -570,6 +575,38 @@ export const Profile: React.FC = () => {
     && savedShippingAddress?.zipCode
     && savedShippingAddress?.country
   );
+  const shippingVerificationEmail = auth.currentUser?.email ?? user.email ?? '';
+  const shippingVerificationCooldownSeconds = Math.max(0, Math.ceil((shippingVerificationResendAt - shippingVerificationNow) / 1000));
+  const isShippingVerificationCoolingDown = shippingVerificationCooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!isShippingVerificationCoolingDown) return;
+    const interval = window.setInterval(() => setShippingVerificationNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [isShippingVerificationCoolingDown]);
+
+  const showShippingVerificationText = (message = 'Verify your email before requesting shipment.') => {
+    setShippingVerificationNotice(message);
+    setShippingVerificationMessage(null);
+  };
+
+  const handleResendShippingVerification = async () => {
+    if (isShippingVerificationCoolingDown || isSendingShippingVerification) return;
+    setIsSendingShippingVerification(true);
+    setShippingVerificationMessage(null);
+    try {
+      await resendEmailVerification();
+      setShippingVerificationResendAt(Date.now() + 60000);
+      setShippingVerificationNow(Date.now());
+      setShippingVerificationMessage(`Verification email sent${shippingVerificationEmail ? ` to ${shippingVerificationEmail}` : ''}.`);
+    } catch (error: any) {
+      console.error('Failed to send shipment verification email', error);
+      setShippingVerificationMessage(error?.message || 'Unable to send verification email right now.');
+    } finally {
+      setIsSendingShippingVerification(false);
+    }
+  };
+
   useEffect(() => {
     if (canUseCoinShipping && canUseCashShipping) return;
     setShippingPaymentMethod(canUseCashShipping ? 'cash' : 'coins');
@@ -607,12 +644,16 @@ export const Profile: React.FC = () => {
     setSignatureRequiredSelected(false);
     setShowShippingProtectionInfo(false);
     setShowSignatureRequiredInfo(false);
+    setShippingVerificationNotice(null);
+    setShippingVerificationMessage(null);
     setShowShippingReview(true);
   };
 
   const handleAddMoreShipmentItems = () => {
     setShowShippingRateTooltip(false);
     setShippingRequestConfirmed(false);
+    setShippingVerificationNotice(null);
+    setShippingVerificationMessage(null);
     setShowShippingReview(false);
     setActiveTab('inventory');
   };
@@ -738,7 +779,13 @@ export const Profile: React.FC = () => {
     setIsSubmittingShipment(true);
     try {
       const shipmentResult = await shipItem(itemsToShip.map((item) => item.instanceId), { shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected });
+      if (shipmentResult?.requiresEmailVerification) {
+        showShippingVerificationText('Verify your email before requesting shipment.');
+        return;
+      }
       if (!shipmentResult) return;
+      setShippingVerificationNotice(null);
+      setShippingVerificationMessage(null);
       setSelectedShipments([]);
       setShippingRequestConfirmed(true);
     } catch {
@@ -766,16 +813,30 @@ export const Profile: React.FC = () => {
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
     setIsSubmittingCashShipping(true);
     try {
+      await auth.currentUser.reload();
+      if (!auth.currentUser.emailVerified) {
+        showShippingVerificationText('Verify your email before requesting shipment.');
+        return;
+      }
       const token = await auth.currentUser.getIdToken();
       const response = await fetch('/api/create-shipping-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ inventoryIds: itemsToShip.map((item) => item.instanceId), shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected })
       });
-      if (!response.ok) throw new Error('Unable to start checkout.');
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        if (payload?.error === 'EMAIL_VERIFICATION_REQUIRED') {
+          showShippingVerificationText(payload?.message || 'Verify your email before requesting shipment.');
+          return;
+        }
+        throw new Error('Unable to start checkout.');
+      }
       const data = await response.json();
       if (typeof data.shipmentBatchId === 'string') window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, data.shipmentBatchId);
       if (!data.sessionId) {
+        setShippingVerificationNotice(null);
+        setShippingVerificationMessage(null);
         setSelectedShipments([]);
         setShippingRequestConfirmed(true);
         return;
@@ -1169,6 +1230,23 @@ export const Profile: React.FC = () => {
                     {activeShippingMethod === 'cash' && <span className={`ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${activeCheckClass} text-white`}><Check className="h-4 w-4" /></span>}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {shippingVerificationNotice && (
+              <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-5 text-amber-100 sm:text-[13px]">
+                <p>
+                  {shippingVerificationNotice} You can keep using Pullz, but shipping requires a verified email{shippingVerificationEmail ? ` (${shippingVerificationEmail})` : ''}.
+                </p>
+                {shippingVerificationMessage && <p className="mt-1 text-amber-200/90">{shippingVerificationMessage}</p>}
+                <button
+                  type="button"
+                  onClick={handleResendShippingVerification}
+                  disabled={isSendingShippingVerification || isShippingVerificationCoolingDown}
+                  className="mt-1 text-[11px] font-bold text-amber-200 underline decoration-amber-200/50 underline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSendingShippingVerification ? 'Sending...' : isShippingVerificationCoolingDown ? `Send again in ${shippingVerificationCooldownSeconds}s` : 'Send verification email'}
+                </button>
               </div>
             )}
 

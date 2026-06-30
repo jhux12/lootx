@@ -12,7 +12,7 @@ import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/po
 import { lockPageScroll } from '../utils/scrollLock';
 
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
-const EMAIL_CONFIRMATION_MESSAGE = 'Please check your email to confirm your account before signing in.';
+const EMAIL_CONFIRMATION_MESSAGE = 'Account ready. We sent a verification email for when you are ready to ship items.';
 
 export const LoginModal: React.FC = () => {
   const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
