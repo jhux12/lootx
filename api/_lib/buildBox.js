@@ -4,7 +4,7 @@ const DEFAULT_SETTINGS = {
   enabled: true,
   minItems: 5,
   maxItems: 0,
-  targetRtp: 0.82,
+  targetRtp: 0.7,
   eligibleBoxIds: [],
   eligibleCategories: [],
   discountTiers: []
@@ -25,7 +25,7 @@ export async function getBuildBoxSettings(transaction = null) {
     enabled: raw.enabled === false ? false : true,
     minItems: Math.max(1, Math.floor(toNum(raw.minItems, DEFAULT_SETTINGS.minItems))),
     maxItems: Math.max(0, Math.floor(toNum(raw.maxItems, DEFAULT_SETTINGS.maxItems))),
-    targetRtp: Math.min(0.98, Math.max(0.5, toNum(raw.targetRtp, DEFAULT_SETTINGS.targetRtp))),
+    targetRtp: DEFAULT_SETTINGS.targetRtp,
     eligibleBoxIds: Array.isArray(raw.eligibleBoxIds) ? raw.eligibleBoxIds.filter((x) => typeof x === 'string') : [],
     eligibleCategories: Array.isArray(raw.eligibleCategories) ? raw.eligibleCategories.map(norm).filter(Boolean) : [],
     discountTiers: Array.isArray(raw.discountTiers) ? raw.discountTiers : []
