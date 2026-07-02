@@ -5,6 +5,7 @@ import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
+import heroImage from '../assets/hero.png';
 import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
@@ -206,22 +207,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       Icon: Sparkles
     }
   ] as const;
-  const heroImageSources = useMemo(() => {
-    const boxImages = trendingBoxes.map((box) => box.image).filter(Boolean);
-    const winImages = mobileLiveWins.map((win) => win.image).filter(Boolean);
-    const fallbackImages = boxes.map((box) => box.image).filter(Boolean);
-    const pickImages = (preferred: string[], fallback: string[] = fallbackImages) => {
-      const uniqueImages = [...preferred, ...fallback].filter((image, index, images) => image && images.indexOf(image) === index);
-      return uniqueImages.slice(0, 3);
-    };
-
-    return {
-      'free-welcome-box': pickImages(boxImages),
-      'real-items': pickImages(winImages, boxImages),
-      'first-deposit-bonus': pickImages([...boxImages].reverse())
-    } satisfies Record<typeof heroSlides[number]['id'], string[]>;
-  }, [boxes, mobileLiveWins, trendingBoxes]);
-
   useEffect(() => {
     if (mobileLiveWins.length <= 1) return undefined;
     const rotateTimer = window.setInterval(() => {
@@ -377,26 +362,16 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   return (
     <div className="animate-in fade-in duration-500">
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <div onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[244px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] sm:h-[270px] sm:rounded-[1.6rem] lg:h-[330px] lg:rounded-[2rem]">
+        <div onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[365px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] border border-white/10 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] sm:h-[410px] sm:rounded-[1.6rem] lg:h-[440px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {heroSlides.map(({ id, badge, title, subtitle, buttonText, buttonLink, Icon }, slideIndex) => {
-              const previewImages = heroImageSources[id];
               return (
-              <div key={id} className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 py-5 sm:px-7 sm:py-7 lg:px-10 lg:py-10">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.20),transparent_42%),radial-gradient(circle_at_16%_20%,rgba(34,211,238,0.16),transparent_30%)]" />
-                <div className="pointer-events-none absolute inset-x-0 bottom-3 z-0 flex h-[74px] items-end justify-center gap-2 px-4 sm:inset-x-auto sm:bottom-5 sm:right-5 sm:h-[166px] sm:justify-end sm:gap-3 sm:px-0 lg:right-9 lg:h-[220px] lg:gap-4" aria-hidden="true">
-                  <div className="absolute bottom-0 left-1/2 h-10 w-[82%] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(93,247,177,0.34)_0%,rgba(34,211,238,0.18)_38%,transparent_72%)] blur-xl sm:h-16 sm:w-[120%]" />
-                  {previewImages.length ? previewImages.map((image, imageIndex) => (
-                    <div key={`${id}-preview-${image}`} className={`relative grid place-items-center overflow-hidden rounded-2xl border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06))] p-1.5 shadow-[0_18px_34px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.18)] ring-1 ring-[#5df7b1]/20 backdrop-blur-md ${imageIndex === 1 ? 'h-[72px] w-[72px] sm:h-[148px] sm:w-[120px] lg:h-[202px] lg:w-[158px]' : 'h-[58px] w-[58px] sm:h-[118px] sm:w-[96px] lg:h-[166px] lg:w-[132px]'} ${imageIndex === 0 ? '-rotate-6' : imageIndex === 2 ? 'rotate-6' : ''}`}>
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.32),transparent_35%),linear-gradient(180deg,transparent_42%,rgba(0,0,0,0.18))]" />
-                      <img src={image} alt="" className="relative z-10 h-full w-full object-contain drop-shadow-[0_14px_20px_rgba(0,0,0,0.44)]" loading={slideIndex === 0 ? 'eager' : 'lazy'} />
-                    </div>
-                  )) : (
-                    <div className="relative grid h-[72px] w-[72px] place-items-center overflow-hidden rounded-2xl border border-white/20 bg-[linear-gradient(145deg,rgba(255,255,255,0.22),rgba(255,255,255,0.06))] text-white/80 shadow-[0_18px_34px_rgba(0,0,0,0.38)] ring-1 ring-[#5df7b1]/20 backdrop-blur-md sm:h-[148px] sm:w-[120px] lg:h-[202px] lg:w-[158px]">
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.32),transparent_35%)]" />
-                      <Icon className="relative z-10 h-8 w-8 sm:h-12 sm:w-12" />
-                    </div>
-                  )}
+              <div key={id} className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#641ef0_0%,#072ad9_100%)] px-4 py-7 sm:px-7 sm:py-8 lg:px-10 lg:py-10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(168,85,247,0.52),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(37,99,235,0.46),transparent_36%),radial-gradient(circle_at_50%_84%,rgba(93,247,177,0.20),transparent_34%),linear-gradient(180deg,rgba(0,0,0,0.05)_0%,rgba(0,0,0,0.28)_100%)]" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-[172px] sm:h-[214px] lg:h-[238px]" aria-hidden="true">
+                  <div className="absolute inset-x-8 bottom-2 h-16 rounded-full bg-[radial-gradient(circle,rgba(93,247,177,0.34)_0%,rgba(168,85,247,0.26)_40%,transparent_72%)] blur-2xl" />
+                  <div className="absolute inset-x-5 bottom-0 h-[46px] rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(6,10,24,0.72))] shadow-[0_18px_34px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.14)] sm:inset-x-[16%] sm:h-[60px] lg:inset-x-[22%]" />
+                  <img src={heroImage} alt="" className="absolute inset-x-0 bottom-0 mx-auto h-[190px] w-[104%] max-w-none object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.52)] sm:h-[238px] sm:w-full lg:h-[268px]" loading={slideIndex === 0 ? 'eager' : 'lazy'} />
                 </div>
                 <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                   {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
@@ -412,20 +387,27 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
                     />
                   ))}
                 </div>
-                <div className="relative z-10 flex h-full flex-col items-center justify-start pb-[88px] pt-5 text-center sm:justify-center sm:pb-0 sm:pt-0">
-                  <div className="inline-flex max-w-[92%] items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs">
+                <div className="relative z-10 flex h-full flex-col items-center justify-start text-center">
+                  <div className="inline-flex max-w-[92%] items-center gap-1.5 rounded-full border border-white/10 bg-black/24 px-3.5 py-2 text-[10px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] backdrop-blur-sm sm:text-xs">
                     <Icon className="h-3 w-3 shrink-0 lg:h-4 lg:w-4" />
                     <span className="truncate">{badge}</span>
                   </div>
-                  <h1 className="mt-2 max-w-[310px] text-[21px] font-black uppercase leading-[0.98] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[620px] sm:text-[38px] lg:max-w-[900px] lg:text-[58px]">
+                  <h1 className="mt-4 max-w-[330px] text-[36px] font-black uppercase leading-[0.95] tracking-[-0.035em] text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.32)] sm:max-w-[620px] sm:text-[46px] lg:max-w-[900px] lg:text-[60px]">
                     {title}
                   </h1>
-                  <p className="mt-2 max-w-[300px] text-[12px] font-bold leading-snug text-white/90 sm:max-w-[520px] sm:text-sm lg:max-w-[680px] lg:text-lg">
+                  <p className="mt-3 max-w-[320px] text-[15px] font-semibold leading-snug text-white/86 sm:max-w-[520px] sm:text-base lg:max-w-[680px] lg:text-lg">
                     {subtitle}
                   </p>
-                  <button type="button" onClick={() => handleHeroAction(buttonLink)} className="mt-3 rounded-full bg-[#52f7b0] px-5 py-2.5 text-[11px] font-black uppercase tracking-wide text-[#07120d] shadow-[0_12px_28px_rgba(82,247,176,0.28)] transition hover:bg-[#7dffd0] active:scale-[0.98] sm:px-6 sm:text-xs lg:px-7 lg:py-3">
+                  <button type="button" onClick={() => handleHeroAction(buttonLink)} className="mt-4 rounded-2xl bg-[#52f7b0] px-8 py-3.5 text-[13px] font-black uppercase tracking-wide text-[#07120d] shadow-[0_12px_28px_rgba(82,247,176,0.28)] transition hover:bg-[#7dffd0] active:scale-[0.98] sm:px-9 sm:text-sm">
                     {buttonText}
                   </button>
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-semibold text-white/78 sm:text-sm">
+                    <span>No card required</span>
+                    <span className="text-[#5df7b1]">•</span>
+                    <span>Real items</span>
+                    <span className="text-[#5df7b1]">•</span>
+                    <span>Ships to you</span>
+                  </div>
                 </div>
               </div>
               );
