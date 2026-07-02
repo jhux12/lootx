@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Gift, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
@@ -45,7 +45,6 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 };
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
-const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -178,6 +177,35 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
+  const heroSlides = [
+    {
+      id: 'free-welcome-box',
+      badge: 'FREE WELCOME BOX',
+      title: 'OPEN YOUR FIRST BOX FREE',
+      subtitle: 'Win a real collectible with no purchase required.',
+      buttonText: 'Open Free Box',
+      buttonLink: '/boxes',
+      Icon: Gift
+    },
+    {
+      id: 'real-items',
+      badge: 'REAL ITEMS • REAL SHIPMENTS',
+      title: 'WIN REAL ITEMS',
+      subtitle: 'Ship your pulls or sell them back instantly.',
+      buttonText: 'Browse Boxes',
+      buttonLink: '/boxes',
+      Icon: Truck
+    },
+    {
+      id: 'first-deposit-bonus',
+      badge: 'FIRST DEPOSIT BONUS',
+      title: 'GET 50% MORE ON YOUR FIRST DEPOSIT',
+      subtitle: 'Start with extra balance and open more boxes.',
+      buttonText: 'Claim Bonus',
+      buttonLink: '/top-up',
+      Icon: Sparkles
+    }
+  ] as const;
 
   useEffect(() => {
     if (mobileLiveWins.length <= 1) return undefined;
@@ -223,20 +251,19 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     });
   }, []);
 
-  const heroSlides = ['deposit-match', 'hot-picks'] as const;
-  const showDepositSlide = activeHeroSlide === 0;
+  const activeHero = heroSlides[activeHeroSlide] ?? heroSlides[0];
 
   const goToHeroSlide = (direction: 1 | -1) => {
     setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
   };
 
-  const handleHeroTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
+  const handleHeroTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     if (!touch) return;
     heroTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handleHeroTouchEnd = (event: React.TouchEvent<HTMLButtonElement>) => {
+  const handleHeroTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
     const start = heroTouchStartRef.current;
     heroTouchStartRef.current = null;
     const touch = event.changedTouches[0];
@@ -247,8 +274,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     goToHeroSlide(deltaX < 0 ? 1 : -1);
   };
 
-  const handleHeroAction = () => {
-    if (showDepositSlide) {
+  const handleHeroAction = (buttonLink = activeHero.buttonLink) => {
+    if (buttonLink === '/top-up') {
       if (!isAuthenticated) {
         openAuthModal('login');
         return;
@@ -261,6 +288,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         missingCoins: Math.max(0, 10000 - Number(user.balance ?? 0)),
         preferredPackageUsd: 50
       });
+      window.history.replaceState({}, '', '/top-up');
       setShowTopUpModal(true);
       return;
     }
@@ -334,50 +362,48 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   return (
     <div className="animate-in fade-in duration-500">
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
+        <div onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[190px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] sm:h-[230px] sm:rounded-[1.6rem] lg:h-[310px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
-                  <Coins
-                    key={`hero-raining-coin-${coinIndex}`}
-                    className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
-                    style={{
-                      left: `${8 + ((coinIndex * 8) % 86)}%`,
-                      animationDelay: `${coinIndex * -0.45}s`,
-                      animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
-                      transform: `rotate(${coinIndex * 23}deg)`
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
-              </div>
-              <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
-            </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
-              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
-              </div>
-              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
+            {heroSlides.map(({ id, badge, title, subtitle, buttonText, buttonLink, Icon }, slideIndex) => (
+              <div key={id} className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 py-5 sm:px-7 sm:py-7 lg:px-10 lg:py-10">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.20),transparent_42%),radial-gradient(circle_at_16%_20%,rgba(34,211,238,0.16),transparent_30%)]" />
+                <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+                  {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
+                    <Coins
+                      key={`${id}-hero-coin-${coinIndex}`}
+                      className="absolute h-4 w-4 animate-[hero-coin-rain_7s_linear_infinite] text-amber-300/45 drop-shadow-[0_8px_12px_rgba(0,0,0,0.20)] sm:h-6 sm:w-6 lg:h-8 lg:w-8"
+                      style={{
+                        left: `${14 + ((coinIndex * 13 + slideIndex * 7) % 72)}%`,
+                        animationDelay: `${coinIndex * -0.85}s`,
+                        animationDuration: `${6.8 + (coinIndex % 3) * 0.6}s`,
+                        transform: `rotate(${coinIndex * 23}deg)`
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
+                  <div className="inline-flex max-w-[92%] items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs">
+                    <Icon className="h-3 w-3 shrink-0 lg:h-4 lg:w-4" />
+                    <span className="truncate">{badge}</span>
                   </div>
-                ))}
+                  <h1 className="mt-3 max-w-[310px] text-[22px] font-black uppercase leading-[0.98] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[620px] sm:text-[38px] lg:max-w-[900px] lg:text-[58px]">
+                    {title}
+                  </h1>
+                  <p className="mt-2 max-w-[300px] text-[12px] font-bold leading-snug text-white/90 sm:max-w-[520px] sm:text-sm lg:max-w-[680px] lg:text-lg">
+                    {subtitle}
+                  </p>
+                  <button type="button" onClick={() => handleHeroAction(buttonLink)} className="mt-4 rounded-full bg-[#52f7b0] px-5 py-2.5 text-[11px] font-black uppercase tracking-wide text-[#07120d] shadow-[0_12px_28px_rgba(82,247,176,0.28)] transition hover:bg-[#7dffd0] active:scale-[0.98] sm:px-6 sm:text-xs lg:px-7 lg:py-3">
+                    {buttonText}
+                  </button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
-        </button>
+          <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-150%,0) rotate(0deg); opacity: 0; } 14% { opacity: .72; } 78% { opacity: .48; } 100% { transform: translate3d(14px,280px,0) rotate(320deg); opacity: 0; } }`}</style>
+          <span className="sr-only">{activeHero.buttonText}: {activeHero.title}</span>
+        </div>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide.id} type="button" aria-label={`Show ${slide.title} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 rounded-full transition-all ${index === activeHeroSlide ? 'w-5 bg-[#52f7b0]' : 'w-1.5 bg-slate-600'}`} />)}
         </div>
       </section>
 
