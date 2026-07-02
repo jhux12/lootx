@@ -206,6 +206,21 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       Icon: Sparkles
     }
   ] as const;
+  const heroImageSources = useMemo(() => {
+    const boxImages = trendingBoxes.map((box) => box.image).filter(Boolean);
+    const winImages = mobileLiveWins.map((win) => win.image).filter(Boolean);
+    const fallbackImages = boxes.map((box) => box.image).filter(Boolean);
+    const pickImages = (preferred: string[], fallback: string[] = fallbackImages) => {
+      const uniqueImages = [...preferred, ...fallback].filter((image, index, images) => image && images.indexOf(image) === index);
+      return uniqueImages.slice(0, 3);
+    };
+
+    return {
+      'free-welcome-box': pickImages(boxImages),
+      'real-items': pickImages(winImages, boxImages),
+      'first-deposit-bonus': pickImages([...boxImages].reverse())
+    } satisfies Record<typeof heroSlides[number]['id'], string[]>;
+  }, [boxes, mobileLiveWins, trendingBoxes]);
 
   useEffect(() => {
     if (mobileLiveWins.length <= 1) return undefined;
@@ -364,9 +379,22 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <div onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="relative mx-auto h-[190px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] sm:h-[230px] sm:rounded-[1.6rem] lg:h-[310px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            {heroSlides.map(({ id, badge, title, subtitle, buttonText, buttonLink, Icon }, slideIndex) => (
+            {heroSlides.map(({ id, badge, title, subtitle, buttonText, buttonLink, Icon }, slideIndex) => {
+              const previewImages = heroImageSources[id];
+              return (
               <div key={id} className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 py-5 sm:px-7 sm:py-7 lg:px-10 lg:py-10">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(255,255,255,0.18),transparent_34%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.20),transparent_42%),radial-gradient(circle_at_16%_20%,rgba(34,211,238,0.16),transparent_30%)]" />
+                <div className="pointer-events-none absolute inset-x-2 bottom-0 z-0 flex h-[76px] items-end justify-center gap-2 opacity-55 sm:inset-x-auto sm:bottom-4 sm:right-5 sm:h-[150px] sm:justify-end sm:gap-3 sm:opacity-80 lg:right-9 lg:h-[210px] lg:gap-4" aria-hidden="true">
+                  {previewImages.length ? previewImages.map((image, imageIndex) => (
+                    <div key={`${id}-preview-${image}`} className={`grid place-items-center rounded-2xl border border-white/10 bg-white/10 p-1.5 shadow-[0_18px_34px_rgba(0,0,0,0.34)] backdrop-blur-sm ${imageIndex === 1 ? 'h-[74px] w-[74px] sm:h-[136px] sm:w-[112px] lg:h-[190px] lg:w-[150px]' : 'h-[58px] w-[58px] sm:h-[112px] sm:w-[92px] lg:h-[160px] lg:w-[128px]'} ${imageIndex === 0 ? '-rotate-6' : imageIndex === 2 ? 'rotate-6' : ''}`}>
+                      <img src={image} alt="" className="h-full w-full object-contain drop-shadow-[0_14px_20px_rgba(0,0,0,0.38)]" loading={slideIndex === 0 ? 'eager' : 'lazy'} />
+                    </div>
+                  )) : (
+                    <div className="grid h-[74px] w-[74px] place-items-center rounded-2xl border border-white/10 bg-white/10 text-white/70 shadow-[0_18px_34px_rgba(0,0,0,0.34)] sm:h-[136px] sm:w-[112px] lg:h-[190px] lg:w-[150px]">
+                      <Icon className="h-8 w-8 sm:h-12 sm:w-12" />
+                    </div>
+                  )}
+                </div>
                 <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                   {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
                     <Coins
@@ -397,30 +425,14 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
           <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-150%,0) rotate(0deg); opacity: 0; } 14% { opacity: .72; } 78% { opacity: .48; } 100% { transform: translate3d(14px,280px,0) rotate(320deg); opacity: 0; } }`}</style>
           <span className="sr-only">{activeHero.buttonText}: {activeHero.title}</span>
         </div>
         <div className="mt-2 flex justify-center gap-1.5">
           {heroSlides.map((slide, index) => <button key={slide.id} type="button" aria-label={`Show ${slide.title} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 rounded-full transition-all ${index === activeHeroSlide ? 'w-5 bg-[#52f7b0]' : 'w-1.5 bg-slate-600'}`} />)}
-        </div>
-      </section>
-
-      <section className="mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: 'Ship Real Items', sublabel: 'To Your Door', icon: Truck },
-            { label: 'Provably Fair', sublabel: 'Verified Results', icon: ShieldCheck },
-            { label: 'Instant Sellback', sublabel: 'Get Coins Fast', icon: Zap },
-            { label: 'Secure Payments', sublabel: 'Instant Delivery', icon: CreditCard }
-          ].map(({ label, sublabel, icon: Icon }) => (
-            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#24314a] bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
-              <Icon className="mb-1.5 h-5 w-5 text-[#55f7c3]" strokeWidth={2.2} aria-hidden="true" />
-              <span className="text-[10px] font-black uppercase leading-none tracking-tight text-white sm:text-[13px]">{label}</span>
-              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#55f7c3]">{sublabel}</span>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -442,6 +454,23 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             </button>
           ) : (
             <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#242b31] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { label: 'Ship Real Items', sublabel: 'To Your Door', icon: Truck },
+            { label: 'Provably Fair', sublabel: 'Verified Results', icon: ShieldCheck },
+            { label: 'Instant Sellback', sublabel: 'Get Coins Fast', icon: Zap },
+            { label: 'Secure Payments', sublabel: 'Instant Delivery', icon: CreditCard }
+          ].map(({ label, sublabel, icon: Icon }) => (
+            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#24314a] bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
+              <Icon className="mb-1.5 h-5 w-5 text-[#55f7c3]" strokeWidth={2.2} aria-hidden="true" />
+              <span className="text-[10px] font-black uppercase leading-none tracking-tight text-white sm:text-[13px]">{label}</span>
+              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#55f7c3]">{sublabel}</span>
+            </div>
           ))}
         </div>
       </section>
