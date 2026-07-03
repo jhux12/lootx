@@ -1544,6 +1544,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const startAuthenticatedSession = (firebaseUser: FirebaseUser) => {
+    setShowLoginModal(false);
     const uid = firebaseUser.uid;
     const isSameUser = activeUserIdRef.current === uid;
 
@@ -2626,7 +2627,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setEmailVerificationStatus('pending');
       emailVerificationDismissedRef.current = false;
       setShowEmailVerificationModal(false);
-      return { requiresEmailVerification: true };
+      return;
     } catch (error: any) {
       if (error?.code === 'auth/email-already-in-use') {
         try {

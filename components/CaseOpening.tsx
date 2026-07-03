@@ -345,7 +345,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       : 0.82);
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
-  const hideDropTableOdds = Boolean(isFree && box?.isDaily);
+  const hideDropTableOdds = Boolean(isFree);
   const cheapestPaidBox = useMemo(() => {
     const paidBoxes = boxes.filter((entry) => {
       const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
@@ -2602,15 +2602,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid gap-3 ${hideDropTableOdds ? 'grid-cols-1' : 'grid-cols-2'}`}>
                   <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
                     <span className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">Value</span>
                     <CoinAmount amount={animatedModalCoins} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 justify-center text-lg font-bold text-white" iconClassName="h-4 w-4" />
                   </div>
-                  <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Drop Chance</span>
-                    <div className="mt-1 text-lg font-bold text-white">{typeof selectedCaseItem.chance === 'number' ? `${selectedCaseItem.chance}%` : '—'}</div>
-                  </div>
+                  {!hideDropTableOdds && (
+                    <div className="rounded-xl border border-white/10 bg-black/30 p-3 text-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Drop Chance</span>
+                      <div className="mt-1 text-lg font-bold text-white">{typeof selectedCaseItem.chance === 'number' ? `${selectedCaseItem.chance}%` : '—'}</div>
+                    </div>
+                  )}
                 </div>
                 <button type="button" onClick={() => setSelectedCaseItem(null)} className="h-12 w-full rounded-xl bg-white text-sm font-bold text-black transition hover:bg-gray-200">Close</button>
                 </div>
