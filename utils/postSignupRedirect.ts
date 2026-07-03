@@ -7,6 +7,11 @@ export const setPostSignupRedirect = (path: string = DEFAULT_POST_SIGNUP_REDIREC
   window.localStorage.setItem(POST_SIGNUP_REDIRECT_KEY, path);
 };
 
+export const clearPostSignupRedirect = () => {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(POST_SIGNUP_REDIRECT_KEY);
+};
+
 export const readPostSignupRedirect = () => {
   if (typeof window === 'undefined') return null;
   const value = window.localStorage.getItem(POST_SIGNUP_REDIRECT_KEY);
