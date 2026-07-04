@@ -37,7 +37,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://firebasestorage.googleapis.com">
     <link rel="dns-prefetch" href="https://firebasestorage.googleapis.com">
-    <link rel="preload" as="image" href="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060" fetchpriority="high">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" onload="this.onload=null;this.rel='stylesheet'" />
@@ -109,6 +108,32 @@
       .pullz-cls-hero {
         min-height: clamp(560px, 72svh, 760px);
         contain: layout paint;
+      }
+      .pullz-home-shell {
+        min-height: 100svh;
+      }
+      .pullz-home-hero {
+        min-height: 132px;
+        aspect-ratio: 1180 / 132;
+      }
+      .pullz-home-trust-grid,
+      .pullz-home-trending-grid,
+      .pullz-home-live-wins,
+      .pullz-home-reviews {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 260px;
+      }
+      @media (min-width: 640px) {
+        .pullz-home-hero {
+          min-height: 164px;
+          aspect-ratio: 1180 / 164;
+        }
+      }
+      @media (min-width: 1024px) {
+        .pullz-home-hero {
+          min-height: 220px;
+          aspect-ratio: 1180 / 220;
+        }
       }
       .pullz-stable-card {
         contain: layout paint style;
