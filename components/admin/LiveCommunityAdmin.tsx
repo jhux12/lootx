@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Timestamp, addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '../../firebase';
+import { db } from '../../firebase';
+import { storage } from '../../firebaseStorage';
 
 type StoryStatus = 'pending' | 'approved' | 'rejected';
 type LiveStory = Record<string, any> & { id: string };

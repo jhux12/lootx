@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Timestamp, addDoc, collection, doc, getDoc, increment, limit, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
+import { storage } from '../firebaseStorage';
 import { COIN_ICON } from '../constants';
 import { useGame } from '../context/GameContext';
 import type { User } from '../types';

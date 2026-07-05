@@ -2069,11 +2069,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    void (async () => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    const loadBoxes = () => {
+      if (cancelled) return;
+      void (async () => {
       try {
         const boxesPath = 'boxes?limit=250';
         console.log('READING FIRESTORE PATH', boxesPath);
         const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
+        if (cancelled) return;
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
         .map((docSnap) => {
@@ -2161,9 +2166,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
         });
       } catch (error) {
-        console.error('Failed to load boxes', error);
+        if (!cancelled) console.error('Failed to load boxes', error);
       }
-    })();
+      })();
+    };
+    const idleId = 'requestIdleCallback' in window
+      ? window.requestIdleCallback(loadBoxes, { timeout: 1600 })
+      : window.setTimeout(loadBoxes, 700);
+    return () => {
+      cancelled = true;
+      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId as number);
+    };
   }, [isAuthenticated, user.isAdmin]);
 
   useEffect(() => {
