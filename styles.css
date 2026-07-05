@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  .boxes-hero {
+    isolation: isolate;
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+
+  .boxes-hero-art {
+    z-index: 1;
+  }
+
+  .boxes-hero-glow {
+    position: absolute;
+    z-index: -1;
+    left: 50%;
+    top: 20px;
+    width: 420px;
+    height: 260px;
+    transform: translateX(-50%) translateZ(0);
+    border-radius: 50%;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 34% 50%, rgba(126, 34, 206, 0.9) 0%, rgba(109, 40, 217, 0.58) 34%, transparent 68%),
+      radial-gradient(ellipse at 66% 50%, rgba(37, 99, 235, 0.72) 0%, rgba(14, 165, 233, 0.34) 44%, transparent 76%);
+    filter: blur(42px);
+    -webkit-filter: blur(42px);
+    opacity: 0.9;
+  }
+
+  @media (max-width: 640px) {
+    .boxes-hero-glow {
+      top: 10px;
+      width: 320px;
+      height: 210px;
+      filter: blur(42px);
+      -webkit-filter: blur(42px);
+      opacity: 0.9;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .boxes-hero-glow {
+      width: 280px;
+      height: 190px;
+    }
+  }
+}
