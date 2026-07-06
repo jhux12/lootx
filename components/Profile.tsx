@@ -386,14 +386,14 @@ export const Profile: React.FC = () => {
 
   const normalizedInventory = useMemo(() => normalizeItems(inventory as InventoryItem[]).sort((a, b) => b.obtainedAt - a.obtainedAt), [inventory]);
   const activeInventory = useMemo(
-    () => normalizedInventory.filter((item) => item.status !== 'sold' && item.status !== 'shipping' && item.status !== 'shipping_requested' && item.status !== 'shipped'),
+    () => normalizedInventory.filter((item) => item.status !== 'sold' && item.status !== 'opened'),
     [normalizedInventory]
   );
 
   const filteredInventory = useMemo(() => {
     const term = search.trim().toLowerCase();
     const byFilters = activeInventory.filter((item) => {
-      const itemType = item.status === 'shipping' || item.status === 'shipping_requested' ? 'shipping' : item.status === 'shipped' ? 'shipped' : 'available';
+      const itemType = item.status === 'shipped' ? 'shipped' : item.status === 'shipping' || item.status === 'shipping_requested' || item.status === 'pending_shipment' ? 'pending' : 'all';
       return (!term || item.name.toLowerCase().includes(term))
         && (rarity === 'all' || item.rarity === rarity)
         && (type === 'all' || itemType === type);
@@ -408,9 +408,9 @@ export const Profile: React.FC = () => {
   }, [activeInventory, search, rarity, type, sort]);
 
   const orders = useMemo<OrderSummary[]>(() => {
-    const pendingStatuses = new Set(['shipping', 'shipping_requested']);
+    const pendingStatuses = new Set(['pending_payment', 'shipping', 'shipping_requested']);
     const shipmentOrders = (shipments as Shipment[])
-      .filter((shipment) => shipment.uid === user.id && (shipment.status === 'shipped' || pendingStatuses.has(shipment.status)))
+      .filter((shipment) => shipment.uid === user.id && shipment.status !== 'cancelled' && (shipment.status === 'shipped' || pendingStatuses.has(shipment.status)))
       .map((shipment) => ({
         id: shipment.id,
         orderGroupId: shipment.shippingBatchId || shipment.id,
@@ -428,7 +428,7 @@ export const Profile: React.FC = () => {
 
     const shipmentInventoryIds = new Set(shipmentOrders.map((order) => order.inventoryId).filter(Boolean));
     const inventoryOrders = normalizedInventory
-      .filter((item) => (item.status === 'shipped' || item.status === 'shipping' || item.status === 'shipping_requested') && !shipmentInventoryIds.has(item.instanceId))
+      .filter((item) => (item.status === 'shipped' || item.status === 'shipping' || item.status === 'shipping_requested' || item.status === 'pending_shipment') && !shipmentInventoryIds.has(item.instanceId))
       .map((item) => ({
         id: item.instanceId,
         orderGroupId: item.instanceId,
@@ -857,7 +857,7 @@ export const Profile: React.FC = () => {
   ];
 
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
-  const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
+  const availableToShip = activeInventory.filter((item) => canSelectShipment(item)).length;
 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';

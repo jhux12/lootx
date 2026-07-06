@@ -85,6 +85,54 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
     setIsPreviewOpen(false);
   };
 
+  const statusLabel = item.status === 'shipped' ? 'Shipped' : item.status === 'shipping' || item.status === 'shipping_requested' || item.status === 'pending_shipment' ? 'Pending' : 'Vaulted';
+
+  if (isList) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => selectable && onToggleSelect()}
+        onKeyDown={(event) => {
+          if ((event.key === 'Enter' || event.key === ' ') && selectable) {
+            event.preventDefault();
+            onToggleSelect();
+          }
+        }}
+        className={`group relative overflow-hidden rounded-[1.35rem] border border-white/8 bg-[#151d1b]/92 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_16px_38px_rgba(0,0,0,0.24)] transition ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35' : 'hover:border-emerald-300/20 hover:bg-[#17231f]'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={`flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-[#090e16] p-1.5 sm:h-24 sm:w-20 ${rarityStyle.image}`}>
+            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={160} height={190} showPlaceholder={false} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
+              <span className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-200">{statusLabel}</span>
+            </div>
+            <p className="mt-2 line-clamp-2 text-sm font-black leading-tight text-white sm:text-base">{item.name}</p>
+            <p className="mt-1 text-xs font-semibold text-gray-400">{item.size ? `Size ${item.size}` : 'Raw Card'}</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); onAction(); }}
+                disabled={actionDisabled}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-black transition ${actionDisabled ? 'cursor-not-allowed border border-white/10 bg-[#111720] text-gray-500' : 'bg-purple-500 text-white hover:bg-purple-400'}`}
+              >
+                {actionLabel}
+              </button>
+              {secondaryActionLabel && onSecondaryAction ? (
+                <button type="button" onClick={(event) => { event.stopPropagation(); onSecondaryAction(); }} disabled={secondaryActionDisabled} className={`rounded-lg px-2.5 py-1.5 text-xs font-black transition ${secondaryActionDisabled ? 'cursor-not-allowed border border-white/10 bg-[#111720] text-gray-500' : 'bg-emerald-500 text-[#06130f] hover:bg-emerald-400'}`}>{secondaryActionLabel}</button>
+              ) : null}
+            </div>
+          </div>
+          <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="shrink-0 text-sm font-black text-emerald-300 sm:text-lg" iconClassName="h-4 w-4 sm:h-5 sm:w-5" />
+        </div>
+        {selected ? <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white"><Check className="h-3.5 w-3.5 stroke-[4]" /></span> : null}
+      </div>
+    );
+  }
+
   return (
     <div
       role="button"

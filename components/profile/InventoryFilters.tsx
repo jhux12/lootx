@@ -24,6 +24,8 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   onSearchChange,
   rarity,
   onRarityChange,
+  type,
+  onTypeChange,
   sort,
   onSortChange,
   selectedCount,
@@ -32,7 +34,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filters = [
-    { value: rarity, onChange: onRarityChange, label: 'All Categories', options: ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'] },
+    { value: rarity, onChange: onRarityChange, label: 'All Rarities', options: ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'] },
     { value: sort, onChange: onSortChange, label: 'Newest First', options: ['newest', 'valueDesc', 'valueAsc', 'nameAsc'] }
   ];
 
@@ -45,7 +47,12 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
     return option.charAt(0).toUpperCase() + option.slice(1);
   };
 
-  const activeFilterCount = (rarity !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
+  const activeFilterCount = (type !== 'all' ? 1 : 0) + (rarity !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
+  const statusTabs: Array<{ id: string; label: string }> = [
+    { id: 'all', label: 'All' },
+    { id: 'pending', label: 'Pending' },
+    { id: 'shipped', label: 'Shipped' }
+  ];
 
   return (
     <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-5">
@@ -59,6 +66,19 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           {activeFilterCount > 0 ? <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs text-white">{activeFilterCount}</span> : null}
           <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
         </button>
+      </div>
+
+      <div className="mt-3 flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#0b1119] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {statusTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onTypeChange(tab.id)}
+            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${type === tab.id ? 'bg-emerald-500 text-[#06130f] shadow-[0_0_18px_rgba(16,185,129,0.24)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {filtersOpen ? (

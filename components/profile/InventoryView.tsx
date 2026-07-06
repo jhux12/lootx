@@ -45,13 +45,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   availableToShip,
   selectedValue
 }) => {
-  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('list');
 
   return (
     <section className="mx-auto w-full max-w-5xl flex-1 space-y-4 pb-3">
       <header>
-        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Inventory</h2>
-        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your items and view their values.</p>
+        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">My Collection</h2>
+        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your vaulted cards, pending shipments, and shipped rewards.</p>
       </header>
 
       <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
@@ -71,7 +71,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-bold sm:text-xl text-white">Your Items ({items.length})</h3>
+        <h3 className="text-lg font-bold sm:text-xl text-white">Collection ({items.length})</h3>
         <div className="flex rounded-2xl border border-white/10 bg-[#111720] p-1">
           <button type="button" onClick={() => setLayoutMode('grid')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'grid' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="Grid view"><Grid2X2 className="h-6 w-6" /></button>
           <button type="button" onClick={() => setLayoutMode('list')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'list' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="List view"><List className="h-6 w-6" /></button>
@@ -81,7 +81,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className={`${layoutMode === 'grid' ? 'flex flex-wrap gap-3' : 'grid grid-cols-1 gap-4'}`}>
+        <div className={`${layoutMode === 'grid' ? 'flex flex-wrap gap-3' : 'grid grid-cols-1 gap-3'}`}>
           {items.map((item) => {
             const action = getAction(item);
             return (
