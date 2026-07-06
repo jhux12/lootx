@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, Package, Search, SlidersHorizontal } from 'lucide-react';
+import { Package, Search, SlidersHorizontal } from 'lucide-react';
 
 interface InventoryFiltersProps {
   search: string;
@@ -15,10 +15,6 @@ interface InventoryFiltersProps {
   reviewDisabled: boolean;
 }
 
-const selectClass = 'h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#111720] px-4 pr-10 text-sm font-bold text-white outline-none transition focus:border-purple-300/40 focus:ring-2 focus:ring-purple-500/20';
-const reviewButtonBase = 'group/review relative mt-3 flex h-14 w-full items-center justify-center gap-3 overflow-hidden rounded-[10px] border px-4 text-sm font-black shadow-[0_14px_34px_rgba(0,0,0,0.22)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0d131c] active:scale-[0.99] sm:rounded-[11px] sm:text-base';
-const reviewButtonShine = 'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/review:opacity-95';
-
 export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   search,
   onSearchChange,
@@ -31,52 +27,35 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
   reviewDisabled
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const filters = [
-    { value: rarity, onChange: onRarityChange, label: 'All Categories', options: ['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'] },
-    { value: sort, onChange: onSortChange, label: 'Newest First', options: ['newest', 'valueDesc', 'valueAsc', 'nameAsc'] }
-  ];
-
-  const displayLabel = (option: string, fallback: string) => {
-    if (option === 'all') return fallback;
-    if (option === 'valueDesc') return 'Value High to Low';
-    if (option === 'valueAsc') return 'Value Low to High';
-    if (option === 'nameAsc') return 'Name A to Z';
-    if (option === 'newest') return 'Newest First';
-    return option.charAt(0).toUpperCase() + option.slice(1);
-  };
-
   const activeFilterCount = (rarity !== 'all' ? 1 : 0) + (sort !== 'newest' ? 1 : 0);
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-5">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <label className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-[#111720] px-4 text-gray-400 focus-within:border-purple-300/40 focus-within:ring-2 focus-within:ring-purple-500/20">
-          <Search className="h-5 w-5 shrink-0" />
-          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search your inventory..." className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500 sm:text-base" />
+    <div className="space-y-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
+        <label className="flex h-14 items-center gap-3 rounded-[1.05rem] border border-white/10 bg-black/18 px-4 text-gray-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] focus-within:border-purple-300/45 focus-within:ring-2 focus-within:ring-purple-500/20 sm:h-[4.25rem] sm:px-6">
+          <Search className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
+          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search items..." className="w-full bg-transparent text-base font-semibold text-white outline-none placeholder:text-gray-500 sm:text-2xl" />
         </label>
-        <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#111720] px-4 text-sm font-bold text-white transition hover:border-purple-300/40 hover:bg-purple-500/10" aria-expanded={filtersOpen}>
-          <SlidersHorizontal className="h-4 w-4" /> Options
-          {activeFilterCount > 0 ? <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs text-white">{activeFilterCount}</span> : null}
-          <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
+        <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="flex h-14 items-center justify-center gap-2 rounded-[1.05rem] border border-white/10 bg-black/18 px-4 text-base font-bold text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition hover:border-purple-300/40 hover:bg-purple-500/10 sm:h-[4.25rem] sm:px-7 sm:text-2xl" aria-expanded={filtersOpen}>
+          <SlidersHorizontal className="h-5 w-5 sm:h-7 sm:w-7" /> <span className="hidden min-[390px]:inline">Filter</span>
+          <span className="flex h-8 min-w-8 items-center justify-center rounded-xl bg-[#27283a] px-2 text-sm text-white sm:h-10 sm:min-w-10 sm:text-xl">{activeFilterCount}</span>
         </button>
       </div>
 
       {filtersOpen ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {filters.map((filter) => (
-            <div key={filter.label} className="relative">
-              <select value={filter.value} onChange={(event) => filter.onChange(event.target.value)} className={selectClass}>
-                {filter.options.map((option) => <option key={option} value={option}>{displayLabel(option, filter.label)}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
-            </div>
-          ))}
+        <div className="grid gap-3 rounded-[1.05rem] border border-white/10 bg-[#101019] p-3 sm:grid-cols-2">
+          <select value={rarity} onChange={(event) => onRarityChange(event.target.value)} className="h-12 rounded-xl border border-white/10 bg-[#080a10] px-3 font-bold text-white outline-none">
+            {['all', 'common', 'uncommon', 'rare', 'epic', 'legendary'].map((option) => <option key={option} value={option}>{option === 'all' ? 'All Categories' : option.charAt(0).toUpperCase() + option.slice(1)}</option>)}
+          </select>
+          <select value={sort} onChange={(event) => onSortChange(event.target.value)} className="h-12 rounded-xl border border-white/10 bg-[#080a10] px-3 font-bold text-white outline-none">
+            <option value="newest">Newest First</option><option value="valueDesc">Value High to Low</option><option value="valueAsc">Value Low to High</option><option value="nameAsc">Name A to Z</option>
+          </select>
         </div>
       ) : null}
 
-      <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`${reviewButtonBase} ${reviewDisabled ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none' : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'}`}>
-        {!reviewDisabled ? <span aria-hidden="true" className={reviewButtonShine} /> : null}
-        <Package className="relative z-10 h-5 w-5 shrink-0" /> <span className="relative z-10 truncate">Review Shipping ({selectedCount})</span> <ChevronDown className="relative z-10 h-4 w-4 shrink-0 -rotate-90" />
+      <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`relative flex min-h-16 w-full items-center justify-between gap-3 rounded-[1.05rem] border border-white/10 bg-black/18 p-2 pl-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:min-h-[4.75rem] sm:pl-6 ${reviewDisabled ? 'text-gray-400' : 'text-white'}`}>
+        <span className="flex items-center gap-3"><span className="h-8 w-8 rounded-lg border border-white/10 bg-black/15 sm:h-10 sm:w-10" /><span className="text-base font-semibold sm:text-xl">Select Items to Ship ({selectedCount})</span></span>
+        <span className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-400 to-violet-600 px-4 text-sm font-black uppercase tracking-wide text-white shadow-[0_12px_32px_rgba(139,92,246,0.32)] sm:h-14 sm:px-9 sm:text-xl"><Package className="h-5 w-5 sm:h-6 sm:w-6" /> Ship Selected</span>
       </button>
     </div>
   );

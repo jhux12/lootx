@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeftRight, Check, Package, Search, X } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import { InventoryItem } from '../../types';
 import { BlurImage } from '../../src/ui/images/BlurImage';
 import { CoinAmount } from '../CoinAmount';
@@ -19,9 +19,6 @@ interface InventoryCardProps {
   layoutMode?: 'grid' | 'list';
 }
 
-
-const primaryActionButtonBase = 'group/action relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-[10px] border px-3 text-sm font-black shadow-[0_14px_34px_rgba(0,0,0,0.22)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10151c] active:scale-[0.99] sm:rounded-[11px]';
-const primaryActionShineClass = 'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/action:opacity-95';
 
 const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string; image: string }> = {
   common: {
@@ -51,9 +48,8 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
   }
 };
 
-export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction, layoutMode = 'grid' }) => {
+export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect }) => {
   const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
-  const isList = layoutMode === 'list';
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -96,75 +92,31 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative rounded-3xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_44px_rgba(0,0,0,0.22)] transition sm:p-4 ${isList ? 'sm:grid sm:grid-cols-[9rem_minmax(0,1fr)_12rem] sm:items-center sm:gap-4' : 'flex flex-col'} ${rarityStyle.card} ${
-        selected ? 'border-purple-300/80 ring-4 ring-purple-400/45 shadow-[0_0_34px_rgba(168,85,247,0.42)]' : 'hover:shadow-[0_0_22px_rgba(255,255,255,0.08)]'
-      } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group relative flex h-full flex-col rounded-[1.15rem] border border-white/10 bg-[#101019]/92 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_38px_rgba(0,0,0,0.24)] transition sm:rounded-2xl sm:p-5 ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35 shadow-[0_0_34px_rgba(168,85,247,0.35)]' : 'hover:border-white/20'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
-      {selected ? (
-        <span className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]">
-          <Check className="h-4 w-4 stroke-[4]" />
-        </span>
-      ) : null}
+      <span className={`absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-lg border-2 ${selected ? 'border-purple-300 bg-purple-500 text-white' : 'border-gray-300/80 bg-black/20 text-transparent'} sm:left-5 sm:top-5 sm:h-10 sm:w-10`}>
+        <Check className="h-5 w-5 stroke-[4]" />
+      </span>
 
-      <div className={`${isList ? 'mb-3 sm:mb-0' : 'mb-3'} flex items-center justify-between gap-3 sm:col-span-full ${isList ? 'sm:hidden' : ''}`}>
-        <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-        <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
-          <Search className="h-4 w-4" />
-        </button>
+      <span className={`absolute right-3 top-3 z-20 rounded-lg border px-2 py-1 text-xs font-black uppercase leading-none sm:right-5 sm:top-5 sm:text-lg ${item.rarity === 'legendary' || item.rarity === 'epic' ? 'border-amber-400/60 bg-amber-500/10 text-amber-300' : rarityStyle.badge}`}>
+        {item.rarity === 'legendary' || item.rarity === 'epic' ? 'NM' : item.rarity}
+      </span>
+
+      <button type="button" className="absolute right-3 bottom-3 z-20 hidden rounded-xl border border-white/10 bg-black/35 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70 sm:flex" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
+        <Search className="h-4 w-4" />
+      </button>
+
+      <div className="mx-auto mb-4 mt-3 flex aspect-[0.72] w-[72%] max-w-[12rem] items-center justify-center overflow-hidden rounded-lg bg-transparent sm:mt-2 sm:w-[68%]">
+        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={300} showPlaceholder={false} />
       </div>
 
-      <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] p-3 ${rarityStyle.image} ${isList ? 'mx-auto mb-3 w-full max-w-[9rem] sm:mb-0' : 'mb-3 w-full'}`}>
-        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={220} showPlaceholder={false} />
+      <div className="mt-auto min-w-0">
+        <p className="line-clamp-2 text-base font-black leading-tight tracking-[-0.03em] text-white sm:text-2xl">{item.name}</p>
+        <p className="mt-1 truncate text-sm font-semibold text-gray-400 sm:text-xl">{item.brand || item.category || item.source || 'Collectible'}</p>
+        <span className={`mt-3 inline-flex rounded-md px-2.5 py-1 text-xs font-black capitalize sm:text-lg ${rarityStyle.badge}`}>{item.rarity}</span>
+        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} className="mt-4 text-lg font-black leading-none text-white sm:text-2xl" iconClassName="hidden" />
       </div>
 
-      <div className="min-w-0">
-        <div className={`hidden items-center justify-between gap-3 ${isList ? 'sm:flex' : ''}`}>
-          <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-          <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
-            <Search className="h-4 w-4" />
-          </button>
-        </div>
-        <p className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{item.name}</p>
-        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-3 text-sm font-bold text-white" iconClassName="h-5 w-5" />
-      </div>
-
-      <div className={`mt-3 ${isList ? 'sm:mt-0' : 'mt-auto pt-1'}`}>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onAction();
-          }}
-          disabled={actionDisabled}
-          className={`${primaryActionButtonBase} ${
-            actionDisabled
-              ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none'
-              : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'
-          }`}
-        >
-          {!actionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
-          <Package className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{actionLabel}</span>
-        </button>
-
-        {secondaryActionLabel && onSecondaryAction && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onSecondaryAction();
-            }}
-            disabled={secondaryActionDisabled}
-            className={`mt-2 ${primaryActionButtonBase} ${
-              secondaryActionDisabled
-                ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none'
-                : 'border-emerald-300/40 bg-[linear-gradient(135deg,rgba(16,185,129,0.82)_0%,rgba(5,150,105,0.78)_100%)] text-emerald-50 shadow-[0_14px_34px_rgba(16,185,129,0.20)] hover:scale-[1.01] hover:border-emerald-200/60 hover:shadow-[0_18px_42px_rgba(16,185,129,0.26)]'
-            }`}
-          >
-            {!secondaryActionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
-            <ArrowLeftRight className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{secondaryActionLabel}</span>
-          </button>
-        )}
-      </div>
 
 
       {isPreviewOpen ? (

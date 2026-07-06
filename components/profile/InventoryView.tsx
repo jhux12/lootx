@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { InventoryItem } from '../../types';
-import { Grid2X2, List, ShieldCheck } from 'lucide-react';
-import { CoinAmount } from '../CoinAmount';
+import { ChevronRight, ShieldCheck } from 'lucide-react';
 import { InventoryStats } from './InventoryStats';
 import { InventoryFilters } from './InventoryFilters';
 import { InventoryCard } from './InventoryCard';
@@ -42,17 +41,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   getAction,
   isSelectable,
   totalValue,
-  availableToShip,
-  selectedValue
+  availableToShip
 }) => {
-  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
-
   return (
-    <section className="mx-auto w-full max-w-5xl flex-1 space-y-4 pb-3">
-      <header>
-        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Inventory</h2>
-        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Manage your items and view their values.</p>
-      </header>
+    <section className="mx-auto w-full max-w-5xl flex-1 space-y-5 pb-24 sm:space-y-6 md:pb-6">
 
       <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
 
@@ -70,22 +62,14 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         reviewDisabled={selectedIds.length === 0}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-bold sm:text-xl text-white">Your Items ({items.length})</h3>
-        <div className="flex rounded-2xl border border-white/10 bg-[#111720] p-1">
-          <button type="button" onClick={() => setLayoutMode('grid')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'grid' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="Grid view"><Grid2X2 className="h-6 w-6" /></button>
-          <button type="button" onClick={() => setLayoutMode('list')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'list' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="List view"><List className="h-6 w-6" /></button>
-        </div>
-      </div>
-
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className={`${layoutMode === 'grid' ? 'flex flex-wrap gap-3' : 'grid grid-cols-1 gap-4'}`}>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5">
           {items.map((item) => {
             const action = getAction(item);
             return (
-              <div key={item.instanceId} className={layoutMode === 'grid' ? 'w-[calc(50%-0.375rem)] min-w-0' : 'w-full'}>
+              <div key={item.instanceId} className="min-w-0">
               <InventoryCard
                 item={item}
                 selected={selectedIds.includes(item.instanceId)}
@@ -97,7 +81,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 secondaryActionLabel={action.secondaryLabel}
                 secondaryActionDisabled={action.secondaryDisabled}
                 onSecondaryAction={action.onSecondaryClick}
-                layoutMode={layoutMode}
               />
               </div>
             );
@@ -105,23 +88,16 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#111824] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <ShieldCheck className="h-9 w-9 shrink-0 text-purple-400" />
-          <p className="max-w-2xl text-sm font-semibold leading-snug text-white">Items available to ship will be sent to your address on file.</p>
+      <div className="rounded-[1.15rem] border border-white/10 bg-[#101019]/88 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_38px_rgba(0,0,0,0.24)] sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-purple-500/18 text-purple-300 shadow-[0_0_28px_rgba(139,92,246,0.28)] sm:h-[4.25rem] sm:w-[4.25rem]"><ShieldCheck className="h-8 w-8" /></div>
+            <div className="min-w-0"><p className="text-base font-black leading-tight text-white sm:text-2xl">Your security is our priority</p><p className="mt-1 text-sm font-semibold text-gray-400 sm:text-xl">All shipments are fully insured</p></div>
+          </div>
+          <ChevronRight className="h-7 w-7 shrink-0 text-gray-400 sm:h-9 sm:w-9" />
         </div>
-        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-purple-300 hover:bg-purple-500/10">Learn More <span aria-hidden="true">›</span></button>
       </div>
 
-      {selectedIds.length > 0 && (
-        <div className="sticky bottom-16 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 backdrop-blur md:bottom-4">
-          <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:flex-none">
-            <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
-            <button onClick={onReviewShipping} className="group/review relative inline-flex min-h-10 items-center justify-center overflow-hidden rounded-[10px] border border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] px-3 py-2 text-xs font-black text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] outline-none transition-all duration-200 hover:scale-[1.01] hover:border-purple-200/65 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111824] active:scale-[0.99]"><span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/review:opacity-95" /><span className="relative z-10 whitespace-nowrap">Review Shipping</span></button>
-          </div>
-        </div>
-      )}
     </section>
   );
 };
