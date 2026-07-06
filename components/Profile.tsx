@@ -912,22 +912,21 @@ export const Profile: React.FC = () => {
         />
 
         <div className="flex-1">
-          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#1f252c] p-1 [scrollbar-width:none] md:max-w-md [&::-webkit-scrollbar]:hidden">
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
-            {hasDailyFreeBoxAvailable ? (
-              <button
-                className="shrink-0 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-200"
-                onClick={() => {
-                  if (!dailyFreeBox) return;
-                  setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
-                }}
-              >
-                Free Box
-              </button>
-            ) : null}
+          <div className="mb-4 grid w-full grid-cols-2 overflow-hidden border-b border-white/10 bg-[#0b0d14]/60 text-center sm:rounded-2xl sm:border sm:border-white/10">
+            <button className={`relative px-4 py-4 text-lg font-black uppercase tracking-wide transition sm:text-2xl ${activeTab === 'inventory' ? 'text-purple-400' : 'text-gray-500 hover:text-white'}`} onClick={() => setActiveTab('inventory')}>Inventory{activeTab === 'inventory' ? <span className="absolute inset-x-8 bottom-0 h-1 rounded-full bg-purple-500 shadow-[0_0_18px_rgba(139,92,246,0.9)]" /> : null}</button>
+            <button className={`relative px-4 py-4 text-lg font-black uppercase tracking-wide transition sm:text-2xl ${activeTab === 'orders' ? 'text-purple-400' : 'text-gray-500 hover:text-white'}`} onClick={() => setActiveTab('orders')}>Shipments{activeTab === 'orders' ? <span className="absolute inset-x-8 bottom-0 h-1 rounded-full bg-purple-500 shadow-[0_0_18px_rgba(139,92,246,0.9)]" /> : null}</button>
           </div>
+          {hasDailyFreeBoxAvailable ? (
+            <button
+              className="mb-4 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-200"
+              onClick={() => {
+                if (!dailyFreeBox) return;
+                setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
+              }}
+            >
+              Free Box
+            </button>
+          ) : null}
 
           {activeTab === 'inventory' ? (
             <InventoryView
