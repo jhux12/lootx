@@ -60,7 +60,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
             onToggleSelect();
           }
         }}
-        className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-[#101019] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_16px_38px_rgba(0,0,0,0.24)] transition ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35' : 'hover:border-purple-300/25 hover:bg-[#12121d]'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+        className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-[#101019] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_16px_38px_rgba(0,0,0,0.24)] transition ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35' : 'hover:border-purple-300/25 hover:bg-[#12121d]'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 bg-[#0c0d14]/90 ${selected ? 'border-purple-300 text-purple-200' : 'border-gray-400/80 text-transparent'}`}>
@@ -107,21 +107,21 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative min-h-full overflow-hidden rounded-2xl border border-white/10 bg-[#101019] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.26)] transition sm:p-4 ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35' : 'hover:border-purple-300/25 hover:bg-[#12121d]'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group relative min-h-full overflow-hidden rounded-2xl border border-white/10 bg-[#101019] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.26)] transition sm:p-3 ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35' : 'hover:border-purple-300/25 hover:bg-[#12121d]'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
-      <span className={`absolute left-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-lg border-2 bg-[#0c0d14]/90 sm:h-8 sm:w-8 ${selected ? 'border-purple-300 text-purple-200' : 'border-gray-400/80 text-transparent'}`}>
+      <span className={`absolute left-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-lg border-2 bg-[#0c0d14]/90 sm:h-8 sm:w-8 ${selected ? 'border-purple-300 text-purple-200' : 'border-gray-400/80 text-transparent'}`}>
         <Check className="h-4 w-4 stroke-[4]" />
       </span>
 
-      <div className={`mx-auto flex aspect-[0.74] w-full max-w-[9rem] items-center justify-center overflow-hidden rounded-xl border bg-[#090e16] p-2 sm:max-w-[11rem] ${rarityStyle.image}`}>
+      <div className={`mx-auto flex aspect-[0.74] w-full max-w-[6.8rem] items-center justify-center overflow-hidden rounded-xl border bg-[#090e16] p-1.5 sm:max-w-[8.5rem] ${rarityStyle.image}`}>
         <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={300} showPlaceholder={false} />
       </div>
 
-      <div className="mt-3 min-w-0">
-        <p className="line-clamp-2 text-base font-black leading-tight text-white sm:text-lg">{item.name}</p>
-        <p className="mt-1 line-clamp-1 text-sm font-semibold text-gray-400">{subtitle}</p>
-        <span className={`mt-3 inline-flex rounded-lg border px-2.5 py-1 text-xs font-black capitalize ${rarityStyle.badge}`}>{item.rarity}</span>
-        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-4 text-lg font-black text-white sm:text-xl" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
+      <div className="mt-2 min-w-0">
+        <p className="line-clamp-2 text-sm font-black leading-tight text-white sm:text-base">{item.name}</p>
+        <p className="mt-1 line-clamp-1 text-xs font-semibold text-gray-400 sm:text-sm">{subtitle}</p>
+        <span className={`mt-2 inline-flex rounded-lg border px-2 py-0.5 text-[11px] font-black capitalize ${rarityStyle.badge}`}>{item.rarity}</span>
+        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-3 text-base font-black text-white sm:text-lg" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
       </div>
     </div>
   );

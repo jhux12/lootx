@@ -1,6 +1,6 @@
 import React from 'react';
 import { InventoryItem } from '../../types';
-import { ChevronRight, ShieldCheck } from 'lucide-react';
+import { ChevronRight, ShieldCheck, Truck } from 'lucide-react';
 import { CoinAmount } from '../CoinAmount';
 import { InventoryStats } from './InventoryStats';
 import { InventoryFilters } from './InventoryFilters';
@@ -62,6 +62,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         onReviewShipping={onReviewShipping}
         reviewDisabled={selectedIds.length === 0}
       />
+
+
+      <div className="flex items-center justify-center gap-4 rounded-2xl border border-white/10 bg-[#101019] p-4 text-center shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:text-left">
+        <Truck className="h-8 w-8 shrink-0 text-purple-400" />
+        <div>
+          <p className="text-sm font-bold text-white sm:text-base">Items shipped to you are yours to keep!</p>
+          <p className="mt-1 text-sm font-semibold text-gray-400">Shipping costs are shown in coins at checkout</p>
+        </div>
+      </div>
 
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
