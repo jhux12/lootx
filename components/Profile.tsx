@@ -895,7 +895,7 @@ export const Profile: React.FC = () => {
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
 
   return (
-    <div className="min-h-screen bg-[#1b2024] px-4 py-4 md:px-6 md:py-6">
+    <div className="min-h-screen bg-[#05060d] px-4 py-4 md:px-6 md:py-6">
       <div className="mx-auto flex max-w-[1280px] gap-6 pb-20 md:pb-4">
         <AccountSidebar
           user={user}

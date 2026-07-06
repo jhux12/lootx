@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { InventoryItem } from '../../types';
-import { Grid2X2, List, Truck } from 'lucide-react';
+import { ChevronRight, ShieldCheck } from 'lucide-react';
 import { CoinAmount } from '../CoinAmount';
 import { InventoryStats } from './InventoryStats';
 import { InventoryFilters } from './InventoryFilters';
@@ -45,8 +45,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   availableToShip,
   selectedValue
 }) => {
-  const [layoutMode, setLayoutMode] = useState<'grid' | 'list'>('grid');
-
   return (
     <section className="mx-auto w-full max-w-5xl flex-1 space-y-4 pb-3">
       <InventoryStats totalItems={items.length} totalValue={totalValue} availableToShip={availableToShip} />
@@ -65,18 +63,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         reviewDisabled={selectedIds.length === 0}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-lg font-bold sm:text-xl text-white">Items</h3>
-        <div className="flex rounded-2xl border border-white/10 bg-[#111720] p-1">
-          <button type="button" onClick={() => setLayoutMode('grid')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'grid' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="Grid view"><Grid2X2 className="h-6 w-6" /></button>
-          <button type="button" onClick={() => setLayoutMode('list')} className={`flex h-12 w-14 items-center justify-center rounded-xl transition ${layoutMode === 'list' ? 'border border-purple-400/50 bg-purple-500/15 text-purple-300 shadow-[0_0_18px_rgba(168,85,247,0.2)]' : 'text-gray-500 hover:text-white'}`} aria-label="List view"><List className="h-6 w-6" /></button>
-        </div>
-      </div>
-
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className={`${layoutMode === 'grid' ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4' : 'grid grid-cols-1 gap-3'}`}>
+        <div className="grid grid-cols-2 gap-3 min-[520px]:grid-cols-3 sm:gap-4">
           {items.map((item) => {
             const action = getAction(item);
             return (
@@ -92,7 +82,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 secondaryActionLabel={action.secondaryLabel}
                 secondaryActionDisabled={action.secondaryDisabled}
                 onSecondaryAction={action.onSecondaryClick}
-                layoutMode={layoutMode}
+                layoutMode="grid"
               />
               </div>
             );
@@ -100,11 +90,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#101019] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.22)] sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center justify-center gap-4 text-center sm:text-left">
-          <Truck className="h-9 w-9 shrink-0 text-purple-400" />
-          <p className="max-w-2xl text-sm font-semibold leading-snug text-white">Items shipped to you are yours to keep! Shipping costs are shown in coins at checkout.</p>
+      <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#101019] p-4 shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+        <div className="flex items-center gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-500/18 text-purple-300 shadow-[0_0_24px_rgba(139,92,246,0.2)]"><ShieldCheck className="h-7 w-7" /></span>
+          <div>
+            <p className="text-base font-black text-white">Your security is our priority</p>
+            <p className="mt-1 text-sm font-semibold text-gray-400">All shipments are fully insured</p>
+          </div>
         </div>
+        <ChevronRight className="h-7 w-7 shrink-0 text-gray-400" />
       </div>
 
       {selectedIds.length > 0 && (

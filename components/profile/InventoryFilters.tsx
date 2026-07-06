@@ -59,30 +59,29 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
         <label className="flex h-14 items-center gap-3 rounded-2xl border border-white/10 bg-[#0b0d14] px-4 text-gray-400 focus-within:border-purple-300/40 focus-within:ring-2 focus-within:ring-purple-500/20">
           <Search className="h-5 w-5 shrink-0" />
-          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search your inventory..." className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500 sm:text-base" />
+          <input value={search} onChange={(event) => onSearchChange(event.target.value)} placeholder="Search items..." className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500 sm:text-base" />
         </label>
         <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[#0b0d14] px-4 text-sm font-bold text-white transition hover:border-purple-300/40 hover:bg-purple-500/10" aria-expanded={filtersOpen}>
-          <SlidersHorizontal className="h-4 w-4" /> Options
+          <SlidersHorizontal className="h-5 w-5" /> Filter
           {activeFilterCount > 0 ? <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs text-white">{activeFilterCount}</span> : null}
           <ChevronDown className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#0b0d14] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {statusTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onTypeChange(tab.id)}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-black transition ${type === tab.id ? 'bg-emerald-500 text-[#06130f] shadow-[0_0_18px_rgba(16,185,129,0.24)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {filtersOpen ? (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0b0d14] p-3 sm:grid-cols-2">
+          <div className="flex gap-2 overflow-x-auto rounded-xl bg-black/20 p-1 [scrollbar-width:none] sm:col-span-2 [&::-webkit-scrollbar]:hidden">
+            {statusTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onTypeChange(tab.id)}
+                className={`shrink-0 rounded-lg px-4 py-2 text-sm font-black transition ${type === tab.id ? 'bg-purple-500 text-white shadow-[0_0_18px_rgba(139,92,246,0.24)]' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
           {filters.map((filter) => (
             <div key={filter.label} className="relative">
               <select value={filter.value} onChange={(event) => filter.onChange(event.target.value)} className={selectClass}>
@@ -99,7 +98,7 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
           <CheckSquare className="h-6 w-6 shrink-0 text-gray-500" />
           <span className="text-sm font-bold sm:text-base">Select Items to Ship ({selectedCount})</span>
         </div>
-        <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`${reviewButtonBase} ${reviewDisabled ? 'cursor-not-allowed border-white/10 bg-[#171923] text-gray-500 shadow-none' : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(139,92,246,0.98)_0%,rgba(124,58,237,0.94)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'}`}>
+        <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`${reviewButtonBase} border-purple-300/45 bg-[linear-gradient(135deg,rgba(139,92,246,0.98)_0%,rgba(124,58,237,0.94)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:border-purple-200/65 ${reviewDisabled ? 'cursor-not-allowed opacity-80' : 'hover:scale-[1.01] hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'}`}>
           {!reviewDisabled ? <span aria-hidden="true" className={reviewButtonShine} /> : null}
           <Truck className="relative z-10 h-5 w-5 shrink-0" /> <span className="relative z-10 truncate">Ship Selected</span>
         </button>
