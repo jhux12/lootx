@@ -42,6 +42,12 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
         </button>
       </div>
 
+
+      <button type="button" onClick={() => setFiltersOpen((open) => !open)} className="fixed right-0 top-[58vh] z-40 flex h-16 w-16 translate-x-2 items-center justify-center rounded-full border border-white/20 bg-[#11141c]/95 text-white shadow-[0_10px_28px_rgba(0,0,0,0.45)] backdrop-blur md:hidden" aria-label="Toggle inventory filters">
+        <SlidersHorizontal className="h-7 w-7" />
+        {activeFilterCount > 0 ? <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-purple-400" /> : null}
+      </button>
+
       {filtersOpen ? (
         <div className="grid gap-3 rounded-[1.05rem] border border-white/10 bg-[#101019] p-3 sm:grid-cols-2">
           <select value={rarity} onChange={(event) => onRarityChange(event.target.value)} className="h-12 rounded-xl border border-white/10 bg-[#080a10] px-3 font-bold text-white outline-none">
@@ -54,8 +60,8 @@ export const InventoryFilters: React.FC<InventoryFiltersProps> = ({
       ) : null}
 
       <button type="button" onClick={onReviewShipping} disabled={reviewDisabled} className={`relative flex min-h-16 w-full items-center justify-between gap-3 rounded-[1.05rem] border border-white/10 bg-black/18 p-2 pl-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] sm:min-h-[4.75rem] sm:pl-6 ${reviewDisabled ? 'text-gray-400' : 'text-white'}`}>
-        <span className="flex items-center gap-3"><span className="h-8 w-8 rounded-lg border border-white/10 bg-black/15 sm:h-10 sm:w-10" /><span className="text-base font-semibold sm:text-xl">Select Items to Ship ({selectedCount})</span></span>
-        <span className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-400 to-violet-600 px-4 text-sm font-black uppercase tracking-wide text-white shadow-[0_12px_32px_rgba(139,92,246,0.32)] sm:h-14 sm:px-9 sm:text-xl"><Package className="h-5 w-5 sm:h-6 sm:w-6" /> Ship Selected</span>
+        <span className="flex min-w-0 items-center gap-3"><span className="h-8 w-8 shrink-0 rounded-lg border border-white/10 bg-black/15 sm:h-10 sm:w-10" /><span className="truncate text-base font-semibold sm:text-xl"><span className="hidden sm:inline">Select Items to </span>Ship ({selectedCount})</span></span>
+        <span className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-purple-400 to-violet-600 px-4 text-sm font-black uppercase tracking-wide text-white shadow-[0_12px_32px_rgba(139,92,246,0.32)] sm:h-14 sm:px-9 sm:text-xl"><Package className="h-5 w-5 sm:h-6 sm:w-6" /> <span className="hidden min-[360px]:inline">Ship Selected</span><span className="min-[360px]:hidden">Ship</span></span>
       </button>
     </div>
   );

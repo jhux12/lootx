@@ -92,26 +92,26 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative flex h-full flex-col rounded-[1.15rem] border border-white/10 bg-[#101019]/92 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_38px_rgba(0,0,0,0.24)] transition sm:rounded-2xl sm:p-5 ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35 shadow-[0_0_34px_rgba(168,85,247,0.35)]' : 'hover:border-white/20'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group relative flex min-h-[18.75rem] h-full flex-col rounded-[1.15rem] border border-white/10 bg-[#171b23] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_38px_rgba(0,0,0,0.24)] transition sm:min-h-[32rem] sm:rounded-2xl sm:p-5 ${selected ? 'border-purple-300/80 ring-4 ring-purple-400/35 shadow-[0_0_34px_rgba(168,85,247,0.35)]' : 'hover:border-white/20'} ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
     >
       <span className={`absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-lg border-2 ${selected ? 'border-purple-300 bg-purple-500 text-white' : 'border-gray-300/80 bg-black/20 text-transparent'} sm:left-5 sm:top-5 sm:h-10 sm:w-10`}>
         <Check className="h-5 w-5 stroke-[4]" />
       </span>
 
       <span className={`absolute right-3 top-3 z-20 rounded-lg border px-2 py-1 text-xs font-black uppercase leading-none sm:right-5 sm:top-5 sm:text-lg ${item.rarity === 'legendary' || item.rarity === 'epic' ? 'border-amber-400/60 bg-amber-500/10 text-amber-300' : rarityStyle.badge}`}>
-        {item.rarity === 'legendary' || item.rarity === 'epic' ? 'NM' : item.rarity}
+        {item.rarity === 'legendary' || item.rarity === 'epic' ? 'NM' : item.rarity.toUpperCase()}
       </span>
 
       <button type="button" className="absolute right-3 bottom-3 z-20 hidden rounded-xl border border-white/10 bg-black/35 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70 sm:flex" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
         <Search className="h-4 w-4" />
       </button>
 
-      <div className="mx-auto mb-4 mt-3 flex aspect-[0.72] w-[72%] max-w-[12rem] items-center justify-center overflow-hidden rounded-lg bg-transparent sm:mt-2 sm:w-[68%]">
+      <div className="mx-auto mb-4 mt-12 flex aspect-[0.72] w-[58%] max-w-[10rem] items-center justify-center overflow-hidden rounded-lg bg-transparent sm:mt-14 sm:w-[58%]">
         <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={300} showPlaceholder={false} />
       </div>
 
-      <div className="mt-auto min-w-0">
-        <p className="line-clamp-2 text-base font-black leading-tight tracking-[-0.03em] text-white sm:text-2xl">{item.name}</p>
+      <div className="mt-auto min-w-0 pb-1">
+        <p className="line-clamp-2 text-[1.05rem] font-black leading-tight tracking-[-0.03em] text-white sm:text-2xl">{item.name}</p>
         <p className="mt-1 truncate text-sm font-semibold text-gray-400 sm:text-xl">{item.brand || item.category || item.source || 'Collectible'}</p>
         <span className={`mt-3 inline-flex rounded-md px-2.5 py-1 text-xs font-black capitalize sm:text-lg ${rarityStyle.badge}`}>{item.rarity}</span>
         <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} className="mt-4 text-lg font-black leading-none text-white sm:text-2xl" iconClassName="hidden" />
