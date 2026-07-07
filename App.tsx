@@ -17,8 +17,22 @@ import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
 
-type ClarityWindow = Window &
+type TawkApi = {
+  hideWidget?: () => void;
+  showWidget?: () => void;
+  maximize?: () => void;
+  onLoad?: () => void;
+  onChatMinimized?: () => void;
+  onChatHidden?: () => void;
+};
+
+type PullzWindow = Window &
   typeof globalThis & {
+    Tawk_API?: TawkApi;
+    Tawk_LoadStart?: Date;
+  };
+
+type ClarityWindow = PullzWindow & {
     clarity?: (...args: unknown[]) => void;
     __pullzClarityInitialized?: boolean;
     __pullzClarityNavigationTrackingInstalled?: boolean;
@@ -121,6 +135,130 @@ const ProtectedPageLoading: React.FC = () => (
     </div>
   </div>
 );
+
+
+const TAWK_SCRIPT_SRC = 'https://embed.tawk.to/6a4c4bec6f19351d47f86c36/1jst0h54s';
+const TAWK_SCRIPT_ID = 'pullz-tawk-script';
+
+const isAdminViewType = (viewType: string) => viewType === 'ADMIN' || viewType.startsWith('ADMIN_');
+
+const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) => {
+  const [isTabVisible, setIsTabVisible] = useState(!isAdminPage);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [hasLoadFailed, setHasLoadFailed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+
+    const pullzWindow = window as PullzWindow;
+    const showTab = () => {
+      setIsChatOpen(false);
+      setIsTabVisible(!isAdminPage);
+    };
+    const hideDefaultWidget = () => {
+      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
+        pullzWindow.Tawk_API.hideWidget();
+      }
+    };
+
+    pullzWindow.Tawk_API = pullzWindow.Tawk_API || {};
+    pullzWindow.Tawk_LoadStart = pullzWindow.Tawk_LoadStart || new Date();
+    pullzWindow.Tawk_API.onLoad = () => {
+      setHasLoadFailed(false);
+      hideDefaultWidget();
+      showTab();
+    };
+    pullzWindow.Tawk_API.onChatMinimized = () => {
+      hideDefaultWidget();
+      showTab();
+    };
+    pullzWindow.Tawk_API.onChatHidden = showTab;
+
+    const existingScript = document.getElementById(TAWK_SCRIPT_ID) as HTMLScriptElement | null;
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.id = TAWK_SCRIPT_ID;
+      script.async = true;
+      script.src = TAWK_SCRIPT_SRC;
+      script.charset = 'UTF-8';
+      script.setAttribute('crossorigin', '*');
+      script.onerror = () => {
+        setHasLoadFailed(true);
+        setIsChatOpen(false);
+        setIsTabVisible(!isAdminPage);
+      };
+      document.body.appendChild(script);
+    } else {
+      existingScript.onerror = () => {
+        setHasLoadFailed(true);
+        setIsChatOpen(false);
+        setIsTabVisible(!isAdminPage);
+      };
+      hideDefaultWidget();
+    }
+
+    return () => {
+      if (pullzWindow.Tawk_API) {
+        pullzWindow.Tawk_API.onLoad = undefined;
+        pullzWindow.Tawk_API.onChatMinimized = undefined;
+        pullzWindow.Tawk_API.onChatHidden = undefined;
+      }
+    };
+  }, [isAdminPage]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pullzWindow = window as PullzWindow;
+
+    if (isAdminPage) {
+      setIsTabVisible(false);
+      setIsChatOpen(false);
+      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
+        pullzWindow.Tawk_API.hideWidget();
+      }
+      return;
+    }
+
+    if (!isChatOpen) {
+      setIsTabVisible(true);
+      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
+        pullzWindow.Tawk_API.hideWidget();
+      }
+    }
+  }, [isAdminPage, isChatOpen]);
+
+  const openSupportChat = () => {
+    if (isAdminPage || hasLoadFailed || typeof window === 'undefined') return;
+    const tawkApi = (window as PullzWindow).Tawk_API;
+
+    if (typeof tawkApi?.showWidget === 'function') {
+      tawkApi.showWidget();
+    }
+    if (typeof tawkApi?.maximize === 'function') {
+      tawkApi.maximize();
+      setIsChatOpen(true);
+      setIsTabVisible(false);
+      return;
+    }
+
+    setIsTabVisible(true);
+  };
+
+  if (isAdminPage || !isTabVisible) return null;
+
+  return (
+    <button
+      id="pullz-support-tab"
+      type="button"
+      aria-label={hasLoadFailed ? 'Support chat is unavailable' : 'Open support chat'}
+      aria-disabled={hasLoadFailed}
+      onClick={openSupportChat}
+      title={hasLoadFailed ? 'Support chat is temporarily unavailable' : 'Open support chat'}
+    >
+      Support
+    </button>
+  );
+};
 
 const DeferredAnalytics = React.memo(() => {
   const [AnalyticsComponent, setAnalyticsComponent] = useState<React.ComponentType | null>(null);
@@ -836,6 +974,7 @@ const AppShell = () => {
       />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
       <MobileBottomNav />
+      <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
       <ResetPasswordModal />
     </div>
   );
