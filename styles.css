@@ -1,3 +1,51 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#pullz-support-tab {
+  position: fixed;
+  right: -6px;
+  top: 58%;
+  transform: translateY(-50%);
+  z-index: 999999;
+  background: rgba(18, 18, 22, 0.92);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  padding: 12px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  transition: right 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+#pullz-support-tab:hover {
+  right: 0;
+  background: rgba(30, 30, 38, 0.98);
+}
+
+#pullz-support-tab:active {
+  transform: translateY(-50%) scale(0.97);
+}
+
+#pullz-support-tab[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+@media (max-width: 768px) {
+  #pullz-support-tab {
+    top: auto;
+    bottom: calc(var(--pullz-mobile-bottom-nav-height, 64px) + var(--pullz-viewport-bottom-offset, 0px) + 44px);
+    right: -4px;
+    font-size: 12px;
+    padding: 10px 8px;
+    border-radius: 10px 0 0 10px;
+  }
+}
