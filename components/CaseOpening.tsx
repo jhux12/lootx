@@ -86,11 +86,11 @@ const rarityGlowClass: Record<string, string> = {
 
 
 const dropTableRarityAccent: Record<string, string> = {
-  common: 'from-slate-400 to-slate-600',
-  uncommon: 'from-emerald-300 to-emerald-700',
-  rare: 'from-cyan-400 to-blue-700',
-  epic: 'from-purple-400 to-fuchsia-800',
-  legendary: 'from-amber-300 to-yellow-700'
+  common: 'from-slate-700/95 via-slate-800/95 to-slate-950/95',
+  uncommon: 'from-emerald-900/95 via-emerald-950/90 to-slate-950/95',
+  rare: 'from-sky-900/95 via-blue-950/90 to-slate-950/95',
+  epic: 'from-violet-900/95 via-purple-950/90 to-slate-950/95',
+  legendary: 'from-orange-900/95 via-amber-950/90 to-slate-950/95'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
@@ -298,7 +298,6 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   }
 };
 
-const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false, inventoryId, pullPassClaimTier }) => {
@@ -2509,43 +2508,47 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {visibleDropItems.map((item) => {
                   const rarityKey = normalizeRarityKey(item.rarity);
                   const rarityAccent = dropTableRarityAccent[rarityKey] ?? dropTableRarityAccent.common;
+                  const itemCoinValue = toCoins(item.price, PRICE_UNIT_MODE);
                   return (
                     <button
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className={`group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] transition-all hover:border-white/20`}
+                        className={`group relative flex min-h-[236px] overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition-all hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)] active:translate-y-0 sm:min-h-[286px]`}
+                        style={{ boxShadow: `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${item.color}22` }}
                     >
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
-                        <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
-                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" width={160} height={160} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
-                            {item.redeemable === false && (
-                              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
-                                i
-                              </span>
-                            )}
-                        </div>
-                        <div className="relative border-t border-white/10 bg-black/15 p-3">
-                            <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <CoinAmount
-                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-sm font-bold text-gray-200"
-                                    iconClassName="w-3.5 h-3.5"
-                                  />
-                                  <p className="mt-0.5 text-[9px] leading-tight text-gray-400">{formatUsdValueFromCoins(toCoins(item.price, PRICE_UNIT_MODE))}</p>
-                                </div>
-                                {!hideDropTableOdds && (
-                                  <span
-                                    className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                                    style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
-                                  >
-                                    {item.chance}%
-                                  </span>
-                                )}
-                            </div>
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.12),transparent_18%),radial-gradient(circle_at_88%_24%,rgba(255,255,255,0.16),transparent_14%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_46%,rgba(0,0,0,0.18)_100%)]" />
+                        <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: `radial-gradient(circle at 94% 28%, ${item.color} 0 1.5px, transparent 2px), radial-gradient(circle at 8% 42%, ${item.color} 0 1px, transparent 1.8px), radial-gradient(circle at 54% 92%, ${item.color} 0 1px, transparent 1.8px)`, backgroundSize: '48px 52px' }} />
+                        <div className="relative flex w-full flex-col">
+                          <div className="flex h-36 items-center justify-center px-4 pb-2 pt-4 sm:h-[214px] sm:px-6 sm:pt-5">
+                              <BlurImage src={item.image} alt={item.name} className="max-h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.035]" loading="lazy" width={180} height={210} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
+                              {item.redeemable === false && (
+                                <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
+                                  i
+                                </span>
+                              )}
+                          </div>
+                          <div className="mt-auto px-3 pb-3 sm:px-4 sm:pb-4">
+                              <div className="truncate text-center text-[13px] font-black leading-tight text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.65)] sm:text-sm" title={item.name}>{item.name}</div>
+                              <div className="mt-3 border-t border-white/10 pt-2.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <CoinAmount
+                                      amount={itemCoinValue}
+                                      formatOptions={{ maximumFractionDigits: itemCoinValue >= 1000 ? 1 : 0, notation: itemCoinValue >= 1000 ? 'compact' : 'standard' }}
+                                      className="text-sm font-black text-white sm:text-base"
+                                      iconClassName="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    />
+                                    {!hideDropTableOdds && (
+                                      <span
+                                        className="text-xs font-black sm:text-sm"
+                                        style={{ color: item.color, textShadow: `0 0 10px ${item.color}55` }}
+                                      >
+                                        {item.chance}%
+                                      </span>
+                                    )}
+                                  </div>
+                              </div>
+                          </div>
                         </div>
                     </button>
                   );
