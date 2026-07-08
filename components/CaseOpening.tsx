@@ -86,11 +86,11 @@ const rarityGlowClass: Record<string, string> = {
 
 
 const dropTableRarityAccent: Record<string, string> = {
-  common: 'from-slate-400 to-slate-600',
-  uncommon: 'from-emerald-300 to-emerald-700',
-  rare: 'from-cyan-400 to-blue-700',
-  epic: 'from-purple-400 to-fuchsia-800',
-  legendary: 'from-amber-300 to-yellow-700'
+  common: 'from-slate-700/95 via-slate-800/95 to-slate-950/95',
+  uncommon: 'from-emerald-900/95 via-emerald-950/90 to-slate-950/95',
+  rare: 'from-sky-900/95 via-blue-950/90 to-slate-950/95',
+  epic: 'from-violet-900/95 via-purple-950/90 to-slate-950/95',
+  legendary: 'from-orange-900/95 via-amber-950/90 to-slate-950/95'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
@@ -298,7 +298,6 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   }
 };
 
-const formatUsdValueFromCoins = (coins: number) => `$${(Math.max(0, coins) / 100).toFixed(2)} value`;
 
 
 export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false, inventoryId, pullPassClaimTier }) => {
@@ -2479,12 +2478,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3 sm:gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20" aria-hidden="true">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center sm:h-28 sm:w-28" aria-hidden="true">
                   <BlurImage
                     src={box?.image || pullzLogo}
                     alt=""
                     showPlaceholder={false}
-                    className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.5)]"
+                    className="h-full w-full object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)]"
                   />
                 </div>
                 <div className="min-w-0">
@@ -2509,43 +2508,47 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {visibleDropItems.map((item) => {
                   const rarityKey = normalizeRarityKey(item.rarity);
                   const rarityAccent = dropTableRarityAccent[rarityKey] ?? dropTableRarityAccent.common;
+                  const itemCoinValue = toCoins(item.price, PRICE_UNIT_MODE);
                   return (
                     <button
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className={`group relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_14px_28px_rgba(0,0,0,0.26)] transition-all hover:border-white/20`}
+                        className={`group relative flex min-h-[270px] overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition-all hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)] active:translate-y-0 sm:min-h-[320px]`}
+                        style={{ boxShadow: `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${item.color}22` }}
                     >
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.25),transparent_36%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.24))]" />
-                        <div className="relative flex h-36 items-center justify-center p-3 sm:h-40">
-                            <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105" loading="lazy" width={160} height={160} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
-                            {item.redeemable === false && (
-                              <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
-                                i
-                              </span>
-                            )}
-                        </div>
-                        <div className="relative border-t border-white/10 bg-black/15 p-3">
-                            <div className="mb-1 truncate text-xs font-bold text-white" title={item.name}>{item.name}</div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                  <CoinAmount
-                                    amount={toCoins(item.price, PRICE_UNIT_MODE)}
-                                    formatOptions={{ maximumFractionDigits: 0 }}
-                                    className="text-sm font-bold text-gray-200"
-                                    iconClassName="w-3.5 h-3.5"
-                                  />
-                                  <p className="mt-0.5 text-[9px] leading-tight text-gray-400">{formatUsdValueFromCoins(toCoins(item.price, PRICE_UNIT_MODE))}</p>
-                                </div>
-                                {!hideDropTableOdds && (
-                                  <span
-                                    className="rounded border px-1.5 py-0.5 text-[10px] font-bold"
-                                    style={{ color: item.color, borderColor: `${item.color}66`, backgroundColor: `${item.color}1a` }}
-                                  >
-                                    {item.chance}%
-                                  </span>
-                                )}
-                            </div>
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.12),transparent_18%),radial-gradient(circle_at_88%_24%,rgba(255,255,255,0.16),transparent_14%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_46%,rgba(0,0,0,0.18)_100%)]" />
+                        <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: `radial-gradient(circle at 94% 28%, ${item.color} 0 1.5px, transparent 2px), radial-gradient(circle at 8% 42%, ${item.color} 0 1px, transparent 1.8px), radial-gradient(circle at 54% 92%, ${item.color} 0 1px, transparent 1.8px)`, backgroundSize: '48px 52px' }} />
+                        <div className="relative flex w-full flex-col">
+                          <div className="flex h-44 items-center justify-center px-1.5 pb-1 pt-3 sm:h-[248px] sm:px-2 sm:pt-4">
+                              <BlurImage src={item.image} alt={item.name} className="h-full max-h-none w-[112%] max-w-none object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.48)] transition-transform duration-300 group-hover:scale-[1.06] sm:w-[118%]" loading="lazy" width={240} height={280} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
+                              {item.redeemable === false && (
+                                <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
+                                  i
+                                </span>
+                              )}
+                          </div>
+                          <div className="mt-auto px-3 pb-3 sm:px-4 sm:pb-4">
+                              <div className="truncate text-center text-[13px] font-black leading-tight text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.65)] sm:text-sm" title={item.name}>{item.name}</div>
+                              <div className="mt-3 border-t border-white/10 pt-2.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <CoinAmount
+                                      amount={itemCoinValue}
+                                      formatOptions={{ maximumFractionDigits: itemCoinValue >= 1000 ? 1 : 0, notation: itemCoinValue >= 1000 ? 'compact' : 'standard' }}
+                                      className="text-sm font-black text-white sm:text-base"
+                                      iconClassName="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                    />
+                                    {!hideDropTableOdds && (
+                                      <span
+                                        className="text-xs font-black sm:text-sm"
+                                        style={{ color: item.color, textShadow: `0 0 10px ${item.color}55` }}
+                                      >
+                                        {item.chance}%
+                                      </span>
+                                    )}
+                                  </div>
+                              </div>
+                          </div>
                         </div>
                     </button>
                   );
@@ -2570,9 +2573,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
         {selectedCaseItem && (
             <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}>
-              <div className={`item-modal-hero relative flex items-center justify-center overflow-hidden px-3 transition-[height] duration-300 ${isItemImageZoomed ? 'h-[22rem] sm:h-[26rem]' : 'h-64 sm:h-72'}`} style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
-                <div className={`item-modal-rarity-bg item-modal-rarity-bg--${String(selectedCaseItem.rarity ?? 'common').toLowerCase().replace(/\s+/g, '-')} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
-                <div className={`item-modal-rarity-glow ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" style={{ background: `radial-gradient(circle at center, ${selectedCaseItem.color}55 0%, transparent 70%)` }} />
+              <div className={`item-modal-hero item-modal-hero--${normalizeRarityKey(selectedCaseItem.rarity)} relative flex items-center justify-center overflow-hidden px-3 transition-[height] duration-300 ${isItemImageZoomed ? 'h-[22rem] sm:h-[26rem]' : 'h-64 sm:h-72'}`}>
+                <div className={`item-modal-rarity-bg item-modal-rarity-bg--${normalizeRarityKey(selectedCaseItem.rarity)} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
+                <div className={`item-modal-rarity-glow item-modal-rarity-glow--${normalizeRarityKey(selectedCaseItem.rarity)} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
                 <button
                   ref={itemModalCloseRef}
                   type="button"
@@ -2732,23 +2735,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           .item-modal-rarity-bg.is-active {
             opacity: 1;
           }
+          .item-modal-hero--legendary { background: linear-gradient(135deg, rgba(124, 45, 18, 0.92), rgba(69, 26, 3, 0.96)); }
+          .item-modal-hero--epic { background: linear-gradient(135deg, rgba(76, 29, 149, 0.92), rgba(46, 16, 101, 0.96)); }
+          .item-modal-hero--rare { background: linear-gradient(135deg, rgba(12, 74, 110, 0.92), rgba(23, 37, 84, 0.96)); }
+          .item-modal-hero--uncommon { background: linear-gradient(135deg, rgba(6, 78, 59, 0.92), rgba(2, 44, 34, 0.96)); }
+          .item-modal-hero--common { background: linear-gradient(135deg, rgba(51, 65, 85, 0.92), rgba(15, 23, 42, 0.96)); }
           .item-modal-rarity-bg--legendary {
-            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.35), transparent 70%);
+            background: radial-gradient(circle at center, rgba(251, 191, 36, 0.52), transparent 66%), radial-gradient(circle at top, rgba(255, 237, 213, 0.18), transparent 40%);
             animation: legendaryPulse 2s ease-in-out infinite;
           }
-          .item-modal-rarity-bg--rare {
-            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.28), transparent 72%);
-          }
           .item-modal-rarity-bg--epic {
-            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 72%);
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.46), transparent 68%), radial-gradient(circle at top, rgba(216, 180, 254, 0.15), transparent 42%);
+          }
+          .item-modal-rarity-bg--rare {
+            background: radial-gradient(circle at center, rgba(56, 189, 248, 0.44), transparent 68%), radial-gradient(circle at top, rgba(191, 219, 254, 0.14), transparent 42%);
           }
           .item-modal-rarity-bg--uncommon {
-            background: radial-gradient(circle at center, rgba(34, 197, 94, 0.22), transparent 74%);
+            background: radial-gradient(circle at center, rgba(52, 211, 153, 0.38), transparent 70%), radial-gradient(circle at top, rgba(167, 243, 208, 0.13), transparent 42%);
           }
-          .item-modal-rarity-bg--common,
-          .item-modal-rarity-bg--ultra-rare {
-            background: radial-gradient(circle at center, rgba(156, 163, 175, 0.18), transparent 74%);
+          .item-modal-rarity-bg--common {
+            background: radial-gradient(circle at center, rgba(148, 163, 184, 0.28), transparent 72%), radial-gradient(circle at top, rgba(226, 232, 240, 0.10), transparent 44%);
           }
+          .item-modal-rarity-glow--legendary { background: radial-gradient(circle at center, rgba(251, 191, 36, 0.34) 0%, transparent 70%); }
+          .item-modal-rarity-glow--epic { background: radial-gradient(circle at center, rgba(168, 85, 247, 0.32) 0%, transparent 70%); }
+          .item-modal-rarity-glow--rare { background: radial-gradient(circle at center, rgba(56, 189, 248, 0.30) 0%, transparent 70%); }
+          .item-modal-rarity-glow--uncommon { background: radial-gradient(circle at center, rgba(52, 211, 153, 0.28) 0%, transparent 70%); }
+          .item-modal-rarity-glow--common { background: radial-gradient(circle at center, rgba(148, 163, 184, 0.22) 0%, transparent 70%); }
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
