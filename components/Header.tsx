@@ -137,6 +137,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     [authInitialized, user],
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
+  const purchasedCoins = Math.max(0, Number(user.purchasedCoins ?? balance));
+  const promoCoins = Math.max(0, Number(user.promoCoins ?? Math.max(0, balance - purchasedCoins)));
   const unreadCount = useUnreadActivityCount();
   const lastDailyClaim = useMemo(
     () =>
@@ -600,14 +602,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                           aria-hidden="true"
                           className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(99,102,241,0.12),rgba(59,130,246,0.08),rgba(255,255,255,0.015))]"
                         />
-                        <div className="relative z-10 flex h-11 items-center justify-between gap-2 px-3 pr-2 xl:gap-3 xl:px-4">
-                          <CoinAmount
-                            amount={balance}
-                            className="min-w-[76px] text-[14px] xl:min-w-[90px] xl:text-[15px] font-semibold leading-none tracking-tight text-white"
-                            iconClassName="h-5 w-5"
-                            textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums"
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                          />
+                        <div className="relative z-10 flex min-h-11 items-center justify-between gap-2 px-3 py-1 pr-2 xl:gap-3 xl:px-4">
+                          <div className="min-w-[82px]">
+                            <CoinAmount
+                              amount={balance}
+                              className="text-[14px] xl:text-[15px] font-semibold leading-none tracking-tight text-white"
+                              iconClassName="h-5 w-5"
+                              textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums"
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                            />
+                            {promoCoins > 0 ? (
+                              <p className="mt-0.5 text-[10px] font-semibold text-sky-200">Promo: {Math.floor(promoCoins).toLocaleString()}</p>
+                            ) : null}
+                          </div>
                           <button
                             type="button"
                             onClick={openTopUp}

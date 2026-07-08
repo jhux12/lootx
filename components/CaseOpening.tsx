@@ -479,6 +479,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
   }, [currentXpBalance, xpCostForCoinCase]);
   const showXpOpenUi = false;
+  const promoCoinsForPayment = Math.max(0, Number((user as any).promoCoins ?? 0));
+  const promoCoinsApplied = !isRewardOpen && !isFree && caseCurrencyType === 'COIN' ? Math.min(Math.max(0, currentCasePrice || 0), promoCoinsForPayment) : 0;
+  const purchasedCoinsApplied = !isRewardOpen && !isFree && caseCurrencyType === 'COIN' ? Math.max(0, Math.max(0, currentCasePrice || 0) - promoCoinsApplied) : 0;
   const canOpenMain = isRewardOpen || isFree || balance >= currentCasePrice;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
   const spinnerCardWidth = DESKTOP_CARD_WIDTH;
@@ -2161,6 +2164,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       )}
                     </span>
                  </button>
+                {!isFree && !isRewardOpen && caseCurrencyType === 'COIN' && promoCoinsForPayment > 0 && (
+                  <div className="absolute -top-10 left-1/2 w-[min(92vw,420px)] -translate-x-1/2 rounded-xl border border-sky-300/20 bg-[#0b1220]/95 px-3 py-2 text-center text-[11px] font-semibold text-sky-100 shadow-lg sm:text-xs">
+                    Box cost: {Math.round(currentCasePrice).toLocaleString()} coins · Promo coins applied: {Math.round(promoCoinsApplied).toLocaleString()} · Purchased coins applied: {Math.round(purchasedCoinsApplied).toLocaleString()}
+                  </div>
+                )}
                 {!isFree && !isRewardOpen && (
                   <div className="flex items-center gap-2">
                     <button

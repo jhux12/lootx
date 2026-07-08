@@ -28,6 +28,8 @@ export interface User {
   pullPassResetAt?: number;
   activePullPassBoxClaim?: { tier: number; boxId: string; claimedAt?: number; rewardName?: string };
   balance?: number;
+  purchasedCoins?: number;
+  promoCoins?: number;
   followers?: string[];
   lastDailyClaim?: number;
   lastFreeBoxClaim?: number;
