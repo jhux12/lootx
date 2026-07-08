@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeftRight, Check, Package, Search, X } from 'lucide-react';
 import { InventoryItem } from '../../types';
 import { BlurImage } from '../../src/ui/images/BlurImage';
@@ -170,9 +171,9 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
       </div>
 
 
-      {isPreviewOpen ? (
+      {isPreviewOpen && typeof document !== 'undefined' ? createPortal((
         <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md motion-safe:animate-[inventory-fade-in_180ms_ease-out] sm:px-6"
+          className="fixed inset-0 z-[280] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md motion-safe:animate-[inventory-fade-in_180ms_ease-out] sm:px-6"
           onClick={closePreview}
           role="dialog"
           aria-modal="true"
@@ -201,7 +202,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
             </div>
           </div>
         </div>
-      ) : null}
+      ), document.body) : null}
 
       <style>{`
         @keyframes inventory-fade-in {
