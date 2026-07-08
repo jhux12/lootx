@@ -20,37 +20,41 @@ interface InventoryCardProps {
 }
 
 
-const primaryActionButtonBase = 'group/action relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-[10px] border px-3 text-sm font-black shadow-[0_14px_34px_rgba(0,0,0,0.22)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10151c] active:scale-[0.99] sm:rounded-[11px]';
+const primaryActionButtonBase = 'group/action relative flex h-9 w-full items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-2 text-[11px] font-black shadow-[0_10px_22px_rgba(0,0,0,0.20)] outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-[#10151c] active:scale-[0.99] sm:h-10 sm:rounded-[9px] sm:text-xs';
 const primaryActionShineClass = 'pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.28),transparent_32%)] opacity-75 transition-opacity group-hover/action:opacity-95';
 
-const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string; image: string }> = {
+const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: string; image: string; accent: string }> = {
   common: {
-    card: 'border-gray-400/35 bg-gradient-to-b from-gray-500/14 via-[#151a21] to-[#10151c]',
+    card: 'border-white/10 bg-gradient-to-br from-slate-700/95 via-slate-800/95 to-slate-950/95',
     badge: 'border-gray-300/45 bg-gray-500/15 text-gray-100',
-    image: 'border-white/12'
+    image: 'border-white/12',
+    accent: '#94a3b8'
   },
   uncommon: {
-    card: 'border-emerald-400/45 bg-gradient-to-b from-emerald-500/16 via-[#0d211b] to-[#0b1714]',
+    card: 'border-white/10 bg-gradient-to-br from-emerald-900/95 via-emerald-950/90 to-slate-950/95',
     badge: 'border-emerald-300/55 bg-emerald-500/15 text-emerald-100',
-    image: 'border-emerald-400/35 shadow-[0_0_24px_rgba(52,211,153,0.14)]'
+    image: 'border-emerald-400/35 shadow-[0_0_24px_rgba(52,211,153,0.14)]',
+    accent: '#34d399'
   },
   rare: {
-    card: 'border-blue-400/45 bg-gradient-to-b from-blue-500/16 via-[#101d2e] to-[#0b1421]',
+    card: 'border-white/10 bg-gradient-to-br from-sky-900/95 via-blue-950/90 to-slate-950/95',
     badge: 'border-blue-300/55 bg-blue-500/15 text-blue-100',
-    image: 'border-blue-400/35 shadow-[0_0_24px_rgba(96,165,250,0.14)]'
+    image: 'border-blue-400/35 shadow-[0_0_24px_rgba(96,165,250,0.14)]',
+    accent: '#38bdf8'
   },
   epic: {
-    card: 'border-purple-400/45 bg-gradient-to-b from-purple-500/16 via-[#201333] to-[#130d20]',
+    card: 'border-white/10 bg-gradient-to-br from-violet-900/95 via-purple-950/90 to-slate-950/95',
     badge: 'border-purple-300/55 bg-purple-500/15 text-purple-100',
-    image: 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]'
+    image: 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]',
+    accent: '#a855f7'
   },
   legendary: {
-    card: 'border-yellow-400/55 bg-gradient-to-b from-yellow-400/18 via-[#34290e] to-[#171509]',
+    card: 'border-white/10 bg-gradient-to-br from-orange-900/95 via-amber-950/90 to-slate-950/95',
     badge: 'border-yellow-300/60 bg-yellow-500/15 text-yellow-100',
-    image: 'border-yellow-400/45 shadow-[0_0_24px_rgba(234,179,8,0.18)]'
+    image: 'border-yellow-400/45 shadow-[0_0_24px_rgba(234,179,8,0.18)]',
+    accent: '#fbbf24'
   }
 };
-
 export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction, layoutMode = 'grid' }) => {
   const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
   const isList = layoutMode === 'list';
@@ -96,39 +100,38 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative rounded-3xl border p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_44px_rgba(0,0,0,0.22)] transition sm:p-4 ${isList ? 'sm:grid sm:grid-cols-[9rem_minmax(0,1fr)_12rem] sm:items-center sm:gap-4' : 'flex flex-col'} ${rarityStyle.card} ${
-        selected ? 'border-purple-300/80 ring-4 ring-purple-400/45 shadow-[0_0_34px_rgba(168,85,247,0.42)]' : 'hover:shadow-[0_0_22px_rgba(255,255,255,0.08)]'
+      className={`group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
+        selected ? 'border-purple-300/80 ring-2 ring-purple-400/50 shadow-[0_0_30px_rgba(168,85,247,0.36)]' : 'hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
+      style={{ boxShadow: `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${rarityStyle.accent}22` }}
     >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.12),transparent_18%),radial-gradient(circle_at_88%_24%,rgba(255,255,255,0.16),transparent_14%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_46%,rgba(0,0,0,0.18)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: `radial-gradient(circle at 94% 28%, ${rarityStyle.accent} 0 1.5px, transparent 2px), radial-gradient(circle at 8% 42%, ${rarityStyle.accent} 0 1px, transparent 1.8px), radial-gradient(circle at 54% 92%, ${rarityStyle.accent} 0 1px, transparent 1.8px)`, backgroundSize: '48px 52px' }} />
       {selected ? (
-        <span className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]">
-          <Check className="h-4 w-4 stroke-[4]" />
+        <span className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]">
+          <Check className="h-3.5 w-3.5 stroke-[4]" />
         </span>
       ) : null}
 
-      <div className={`${isList ? 'mb-3 sm:mb-0' : 'mb-3'} flex items-center justify-between gap-3 sm:col-span-full ${isList ? 'sm:hidden' : ''}`}>
-        <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-        <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
-          <Search className="h-4 w-4" />
-        </button>
+      <button type="button" className="absolute left-2 top-2 z-20 rounded-lg border border-white/10 bg-black/25 p-1.5 text-gray-200 backdrop-blur transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
+        <Search className="h-3.5 w-3.5" />
+      </button>
+
+      <div className={`relative flex items-center justify-center overflow-hidden ${isList ? 'mx-auto mb-3 aspect-square w-full max-w-[8.5rem] rounded-xl border bg-[#090e16]/35 p-2 sm:mb-0' : 'h-44 px-1.5 pb-1 pt-3 sm:h-[248px] sm:px-2 sm:pt-4'} ${isList ? rarityStyle.image : ''}`}>
+        <BlurImage src={item.image} alt={item.name} className={`${isList ? 'h-full w-full' : 'h-full max-h-none w-[112%] max-w-none sm:w-[118%]'} object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.48)] transition duration-300 group-hover:scale-[1.06]`} width={240} height={280} showPlaceholder={false} />
       </div>
 
-      <div className={`flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] p-3 ${rarityStyle.image} ${isList ? 'mx-auto mb-3 w-full max-w-[9rem] sm:mb-0' : 'mb-3 w-full'}`}>
-        <BlurImage src={item.image} alt={item.name} className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" width={220} height={220} showPlaceholder={false} />
-      </div>
-
-      <div className="min-w-0">
-        <div className={`hidden items-center justify-between gap-3 ${isList ? 'sm:flex' : ''}`}>
+      <div className={`${isList ? 'min-w-0' : 'relative mt-auto px-3 pb-3 sm:px-4 sm:pb-4'}`}>
+        <div className={`hidden items-center gap-3 ${isList ? 'sm:flex' : ''}`}>
           <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${rarityStyle.badge}`}>{item.rarity}</span>
-          <button type="button" className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-200 transition hover:border-white/20 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/70" onClick={openPreview} aria-label={`Zoom in on ${item.name}`}>
-            <Search className="h-4 w-4" />
-          </button>
         </div>
-        <p className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{item.name}</p>
-        <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-3 text-sm font-bold text-white" iconClassName="h-5 w-5" />
+        <p className={`${isList ? 'mt-3 text-left text-base sm:text-lg' : 'truncate text-center text-[13px] sm:text-sm'} font-black leading-tight text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.65)]`} title={item.name}>{item.name}</p>
+        <div className={`${isList ? 'mt-3' : 'mt-3 border-t border-white/10 pt-2.5'}`}>
+          <CoinAmount amount={toCoins(item.price, PRICE_UNIT_MODE)} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-black text-white sm:text-base" iconClassName="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        </div>
       </div>
 
-      <div className={`mt-3 ${isList ? 'sm:mt-0' : 'mt-auto pt-1'}`}>
+      <div className={`${isList ? 'mt-3 sm:mt-0' : 'relative px-3 pb-3 sm:px-4 sm:pb-4'}`}>
         <button
           type="button"
           onClick={(event) => {
@@ -143,7 +146,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           }`}
         >
           {!actionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
-          <Package className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{actionLabel}</span>
+          <Package className="relative z-10 h-4 w-4" /> <span className="relative z-10 truncate">{actionLabel}</span>
         </button>
 
         {secondaryActionLabel && onSecondaryAction && (
@@ -161,7 +164,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
             }`}
           >
             {!secondaryActionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}
-            <ArrowLeftRight className="relative z-10 h-5 w-5" /> <span className="relative z-10 truncate">{secondaryActionLabel}</span>
+            <ArrowLeftRight className="relative z-10 h-4 w-4" /> <span className="relative z-10 truncate">{secondaryActionLabel}</span>
           </button>
         )}
       </div>

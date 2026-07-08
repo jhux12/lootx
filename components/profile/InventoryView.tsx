@@ -81,11 +81,11 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111720] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className={`${layoutMode === 'grid' ? 'flex flex-wrap gap-3' : 'grid grid-cols-1 gap-4'}`}>
+        <div className={`${layoutMode === 'grid' ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4' : 'grid grid-cols-1 gap-4'}`}>
           {items.map((item) => {
             const action = getAction(item);
             return (
-              <div key={item.instanceId} className={layoutMode === 'grid' ? 'w-[calc(50%-0.375rem)] min-w-0' : 'w-full'}>
+              <div key={item.instanceId} className="min-w-0">
               <InventoryCard
                 item={item}
                 selected={selectedIds.includes(item.instanceId)}
