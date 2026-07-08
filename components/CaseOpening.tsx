@@ -2573,9 +2573,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
         {selectedCaseItem && (
             <div ref={itemModalRef} role="dialog" aria-modal="true" aria-labelledby="item-details-title" className={`modal-container mx-auto w-full max-w-lg overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#131722]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] ${itemModalActive ? 'active' : ''}`}>
-              <div className={`item-modal-hero relative flex items-center justify-center overflow-hidden px-3 transition-[height] duration-300 ${isItemImageZoomed ? 'h-[22rem] sm:h-[26rem]' : 'h-64 sm:h-72'}`} style={{ background: `radial-gradient(circle at top, ${selectedCaseItem.color}80 0%, transparent 72%)` }}>
-                <div className={`item-modal-rarity-bg item-modal-rarity-bg--${String(selectedCaseItem.rarity ?? 'common').toLowerCase().replace(/\s+/g, '-')} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
-                <div className={`item-modal-rarity-glow ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" style={{ background: `radial-gradient(circle at center, ${selectedCaseItem.color}55 0%, transparent 70%)` }} />
+              <div className={`item-modal-hero item-modal-hero--${normalizeRarityKey(selectedCaseItem.rarity)} relative flex items-center justify-center overflow-hidden px-3 transition-[height] duration-300 ${isItemImageZoomed ? 'h-[22rem] sm:h-[26rem]' : 'h-64 sm:h-72'}`}>
+                <div className={`item-modal-rarity-bg item-modal-rarity-bg--${normalizeRarityKey(selectedCaseItem.rarity)} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
+                <div className={`item-modal-rarity-glow item-modal-rarity-glow--${normalizeRarityKey(selectedCaseItem.rarity)} ${itemModalActive ? 'is-active' : ''}`} aria-hidden="true" />
                 <button
                   ref={itemModalCloseRef}
                   type="button"
@@ -2735,23 +2735,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           .item-modal-rarity-bg.is-active {
             opacity: 1;
           }
+          .item-modal-hero--legendary { background: linear-gradient(135deg, rgba(124, 45, 18, 0.92), rgba(69, 26, 3, 0.96)); }
+          .item-modal-hero--epic { background: linear-gradient(135deg, rgba(76, 29, 149, 0.92), rgba(46, 16, 101, 0.96)); }
+          .item-modal-hero--rare { background: linear-gradient(135deg, rgba(12, 74, 110, 0.92), rgba(23, 37, 84, 0.96)); }
+          .item-modal-hero--uncommon { background: linear-gradient(135deg, rgba(6, 78, 59, 0.92), rgba(2, 44, 34, 0.96)); }
+          .item-modal-hero--common { background: linear-gradient(135deg, rgba(51, 65, 85, 0.92), rgba(15, 23, 42, 0.96)); }
           .item-modal-rarity-bg--legendary {
-            background: radial-gradient(circle at center, rgba(255, 215, 0, 0.35), transparent 70%);
+            background: radial-gradient(circle at center, rgba(251, 191, 36, 0.52), transparent 66%), radial-gradient(circle at top, rgba(255, 237, 213, 0.18), transparent 40%);
             animation: legendaryPulse 2s ease-in-out infinite;
           }
-          .item-modal-rarity-bg--rare {
-            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.28), transparent 72%);
-          }
           .item-modal-rarity-bg--epic {
-            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.28), transparent 72%);
+            background: radial-gradient(circle at center, rgba(168, 85, 247, 0.46), transparent 68%), radial-gradient(circle at top, rgba(216, 180, 254, 0.15), transparent 42%);
+          }
+          .item-modal-rarity-bg--rare {
+            background: radial-gradient(circle at center, rgba(56, 189, 248, 0.44), transparent 68%), radial-gradient(circle at top, rgba(191, 219, 254, 0.14), transparent 42%);
           }
           .item-modal-rarity-bg--uncommon {
-            background: radial-gradient(circle at center, rgba(34, 197, 94, 0.22), transparent 74%);
+            background: radial-gradient(circle at center, rgba(52, 211, 153, 0.38), transparent 70%), radial-gradient(circle at top, rgba(167, 243, 208, 0.13), transparent 42%);
           }
-          .item-modal-rarity-bg--common,
-          .item-modal-rarity-bg--ultra-rare {
-            background: radial-gradient(circle at center, rgba(156, 163, 175, 0.18), transparent 74%);
+          .item-modal-rarity-bg--common {
+            background: radial-gradient(circle at center, rgba(148, 163, 184, 0.28), transparent 72%), radial-gradient(circle at top, rgba(226, 232, 240, 0.10), transparent 44%);
           }
+          .item-modal-rarity-glow--legendary { background: radial-gradient(circle at center, rgba(251, 191, 36, 0.34) 0%, transparent 70%); }
+          .item-modal-rarity-glow--epic { background: radial-gradient(circle at center, rgba(168, 85, 247, 0.32) 0%, transparent 70%); }
+          .item-modal-rarity-glow--rare { background: radial-gradient(circle at center, rgba(56, 189, 248, 0.30) 0%, transparent 70%); }
+          .item-modal-rarity-glow--uncommon { background: radial-gradient(circle at center, rgba(52, 211, 153, 0.28) 0%, transparent 70%); }
+          .item-modal-rarity-glow--common { background: radial-gradient(circle at center, rgba(148, 163, 184, 0.22) 0%, transparent 70%); }
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
