@@ -2478,12 +2478,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {/* Box Contents */}
         <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3 sm:gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center sm:h-20 sm:w-20" aria-hidden="true">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center sm:h-28 sm:w-28" aria-hidden="true">
                   <BlurImage
                     src={box?.image || pullzLogo}
                     alt=""
                     showPlaceholder={false}
-                    className="h-full w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.5)]"
+                    className="h-full w-full object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)]"
                   />
                 </div>
                 <div className="min-w-0">
@@ -2514,14 +2514,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedCaseItem(item)}
-                        className={`group relative flex min-h-[236px] overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition-all hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)] active:translate-y-0 sm:min-h-[286px]`}
+                        className={`group relative flex min-h-[270px] overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br ${rarityAccent} text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition-all hover:-translate-y-0.5 hover:border-white/20 hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)] active:translate-y-0 sm:min-h-[320px]`}
                         style={{ boxShadow: `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${item.color}22` }}
                     >
                         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.12),transparent_18%),radial-gradient(circle_at_88%_24%,rgba(255,255,255,0.16),transparent_14%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_46%,rgba(0,0,0,0.18)_100%)]" />
                         <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: `radial-gradient(circle at 94% 28%, ${item.color} 0 1.5px, transparent 2px), radial-gradient(circle at 8% 42%, ${item.color} 0 1px, transparent 1.8px), radial-gradient(circle at 54% 92%, ${item.color} 0 1px, transparent 1.8px)`, backgroundSize: '48px 52px' }} />
                         <div className="relative flex w-full flex-col">
-                          <div className="flex h-36 items-center justify-center px-4 pb-2 pt-4 sm:h-[214px] sm:px-6 sm:pt-5">
-                              <BlurImage src={item.image} alt={item.name} className="max-h-full w-full object-contain drop-shadow-[0_10px_16px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-[1.035]" loading="lazy" width={180} height={210} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
+                          <div className="flex h-44 items-center justify-center px-1.5 pb-1 pt-3 sm:h-[248px] sm:px-2 sm:pt-4">
+                              <BlurImage src={item.image} alt={item.name} className="h-full max-h-none w-[112%] max-w-none object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.48)] transition-transform duration-300 group-hover:scale-[1.06] sm:w-[118%]" loading="lazy" width={240} height={280} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
                               {item.redeemable === false && (
                                 <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
                                   i
