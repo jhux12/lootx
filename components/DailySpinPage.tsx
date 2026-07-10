@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, ChevronLeft } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronLeft, Mail } from "lucide-react";
 import { COIN_ICON } from "../constants";
 
 type SpinPrize = {
@@ -18,6 +18,9 @@ interface DailySpinPageProps {
   nextClaimAt: number;
   embedded?: boolean;
   dailySpinOdds?: Record<string, number>;
+  isSpinLocked?: boolean;
+  lockedEmail?: string;
+  onResendVerification?: () => Promise<void>;
 }
 
 const WHEEL_HIDE_DELAY_MS = 900;
@@ -99,6 +102,9 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
   nextClaimAt,
   embedded = false,
   dailySpinOdds,
+  isSpinLocked = false,
+  lockedEmail,
+  onResendVerification,
 }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -107,8 +113,10 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
   const [localNextClaimAt, setLocalNextClaimAt] = useState(nextClaimAt);
   const [countdownNow, setCountdownNow] = useState(Date.now());
   const [isWheelVisible, setIsWheelVisible] = useState(
-    () => canSpin || nextClaimAt <= Date.now(),
+    () => isSpinLocked || canSpin || nextClaimAt <= Date.now(),
   );
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState("");
 
   const prizes = useMemo(() => getWheelPrizes(dailySpinOdds), [dailySpinOdds]);
   const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
@@ -121,7 +129,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
     return () => window.clearInterval(interval);
   }, []);
 
-  const canSpinNow = canSpin && effectiveNextClaimAt <= countdownNow;
+  const canSpinNow = !isSpinLocked && canSpin && effectiveNextClaimAt <= countdownNow;
   const hasClaimedDailyBonus =
     !isSpinning && !canSpinNow && effectiveNextClaimAt > countdownNow;
   const showClaimedCard = hasClaimedDailyBonus && !isWheelVisible;
@@ -130,6 +138,12 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
     if (canSpinNow && !isSpinning) return "";
     return formatCountdown(effectiveNextClaimAt);
   }, [canSpinNow, isSpinning, effectiveNextClaimAt, countdownNow]);
+
+  useEffect(() => {
+    if (!isSpinLocked) return;
+    setIsWheelVisible(true);
+    setLastPrize(null);
+  }, [isSpinLocked]);
 
   useEffect(() => {
     if (!canSpinNow) return;
@@ -152,8 +166,24 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
     return () => window.clearTimeout(timeout);
   }, [hasClaimedDailyBonus, lastPrize]);
 
+  const handleResendVerification = async () => {
+    if (!onResendVerification || isResendingVerification) return;
+
+    setIsResendingVerification(true);
+    setVerificationMessage("");
+
+    try {
+      await onResendVerification();
+      setVerificationMessage("Verification email sent. Check your inbox.");
+    } catch (error) {
+      setVerificationMessage((error as Error)?.message || "Unable to resend verification email.");
+    } finally {
+      setIsResendingVerification(false);
+    }
+  };
+
   const handleSpin = async () => {
-    if (isSpinning || !canSpinNow) return;
+    if (isSpinLocked || isSpinning || !canSpinNow) return;
 
     setErrorMessage("");
     setIsWheelVisible(true);
@@ -333,7 +363,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
 
               <button
                 onClick={handleSpin}
-                disabled={isSpinning || !canSpinNow}
+                disabled={isSpinLocked || isSpinning || !canSpinNow}
                 className="relative w-full h-full rounded-full bg-[#131315] border-4 border-neutral-800 shadow-xl flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 z-10"
               >
                 {lastPrize ? (
@@ -371,6 +401,31 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
                 )}
               </button>
             </div>
+
+            {isSpinLocked && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center rounded-full bg-black/70 p-5 text-center backdrop-blur-[2px] sm:p-8">
+                <div className="w-full max-w-[260px] rounded-3xl border border-white/10 bg-neutral-950/90 px-4 py-5 shadow-2xl sm:max-w-xs sm:px-5">
+                  <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-400/10 text-sky-200 ring-1 ring-sky-300/20">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <p className="text-base font-black text-white sm:text-lg">Verify email to spin</p>
+                  <p className="mt-2 text-xs leading-5 text-neutral-300 sm:text-sm">
+                    Confirm {lockedEmail ? <span className="font-semibold text-white">{lockedEmail}</span> : "your email address"} before claiming daily rewards.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={!onResendVerification || isResendingVerification}
+                    className="mt-4 inline-flex w-full items-center justify-center rounded-2xl border border-sky-300/30 bg-sky-400/10 px-4 py-2.5 text-xs font-black text-sky-100 transition-colors hover:bg-sky-400/20 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+                  >
+                    {isResendingVerification ? "Sending..." : "Resend email"}
+                  </button>
+                  {!!verificationMessage && (
+                    <p className="mt-3 text-[11px] leading-4 text-neutral-300 sm:text-xs">{verificationMessage}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

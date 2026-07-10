@@ -71,6 +71,12 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    if (decoded.email && decoded.email_verified !== true) {
+      return res.status(403).json({
+        error: 'EMAIL_VERIFICATION_REQUIRED',
+        message: 'Please verify your email before spinning the daily rewards wheel.'
+      });
+    }
     const uid = decoded.uid;
     const userRef = firestore.collection('users').doc(uid);
     const bonusSettingsRef = firestore.collection('settings').doc(BONUS_SETTINGS_DOC);
