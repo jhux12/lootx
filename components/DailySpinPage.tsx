@@ -17,18 +17,29 @@ interface DailySpinPageProps {
   canSpin: boolean;
   nextClaimAt: number;
   embedded?: boolean;
+  dailySpinOdds?: Record<string, number>;
 }
 
 const WHEEL_HIDE_DELAY_MS = 900;
 
-const PRIZES: SpinPrize[] = [
-  { id: 1, amount: 10, image: COIN_ICON, angle: 30 },
-  { id: 2, amount: 25, image: COIN_ICON, angle: 90 },
-  { id: 3, amount: 100, image: COIN_ICON, angle: 150 },
-  { id: 4, amount: 500, image: COIN_ICON, angle: 210 },
-  { id: 5, amount: 1000, image: COIN_ICON, angle: 270 },
-  { id: 6, amount: 2500, image: COIN_ICON, angle: 330 },
-];
+const DEFAULT_PRIZE_AMOUNTS = [10, 25, 100, 500, 1000, 2500];
+const PRIZE_ANGLES = [30, 90, 150, 210, 270, 330];
+
+const getWheelPrizes = (dailySpinOdds?: Record<string, number>): SpinPrize[] => {
+  const configuredAmounts = Object.keys(dailySpinOdds ?? {})
+    .map((amount) => Math.floor(Number(amount)))
+    .filter((amount) => Number.isFinite(amount) && amount > 0)
+    .sort((a, b) => a - b);
+
+  const amounts = Array.from(new Set([...configuredAmounts, ...DEFAULT_PRIZE_AMOUNTS])).slice(0, PRIZE_ANGLES.length);
+
+  return amounts.map((amount, index) => ({
+    id: index + 1,
+    amount,
+    image: COIN_ICON,
+    angle: PRIZE_ANGLES[index],
+  }));
+};
 
 const BackgroundFloatingCoins = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -87,6 +98,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
   canSpin,
   nextClaimAt,
   embedded = false,
+  dailySpinOdds,
 }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -98,6 +110,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
     () => canSpin || nextClaimAt <= Date.now(),
   );
 
+  const prizes = useMemo(() => getWheelPrizes(dailySpinOdds), [dailySpinOdds]);
   const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
 
   useEffect(() => {
@@ -149,8 +162,8 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
     try {
       const startResult = await onSpinStart();
       const winner =
-        PRIZES.find((prize) => prize.amount === startResult.amount) ??
-        PRIZES[0];
+        prizes.find((prize) => prize.amount === startResult.amount) ??
+        prizes[0];
 
       const extraSpins = 5;
       const baseRotation = 360 * extraSpins;
@@ -280,7 +293,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
                   />
                 </svg>
 
-                {PRIZES.map((prize) => (
+                {prizes.map((prize) => (
                   <div
                     key={prize.id}
                     className="absolute top-1/2 left-1/2 w-[80px] h-[80px] md:w-[80.79px] md:h-[80.79px] flex items-center justify-center"

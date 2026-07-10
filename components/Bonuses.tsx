@@ -7,7 +7,7 @@ import { authedFetch } from "../utils/authedFetch";
 export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   embedded = false,
 }) => {
-  const { user, setView, isAuthenticated, openAuthModal } = useGame();
+  const { user, setView, isAuthenticated, openAuthModal, bonusSettings } = useGame();
   const { playSound } = useSound();
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -70,6 +70,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
         canSpin={canClaim}
         nextClaimAt={nextDailyClaimAt}
         embedded={embedded}
+        dailySpinOdds={bonusSettings.dailySpinOdds}
       />
     </div>
   );
