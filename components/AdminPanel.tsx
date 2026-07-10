@@ -59,6 +59,35 @@ const ITEM_TAG_SUGGESTIONS = [
 ] as const;
 const BOX_TAG_PRESETS = ['new', 'top', 'hot', 'limited', 'popular'] as const;
 
+const DEFAULT_DAILY_SPIN_REWARD_AMOUNTS = [10, 25, 100, 500, 1000, 2500];
+
+const getDailySpinRows = (dailySpinOdds?: Record<string, number>) => {
+    const entries = Object.entries(dailySpinOdds ?? {})
+        .map(([amount, weight]) => ({ amount: Math.max(1, Math.floor(Number(amount) || 0)), weight: Math.max(0, Number(weight) || 0) }))
+        .filter((entry) => entry.amount > 0)
+        .sort((a, b) => a.amount - b.amount);
+
+    const rows = entries.length > 0
+        ? entries.slice(0, DEFAULT_DAILY_SPIN_REWARD_AMOUNTS.length)
+        : DEFAULT_DAILY_SPIN_REWARD_AMOUNTS.map((amount) => ({ amount, weight: 1 }));
+
+    return DEFAULT_DAILY_SPIN_REWARD_AMOUNTS.map((fallbackAmount, index) => rows[index] ?? { amount: fallbackAmount, weight: 0 });
+};
+
+const setDailySpinRow = (dailySpinOdds: Record<string, number> | undefined, index: number, nextRow: { amount: number; weight: number }) => {
+    const rows = getDailySpinRows(dailySpinOdds);
+    rows[index] = {
+        amount: Math.max(1, Math.floor(Number(nextRow.amount) || 1)),
+        weight: Math.max(0, Number(nextRow.weight) || 0)
+    };
+
+    return rows.reduce<Record<string, number>>((next, row, rowIndex) => {
+        const normalizedAmount = Math.max(1, Math.floor(Number(row.amount) || DEFAULT_DAILY_SPIN_REWARD_AMOUNTS[rowIndex]));
+        next[String(normalizedAmount)] = Math.max(0, Number(row.weight) || 0);
+        return next;
+    }, {});
+};
+
 const ITEM_SIZE_SUGGESTIONS = [
     'XS',
     'S',
@@ -607,6 +636,7 @@ export const AdminPanel: React.FC = () => {
   const [isApprovingLeaderboardWinners, setIsApprovingLeaderboardWinners] = useState(false);
   const [leaderboardApprovalNotice, setLeaderboardApprovalNotice] = useState<string | null>(null);
   const [bonusSaveNotice, setBonusSaveNotice] = useState(false);
+  const dailySpinRows = useMemo(() => getDailySpinRows(bonusDraft.dailySpinOdds), [bonusDraft.dailySpinOdds]);
   const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
   const [economySaveNotice, setEconomySaveNotice] = useState(false);
   const [xpShopItems, setXpShopItems] = useState<AdminXpShopItem[]>([]);
@@ -6767,27 +6797,55 @@ export const AdminPanel: React.FC = () => {
                                 Mobile friendly grid
                             </div>
                         </div>
-                        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                            {[10, 25, 100, 500, 1000, 2500].map((amount) => (
-                                <div key={`homepage-daily-spin-${amount}`} className="rounded-lg border border-gray-700 bg-[#0b0e14] p-3">
-                                    <label className="block text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1">{amount} coins</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={0.1}
-                                        value={Number(bonusDraft.dailySpinOdds?.[String(amount)] ?? 0)}
-                                        onChange={(event) => {
-                                            setBonusSaveNotice(false);
-                                            setBonusDraft((prev) => ({
-                                                ...prev,
-                                                dailySpinOdds: {
-                                                    ...(prev.dailySpinOdds ?? {}),
-                                                    [String(amount)]: Math.max(0, Number(event.target.value) || 0)
-                                                }
-                                            }));
-                                        }}
-                                        className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-2 py-2 text-white text-sm"
-                                    />
+                        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {dailySpinRows.map((row, index) => (
+                                <div key={`homepage-daily-spin-${index}`} className="rounded-xl border border-gray-700 bg-[#0b0e14] p-3">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Reward spin {index + 1}</p>
+                                        <span className="rounded-full bg-brand-blue/10 px-2 py-1 text-[10px] font-bold text-brand-blue">{row.amount.toLocaleString()} coins</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+                                        <label className="block">
+                                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Reward value</span>
+                                            <Input
+                                                type="number"
+                                                min={1}
+                                                step={1}
+                                                value={row.amount}
+                                                onChange={(event) => {
+                                                    setBonusSaveNotice(false);
+                                                    setBonusDraft((prev) => ({
+                                                        ...prev,
+                                                        dailySpinOdds: setDailySpinRow(prev.dailySpinOdds, index, {
+                                                            amount: Number(event.target.value),
+                                                            weight: row.weight
+                                                        })
+                                                    }));
+                                                }}
+                                                className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-2 py-2 text-white text-sm"
+                                            />
+                                        </label>
+                                        <label className="block">
+                                            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-gray-500">Odds weight</span>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                step={0.1}
+                                                value={row.weight}
+                                                onChange={(event) => {
+                                                    setBonusSaveNotice(false);
+                                                    setBonusDraft((prev) => ({
+                                                        ...prev,
+                                                        dailySpinOdds: setDailySpinRow(prev.dailySpinOdds, index, {
+                                                            amount: row.amount,
+                                                            weight: Number(event.target.value)
+                                                        })
+                                                    }));
+                                                }}
+                                                className="w-full bg-[#0f1521] border border-gray-700 rounded-lg px-2 py-2 text-white text-sm"
+                                            />
+                                        </label>
+                                    </div>
                                 </div>
                             ))}
                         </div>
