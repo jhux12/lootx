@@ -804,11 +804,12 @@ export const Profile: React.FC = () => {
     setIsSubmittingCashShipping(true);
     try {
       await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true);
       if (!auth.currentUser.emailVerified) {
         showShippingVerificationText('Verify your email before requesting shipment.');
         return;
       }
-      const token = await auth.currentUser.getIdToken();
+      const token = await auth.currentUser.getIdToken(true);
       const response = await fetch('/api/create-shipping-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

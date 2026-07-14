@@ -1679,6 +1679,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setEmailVerificationStatus('checking');
     try {
       await firebaseUser.reload();
+      await firebaseUser.getIdToken(true);
     } catch (error) {
       console.error('Failed to reload Firebase user for verification check', error);
     }
@@ -1693,7 +1694,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       resolveEmailRedirect(getPendingEmailRedirect());
       if (firebaseUser) {
         void syncAdminClaim(firebaseUser);
-      startAuthenticatedSession(firebaseUser);
+        startAuthenticatedSession(firebaseUser);
       }
       return;
     }
@@ -1722,6 +1723,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       setEmailVerificationStatus('checking');
       await applyActionCode(auth, oobCode);
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        await auth.currentUser.getIdToken(true);
+      }
       setEmailVerificationCompleted();
     } catch (error) {
       console.error('Failed to apply email verification code', error);
@@ -3028,6 +3033,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       await auth.currentUser.reload();
+      await auth.currentUser.getIdToken(true);
       if (!auth.currentUser.emailVerified) {
         setPendingEmailVerification(getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
         setEmailVerificationStatus('pending');
