@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Search, ShieldCheck, Sparkles, Truck, SlidersHorizontal, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -100,18 +100,18 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   staticImages: boolean;
   onOpen: (boxId: string) => void;
 }) => {
-  const { box, primaryTag, tagClass, topItemPreviews } = model;
+  const { box, primaryTag, tagClass } = model;
   const isPriority = index < 4;
 
   return (
     <button
       type="button"
       onClick={() => onOpen(box.id)}
-      className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className="group flex w-full flex-col overflow-hidden rounded-xl border border-white/10 bg-[#20262b] p-2 text-left shadow-[0_18px_42px_-32px_rgba(0,0,0,0.85)] transition hover:-translate-y-0.5 hover:border-slate-300/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/60 [content-visibility:auto] [contain-intrinsic-size:240px] sm:rounded-2xl sm:p-3"
     >
-      <div className="relative px-2 pb-2 pt-3">
+      <div className="relative">
         {primaryTag && (
-          <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
+          <span className={`absolute left-0 top-0 z-10 rounded-md px-2 py-1 text-[10px] font-extrabold uppercase leading-none tracking-wide shadow-lg ${tagClass}`}>{primaryTag}</span>
         )}
         <div className="mx-auto aspect-[1.35] w-full">
           <BlurImage
@@ -124,23 +124,17 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
             width={360}
             height={230}
             ratioClassName="h-full w-full"
-            className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+            className="h-full w-full object-contain drop-shadow-[0_18px_20px_rgba(0,0,0,0.45)] transition duration-300 group-hover:scale-105"
             staticRender={staticImages}
             retryOnError={!staticImages}
           />
         </div>
       </div>
-      <div className="border-t border-white/10 px-3 pb-3 pt-2">
-        <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
-        <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
-        <div className="mt-1 grid grid-cols-3 gap-1.5">
-          {topItemPreviews.map((item) => (
-            <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
-              <BlurImage src={item.image} fallbackSrc="/android-chrome-512x512.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-1 flex-col px-0.5 pb-0.5 pt-1.5 sm:px-1">
+        <div className="line-clamp-1 text-[15px] font-bold leading-tight text-slate-100 sm:text-base">{box.name}</div>
+        <span className="mt-2.5 inline-flex min-h-9 w-full items-center justify-center rounded-md bg-gradient-to-r from-[#7c3cff] to-[#5f2eea] px-3 py-2 text-sm font-extrabold text-white shadow-[0_10px_24px_-14px_rgba(124,72,255,0.95)] transition group-hover:brightness-110 sm:mt-3">
+          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-sm font-extrabold text-white" iconClassName="h-4 w-4" />
+        </span>
       </div>
     </button>
   );
@@ -464,75 +458,72 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
-          <div className="order-2 lg:order-1">
-            <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
-            <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
-              Open premium mystery boxes and win <span className="text-[#5da0ff]">real items</span>.
+      <div className="relative mx-auto max-w-[1320px] px-4 pb-4 pt-5 sm:px-5 sm:pt-8">
+        <div className="relative min-h-[230px] overflow-hidden rounded-2xl border border-violet-300/20 bg-[#160b3d] px-4 py-5 shadow-[0_24px_70px_-42px_rgba(95,47,255,0.95)] sm:min-h-[280px] sm:rounded-3xl sm:px-6 sm:py-7 lg:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(255,255,255,0.16),transparent_18%),radial-gradient(circle_at_78%_20%,rgba(250,204,21,0.22),transparent_16%),linear-gradient(105deg,rgba(48,16,119,0.98)_0%,rgba(66,24,143,0.92)_42%,rgba(16,10,35,0.88)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:34px_34px]" />
+          <div className="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full border border-white/10 bg-white/5 blur-[1px] sm:h-44 sm:w-44" />
+          <div className="pointer-events-none absolute right-[6%] top-5 h-14 w-14 rounded-full border border-yellow-300/30 bg-yellow-300/10 shadow-[0_0_40px_rgba(250,204,21,0.22)] sm:h-20 sm:w-20" />
+          <div className="pointer-events-none absolute bottom-5 right-[34%] hidden h-10 w-10 rotate-12 rounded-lg border border-white/10 bg-white/5 sm:block" />
+          {stripeSettings.boxCatalogHeroImageUrl ? (
+            <img
+              src={stripeSettings.boxCatalogHeroImageUrl}
+              alt="Box catalog hero"
+              className="pointer-events-none absolute bottom-0 right-[-44px] z-0 h-[150px] w-[250px] object-contain opacity-55 drop-shadow-[0_24px_34px_rgba(0,0,0,0.55)] sm:right-2 sm:h-[255px] sm:w-[420px] sm:opacity-95 lg:right-10 lg:h-[290px] lg:w-[500px]"
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              width={500}
+              height={290}
+            />
+          ) : null}
+          <div className="relative z-10 max-w-[21rem] sm:max-w-xl">
+            <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.26em] text-yellow-300/90 sm:text-xs">Pullz catalog</p>
+            <h1 className="text-[2.35rem] font-black leading-[0.92] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              Where Big Pulls Turn Into <span className="text-yellow-300">Bigger Wins</span>
+            </h1>
+            <p className="mt-3 max-w-md text-xs font-medium leading-5 text-violet-100/85 sm:mt-4 sm:text-base sm:leading-7">
+              Open premium mystery boxes and chase real collectibles, tech, sneakers, slabs, and more.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
+            <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <ShieldCheck className="h-3.5 w-3.5 text-yellow-300" />
                 Provably Fair
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
                 Real Items
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Tag className="h-3.5 w-3.5 text-[#67a6ff]" />
-                Sell Back
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-[11px] font-bold text-white backdrop-blur">
+                <Truck className="h-3.5 w-3.5 text-yellow-300" />
+                Fast Shipping
               </span>
-            </div>
-          </div>
-          <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
-              {stripeSettings.boxCatalogHeroImageUrl ? (
-                <img
-                  src={stripeSettings.boxCatalogHeroImageUrl}
-                  alt="Box catalog hero"
-                  className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                  width={460}
-                  height={256}
-                />
-              ) : null}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#1b2024]/95 backdrop-blur">
-        <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
-          <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
-              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
+      <div id="box-catalog-controls" className="relative z-30 w-full bg-[#1b2024]">
+        <div className="mx-auto max-w-[1320px] px-4 py-3 sm:px-5">
+          <div className="mb-3 flex w-full items-center gap-3 sm:mb-2 sm:max-w-[920px]">
+              <div className="flex min-w-0 flex-1 items-center rounded-2xl border border-white/10 bg-[#151d26] px-3 py-3.5 shadow-inner shadow-black/20">
                 <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
                 <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
               </div>
-              <label className="relative hidden sm:block">
-                <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-white/10 bg-[#20262b] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
-                  {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
-              </label>
               <div className="relative sm:hidden">
                 <button
                   type="button"
                   onClick={() => setIsMobileFilterOpen((prev) => !prev)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#20262b] text-slate-200"
+                  className="inline-flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-white/10 bg-[#151d26] text-slate-200"
                   aria-label="Filter and sort options"
                 >
-                  <SlidersHorizontal className="h-4.5 w-4.5" />
+                  <SlidersHorizontal className="h-[18px] w-[18px]" />
                 </button>
                 {isMobileFilterOpen && (
                   <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-white/10 bg-[#1b2432] p-2 shadow-xl">
                     <label className="relative block">
                       <select value={sortOption} onChange={(event) => { setSortOption(event.target.value as SortOption); setIsMobileFilterOpen(false); }} className="h-10 w-full appearance-none rounded-lg border border-white/10 bg-[#20262b] px-3 pr-8 text-sm font-semibold text-white outline-none">
-                        {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+                        {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{`Sort: ${option.label}`}</option>)}
                       </select>
                       <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
                     </label>
@@ -540,8 +531,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 )}
               </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
+          <div className="rounded-2xl border border-white/10 bg-[#20262b] p-2 sm:flex sm:items-center sm:gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide pb-2 sm:pb-0">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -550,10 +541,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center justify-center whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                  className={`flex items-center justify-center whitespace-nowrap rounded-full border px-4 py-2.5 text-xs font-bold transition ${
                     isActive
-                      ? 'border-transparent bg-gradient-to-r from-[#1f6cff] to-[#5d39ff] text-white'
-                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
+                      ? 'border-slate-400/20 bg-slate-500/25 text-white'
+                      : 'border-white/10 bg-[#151b21] text-slate-300 hover:border-white/20 hover:text-white'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -573,19 +564,28 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             })}
             </div>
             <label className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200 sm:w-auto sm:justify-start">
-              <input
-                type="checkbox"
-                checked={showAffordableOnly}
-                onChange={(event) => setShowAffordableOnly(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-white/30 bg-transparent text-[#3f7cff] focus:ring-[#3f7cff]"
-              />
+              <span className={`relative inline-flex h-6 w-10 items-center rounded-full border transition ${showAffordableOnly ? 'border-slate-300/50 bg-slate-400/30' : 'border-white/15 bg-white/10'}`}>
+                <input
+                  type="checkbox"
+                  checked={showAffordableOnly}
+                  onChange={(event) => setShowAffordableOnly(event.target.checked)}
+                  className="peer sr-only"
+                />
+                <span className={`absolute h-[18px] w-[18px] rounded-full bg-white transition ${showAffordableOnly ? 'translate-x-[18px]' : 'translate-x-1'}`} />
+              </span>
               Enough coins
+            </label>
+            <label className="relative mt-2 block sm:mt-0 sm:ml-auto sm:min-w-[190px]">
+              <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-11 w-full appearance-none rounded-xl border border-white/10 bg-[#151d26] px-3 pr-9 text-sm font-bold text-white outline-none">
+                {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{`Sort: ${option.label}`}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
             </label>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-3 py-4 sm:px-5 sm:py-5">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-4 py-2 sm:px-5 sm:py-5">
         <div className="flex flex-col gap-6">
           {isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
@@ -594,7 +594,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           )}
 
           {!isLoadingBoxes && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
               {visibleBoxes.map((model, index) => (
                 <CatalogBoxCard
                   key={model.id}
