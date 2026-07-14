@@ -53,6 +53,7 @@ export const VerifyEmailPage: React.FC = () => {
 
         if (auth.currentUser) {
           await auth.currentUser.reload();
+          await auth.currentUser.getIdToken(true);
         }
 
         clearVerificationParams();
