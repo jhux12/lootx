@@ -5,8 +5,9 @@ const BONUS_SETTINGS_DOC = 'bonus-settings';
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PENDING_SPIN_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_PRIZES = [10, 25, 100, 500, 1000, 2500];
+const DEFAULT_PREMIUM_PRIZES = [250, 500, 1000, 2500, 5000, 10000];
 
-const sanitizeOdds = (input) => {
+const sanitizeOdds = (input, fallbackPrizes = DEFAULT_PRIZES) => {
   const base = {};
 
   if (input && typeof input === 'object') {
@@ -19,7 +20,7 @@ const sanitizeOdds = (input) => {
     }
   }
 
-  for (const amount of DEFAULT_PRIZES) {
+  for (const amount of fallbackPrizes) {
     if (!(amount in base)) {
       base[amount] = 1;
     }
@@ -31,7 +32,7 @@ const sanitizeOdds = (input) => {
     .sort((a, b) => a.amount - b.amount);
 
   if (entries.length === 0) {
-    return DEFAULT_PRIZES.map((amount) => ({ amount, weight: 1 }));
+    return fallbackPrizes.map((amount) => ({ amount, weight: 1 }));
   }
 
   return entries;
@@ -65,6 +66,7 @@ export default async function handler(req, res) {
 
   try {
     const action = req.body?.action === 'claim' ? 'claim' : 'spin';
+    const requestedWheelType = req.body?.wheelType === 'premium' ? 'premium' : 'regular';
     const token = extractBearerToken(req.headers.authorization || req.headers.Authorization);
     if (!token) {
       return res.status(401).json({ error: 'UNAUTHENTICATED', message: 'Missing authorization token.' });
@@ -84,12 +86,22 @@ export default async function handler(req, res) {
       const userData = userSnap.exists ? userSnap.data() || {} : {};
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() || {} : {};
       const now = Date.now();
+      const hasDeposited = Math.max(0, Number(userData.depositCount ?? 0)) > 0 || Math.max(0, Number(userData.totalDepositedCents ?? 0)) > 0 || Math.max(0, Number(userData.totalSpent ?? 0)) > 0;
+      const wheelType = hasDeposited ? 'premium' : 'regular';
+
+      if (requestedWheelType === 'premium' && !hasDeposited) {
+        throw Object.assign(new Error('Premium daily spin unlocks after your first deposit.'), {
+          status: 403,
+          code: 'PREMIUM_DAILY_SPIN_LOCKED'
+        });
+      }
 
       const pendingSpin =
         userData.dailySpinPending && typeof userData.dailySpinPending === 'object'
           ? {
               amount: Math.floor(Number(userData.dailySpinPending.amount ?? 0)),
-              createdAt: Number(userData.dailySpinPending.createdAt ?? 0)
+              createdAt: Number(userData.dailySpinPending.createdAt ?? 0),
+              wheelType: userData.dailySpinPending.wheelType === 'premium' ? 'premium' : 'regular'
             }
           : null;
       const hasValidPendingSpin =
@@ -122,7 +134,7 @@ export default async function handler(req, res) {
           actorUid: null,
           source: 'api/daily-spin',
           relatedId: null,
-          metadata: { action: 'claim' }
+          metadata: { action: 'claim', wheelType: pendingSpin.wheelType || wheelType }
         });
         transaction.set(
           userRef,
@@ -138,7 +150,8 @@ export default async function handler(req, res) {
           prizeAmount,
           lastDailyClaim: now,
           nextClaimAt: now + SPIN_COOLDOWN_MS,
-          claimed: true
+          claimed: true,
+          wheelType: pendingSpin.wheelType || wheelType
         };
       }
 
@@ -146,7 +159,8 @@ export default async function handler(req, res) {
         return {
           prizeAmount: pendingSpin.amount,
           nextClaimAt: pendingSpin.createdAt + SPIN_COOLDOWN_MS,
-          pending: true
+          pending: true,
+          wheelType: pendingSpin.wheelType || wheelType
         };
       }
 
@@ -161,7 +175,10 @@ export default async function handler(req, res) {
         });
       }
 
-      const entries = sanitizeOdds(bonusSettings.dailySpinOdds);
+      const entries = sanitizeOdds(
+        wheelType === 'premium' ? bonusSettings.premiumDailySpinOdds : bonusSettings.dailySpinOdds,
+        wheelType === 'premium' ? DEFAULT_PREMIUM_PRIZES : DEFAULT_PRIZES
+      );
       const prizeAmount = pickWeightedPrize(entries);
 
       transaction.set(
@@ -169,7 +186,8 @@ export default async function handler(req, res) {
         {
           dailySpinPending: {
             amount: prizeAmount,
-            createdAt: now
+            createdAt: now,
+            wheelType
           },
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         },
@@ -180,6 +198,7 @@ export default async function handler(req, res) {
         prizeAmount,
         nextClaimAt: now + SPIN_COOLDOWN_MS,
         pending: true,
+        wheelType,
         odds: entries
       };
     });
