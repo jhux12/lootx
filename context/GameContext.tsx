@@ -8,6 +8,7 @@ import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import {
   User as FirebaseUser,
   AuthCredential,
@@ -744,7 +745,7 @@ interface GameContextType {
   followUser: (targetUserId: string) => Promise<void>;
   unfollowUser: (targetUserId: string) => Promise<void>;
   sellItem: (instanceId: string) => Promise<{ creditCoins?: number } | void>;
-  shipItem: (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => Promise<{ shipmentId?: string; shipmentBatchId?: string; requiresEmailVerification?: boolean } | void>;
+  shipItem: (instanceId: string | string[], options?: { shippingProtection?: boolean; signatureRequired?: boolean }) => Promise<{ shipmentId?: string; shipmentBatchId?: string; requiresDeposit?: boolean } | void>;
   updateAddress: (address: ShippingAddress) => void;
   updateUserInfo: (name: string, avatar: string) => Promise<void>;
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt'> & Partial<Pick<AppNotification, 'id' | 'createdAt'>>) => void;
@@ -3027,12 +3028,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      await auth.currentUser.reload();
-      if (!auth.currentUser.emailVerified) {
-        setPendingEmailVerification(getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
-        setEmailVerificationStatus('pending');
-        emailVerificationDismissedRef.current = false;
-        return { requiresEmailVerification: true };
+      if (!hasUserMadeDeposit(user)) {
+        return { requiresDeposit: true };
       }
 
       const data = await authedFetch<{ newCoins?: number; shipmentId?: string; shipmentBatchId?: string }>('/api/request-shipment', {
@@ -3078,11 +3075,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { shipmentId: data.shipmentId, shipmentBatchId: data.shipmentBatchId };
     } catch (error: any) {
       console.error('Failed to request shipment', error);
-      if (error?.code === 'EMAIL_VERIFICATION_REQUIRED') {
-        setPendingEmailVerification(getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT);
-        setEmailVerificationStatus('pending');
-        emailVerificationDismissedRef.current = false;
-        return { requiresEmailVerification: true };
+      if (error?.code === 'DEPOSIT_REQUIRED') {
+        return { requiresDeposit: true };
       }
       alert('Unable to request shipment right now. Please try again.');
     }

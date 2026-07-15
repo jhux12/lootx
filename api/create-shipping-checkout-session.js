@@ -37,13 +37,16 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
-    const authUser = await adminAuth.getUser(decoded.uid);
-    if (!authUser.email || authUser.emailVerified !== true) {
+    const userRef = firestore.collection('users').doc(decoded.uid);
+    const userSnap = await userRef.get();
+    const userData = userSnap.data() ?? {};
+    const depositCount = Math.max(0, Number(userData.depositCount ?? 0));
+    const totalDepositedCents = Math.max(0, Number(userData.totalDepositedCents ?? 0));
+    const totalSpent = Math.max(0, Number(userData.totalSpent ?? 0));
+    if (depositCount <= 0 && totalDepositedCents <= 0 && totalSpent <= 0) {
       return sendJson(res, 403, {
-        error: 'EMAIL_VERIFICATION_REQUIRED',
-        message: authUser.email
-          ? 'Verify your email before requesting shipment.'
-          : 'Add and verify an email address before requesting shipment.'
+        error: 'DEPOSIT_REQUIRED',
+        message: 'Make your first deposit before requesting shipment.'
       });
     }
 
@@ -71,9 +74,6 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
     }
 
-    const userRef = firestore.collection('users').doc(decoded.uid);
-    const userSnap = await userRef.get();
-    const userData = userSnap.data() ?? {};
     const shippingInfo = userData.shippingAddress;
 
     if (!shippingInfo || typeof shippingInfo !== 'object') {
