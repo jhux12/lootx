@@ -228,6 +228,7 @@ interface BonusSettings {
   rakebackBonusCoins: number;
   rakebackDailyCapCoins: number;
   dailySpinOdds: Record<string, number>;
+  premiumDailySpinOdds: Record<string, number>;
 }
 
 const DEFAULT_BONUS_SETTINGS: BonusSettings = {
@@ -250,6 +251,14 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
     '500': 12,
     '1000': 9,
     '2500': 6
+  },
+  premiumDailySpinOdds: {
+    '250': 30,
+    '500': 25,
+    '1000': 18,
+    '2500': 12,
+    '5000': 9,
+    '10000': 6
   }
 };
 
@@ -363,6 +372,17 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
   };
 };
 
+
+const normalizeSpinOdds = (odds: unknown, fallback: Record<string, number>): Record<string, number> => {
+  const source = odds && typeof odds === 'object' ? odds as Record<string, unknown> : fallback;
+  const normalizedEntries = Object.entries(source)
+    .map(([amount, weight]) => [String(Math.max(0, Math.floor(Number(amount) || 0))), Math.max(0, Number(weight) || 0)] as const)
+    .filter(([amount]) => Number(amount) > 0);
+
+  const next = Object.fromEntries(normalizedEntries);
+  return Object.keys(next).length > 0 ? next : { ...fallback };
+};
+
 const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings => ({
   xpPer100Coins: Math.max(0, Number(settings.xpPer100Coins) || Number(settings.xpPer100CoinsWagered) || 0),
   xpPerCaseOpen: Math.max(0, Number(settings.xpPerCaseOpen) || Number(settings.xpPerCaseOpened) || 0),
@@ -376,19 +396,8 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
   rakebackBasePercent: Math.max(0, Number(settings.rakebackBasePercent) || 0),
   rakebackBonusCoins: Math.max(0, Number(settings.rakebackBonusCoins) || 0),
   rakebackDailyCapCoins: Math.max(0, Number(settings.rakebackDailyCapCoins) || 0),
-  dailySpinOdds: (() => {
-    const source =
-      settings.dailySpinOdds && typeof settings.dailySpinOdds === 'object'
-        ? settings.dailySpinOdds
-        : DEFAULT_BONUS_SETTINGS.dailySpinOdds;
-
-    const normalizedEntries = Object.entries(source)
-      .map(([amount, weight]) => [String(Math.max(0, Math.floor(Number(amount) || 0))), Math.max(0, Number(weight) || 0)] as const)
-      .filter(([amount]) => Number(amount) > 0);
-
-    const next = Object.fromEntries(normalizedEntries);
-    return Object.keys(next).length > 0 ? next : { ...DEFAULT_BONUS_SETTINGS.dailySpinOdds };
-  })()
+  dailySpinOdds: normalizeSpinOdds(settings.dailySpinOdds, DEFAULT_BONUS_SETTINGS.dailySpinOdds),
+  premiumDailySpinOdds: normalizeSpinOdds(settings.premiumDailySpinOdds, DEFAULT_BONUS_SETTINGS.premiumDailySpinOdds)
 });
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';

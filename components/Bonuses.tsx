@@ -3,6 +3,7 @@ import { useGame } from "../context/GameContext";
 import { useSound } from "../context/SoundContext";
 import { DailySpinPage } from "./DailySpinPage";
 import { authedFetch } from "../utils/authedFetch";
+import { hasUserMadeDeposit } from "../utils/depositEligibility";
 
 export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   embedded = false,
@@ -10,6 +11,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   const { user, setView, isAuthenticated, openAuthModal, bonusSettings } = useGame();
   const { playSound } = useSound();
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const hasDeposited = hasUserMadeDeposit(user);
 
   useEffect(() => {
     const interval = window.setInterval(() => setCurrentTime(Date.now()), 1000);
@@ -24,7 +26,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   const canClaim = !lastDailyClaim || nextDailyClaimAt <= currentTime;
 
 
-  const handleSpinStart = async () => {
+  const handleSpinStart = async (wheelType: "regular" | "premium") => {
     if (!isAuthenticated) {
       openAuthModal("login");
       throw new Error("Please login to spin.");
@@ -36,7 +38,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
 
     const data = await authedFetch<{ prizeAmount: number }>("/api/daily-spin", {
       method: "POST",
-      body: JSON.stringify({ action: "spin" }),
+      body: JSON.stringify({ action: "spin", wheelType }),
     });
 
     return {
@@ -44,13 +46,13 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
     };
   };
 
-  const handleSpinClaim = async () => {
+  const handleSpinClaim = async (wheelType: "regular" | "premium") => {
     const data = await authedFetch<{
       prizeAmount: number;
       nextClaimAt: number;
     }>("/api/daily-spin", {
       method: "POST",
-      body: JSON.stringify({ action: "claim" }),
+      body: JSON.stringify({ action: "claim", wheelType }),
     });
 
     playSound("coins");
@@ -72,6 +74,8 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
         nextClaimAt={nextDailyClaimAt}
         embedded={embedded}
         dailySpinOdds={bonusSettings.dailySpinOdds}
+        premiumDailySpinOdds={bonusSettings.premiumDailySpinOdds}
+        hasDeposited={hasDeposited}
       />
     </div>
   );
