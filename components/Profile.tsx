@@ -580,6 +580,7 @@ export const Profile: React.FC = () => {
 
   const handleOpenFirstDeposit = () => {
     setShippingDepositMessage('Opening first-time deposit packages...');
+    setShowShippingReview(false);
     setTopUpModalIntent({
       reason: 'insufficient_balance',
       requiredCoins: 4000,
@@ -1212,7 +1213,7 @@ export const Profile: React.FC = () => {
             {shippingDepositNotice && (
               <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-5 text-amber-100 sm:text-[13px]">
                 <p>
-                  {shippingDepositNotice} You can keep using Pullz, but shipping unlocks after the same deposit signals used for first-time deposit offers are detected.
+                  {shippingDepositNotice} You can keep using Pullz, but shipping unlocks after first deposit.
                 </p>
                 {shippingDepositMessage && <p className="mt-1 text-amber-200/90">{shippingDepositMessage}</p>}
                 <button

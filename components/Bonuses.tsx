@@ -3,12 +3,11 @@ import { useGame } from "../context/GameContext";
 import { useSound } from "../context/SoundContext";
 import { DailySpinPage } from "./DailySpinPage";
 import { authedFetch } from "../utils/authedFetch";
-import { auth } from "../firebase";
 
 export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   embedded = false,
 }) => {
-  const { user, setView, isAuthenticated, openAuthModal, bonusSettings, resendEmailVerification } = useGame();
+  const { user, setView, isAuthenticated, openAuthModal, bonusSettings } = useGame();
   const { playSound } = useSound();
   const [currentTime, setCurrentTime] = useState(Date.now());
 
@@ -23,19 +22,12 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
   const nextDailyClaimAt = lastDailyClaim + dailyCooldownMs;
   const canClaim = !lastDailyClaim || nextDailyClaimAt <= currentTime;
-  const currentAuthUser = auth.currentUser;
-  const isEmailVerificationLocked = Boolean(
-    isAuthenticated && currentAuthUser?.email && currentAuthUser.emailVerified === false,
-  );
+
 
   const handleSpinStart = async () => {
     if (!isAuthenticated) {
       openAuthModal("login");
       throw new Error("Please login to spin.");
-    }
-
-    if (isEmailVerificationLocked) {
-      throw new Error("Please verify your email before spinning.");
     }
 
     if (!canClaim) {
@@ -80,9 +72,6 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
         nextClaimAt={nextDailyClaimAt}
         embedded={embedded}
         dailySpinOdds={bonusSettings.dailySpinOdds}
-        isSpinLocked={isEmailVerificationLocked}
-        lockedEmail={currentAuthUser?.email ?? undefined}
-        onResendVerification={resendEmailVerification}
       />
     </div>
   );
