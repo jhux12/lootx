@@ -12,7 +12,7 @@ import { db } from '../firebase';
 import { storage } from '../firebaseStorage';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
-import { LegalEditor } from './admin/LegalEditor';
+import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
@@ -399,7 +399,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'legal' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -3768,10 +3768,10 @@ export const AdminPanel: React.FC = () => {
                        <BarChart3 className="w-4 h-4" /> Polls
                    </button>
                    <button
-                     onClick={() => setActiveTab('legal')}
-                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'legal' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                     onClick={() => setActiveTab('footer-pages')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'footer-pages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
-                       <ScrollText className="w-4 h-4" /> Legal
+                       <ScrollText className="w-4 h-4" /> Footer Pages
                    </button>
                    <button
                      onClick={() => setActiveTab('settings')}
@@ -3804,7 +3804,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'boxes-page' && 'Boxes Page'}
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
-                    {activeTab === 'legal' && 'Legal Content'}
+                    {activeTab === 'footer-pages' && 'Footer Pages'}
                     {activeTab === 'market-pricing' && 'Market Pricing'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
@@ -7038,9 +7038,9 @@ export const AdminPanel: React.FC = () => {
                 <PollsAdminSection />
             )}
 
-            {/* TAB: LEGAL */}
-            {activeTab === 'legal' && (
-                <LegalEditor />
+            {/* TAB: FOOTER PAGES */}
+            {activeTab === 'footer-pages' && (
+                <FooterPagesEditor />
             )}
 
             {/* TAB: SETTINGS */}
