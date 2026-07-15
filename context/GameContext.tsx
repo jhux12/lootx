@@ -662,6 +662,8 @@ type PersistUserData = Partial<{
   photoURL: string;
   topPullsPublic: boolean;
   lastDailyClaim: number;
+  purchasedCoins: number;
+  promoCoins: number;
   lastFreeBoxClaim: number;
   isAdmin: boolean;
 }>;
@@ -1602,7 +1604,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       const profile = buildUserProfile(firebaseUser, data);
 
-      const incomingBalance = profile.balance ?? 0;
+      const purchasedCoins = Math.max(0, Number((data as any).purchasedCoins ?? (data as any).coins ?? profile.balance ?? 0));
+      const promoCoins = Math.max(0, Number((data as any).balance ?? profile.balance ?? 0) - purchasedCoins);
+      const incomingBalance = purchasedCoins + promoCoins;
       const pendingBalance = pendingBalanceRef.current;
       const resolvedBalance = pendingBalance !== null && incomingBalance < pendingBalance
         ? pendingBalance
@@ -1617,6 +1621,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...profile,
         isAdmin: prev.isAdmin,
         balance: resolvedBalance,
+        purchasedCoins,
+        promoCoins,
         topPulls: hasInventorySubcollectionRef.current ? prev.topPulls : profile.topPulls
       }));
       setBalance(resolvedBalance);

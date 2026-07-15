@@ -1104,6 +1104,10 @@ export const AdminPanel: React.FC = () => {
                   id: docSnap.id,
                   createdAt: toMillis(data.createdAt, 0),
                   balance: Math.max(0, Number(data.balance ?? data.coins ?? 0)),
+                  purchasedCoins: Math.max(0, Number(data.purchasedCoins ?? data.coins ?? 0)),
+                  activePromoCoins: Math.max(0, Number(data.activePromoCoins ?? Math.max(0, Number(data.balance ?? 0) - Number(data.purchasedCoins ?? data.coins ?? 0)))),
+                  expiredPromoCoins: Math.max(0, Number(data.expiredPromoCoins ?? 0)),
+                  nextPromoExpiration: data.nextPromoExpiration ?? null,
                   ledger: normalizedLedger
               });
               const userLabel =
@@ -5187,6 +5191,9 @@ export const AdminPanel: React.FC = () => {
                                             <div className="grid grid-cols-2 gap-2">
                                                 {[
                                                     ['Current Balance', `${Math.round(selectedUser.balance ?? 0).toLocaleString()} coins`],
+                                                    ['Purchased Coins', `${Math.round(Number((selectedUser as any).purchasedCoins ?? selectedUser.balance ?? 0)).toLocaleString()} coins`],
+                                                    ['Active Promo Coins', `${Math.round(Number((selectedUser as any).activePromoCoins ?? 0)).toLocaleString()} coins`],
+                                                    ['Expired Promo Coins', `${Math.round(Number((selectedUser as any).expiredPromoCoins ?? 0)).toLocaleString()} coins`],
                                                     ['Lifetime Deposits', Math.round(metrics.lifetimeDeposits).toLocaleString()],
                                                     ['Lifetime Spent', Math.round(metrics.lifetimeSpent).toLocaleString()],
                                                     ['Lifetime Sellback', Math.round(metrics.lifetimeSellback).toLocaleString()],

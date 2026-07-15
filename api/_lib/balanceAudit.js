@@ -32,10 +32,12 @@ const writeBalanceChange = async ({ transaction, uid, userRef: inputUserRef, use
     throw new Error('userData is required when using recordBalanceChange inside an existing transaction');
   })();
 
-  const balanceField = normalizedCurrency === 'xp' ? 'xpBalance' : 'coins';
-  const legacyField = normalizedCurrency === 'xp' ? 'xp' : 'balance';
-  const currentBalance = Math.max(0, toInt(userData[balanceField] ?? userData[legacyField], 0));
+  const balanceField = normalizedCurrency === 'xp' ? 'xpBalance' : 'purchasedCoins';
+  const legacyField = normalizedCurrency === 'xp' ? 'xp' : 'coins';
+  const currentBalance = Math.max(0, toInt(userData[balanceField] ?? userData[legacyField] ?? userData.balance, 0));
+  const currentTotalBalance = normalizedCurrency === 'xp' ? currentBalance : Math.max(0, toInt(userData.balance ?? currentBalance, currentBalance));
   const nextBalance = currentBalance + delta;
+  const nextTotalBalance = normalizedCurrency === 'xp' ? nextBalance : currentTotalBalance + delta;
 
   const safeMetadata = sanitizeMetadata(metadata);
   const adminOverride = safeMetadata?.adminOverride === true;
@@ -56,7 +58,7 @@ const writeBalanceChange = async ({ transaction, uid, userRef: inputUserRef, use
 
   const patch = normalizedCurrency === 'xp'
     ? { xpBalance: nextBalance, xp: nextBalance }
-    : { coins: nextBalance, balance: nextBalance };
+    : { purchasedCoins: nextBalance, coins: nextBalance, balance: nextTotalBalance };
   transaction.set(userRef, patch, { merge: true });
   const mergedUserData = { ...userData, ...patch };
 
@@ -66,7 +68,7 @@ const writeBalanceChange = async ({ transaction, uid, userRef: inputUserRef, use
     reason: typeof reason === 'string' ? reason : 'balance_change',
     amount: delta,
     balanceBefore: currentBalance,
-    balanceAfter: nextBalance,
+    balanceAfter: nextTotalBalance,
     actorType: normalizedActorType,
     actorUid: actorUid ? String(actorUid) : null,
     source: typeof source === 'string' ? source : '',
@@ -75,7 +77,7 @@ const writeBalanceChange = async ({ transaction, uid, userRef: inputUserRef, use
     createdAt: admin.firestore.FieldValue.serverTimestamp()
   });
 
-  return { balanceBefore: currentBalance, balanceAfter: nextBalance, auditId: auditRef.id, userData: mergedUserData };
+  return { balanceBefore: currentTotalBalance, balanceAfter: nextTotalBalance, auditId: auditRef.id, userData: mergedUserData };
 };
 
 export const recordBalanceChange = async (params) => {

@@ -48,6 +48,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
     const data = await authedFetch<{
       prizeAmount: number;
       nextClaimAt: number;
+      expiresAt?: number;
     }>("/api/daily-spin", {
       method: "POST",
       body: JSON.stringify({ action: "claim" }),
@@ -58,6 +59,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
     return {
       amount: Number(data.prizeAmount ?? 0),
       nextClaimAt: Number(data.nextClaimAt ?? Date.now() + dailyCooldownMs),
+      expiresAt: Number(data.expiresAt ?? Date.now() + 48 * 60 * 60 * 1000),
     };
   };
 

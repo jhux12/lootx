@@ -41,7 +41,7 @@ import { CoinAmount } from "./CoinAmount";
 import { BrandLockup } from "./BrandLockup";
 import { useBalanceFeedback } from "../src/ui/feedback/useBalanceFeedback";
 import { useUnreadActivityCount } from "../src/lib/activity/useActivity";
-import { doc, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import {
   getClaimReadyQuestCount,
@@ -56,6 +56,33 @@ const ActivityDrawer = lazy(() =>
     default: module.ActivityDrawer,
   })),
 );
+
+
+type PromoGrantPreview = {
+  id: string;
+  remainingAmount: number;
+  expiresAt: number;
+};
+
+const toMillis = (value: unknown): number => {
+  if (value && typeof value === "object" && "toMillis" in value && typeof (value as { toMillis: () => number }).toMillis === "function") {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatPromoExpiryCountdown = (expiresAt: number, now: number): string => {
+  const remainingMs = Math.max(0, expiresAt - now);
+  const totalMinutes = Math.ceil(remainingMs / 60000);
+  if (totalMinutes <= 0) return "now";
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
 
 type HeaderProps = {
   onOpenInbox: () => void;
@@ -128,6 +155,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     Record<string, string>
   >({});
   const [showActivity, setShowActivity] = useState(false);
+  const [promoGrantPreviews, setPromoGrantPreviews] = useState<PromoGrantPreview[]>([]);
+  const [promoCountdownNow, setPromoCountdownNow] = useState(Date.now());
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] =
     useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -137,6 +166,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     [authInitialized, user],
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
+  const purchasedCoins = Math.max(0, Number(user.purchasedCoins ?? balance));
+  const fallbackPromoCoins = Math.max(0, Number(user.promoCoins ?? Math.max(0, balance - purchasedCoins)));
+  const activePromoGrantPreviews = useMemo(
+    () => promoGrantPreviews.filter((grant) => grant.remainingAmount > 0 && grant.expiresAt > promoCountdownNow),
+    [promoCountdownNow, promoGrantPreviews],
+  );
+  const soonestPromoGrant = activePromoGrantPreviews[0] ?? null;
+  const promoCoins = activePromoGrantPreviews.length > 0
+    ? activePromoGrantPreviews.reduce((sum, grant) => sum + grant.remainingAmount, 0)
+    : fallbackPromoCoins;
+  const promoExpiryLabel = soonestPromoGrant
+    ? `${Math.floor(soonestPromoGrant.remainingAmount).toLocaleString()} coins expiring in ${formatPromoExpiryCountdown(soonestPromoGrant.expiresAt, promoCountdownNow)}`
+    : (promoCoins > 0 ? `${Math.floor(promoCoins).toLocaleString()} coins expiring soon` : "");
   const unreadCount = useUnreadActivityCount();
   const lastDailyClaim = useMemo(
     () =>
@@ -336,6 +378,47 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     );
     return () => unsub();
   }, [enableRewardsRealtime, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user.id) {
+      setPromoGrantPreviews([]);
+      return undefined;
+    }
+
+    const grantsRef = collection(db, "users", user.id, "promoCoinGrants");
+    const unsubscribe = onSnapshot(
+      grantsRef,
+      (snapshot) => {
+        const now = Date.now();
+        const grants = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data() as Record<string, unknown>;
+            return {
+              id: docSnap.id,
+              remainingAmount: Math.max(0, Math.floor(Number(data.remainingAmount ?? data.amount ?? 0))),
+              expiresAt: toMillis(data.expiresAt),
+              status: String(data.status ?? "active"),
+            };
+          })
+          .filter((grant) => grant.status === "active" && grant.remainingAmount > 0 && grant.expiresAt > now)
+          .sort((a, b) => a.expiresAt - b.expiresAt)
+          .map(({ status: _status, ...grant }) => grant);
+        setPromoGrantPreviews(grants);
+      },
+      (error) => {
+        console.error("Promo coin grant snapshot failed", error);
+        setPromoGrantPreviews([]);
+      },
+    );
+    return () => unsubscribe();
+  }, [isAuthenticated, user.id]);
+
+  useEffect(() => {
+    if (promoGrantPreviews.length === 0) return undefined;
+    const interval = window.setInterval(() => setPromoCountdownNow(Date.now()), 1000);
+    setPromoCountdownNow(Date.now());
+    return () => window.clearInterval(interval);
+  }, [promoGrantPreviews.length]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -600,14 +683,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                           aria-hidden="true"
                           className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(99,102,241,0.12),rgba(59,130,246,0.08),rgba(255,255,255,0.015))]"
                         />
-                        <div className="relative z-10 flex h-11 items-center justify-between gap-2 px-3 pr-2 xl:gap-3 xl:px-4">
-                          <CoinAmount
-                            amount={balance}
-                            className="min-w-[76px] text-[14px] xl:min-w-[90px] xl:text-[15px] font-semibold leading-none tracking-tight text-white"
-                            iconClassName="h-5 w-5"
-                            textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums"
-                            formatOptions={{ maximumFractionDigits: 0 }}
-                          />
+                        <div className="relative z-10 flex min-h-11 items-center justify-between gap-2 px-3 py-1 pr-2 xl:gap-3 xl:px-4">
+                          <div className="min-w-[82px]">
+                            <CoinAmount
+                              amount={balance}
+                              className="text-[14px] xl:text-[15px] font-semibold leading-none tracking-tight text-white"
+                              iconClassName="h-5 w-5"
+                              textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums"
+                              formatOptions={{ maximumFractionDigits: 0 }}
+                            />
+                            {promoCoins > 0 ? (
+                              <p className="mt-0.5 max-w-[112px] truncate text-[10px] font-semibold text-sky-200 xl:max-w-[132px]">{promoExpiryLabel}</p>
+                            ) : null}
+                          </div>
                           <button
                             type="button"
                             onClick={openTopUp}
@@ -723,19 +811,24 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
                 {authInitialized && isAuthenticated && (
                   <div className="flex min-h-[40px] min-w-0 items-center gap-1.5 lg:hidden">
-                    <div className="relative min-w-[110px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] sm:min-w-[126px]">
+                    <div className="relative min-w-[118px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] sm:min-w-[136px]">
                       <span
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,56,92,0.12),rgba(34,211,238,0.08),rgba(255,255,255,0.02))]"
                       />
-                      <div className="relative z-10 flex h-9 items-center justify-between gap-1.5 px-2 pl-2.5 pr-1 sm:gap-2 sm:pl-3 sm:pr-1.5">
-                        <CoinAmount
-                          amount={balance}
-                          className="min-w-[72px] text-xs font-extrabold leading-none tracking-tight text-white sm:min-w-[82px] sm:text-sm"
-                          iconClassName="h-4 w-4"
-                          textClassName="min-w-[44px] text-right tabular-nums sm:min-w-[52px]"
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                        />
+                      <div className="relative z-10 flex min-h-9 items-center justify-between gap-1.5 px-2 py-1 pl-2.5 pr-1 sm:gap-2 sm:pl-3 sm:pr-1.5">
+                        <div className="min-w-[78px] sm:min-w-[92px]">
+                          <CoinAmount
+                            amount={balance}
+                            className="text-xs font-extrabold leading-none tracking-tight text-white sm:text-sm"
+                            iconClassName="h-4 w-4"
+                            textClassName="min-w-[44px] text-right tabular-nums sm:min-w-[52px]"
+                            formatOptions={{ maximumFractionDigits: 0 }}
+                          />
+                          {promoCoins > 0 ? (
+                            <p className="mt-0.5 max-w-[82px] truncate text-[9px] font-semibold leading-tight text-sky-200 sm:max-w-[98px]">{promoExpiryLabel}</p>
+                          ) : null}
+                        </div>
                         <button
                           type="button"
                           onClick={openTopUp}

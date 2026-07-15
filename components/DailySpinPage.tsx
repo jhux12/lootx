@@ -12,7 +12,7 @@ type SpinPrize = {
 interface DailySpinPageProps {
   onBack?: () => void;
   onSpinStart: () => Promise<{ amount: number }>;
-  onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
+  onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number; expiresAt?: number }>;
   onExploreBoxes: () => void;
   canSpin: boolean;
   nextClaimAt: number;
@@ -103,6 +103,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [lastPrize, setLastPrize] = useState<number | null>(null);
+  const [lastPrizeExpiresAt, setLastPrizeExpiresAt] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [localNextClaimAt, setLocalNextClaimAt] = useState(nextClaimAt);
   const [countdownNow, setCountdownNow] = useState(Date.now());
@@ -175,6 +176,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
           const claimResult = await onSpinClaim();
           setLocalNextClaimAt(claimResult.nextClaimAt);
           setLastPrize(claimResult.amount || winner.amount);
+          setLastPrizeExpiresAt(claimResult.expiresAt ?? Date.now() + 48 * 60 * 60 * 1000);
           setIsSpinning(false);
         } catch (claimError) {
           setIsSpinning(false);
@@ -384,8 +386,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
               Daily bonus claimed!
             </p>
             <p className="mt-2 text-sm text-neutral-300">
-              Your free reward is locked in. Explore more boxes while the next
-              spin gets ready.
+              Your free reward is locked in as promo coins. Promo coins expire 48 hours after claiming; purchased coins never expire.
             </p>
             <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-950/55 px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-200/80">

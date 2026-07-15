@@ -110,6 +110,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /users/{uid}/promoCoinGrants/{grantId} {
+      allow read: if isOwnUser(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+
     match /users/{uid}/activity/{activityId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow create, update: if isOwnUser(uid) || isAdmin();

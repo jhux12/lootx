@@ -5,6 +5,7 @@ import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { recordBalanceChange } from './_lib/balanceAudit.js';
+import { calculateAvailableBalance, spendCoinsPromoFirst } from './_lib/promoCoins.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralFirstGameQualified } from './_lib/referrals.js';
@@ -218,9 +219,8 @@ export default async function handler(req, res) {
         : DEFAULT_CLIENT_SEED;
       const nonce = Number.isFinite(provablyData.nonce) ? Number(provablyData.nonce) : 0;
 
-      const rawCoins = userSnap.exists ? (userData.coins ?? userData.balance) : undefined;
-      const hasCoins = Number.isFinite(toFiniteNumber(rawCoins, Number.NaN));
-      const currentCoins = hasCoins ? toFiniteNumber(rawCoins, 0) : DEFAULT_NEW_USER_COINS;
+      const coinBalance = await calculateAvailableBalance({ transaction, uid: decoded.uid, userData });
+      const currentCoins = userSnap.exists ? coinBalance.totalCoins : DEFAULT_NEW_USER_COINS;
       const currentXp = Math.max(0, Math.floor(toFiniteNumber(userData.xpBalance ?? userData.xp, 0)));
       const normalizedEconomy = normalizeEconomySettings(economySettingsSnap.exists ? economySettingsSnap.data() ?? {} : {});
       const { settings: rewardsSettings } = await getRewardsSettings(transaction);
@@ -319,7 +319,8 @@ export default async function handler(req, res) {
       let newXpBalance = currentXp;
       let balanceState = {
         ...userData,
-        coins: currentCoins,
+        purchasedCoins: coinBalance.purchasedCoins,
+        coins: coinBalance.purchasedCoins,
         balance: currentCoins,
         xpBalance: currentXp,
         xp: currentXp
@@ -332,22 +333,18 @@ export default async function handler(req, res) {
       });
 
       if (coinCost > 0) {
-        const result = await recordBalanceChange({
+        const result = await spendCoinsPromoFirst({
           transaction,
           uid: decoded.uid,
           userRef,
           userData: balanceState,
-          currency: 'coins',
-          amount: -coinCost,
-          reason: 'case_open_cost',
-          actorType: 'user',
-          actorUid: decoded.uid,
-          source: 'api/open-case',
+          amount: coinCost,
           relatedId: openRef.id,
           metadata: { boxId, paymentMethod: 'coins', caseName: boxData.name ?? 'Mystery Box' }
         });
         newCoins = result.balanceAfter;
-        balanceState = result.userData;
+        responsePayload = { ...(responsePayload ?? {}), paymentBreakdown: { promoCoinsApplied: result.spentPromoCoins, purchasedCoinsApplied: result.spentPurchasedCoins } };
+        balanceState = { ...balanceState, purchasedCoins: result.purchasedCoinsAfter, coins: result.purchasedCoinsAfter, balance: result.balanceAfter };
       }
 
       if (paidWithXp) {
@@ -536,6 +533,7 @@ export default async function handler(req, res) {
           size: selectedSize || null
         },
         createdAt: obtainedAt,
+        paymentBreakdown: responsePayload?.paymentBreakdown,
         provablyFair: {
           serverSeedHash,
           clientSeed,
@@ -600,6 +598,7 @@ export default async function handler(req, res) {
         inventoryId: inventoryRef.id,
         openId: openRef.id,
         operationId,
+        paymentBreakdown: responsePayload?.paymentBreakdown,
         provablyFair: {
           serverSeedHash,
           clientSeed,
