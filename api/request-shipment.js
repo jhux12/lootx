@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     const authUser = await adminAuth.getUser(decoded.uid);
-    if (!authUser.email || authUser.emailVerified !== true) {
+    if (!authUser.email || decoded.email_verified !== true) {
       return sendJson(res, 403, {
         error: 'EMAIL_VERIFICATION_REQUIRED',
         message: authUser.email
