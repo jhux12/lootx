@@ -18,7 +18,17 @@ const generateCheckoutEventId = () => {
 };
 
 export const TopUpModal: React.FC = () => {
-  const { user, setShowTopUpModal, setTopUpModalIntent, topUpModalIntent, coinPackages } = useGame();
+  const {
+    user,
+    setShowTopUpModal,
+    setTopUpModalIntent,
+    topUpModalIntent,
+    coinPackages,
+    coinPackagesLoading,
+    coinPackagesLoaded,
+    coinPackagesError,
+    refreshCoinPackages
+  } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [hasUserSelectedPackage, setHasUserSelectedPackage] = useState(false);
@@ -44,6 +54,8 @@ export const TopUpModal: React.FC = () => {
     () => activePackages.filter((pkg) => !pkg.firstTimeDepositOnly),
     [activePackages]
   );
+  const isInitialPackagesLoading = coinPackagesLoading && coinPackages.length === 0;
+
   const displayedPackages = useMemo(() => {
     if (isFirstDepositEligible && showFirstDepositPackages) {
       return firstDepositPackages;
@@ -306,7 +318,7 @@ export const TopUpModal: React.FC = () => {
                         Covers your first box + extra spins
                       </p>
                     )}
-                    {isFirstDepositEligible && (
+                    {coinPackagesLoaded && isFirstDepositEligible && firstDepositPackages.length > 0 && (
                       <button
                         type="button"
                         onClick={() => {
@@ -339,7 +351,25 @@ export const TopUpModal: React.FC = () => {
                     <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-200">Select a pack</label>
                     <div className="mb-3 max-h-[min(44dvh,320px)] overflow-y-auto overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch]">
                     <div className="flex flex-col gap-3">
-                        {displayedPackages.length === 0 ? (
+                        {isInitialPackagesLoading ? (
+                          <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-8 text-center text-xs text-gray-400">
+                            <Loader2 className="mb-2 h-6 w-6 animate-spin text-cyan-300" />
+                            <span>Loading coin packages...</span>
+                          </div>
+                        ) : coinPackagesError && coinPackages.length === 0 ? (
+                          <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-6 text-center text-xs text-red-100">
+                            <span>Unable to load coin packages.</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void refreshCoinPackages();
+                              }}
+                              className="mt-3 rounded-lg border border-red-200/30 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/15"
+                            >
+                              Try again
+                            </button>
+                          </div>
+                        ) : coinPackagesLoaded && !coinPackagesLoading && displayedPackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             {showFirstDepositPackages ? 'No first-time deposit packages available right now.' : 'No packages available right now.'}
                           </div>
@@ -389,7 +419,7 @@ export const TopUpModal: React.FC = () => {
                 <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-5">
                   <button
                     onClick={handleDeposit}
-                    disabled={isLoading || !selectedPackage}
+                    disabled={isLoading || isInitialPackagesLoading || !selectedPackage}
                     className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
