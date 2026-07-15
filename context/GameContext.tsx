@@ -684,6 +684,10 @@ type EmailVerificationStatus = 'idle' | 'pending' | 'checking' | 'verified-no-se
 type EmailPasswordAuthResult = { requiresEmailVerification?: boolean } | void;
 
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
+const COIN_PACKAGES_CACHE_TTL_MS = 5 * 60 * 1000;
+const COIN_PACKAGE_RETRY_DELAYS_MS = [400, 1000] as const;
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 export type TopUpModalIntent = {
   reason: 'insufficient_balance';
@@ -707,6 +711,10 @@ interface GameContextType {
   boxes: MysteryBox[];
   items: CaseItem[];
   coinPackages: CoinPackage[];
+  coinPackagesLoading: boolean;
+  coinPackagesLoaded: boolean;
+  coinPackagesError: string | null;
+  refreshCoinPackages: () => Promise<void>;
   bonusSettings: BonusSettings;
   stripeSettings: StripeSettings;
   showLoginModal: boolean;
@@ -1829,6 +1837,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
+  const [coinPackagesLoading, setCoinPackagesLoading] = useState(false);
+  const [coinPackagesLoaded, setCoinPackagesLoaded] = useState(false);
+  const [coinPackagesError, setCoinPackagesError] = useState<string | null>(null);
+  const coinPackagesInFlightRef = useRef<Promise<void> | null>(null);
+  const coinPackagesLastLoadedAtRef = useRef<number>(0);
 
   const [battles, setBattles] = useState<Battle[]>([]);
 
@@ -2197,41 +2210,82 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearInterval(interval);
   }, []);
 
+  const loadCoinPackages = useCallback(async () => {
+    if (coinPackagesInFlightRef.current) {
+      return coinPackagesInFlightRef.current;
+    }
+
+    const request = (async () => {
+      setCoinPackagesLoading(true);
+      setCoinPackagesError(null);
+      let lastError: unknown = null;
+
+      for (let attempt = 0; attempt <= COIN_PACKAGE_RETRY_DELAYS_MS.length; attempt += 1) {
+        try {
+          const coinPackagesPath = 'coin_packages?limit=50';
+          console.log('READING FIRESTORE PATH', coinPackagesPath);
+          const snapshot = await getDocs(query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'), limit(50)));
+          const loaded = snapshot.docs.map((docSnap) => {
+            const data = docSnap.data();
+            const coins = Number(data.coins ?? 0);
+            const bonusCoins = Number(data.bonusCoins ?? 0);
+            return {
+              id: docSnap.id,
+              name: data.name ?? 'Coin Package',
+              coins,
+              bonusCoins,
+              totalCoins: coins + bonusCoins,
+              defaultSelected: Boolean(data.defaultSelected),
+              firstTimeDepositOnly: Boolean(data.firstTimeDepositOnly),
+              imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
+              displayPrice: data.displayPrice ?? '',
+              stripePriceId: data.stripePriceId ?? '',
+              badge: typeof data.badge === 'string' ? data.badge : undefined,
+              active: data.active ?? false,
+              sortOrder: Number(data.sortOrder ?? 0),
+              createdAt: normalizeTimestamp(data.createdAt, 0),
+              updatedAt: normalizeTimestamp(data.updatedAt, 0)
+            } as CoinPackage;
+          });
+          setCoinPackages(loaded);
+          setCoinPackagesLoaded(true);
+          setCoinPackagesError(null);
+          coinPackagesLastLoadedAtRef.current = Date.now();
+          return;
+        } catch (error) {
+          lastError = error;
+          const retryDelay = COIN_PACKAGE_RETRY_DELAYS_MS[attempt];
+          if (retryDelay !== undefined) {
+            await wait(retryDelay);
+          }
+        }
+      }
+
+      const message = lastError instanceof Error ? lastError.message : 'Unable to load coin packages.';
+      setCoinPackagesError(message || 'Unable to load coin packages.');
+      console.error('Failed to load coin packages after retry attempts', lastError);
+    })().finally(() => {
+      setCoinPackagesLoading(false);
+      coinPackagesInFlightRef.current = null;
+    });
+
+    coinPackagesInFlightRef.current = request;
+    return request;
+  }, []);
+
+  const refreshCoinPackages = useCallback(() => loadCoinPackages(), [loadCoinPackages]);
+
+  useEffect(() => {
+    void loadCoinPackages();
+  }, [loadCoinPackages]);
+
   useEffect(() => {
     if (!showTopUpModal) return;
-    void (async () => {
-      try {
-        const coinPackagesPath = 'coin_packages?limit=50';
-        console.log('READING FIRESTORE PATH', coinPackagesPath);
-        const snapshot = await getDocs(query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'), limit(50)));
-        const loaded = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data();
-        const coins = Number(data.coins ?? 0);
-        const bonusCoins = Number(data.bonusCoins ?? 0);
-        return {
-          id: docSnap.id,
-          name: data.name ?? 'Coin Package',
-          coins,
-          bonusCoins,
-          totalCoins: coins + bonusCoins,
-          defaultSelected: Boolean(data.defaultSelected),
-          firstTimeDepositOnly: Boolean(data.firstTimeDepositOnly),
-          imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
-          displayPrice: data.displayPrice ?? '',
-          stripePriceId: data.stripePriceId ?? '',
-          badge: typeof data.badge === 'string' ? data.badge : undefined,
-          active: data.active ?? false,
-          sortOrder: Number(data.sortOrder ?? 0),
-          createdAt: normalizeTimestamp(data.createdAt, 0),
-          updatedAt: normalizeTimestamp(data.updatedAt, 0)
-        } as CoinPackage;
-        });
-        setCoinPackages(loaded);
-      } catch (error) {
-        console.error('Failed to load coin packages', error);
-      }
-    })();
-  }, [showTopUpModal]);
+    const cacheAgeMs = Date.now() - coinPackagesLastLoadedAtRef.current;
+    if (!coinPackagesLoaded || coinPackagesError || cacheAgeMs > COIN_PACKAGES_CACHE_TTL_MS) {
+      void refreshCoinPackages();
+    }
+  }, [coinPackagesError, coinPackagesLoaded, refreshCoinPackages, showTopUpModal]);
 
   useEffect(() => {
     activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');
@@ -3764,6 +3818,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       boxes,
       items,
       coinPackages,
+      coinPackagesLoading,
+      coinPackagesLoaded,
+      coinPackagesError,
+      refreshCoinPackages,
       bonusSettings,
       stripeSettings,
       login,
@@ -3829,7 +3887,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }), [
       user, isAuthenticated, users, notifications, showLoginModal, showTopUpModal, topUpModalIntent, authModalMode,
       showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, balance, inventory, shipments,
-      view, battles, boxes, items, coinPackages, bonusSettings, stripeSettings, login, loginWithGoogle,
+      view, battles, boxes, items, coinPackages, coinPackagesLoading, coinPackagesLoaded, coinPackagesError, refreshCoinPackages, bonusSettings, stripeSettings, login, loginWithGoogle,
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
       setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
