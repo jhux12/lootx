@@ -187,6 +187,10 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    match /site/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
 
     match /polls/{pollId} {
       allow read: if true;

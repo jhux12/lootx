@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
+import { useManagedFooterPage } from './FooterManagedContent';
 
 type SupportMessage = {
   sender: 'user' | 'admin';
@@ -60,6 +61,7 @@ export const ContactSupport: React.FC = () => {
   const [replyStatus, setReplyStatus] = useState<Record<string, { sending: boolean; error?: string; success?: string }>>(
     {}
   );
+  const managedContent = useManagedFooterPage('contact');
 
   const currentUser = auth.currentUser;
   const userEmail = currentUser?.email ?? '';
@@ -216,11 +218,10 @@ export const ContactSupport: React.FC = () => {
 
   return (
     <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold text-white sm:text-3xl">Contact Support</h1>
-        <p className="text-sm text-gray-400 sm:text-base">
-          Send us a message and track your support threads in one place.
-        </p>
+      <div className="rounded-2xl border border-white/10 bg-[#0b0f1a] p-5 sm:p-6">
+        <h1 className="text-2xl font-semibold text-white sm:text-3xl">{managedContent.title}</h1>
+        {managedContent.lastUpdated && <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-500">Last updated {managedContent.lastUpdated}</p>}
+        <div className="mt-4 space-y-3 text-sm text-gray-400 sm:text-base" dangerouslySetInnerHTML={{ __html: managedContent.html }} />
       </div>
 
       {!isAuthenticated && (
