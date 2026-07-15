@@ -4,6 +4,9 @@ import { useSound } from "../context/SoundContext";
 import { DailySpinPage } from "./DailySpinPage";
 import { authedFetch } from "../utils/authedFetch";
 
+const DAILY_SPIN_BALANCE_SUPPRESSION_KEY = "pullzDailySpinSuppressBalanceFeedbackUntil";
+const DAILY_SPIN_ANIMATION_MS = 5000;
+
 export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   embedded = false,
 }) => {
@@ -34,14 +37,29 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
       throw new Error("Daily spin is on cooldown.");
     }
 
-    const data = await authedFetch<{ prizeAmount: number }>("/api/daily-spin", {
-      method: "POST",
-      body: JSON.stringify({ action: "spin" }),
-    });
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(
+        DAILY_SPIN_BALANCE_SUPPRESSION_KEY,
+        String(Date.now() + DAILY_SPIN_ANIMATION_MS + 1500),
+      );
+    }
 
-    return {
-      amount: Number(data.prizeAmount ?? 0),
-    };
+    try {
+      const data = await authedFetch<{ prizeAmount: number; nextClaimAt?: number }>("/api/daily-spin", {
+        method: "POST",
+        body: JSON.stringify({ action: "spin" }),
+      });
+
+      return {
+        amount: Number(data.prizeAmount ?? 0),
+        nextClaimAt: Number(data.nextClaimAt ?? 0) || undefined,
+      };
+    } catch (error) {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem(DAILY_SPIN_BALANCE_SUPPRESSION_KEY);
+      }
+      throw error;
+    }
   };
 
   const handleSpinClaim = async () => {
@@ -53,6 +71,9 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
       body: JSON.stringify({ action: "claim" }),
     });
 
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(DAILY_SPIN_BALANCE_SUPPRESSION_KEY);
+    }
     playSound("coins");
 
     return {

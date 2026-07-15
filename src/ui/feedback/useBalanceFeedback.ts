@@ -4,6 +4,7 @@ import { useSound } from '../../../context/SoundContext';
 
 const SIGN_IN_SOUND_SUPPRESSION_MS = 6000;
 const SIGN_IN_SUPPRESSED_PINGS = 4;
+const DAILY_SPIN_BALANCE_SUPPRESSION_KEY = 'pullzDailySpinSuppressBalanceFeedbackUntil';
 
 export const useBalanceFeedback = (balance: number, isAuthenticated: boolean) => {
   const { muted, playSound } = useSound();
@@ -21,6 +22,16 @@ export const useBalanceFeedback = (balance: number, isAuthenticated: boolean) =>
     if (signedInJustNow) {
       suppressSoundUntil.current = Date.now() + SIGN_IN_SOUND_SUPPRESSION_MS;
       suppressedPingBudget.current = SIGN_IN_SUPPRESSED_PINGS;
+      prevBalance.current = balance;
+      return;
+    }
+
+    const suppressedUntil = (() => {
+      if (typeof window === 'undefined') return 0;
+      return Number(window.localStorage.getItem(DAILY_SPIN_BALANCE_SUPPRESSION_KEY) ?? 0);
+    })();
+
+    if (Number.isFinite(suppressedUntil) && Date.now() < suppressedUntil && balance !== prevBalance.current) {
       prevBalance.current = balance;
       return;
     }

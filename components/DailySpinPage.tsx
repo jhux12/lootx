@@ -11,7 +11,7 @@ type SpinPrize = {
 
 interface DailySpinPageProps {
   onBack?: () => void;
-  onSpinStart: () => Promise<{ amount: number }>;
+  onSpinStart: () => Promise<{ amount: number; nextClaimAt?: number }>;
   onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
   onExploreBoxes: () => void;
   canSpin: boolean;
@@ -161,6 +161,9 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
 
     try {
       const startResult = await onSpinStart();
+      if (Number.isFinite(startResult.nextClaimAt ?? NaN)) {
+        setLocalNextClaimAt(Number(startResult.nextClaimAt));
+      }
       const winner =
         prizes.find((prize) => prize.amount === startResult.amount) ??
         prizes[0];

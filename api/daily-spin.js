@@ -89,7 +89,8 @@ export default async function handler(req, res) {
         userData.dailySpinPending && typeof userData.dailySpinPending === 'object'
           ? {
               amount: Math.floor(Number(userData.dailySpinPending.amount ?? 0)),
-              createdAt: Number(userData.dailySpinPending.createdAt ?? 0)
+              createdAt: Number(userData.dailySpinPending.createdAt ?? 0),
+              credited: userData.dailySpinPending.credited === true
             }
           : null;
       const hasValidPendingSpin =
@@ -110,24 +111,27 @@ export default async function handler(req, res) {
 
         const prizeAmount = pendingSpin.amount;
 
-        await recordBalanceChange({
-          transaction,
-          uid,
-          userRef,
-          userData,
-          currency: 'coins',
-          amount: prizeAmount,
-          reason: 'daily_spin_reward',
-          actorType: 'system',
-          actorUid: null,
-          source: 'api/daily-spin',
-          relatedId: null,
-          metadata: { action: 'claim' }
-        });
+        if (!pendingSpin.credited) {
+          await recordBalanceChange({
+            transaction,
+            uid,
+            userRef,
+            userData,
+            currency: 'coins',
+            amount: prizeAmount,
+            reason: 'daily_spin_reward',
+            actorType: 'system',
+            actorUid: null,
+            source: 'api/daily-spin',
+            relatedId: null,
+            metadata: { action: 'claim' }
+          });
+        }
+        const claimTime = Number.isFinite(pendingSpin.createdAt) && pendingSpin.createdAt > 0 ? pendingSpin.createdAt : now;
         transaction.set(
           userRef,
           {
-            lastDailyClaim: now,
+            lastDailyClaim: claimTime,
             dailySpinPending: admin.firestore.FieldValue.delete(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
           },
@@ -136,8 +140,8 @@ export default async function handler(req, res) {
 
         return {
           prizeAmount,
-          lastDailyClaim: now,
-          nextClaimAt: now + SPIN_COOLDOWN_MS,
+          lastDailyClaim: claimTime,
+          nextClaimAt: claimTime + SPIN_COOLDOWN_MS,
           claimed: true
         };
       }
@@ -164,12 +168,28 @@ export default async function handler(req, res) {
       const entries = sanitizeOdds(bonusSettings.dailySpinOdds);
       const prizeAmount = pickWeightedPrize(entries);
 
+      await recordBalanceChange({
+        transaction,
+        uid,
+        userRef,
+        userData,
+        currency: 'coins',
+        amount: prizeAmount,
+        reason: 'daily_spin_reward',
+        actorType: 'system',
+        actorUid: null,
+        source: 'api/daily-spin',
+        relatedId: null,
+        metadata: { action: 'spin' }
+      });
       transaction.set(
         userRef,
         {
+          lastDailyClaim: now,
           dailySpinPending: {
             amount: prizeAmount,
-            createdAt: now
+            createdAt: now,
+            credited: true
           },
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         },
