@@ -70,6 +70,7 @@ const storyBadgeClass: Record<string, string> = {
 };
 
 const formatStoryCount = (count: number) => `${count} ${count === 1 ? 'story' : 'stories'}`;
+const SUBMIT_PULL_REWARD_COINS = 50;
 
 
 const getSubmissionUsername = (user: User): string => {
@@ -417,7 +418,7 @@ export const LiveCommunitySection: React.FC = () => {
         source: 'community-submit-pull',
         submittedByUserId: user.id,
         submittedByEmail: user.email ?? null,
-        rewardCoins: 1000,
+        rewardCoins: SUBMIT_PULL_REWARD_COINS,
         requirements: ['shipped_and_delivered', 'clean_respectful_photo', 'admin_approved'],
         createdAt: serverTimestamp(),
         order: Date.now(),
@@ -439,12 +440,22 @@ export const LiveCommunitySection: React.FC = () => {
 
   return <section ref={sectionRef} className="space-y-3 min-h-[136px]">
     <div className="rounded-[1.1rem] border border-white/[0.06] bg-[#20262b]/62 p-3 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-4">
-      <div className="mb-2.5 flex items-end justify-between gap-2 px-0.5">
-        <div>
+      <div className="mb-2.5 flex items-start justify-between gap-2 px-0.5">
+        <div className="min-w-0">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/85">Community Pullz</p>
           <h2 className="mt-0.5 text-xl font-black tracking-tight text-white sm:text-2xl">Real wins &amp; deliveries</h2>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={openSubmitPull}
+            className="inline-flex min-h-9 max-w-[48vw] flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-100 transition hover:bg-[#303a55] active:scale-[0.98] sm:text-[11px]"
+          >
+            <span>Submit Your Pull</span>
+            <span className="inline-flex items-center gap-1 whitespace-nowrap text-amber-100">
+              get <img src={COIN_ICON} alt="Coin" className="h-3.5 w-3.5" loading="lazy" decoding="async" /> {SUBMIT_PULL_REWARD_COINS.toLocaleString()}
+            </span>
+          </button>
           <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-slate-300 sm:inline-flex">{formatStoryCount(stories.length)}</span>
           <div className="hidden items-center gap-1 sm:flex" aria-label="Scroll community stories">
             <button type="button" aria-label="Scroll to previous community stories" onClick={() => scrollStoryRail('previous')} className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-base font-black text-white/90 transition hover:border-fuchsia-300/40 hover:bg-white/[0.08]">‹</button>
@@ -472,11 +483,11 @@ export const LiveCommunitySection: React.FC = () => {
                 <img src={COIN_ICON} alt="" aria-hidden="true" className="mb-1 h-6 w-6 object-contain drop-shadow sm:h-7 sm:w-7" loading="lazy" decoding="async" />
                 <span className="text-[9px] font-black uppercase leading-tight tracking-wide text-white sm:text-[10px]">Submit Pull</span>
                 <span className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-black text-black">
-                  +1,000
+                  +{SUBMIT_PULL_REWARD_COINS.toLocaleString()}
                 </span>
               </div>
             </div>
-            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-amber-100">Get 1,000 coins</span>
+            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-amber-100">Get {SUBMIT_PULL_REWARD_COINS.toLocaleString()} coins</span>
           </button>
         {stories.length ? stories.map((story, index) => {
           const badge = getStoryBadge(story);
@@ -521,7 +532,7 @@ export const LiveCommunitySection: React.FC = () => {
               </span>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Community reward</p>
-                <h3 className="mt-0.5 text-xl font-black leading-tight text-white">Submit your pull, get 1,000 coins</h3>
+                <h3 className="mt-0.5 text-xl font-black leading-tight text-white">Submit your pull, get {SUBMIT_PULL_REWARD_COINS.toLocaleString()} coins</h3>
               </div>
             </div>
           </div>
@@ -574,7 +585,7 @@ export const LiveCommunitySection: React.FC = () => {
               className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-300 via-lime-300 to-emerald-300 px-4 text-sm font-black uppercase tracking-wide text-black shadow-[0_14px_34px_rgba(132,204,22,0.22)] transition hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <img src={COIN_ICON} alt="" aria-hidden="true" className="h-5 w-5 object-contain" />
-              {isSubmittingPull ? 'Submitting...' : 'Submit for 1,000 coins'}
+              {isSubmittingPull ? 'Submitting...' : `Submit for ${SUBMIT_PULL_REWARD_COINS.toLocaleString()} coins`}
             </button>
           </div>
         </form>
