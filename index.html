@@ -275,23 +275,23 @@
           background-attachment: scroll !important;
           scroll-behavior: auto !important;
         }
-        html.pullz-mobile-optimized [class*="backdrop-blur"] {
-          -webkit-backdrop-filter: none !important;
-          backdrop-filter: none !important;
+        html.pullz-low-performance [class*="backdrop-blur"] {
+          -webkit-backdrop-filter: blur(4px) !important;
+          backdrop-filter: blur(4px) !important;
         }
-        html.pullz-mobile-optimized [class*="blur-2xl"],
-        html.pullz-mobile-optimized [class*="blur-3xl"],
+        html.pullz-low-performance [class*="blur-2xl"],
+        html.pullz-low-performance [class*="blur-3xl"],
         html.pullz-low-performance [class*="blur-xl"] {
           filter: none !important;
         }
-        html.pullz-mobile-optimized [class*="drop-shadow"],
-        html.pullz-mobile-optimized [class*="shadow-[0_0"],
-        html.pullz-mobile-optimized [class*="shadow-blue"],
-        html.pullz-mobile-optimized [class*="shadow-purple"],
-        html.pullz-mobile-optimized [class*="shadow-cyan"],
-        html.pullz-mobile-optimized [class*="shadow-amber"],
-        html.pullz-mobile-optimized [class*="shadow-green"],
-        html.pullz-mobile-optimized [class*="shadow-emerald"] {
+        html.pullz-low-performance [class*="drop-shadow"],
+        html.pullz-low-performance [class*="shadow-[0_0"],
+        html.pullz-low-performance [class*="shadow-blue"],
+        html.pullz-low-performance [class*="shadow-purple"],
+        html.pullz-low-performance [class*="shadow-cyan"],
+        html.pullz-low-performance [class*="shadow-amber"],
+        html.pullz-low-performance [class*="shadow-green"],
+        html.pullz-low-performance [class*="shadow-emerald"] {
           filter: none !important;
           box-shadow: 0 0 12px rgba(32, 93, 215, 0.16) !important;
         }
@@ -311,11 +311,9 @@
           filter: blur(24px) !important;
           opacity: 0.6 !important;
         }
-        html.pullz-mobile-optimized .pullz-spinner-card.is-spinning,
-        html.pullz-low-performance .pullz-spinner-card {
+        html.pullz-low-performance .pullz-spinner-card.is-spinning {
           filter: none !important;
           box-shadow: none !important;
-          transition: none !important;
         }
         html.pullz-mobile-optimized .pullz-spinner-glow,
         html.pullz-low-performance .pullz-spinner-glow {
@@ -328,7 +326,6 @@
       html.pullz-tab-hidden *,
       html.pullz-reduced-motion *,
       html.pullz-low-performance .ticker-animation:not(.live-wins-ticker),
-      html.pullz-low-performance .animate-pulse,
       html.pullz-low-performance .ambient-pulse {
         animation-play-state: paused !important;
       }

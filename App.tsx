@@ -954,15 +954,7 @@ const AppShell = () => {
     previousNavigationScrollKey.current = navigationScrollKey;
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
 
-    const scrollToPageTop = () => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-
-    scrollToPageTop();
-    const frameId = window.requestAnimationFrame(scrollToPageTop);
-    return () => window.cancelAnimationFrame(frameId);
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [navigationScrollKey]);
 
   return (

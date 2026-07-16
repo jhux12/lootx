@@ -55,6 +55,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       onTouchStart={() => {
         prefetchHandlers.onTouchStart();
       }}
+      onFocus={prefetchHandlers.onFocus}
       onKeyDown={handleKeyDown}
       className={`pullz-stable-card group relative mx-auto flex h-full min-h-[19rem] w-full max-w-[18rem] sm:min-h-[22rem] cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11141a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
       tabIndex={0}

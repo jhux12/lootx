@@ -319,8 +319,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     claimFreeBox,
     registerSpend
   } = useGame();
-  const { muted, toggleMute, unlockAudio, playSound } = useSound();
+  const { muted, toggleMute, unlockAudio, playSound, prepareCaseAudio } = useSound();
   const performanceMode = usePerformanceMode();
+
+  useEffect(() => {
+    prepareCaseAudio();
+  }, [prepareCaseAudio]);
 
   const matchedBox = boxes.find(b => b.id === boxId);
   const box = matchedBox ?? boxes[0];

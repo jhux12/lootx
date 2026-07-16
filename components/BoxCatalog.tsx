@@ -10,6 +10,7 @@ import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import { BlurImage } from '../src/ui/images/BlurImage';
 import { usePerformanceMode } from '../src/lib/performance';
+import { useIntentPrefetch } from '../src/lib/prefetch/useIntentPrefetch';
 import type { CaseItem, MysteryBox } from '../types';
 
 type BoxCatalogProps = {
@@ -102,11 +103,15 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
 }) => {
   const { box, primaryTag, tagClass, topItemPreviews } = model;
   const isPriority = index < 4;
+  const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
 
   return (
     <button
       type="button"
       onClick={() => onOpen(box.id)}
+      onMouseEnter={prefetchHandlers.onMouseEnter}
+      onTouchStart={prefetchHandlers.onTouchStart}
+      onFocus={prefetchHandlers.onFocus}
       className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35 [content-visibility:auto] [contain-intrinsic-size:260px]"
     >
       <div className="relative px-2 pb-2 pt-3">

@@ -15,6 +15,7 @@ export const useIntentPrefetch = (
 
   return {
     onMouseEnter: runPrefetch,
+    onFocus: runPrefetch,
     onTouchStart: () => {
       if (touchedRef.current) return;
       touchedRef.current = true;
