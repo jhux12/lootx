@@ -33,11 +33,21 @@ export type ShowcaseRowCategories = ShowcaseRowBase & {
 
 export type ShowcaseRow = ShowcaseRowBoxes | ShowcaseRowCategories;
 
+export type HomepageAssetUrls = {
+  heroBoxUrl?: string | null;
+  heroLeftCardUrl?: string | null;
+  heroRightCardUrl?: string | null;
+  howOpenUrl?: string | null;
+  howPullUrl?: string | null;
+  howShipUrl?: string | null;
+};
+
 export type HomepageConfig = {
   showcaseRows: ShowcaseRow[];
   demoBoxId?: string | null;
   trustImageUrl?: string | null;
   trendingBoxIds?: string[];
+  assetUrls?: HomepageAssetUrls;
 };
 
 export const MAX_SHOWCASE_BOXES = 12;
@@ -135,7 +145,8 @@ export const subscribeHomepageConfig = (
         trustImageUrl: typeof data.trustImageUrl === 'string' && data.trustImageUrl.trim() ? data.trustImageUrl : null,
         trendingBoxIds: Array.isArray(data.trendingBoxIds)
           ? data.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim())
-          : []
+          : [],
+        assetUrls: typeof data.assetUrls === 'object' && data.assetUrls ? data.assetUrls : {}
       });
     },
     (error) => {
@@ -164,7 +175,10 @@ export const saveHomepageConfig = async (configOrRows: HomepageConfig | Showcase
   const trendingBoxIds = Array.isArray(config.trendingBoxIds)
     ? config.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim()).slice(0, 6)
     : [];
-  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl, trendingBoxIds }, { merge: true });
+  const assetUrls = Object.fromEntries(
+    Object.entries(config.assetUrls ?? {}).map(([key, value]) => [key, typeof value === 'string' ? value.trim() : null])
+  );
+  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl, trendingBoxIds, assetUrls }, { merge: true });
 };
 
 export const addRow = (rows: ShowcaseRow[]) => {
