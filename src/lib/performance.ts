@@ -15,6 +15,8 @@ const ENTER_FPS = 44;
 const EXIT_FPS = 54;
 const SLOW_WINDOWS_TO_ENTER = 3;
 const HEALTHY_WINDOWS_TO_EXIT = 4;
+const NORMAL_SAMPLE_INTERVAL_MS = 4_500;
+const CONFIRMING_SAMPLE_INTERVAL_MS = 900;
 
 const resolveInitialMode = (): PerformanceMode => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -129,7 +131,9 @@ export const usePerformanceMode = () => {
         }
         const fps = (frames / Math.max(1, now - startedAt)) * 1000;
         recordWindow(fps);
-        scheduleSample(500);
+        const isConfirmingEntry = !lowPower && slowWindows > 0;
+        const isConfirmingExit = lowPower && healthyWindows > 0;
+        scheduleSample(isConfirmingEntry || isConfirmingExit ? CONFIRMING_SAMPLE_INTERVAL_MS : NORMAL_SAMPLE_INTERVAL_MS);
       };
 
       rafId = window.requestAnimationFrame((now) => {

@@ -7,10 +7,14 @@ let caseChunkPrefetch: Promise<unknown> | null = null;
 
 const connection = () => (typeof navigator === 'undefined' ? undefined : (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection);
 
+const getEffectiveConnection = () => connection()?.effectiveType;
+
 const shouldSkipPrefetch = () => {
   const currentConnection = connection();
   return currentConnection?.saveData === true || currentConnection?.effectiveType === '2g' || currentConnection?.effectiveType === 'slow-2g';
 };
+
+const shouldSkipItemImages = () => getEffectiveConnection() === '3g';
 
 const preloadImage = (imageUrl?: string) => {
   if (!imageUrl || typeof Image === 'undefined' || imagePrefetches.has(imageUrl) || shouldSkipPrefetch()) return;
@@ -35,6 +39,15 @@ export const prefetchBox = async (
   prefetchCaseChunk();
   const box = await boxPrefetchCache.getOrLoad(boxId, fetcher, 60_000).catch(() => null);
   preloadImage(heroImageUrl || box?.image);
-  box?.items.slice(0, 8).forEach((item) => preloadImage(item.image));
+  if (!shouldSkipItemImages()) {
+    box?.items
+      .slice()
+      .sort((a, b) => b.price - a.price)
+      .slice(0, 3)
+      .forEach((item) => {
+        const itemWithThumbnail = item as typeof item & { thumbnail?: string; thumbnailUrl?: string; imageThumb?: string };
+        preloadImage(itemWithThumbnail.thumbnailUrl || itemWithThumbnail.thumbnail || itemWithThumbnail.imageThumb || item.image);
+      });
+  }
   return box;
 };

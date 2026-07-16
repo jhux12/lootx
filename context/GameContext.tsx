@@ -2292,6 +2292,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [coinPackagesError, coinPackagesLoaded, refreshCoinPackages, showTopUpModal]);
 
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const retryCoinPackagesWhenOnline = () => {
+      const cacheAgeMs = Date.now() - coinPackagesLastLoadedAtRef.current;
+      if (coinPackagesInFlightRef.current || (coinPackagesLoaded && !coinPackagesError && cacheAgeMs <= COIN_PACKAGES_CACHE_TTL_MS)) {
+        return;
+      }
+      void refreshCoinPackages();
+    };
+
+    window.addEventListener('online', retryCoinPackagesWhenOnline);
+    return () => window.removeEventListener('online', retryCoinPackagesWhenOnline);
+  }, [coinPackagesError, coinPackagesLoaded, refreshCoinPackages]);
+
   useEffect(() => {
     activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');
   }, [isAuthenticated, user.id]);

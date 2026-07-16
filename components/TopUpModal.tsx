@@ -155,6 +155,40 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+
+  const renderPackageCard = (pack: typeof displayedPackages[number]) => {
+    const isSelected = selectedPackage?.id === pack.id;
+    const bonusCoins = pack.bonusCoins ?? 0;
+    const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
+    const badgeText = pack.badge?.trim() ?? '';
+
+    return (
+      <button
+        key={pack.id}
+        onClick={() => {
+          setSelectedPackageId(pack.id);
+          setHasUserSelectedPackage(true);
+          playSound('click');
+        }}
+        className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
+          ${isSelected ? 'border-[#f7b733] shadow-[inset_0_0_0_1px_rgba(247,183,51,0.75),0_0_18px_rgba(247,183,51,0.25)]' : 'border-white/10'}`}
+      >
+        <div className="flex min-w-0 flex-col">
+          {badgeText && (
+            <span
+              className={`mb-1 w-fit rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
+            >
+              {getBadgeLabel(badgeText)}
+            </span>
+          )}
+          <CoinAmount amount={pack.coins} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-bold text-white" iconClassName="h-4 w-4" />
+          {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-200">{bonusLabel}</span>}
+        </div>
+        <span className="shrink-0 text-base font-bold text-white">{pack.displayPrice}</span>
+      </button>
+    );
+  };
+
   React.useEffect(() => lockPageScroll({ preserveScrollPosition: true }), []);
 
   React.useEffect(() => {
@@ -383,75 +417,14 @@ export const TopUpModal: React.FC = () => {
                                 Retry
                               </button>
                             </div>
-                            {displayedPackages.map((pack) => {
-                              const isSelected = selectedPackage?.id === pack.id;
-                              const bonusCoins = pack.bonusCoins ?? 0;
-                              const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
-                              const badgeText = pack.badge?.trim() ?? '';
-                              return (
-                                <button
-                                  key={pack.id}
-                                  onClick={() => {
-                                    setSelectedPackageId(pack.id);
-                                    setHasUserSelectedPackage(true);
-                                    playSound('click');
-                                  }}
-                                  className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
-                                  ${isSelected ? 'border-cyan-300 shadow-[0_0_0_1px_rgba(103,232,249,0.35),0_0_28px_rgba(34,211,238,0.12)]' : 'border-white/10 hover:border-white/20'}` }
-                                >
-                                  <span className="flex min-w-0 items-center gap-3">
-                                    <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-900/80">
-                                      {pack.imageUrl ? <img src={pack.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : <Coins className="h-6 w-6 text-yellow-300" />}
-                                    </span>
-                                    <span className="min-w-0">
-                                      <span className="block truncate text-sm font-bold text-white">{pack.name}</span>
-                                      <span className="block text-xs text-slate-400">{pack.totalCoins.toLocaleString()} coins{bonusCoins > 0 ? ` • ${bonusLabel}` : ''}</span>
-                                    </span>
-                                  </span>
-                                  <span className="shrink-0 text-right">
-                                    {badgeText && <span className="mb-1 block rounded-full bg-cyan-400/15 px-2 py-0.5 text-[10px] font-bold uppercase text-cyan-100">{badgeText}</span>}
-                                    <span className="block text-sm font-extrabold text-white">{pack.displayPrice}</span>
-                                  </span>
-                                </button>
-                              );
-                            })}
+                            {displayedPackages.map(renderPackageCard)}
                           </>
                         ) : coinPackagesLoaded && !coinPackagesLoading && displayedPackages.length === 0 ? (
                           <div className="col-span-full rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-6 text-center text-xs text-gray-500">
                             {showFirstDepositPackages ? 'No first-time deposit packages available right now.' : 'No packages available right now.'}
                           </div>
                         ) : (
-                          displayedPackages.map((pack) => {
-                            const isSelected = selectedPackage?.id === pack.id;
-                            const bonusCoins = pack.bonusCoins ?? 0;
-                            const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
-                            const badgeText = pack.badge?.trim() ?? '';
-                            return (
-                              <button
-                                  key={pack.id}
-                                  onClick={() => {
-                                    setSelectedPackageId(pack.id);
-                                    setHasUserSelectedPackage(true);
-                                    playSound('click');
-                                  }}
-                                  className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
-                                    ${isSelected ? 'border-[#f7b733] shadow-[inset_0_0_0_1px_rgba(247,183,51,0.75),0_0_18px_rgba(247,183,51,0.25)]' : 'border-white/10'}`}
-                              >
-                                  <div className="flex min-w-0 flex-col">
-                                    {badgeText && (
-                                      <span
-                                        className={`mb-1 w-fit rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
-                                      >
-                                        {getBadgeLabel(badgeText)}
-                                      </span>
-                                    )}
-                                    <CoinAmount amount={pack.coins} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-bold text-white" iconClassName="h-4 w-4" />
-                                    {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-200">{bonusLabel}</span>}
-                                  </div>
-                                  <span className="shrink-0 text-base font-bold text-white">{pack.displayPrice}</span>
-                              </button>
-                            );
-                          })
+                          displayedPackages.map(renderPackageCard)
                         )}
                     </div>
                     </div>
