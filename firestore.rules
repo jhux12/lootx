@@ -192,6 +192,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /homepageActivity/{activityId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /polls/{pollId} {
       allow read: if true;
       allow write: if isAdmin();
