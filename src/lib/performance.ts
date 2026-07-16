@@ -9,28 +9,24 @@ export type PerformanceMode = {
 
 const MOBILE_QUERY = '(max-width: 768px), (pointer: coarse)';
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
-
-const getDeviceMemory = () => {
-  if (typeof navigator === 'undefined') return undefined;
-  return (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
-};
+const STARTUP_GRACE_MS = 5_000;
+const SAMPLE_WINDOW_MS = 1_500;
+const ENTER_FPS = 44;
+const EXIT_FPS = 54;
+const SLOW_WINDOWS_TO_ENTER = 3;
+const HEALTHY_WINDOWS_TO_EXIT = 4;
+const NORMAL_SAMPLE_INTERVAL_MS = 4_500;
+const CONFIRMING_SAMPLE_INTERVAL_MS = 900;
 
 const resolveInitialMode = (): PerformanceMode => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return { isMobile: false, prefersReducedMotion: false, isLowPower: false, isHidden: false };
   }
 
-  const isMobile = window.matchMedia(MOBILE_QUERY).matches;
-  const prefersReducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches;
-  const cores = navigator.hardwareConcurrency ?? 8;
-  const memory = getDeviceMemory() ?? 8;
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const isLowPower = prefersReducedMotion || (isMobile && (cores <= 4 || memory <= 4 || isSafari));
-
   return {
-    isMobile,
-    prefersReducedMotion,
-    isLowPower,
+    isMobile: window.matchMedia(MOBILE_QUERY).matches,
+    prefersReducedMotion: window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    isLowPower: window.matchMedia(REDUCED_MOTION_QUERY).matches,
     isHidden: document.visibilityState === 'hidden'
   };
 };
@@ -53,71 +49,126 @@ export const usePerformanceMode = () => {
     const mobileMedia = window.matchMedia(MOBILE_QUERY);
     const motionMedia = window.matchMedia(REDUCED_MOTION_QUERY);
     let rafId: number | null = null;
-    let cancelled = false;
+    let timeoutId: number | null = null;
+    let stopped = false;
+    let slowWindows = 0;
+    let healthyWindows = 0;
+    let lowPower = motionMedia.matches;
+    let graceUntil = performance.now() + STARTUP_GRACE_MS;
 
-    const updateMode = (forceLowPower = false) => {
-      setMode((current) => {
-        const cores = navigator.hardwareConcurrency ?? 8;
-        const memory = getDeviceMemory() ?? 8;
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        const next: PerformanceMode = {
-          isMobile: mobileMedia.matches,
-          prefersReducedMotion: motionMedia.matches,
-          isLowPower: forceLowPower || motionMedia.matches || (mobileMedia.matches && (cores <= 4 || memory <= 4 || isSafari)) || current.isLowPower,
-          isHidden: document.visibilityState === 'hidden'
-        };
-        applyPerformanceClasses(next);
-        return next;
-      });
+    const publish = () => {
+      const next: PerformanceMode = {
+        isMobile: mobileMedia.matches,
+        prefersReducedMotion: motionMedia.matches,
+        isLowPower: motionMedia.matches || lowPower,
+        isHidden: document.visibilityState === 'hidden'
+      };
+      applyPerformanceClasses(next);
+      setMode(next);
     };
 
-    const sampleFps = () => {
-      if (!mobileMedia.matches || motionMedia.matches) return;
+    const clearScheduled = () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    };
+
+    const scheduleSample = (delay = 250) => {
+      clearScheduled();
+      if (stopped || document.visibilityState === 'hidden' || motionMedia.matches) return;
+      timeoutId = window.setTimeout(sampleWindow, delay);
+    };
+
+    const recordWindow = (fps: number) => {
+      if (performance.now() < graceUntil) {
+        slowWindows = 0;
+        healthyWindows = 0;
+        return;
+      }
+
+      if (!lowPower && fps < ENTER_FPS) {
+        slowWindows += 1;
+        healthyWindows = 0;
+        if (slowWindows >= SLOW_WINDOWS_TO_ENTER) {
+          lowPower = true;
+          slowWindows = 0;
+          publish();
+        }
+        return;
+      }
+
+      if (lowPower && fps > EXIT_FPS) {
+        healthyWindows += 1;
+        slowWindows = 0;
+        if (healthyWindows >= HEALTHY_WINDOWS_TO_EXIT) {
+          lowPower = false;
+          healthyWindows = 0;
+          publish();
+        }
+        return;
+      }
+
+      if (fps >= ENTER_FPS) slowWindows = 0;
+      if (fps <= EXIT_FPS) healthyWindows = 0;
+    };
+
+    function sampleWindow() {
+      if (stopped || document.visibilityState === 'hidden' || motionMedia.matches) return;
       let frames = 0;
       let startedAt = performance.now();
-      let previous = startedAt;
-      let droppedFrames = 0;
 
       const tick = (now: number) => {
-        if (cancelled) return;
+        if (stopped || document.visibilityState === 'hidden') return;
         frames += 1;
-        if (now - previous > 34) droppedFrames += 1;
-        previous = now;
-
-        if (frames < 90 && now - startedAt < 1800) {
+        if (now - startedAt < SAMPLE_WINDOW_MS) {
           rafId = window.requestAnimationFrame(tick);
           return;
         }
-
-        const elapsed = Math.max(1, now - startedAt);
-        const fps = (frames / elapsed) * 1000;
-        if (fps < 45 || droppedFrames > 10) updateMode(true);
+        const fps = (frames / Math.max(1, now - startedAt)) * 1000;
+        recordWindow(fps);
+        const isConfirmingEntry = !lowPower && slowWindows > 0;
+        const isConfirmingExit = lowPower && healthyWindows > 0;
+        scheduleSample(isConfirmingEntry || isConfirmingExit ? CONFIRMING_SAMPLE_INTERVAL_MS : NORMAL_SAMPLE_INTERVAL_MS);
       };
 
       rafId = window.requestAnimationFrame((now) => {
         startedAt = now;
-        previous = now;
         rafId = window.requestAnimationFrame(tick);
       });
+    }
+
+    const onChange = () => {
+      if (motionMedia.matches) {
+        lowPower = true;
+      }
+      publish();
+      scheduleSample();
     };
 
-    const onChange = () => updateMode(false);
-    const onVisibility = () => updateMode(false);
+    const onVisibility = () => {
+      publish();
+      if (document.visibilityState === 'hidden') {
+        clearScheduled();
+        return;
+      }
+      graceUntil = performance.now() + 1_000;
+      scheduleSample();
+    };
 
-    updateMode(false);
-    const idleId: number = 'requestIdleCallback' in window
-      ? window.requestIdleCallback(sampleFps, { timeout: 3200 })
-      : globalThis.setTimeout(sampleFps, 1800) as unknown as number;
-
+    publish();
+    scheduleSample(STARTUP_GRACE_MS);
     mobileMedia.addEventListener('change', onChange);
     motionMedia.addEventListener('change', onChange);
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
-      cancelled = true;
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
-      else globalThis.clearTimeout(idleId);
+      stopped = true;
+      clearScheduled();
       mobileMedia.removeEventListener('change', onChange);
       motionMedia.removeEventListener('change', onChange);
       document.removeEventListener('visibilitychange', onVisibility);

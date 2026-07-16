@@ -12,6 +12,7 @@ interface SoundContextType {
   muted: boolean;
   toggleMute: () => void;
   unlockAudio: () => void;
+  prepareCaseAudio: () => void;
   playSound: (type: SoundType) => void;
 }
 
@@ -43,7 +44,6 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const roundRobinIndexRef = useRef<Partial<Record<SoundType, number>>>({});
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickAtRef = useRef(0);
-  const didInitRef = useRef(false);
   const didWarmupRef = useRef(false);
   const hasUserInteractedRef = useRef(false);
 
@@ -80,35 +80,40 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return audioContext;
   }, []);
 
-  const initializeAudio = useCallback(() => {
-    if (didInitRef.current || typeof window === 'undefined') return;
-    didInitRef.current = true;
-    ensureAudioContextReady();
+  const ensureSoundPool = useCallback((key: SoundType, preload: HTMLAudioElement['preload'] = 'metadata') => {
+    if (typeof window === 'undefined' || audioRefs.current[key]) return;
+    const url = SOUND_URLS[key];
+    if (!url) return;
 
-    (Object.entries(SOUND_URLS) as [SoundType, string][]).forEach(([key, url]) => {
-      if (!url) return;
-      try {
-        const poolSize = key === 'spin-tick' ? 5 : 2;
-        const audioPool = Array.from({ length: poolSize }, () => {
-          const audio = new Audio(url);
-          audio.preload = 'auto';
-          audio.volume = SOUND_VOLUMES[key] ?? 0.4;
-          return audio;
-        });
-        audioRefs.current[key] = audioPool;
-        roundRobinIndexRef.current[key] = 0;
-      } catch (error) {
-        console.warn('Sound init failed', key, error);
-      }
-    });
-  }, [ensureAudioContextReady]);
+    try {
+      const poolSize = key === 'spin-tick' ? 3 : 1;
+      audioRefs.current[key] = Array.from({ length: poolSize }, () => {
+        const audio = new Audio(url);
+        audio.preload = preload;
+        audio.volume = SOUND_VOLUMES[key] ?? 0.4;
+        if (preload === 'auto') {
+          audio.load();
+        }
+        return audio;
+      });
+      roundRobinIndexRef.current[key] = 0;
+    } catch (error) {
+      console.warn('Sound init failed', key, error);
+    }
+  }, []);
+
+  const prepareCaseAudio = useCallback(() => {
+    ensureAudioContextReady();
+    ensureSoundPool('spin-tick', 'auto');
+    ensureSoundPool('win-common', 'metadata');
+  }, [ensureAudioContextReady, ensureSoundPool]);
 
   const unlockAudio = useCallback(() => {
     if (hasUserInteractedRef.current) return;
     hasUserInteractedRef.current = true;
-    initializeAudio();
     ensureAudioContextReady();
-  }, [ensureAudioContextReady, initializeAudio]);
+    ensureSoundPool('spin-tick', 'metadata');
+  }, [ensureAudioContextReady, ensureSoundPool]);
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
@@ -124,6 +129,7 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (!['spin-start', 'spin-tick', 'win-common', 'win-uncommon', 'win-rare', 'win-epic', 'win-gold'].includes(type)) return;
 
+    ensureSoundPool(type, type === 'spin-tick' ? 'auto' : 'metadata');
     const audioPool = audioRefs.current[type];
     if (!audioPool || audioPool.length === 0) return;
     const cursor = roundRobinIndexRef.current[type] ?? 0;
@@ -147,9 +153,9 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // ignore playback errors
     }
-  }, [ensureAudioContextReady, initializeAudio, muted]);
+  }, [ensureAudioContextReady, ensureSoundPool, muted]);
 
-  return <SoundContext.Provider value={{ muted, toggleMute, unlockAudio, playSound }}>{children}</SoundContext.Provider>;
+  return <SoundContext.Provider value={{ muted, toggleMute, unlockAudio, prepareCaseAudio, playSound }}>{children}</SoundContext.Provider>;
 };
 
 export const useSound = () => {

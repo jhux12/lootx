@@ -1360,12 +1360,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return getViewFromLocation(window.location.pathname, window.location.search);
   });
 
-  const scrollToTop = () => {
-    if (typeof window === 'undefined') return;
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    window.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
-  };
-
   useEffect(() => {
     if (!isAuthenticated) return;
     const nextBalance = Number(user.balance ?? 0);
@@ -1377,7 +1371,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const setView = (nextView: ViewState) => {
     setViewState(nextView);
     if (typeof window !== 'undefined') {
-      scrollToTop();
       const baseNextPath = getPathFromView(nextView);
       const nextPath =
         nextView.type === 'BOXES' && window.location.pathname === '/boxes' && window.location.search
@@ -1430,7 +1423,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (nextPath !== currentPath) {
       window.history.replaceState({}, '', nextPath);
     }
-    scrollToTop();
     setViewState(getViewFromLocation(url.pathname, url.search));
   };
 
@@ -1850,7 +1842,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (typeof window === 'undefined') return;
     const handlePopState = () => {
       setViewState(getViewFromLocation(window.location.pathname, window.location.search));
-      scrollToTop();
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -2222,8 +2213,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       for (let attempt = 0; attempt <= COIN_PACKAGE_RETRY_DELAYS_MS.length; attempt += 1) {
         try {
-          const coinPackagesPath = 'coin_packages?limit=50';
-          console.log('READING FIRESTORE PATH', coinPackagesPath);
+          const coinPackagesPath = 'coin_packages?orderBy=sortOrder&limit=50';
+          if (import.meta.env.DEV) {
+            console.info('Reading Firestore collection', { collection: 'coin_packages', query: coinPackagesPath });
+          }
           const snapshot = await getDocs(query(collection(db, 'coin_packages'), orderBy('sortOrder', 'asc'), limit(50)));
           const loaded = snapshot.docs.map((docSnap) => {
             const data = docSnap.data();
@@ -2261,9 +2254,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      const message = lastError instanceof Error ? lastError.message : 'Unable to load coin packages.';
-      setCoinPackagesError(message || 'Unable to load coin packages.');
-      console.error('Failed to load coin packages after retry attempts', lastError);
+      const errorCode = typeof lastError === 'object' && lastError !== null && 'code' in lastError ? String(lastError.code) : undefined;
+      const message = errorCode === 'permission-denied'
+        ? 'Permission denied while loading coin packages.'
+        : typeof navigator !== 'undefined' && !navigator.onLine
+          ? 'You appear to be offline. Coin packages will retry when your connection returns.'
+          : 'Coin packages are temporarily unavailable.';
+      setCoinPackagesError(message);
+      if (import.meta.env.DEV) {
+        console.error('Failed to load Firestore coin packages after retry attempts', {
+          collection: 'coin_packages',
+          query: 'orderBy(sortOrder, asc), limit(50)',
+          code: errorCode,
+          error: lastError
+        });
+      }
     })().finally(() => {
       setCoinPackagesLoading(false);
       coinPackagesInFlightRef.current = null;
@@ -2286,6 +2291,22 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       void refreshCoinPackages();
     }
   }, [coinPackagesError, coinPackagesLoaded, refreshCoinPackages, showTopUpModal]);
+
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const retryCoinPackagesWhenOnline = () => {
+      const cacheAgeMs = Date.now() - coinPackagesLastLoadedAtRef.current;
+      if (coinPackagesInFlightRef.current || (coinPackagesLoaded && !coinPackagesError && cacheAgeMs <= COIN_PACKAGES_CACHE_TTL_MS)) {
+        return;
+      }
+      void refreshCoinPackages();
+    };
+
+    window.addEventListener('online', retryCoinPackagesWhenOnline);
+    return () => window.removeEventListener('online', retryCoinPackagesWhenOnline);
+  }, [coinPackagesError, coinPackagesLoaded, refreshCoinPackages]);
 
   useEffect(() => {
     activityStore.setScope(isAuthenticated && user.id ? user.id : 'guest');

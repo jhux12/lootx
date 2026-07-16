@@ -16,6 +16,7 @@ import { auth } from './firebase';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 type TawkApi = {
   hideWidget?: () => void;
@@ -849,12 +850,18 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
       {view.type === 'CASE_OPENING' && (
         <div className="w-full">
-          <CaseOpening 
-            boxId={view.boxId} 
-            isFree={view.isFree}
-            inventoryId={view.inventoryId}
-            pullPassClaimTier={view.pullPassClaimTier}
-          />
+          <ErrorBoundary
+            title="Case opening needs a refresh"
+            message="We could not render this case-opening view. Retry the view to continue without exposing internal details."
+            actionLabel="Retry case opening"
+          >
+            <CaseOpening
+              boxId={view.boxId}
+              isFree={view.isFree}
+              inventoryId={view.inventoryId}
+              pullPassClaimTier={view.pullPassClaimTier}
+            />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -910,16 +917,18 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
 function App() {
   return (
-    <SoundProvider>
-      <GameProvider>
+    <ErrorBoundary>
+      <SoundProvider>
+        <GameProvider>
         <PreviewProvider>
           <ToastProvider>
             <AppShell />
             <DeferredAnalytics />
           </ToastProvider>
         </PreviewProvider>
-      </GameProvider>
-    </SoundProvider>
+        </GameProvider>
+      </SoundProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -954,15 +963,7 @@ const AppShell = () => {
     previousNavigationScrollKey.current = navigationScrollKey;
     if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
 
-    const scrollToPageTop = () => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-
-    scrollToPageTop();
-    const frameId = window.requestAnimationFrame(scrollToPageTop);
-    return () => window.cancelAnimationFrame(frameId);
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [navigationScrollKey]);
 
   return (
