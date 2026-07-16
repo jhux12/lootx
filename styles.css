@@ -76,3 +76,18 @@
     animation: none !important;
   }
 }
+
+.home-float-slow {
+  animation-duration: 9s;
+}
+
+.home-float-delay {
+  animation-delay: 1.2s;
+  animation-duration: 8s;
+}
+
+@media (max-width: 480px) {
+  .home-float {
+    animation-duration: 12s;
+  }
+}
