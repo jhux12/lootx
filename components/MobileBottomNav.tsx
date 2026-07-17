@@ -111,6 +111,13 @@ export const MobileBottomNav: React.FC = () => {
   const handleNav = (item: NavItem) => {
     playSound('click');
 
+    if (item.id === 'HOME') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(isMenuOpen ? 'pullz:close-mobile-menu' : 'pullz:open-mobile-menu'));
+      }
+      return;
+    }
+
     if (item.requiresAuth && !isAuthenticated) {
       openAuthModal('login');
       return;
@@ -165,7 +172,7 @@ export const MobileBottomNav: React.FC = () => {
       <nav className="grid h-full grid-cols-5 items-center gap-0.5">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = activeId === item.id;
+          const isActive = item.id === 'HOME' ? isMenuOpen : activeId === item.id;
           const isProfile = item.id === 'PROFILE';
           return (
             <div key={item.id} className="relative flex justify-center">

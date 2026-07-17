@@ -13,6 +13,8 @@ import {
   Home as HomeIcon,
   AtSign,
   ChevronDown,
+  ChevronRight,
+  ArrowRight,
   HelpCircle,
   Facebook,
   Instagram,
@@ -756,139 +758,117 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-black/70 backdrop-blur-[1px] transition-opacity duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
         />
 
-        <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+        <aside
+          className={`fixed bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] left-0 z-[240] flex w-[min(73.5vw,522px)] max-w-[calc(100vw-28px)] flex-col overflow-hidden rounded-tr-[22px] border border-l-0 border-[#27303a]/90 bg-[#11161b]/98 shadow-[22px_0_55px_rgba(0,0,0,0.48)] transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
               ? "translate-x-0 opacity-100"
-              : "pointer-events-none translate-x-full opacity-0"
+              : "pointer-events-none -translate-x-full opacity-0"
           }`}
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
-          <div className="flex min-h-full flex-col pb-4 pt-1">
-            <div className="mb-7 flex w-full items-center justify-between gap-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pb-4 pt-6">
+            <div className="mb-7 flex items-center justify-between gap-4">
+              <BrandLockup showText showTextOnMobile logoClassName="h-10 w-auto" textClassName="text-xl" />
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-white/90 transition-colors hover:bg-white/10"
+                aria-label="Close menu"
+              >
+                <X className="h-7 w-7 stroke-[1.7]" />
+              </button>
+            </div>
+
+            <div className="mb-6 flex w-full items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => navigate("PROFILE")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-[#242b31]"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition-colors hover:bg-white/[0.03]"
               >
                 {isAuthenticated ? (
                   <UserAvatar
                     user={user}
-                    className="h-14 w-14 rounded-full object-cover ring-1 ring-[#3a4146]/80"
+                    className="h-12 w-12 rounded-full object-cover ring-1 ring-emerald-300/55"
                     initialsClassName="text-base"
                   />
                 ) : (
-                  <div className="grid h-14 w-14 place-items-center rounded-full border border-[#3a4146]/70 bg-[#242b31] text-base font-black text-slate-100">
-                    <UserIcon className="h-6 w-6" />
+                  <div className="grid h-12 w-12 place-items-center rounded-full border border-emerald-300/55 bg-[#171d21] text-slate-100 shadow-[inset_0_0_24px_rgba(84,245,179,0.08)]">
+                    <UserIcon className="h-6 w-6 stroke-[1.7]" />
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-lg font-black text-white">
-                    {isAuthenticated
-                      ? resolvedDisplayName || "Pullz Player"
-                      : "Welcome to Pullz"}
+                  <p className="truncate text-lg font-black leading-tight text-white">
+                    {isAuthenticated ? resolvedDisplayName || "Pullz Player" : "Welcome to Pullz"}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold text-slate-400">
+                    {isAuthenticated ? "Manage your account" : "Sign in to access your account"}
                   </p>
                 </div>
               </button>
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("click");
-                    setIsMobileMenuOpen(false);
-                    void logout();
-                  }}
-                  className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-[#2d353c]"
-                >
-                  Sign out
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSignIn}
-                  className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-100 transition-colors hover:bg-[#2d353c]"
-                >
-                  Sign in
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={isAuthenticated ? handleLogout : handleSignIn}
+                className="shrink-0 rounded-[18px] border border-[#303941] bg-[#151b20] px-4 py-2.5 text-xs font-black uppercase tracking-wide text-[#54f5b3] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-colors hover:bg-[#1b2328]"
+              >
+                {isAuthenticated ? "Sign out" : "Sign in"}
+              </button>
             </div>
 
             <nav className="space-y-2" aria-label="Mobile menu links">
-              <button
-                onClick={() => navigate("HOME")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <HomeIcon className="h-5 w-5 text-[#54f5b3]" />
-                Home
-              </button>
-              <button
-                onClick={() => navigate("BOXES")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <Package className="h-5 w-5 text-[#54f5b3]" />
-                Boxes
-              </button>
-              <button
-                onClick={() => navigate("PLINKO")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <UpgraderIcon className="h-5 w-5 text-[#54f5b3]" />
-                Upgrader
-              </button>
-              <button
-                onClick={() => navigate("LEADERBOARD")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <Trophy className="h-5 w-5 text-[#54f5b3]" />
-                Leaderboard
-              </button>
-              <button
-                onClick={() => navigate("BONUSES")}
-                className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <RefreshCw className="h-5 w-5 text-[#54f5b3]" />
-                <span className="min-w-0 flex-1">Daily Spin</span>
-                {showDailySpinReady ? (
-                  <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#54f5b3]">Ready</span>
-                ) : null}
-              </button>
-              <button
-                onClick={() => navigate("PROFILE")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
-              >
-                <UserIcon className="h-5 w-5 text-[#54f5b3]" />
-                Profile
-              </button>
+              {[
+                ["HOME", HomeIcon, "Home", view.type === "HOME"],
+                ["BOXES", Package, "Boxes", view.type === "BOXES" || view.type === "CASE_OPENING"],
+                ["PLINKO", UpgraderIcon, "Upgrader", view.type === "PLINKO"],
+                ["LEADERBOARD", Trophy, "Leaderboard", view.type === "LEADERBOARD"],
+                ["BONUSES", RefreshCw, "Daily Spin", view.type === "BONUSES"],
+                ["PROFILE", UserIcon, "Profile", view.type === "PROFILE" || view.type === "INVENTORY"],
+              ].map(([type, Icon, label, active]) => (
+                <button
+                  key={String(type)}
+                  onClick={() => navigate(type as any)}
+                  className={`flex min-h-[52px] w-full items-center gap-4 rounded-[16px] border px-4 text-left text-base font-black transition-colors ${active ? "border-[#54f5b3]/70 bg-[#13241f] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(84,245,179,0.1),0_0_26px_rgba(84,245,179,0.06)]" : "border-transparent text-slate-200 hover:bg-white/[0.04]"}`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 text-[#54f5b3] stroke-[1.8]" />
+                  <span className="min-w-0 flex-1">{String(label)}</span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-white/90 stroke-[1.9]" />
+                </button>
+              ))}
             </nav>
 
-            <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
-              <button
-                onClick={() => navigate("REFERRALS")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
-              >
-                <Users className="h-5 w-5 text-[#54f5b3]" />
-                Refer a Friend
+            <div className="mt-5 space-y-2 border-t border-[#2b333a] pt-5">
+              <button onClick={() => navigate("REFERRALS")} className="flex min-h-[52px] w-full items-center gap-4 rounded-[16px] px-4 text-left text-base font-black text-slate-200 transition-colors hover:bg-white/[0.04]">
+                <Users className="h-5 w-5 text-[#54f5b3] stroke-[1.8]" />
+                <span className="min-w-0 flex-1">Refer a Friend</span>
+                <ChevronRight className="h-5 w-5 text-white/90 stroke-[1.9]" />
               </button>
-              <button
-                onClick={() => navigate("CONTACT")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
-              >
-                <LifeBuoy className="h-5 w-5 text-[#54f5b3]" />
-                Support
+              <button onClick={() => navigate("CONTACT")} className="flex min-h-[52px] w-full items-center gap-4 rounded-[16px] px-4 text-left text-base font-black text-slate-200 transition-colors hover:bg-white/[0.04]">
+                <LifeBuoy className="h-5 w-5 text-[#54f5b3] stroke-[1.8]" />
+                <span className="min-w-0 flex-1">Support</span>
+                <ChevronRight className="h-5 w-5 text-white/90 stroke-[1.9]" />
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={() => (isAuthenticated ? navigate("BOXES") : openAuthModal("register"))}
+              className="mt-5 flex min-h-[72px] w-full items-center gap-3 rounded-[18px] bg-[#1a2025] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+            >
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#7a2cff,#3f72ff)] text-white shadow-[0_12px_28px_rgba(90,83,255,0.3)]"><Box className="h-6 w-6 stroke-[1.7]" /></span>
+              <span className="min-w-0 flex-1"><span className="block text-base font-black text-white">Open a Free Box</span><span className="mt-1 block text-xs font-bold text-slate-400">Get started with a free box on us!</span></span>
+              <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#7558ff,#466dff)] px-3 text-[11px] font-black uppercase text-white">Open now <ArrowRight className="h-4 w-4" /></span>
+            </button>
           </div>
-        </div>
+        </aside>
       </div>
       <Suspense fallback={null}>
         {showActivity ? (
