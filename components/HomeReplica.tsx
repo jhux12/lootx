@@ -41,7 +41,7 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
   uncommon: 'from-emerald-900/95 via-emerald-950/90 to-slate-950/95',
   rare: 'from-sky-900/95 via-blue-950/90 to-slate-950/95',
   epic: 'from-violet-900/95 via-purple-950/90 to-slate-950/95',
-  legendary: 'from-orange-900/95 via-amber-950/90 to-slate-950/95'
+  legendary: 'from-yellow-400/90 via-amber-600/90 to-yellow-950/95'
 };
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
