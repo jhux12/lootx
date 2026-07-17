@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
+import { Box, Home, PackageOpen, Trophy, User, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
@@ -13,11 +13,11 @@ type NavItem = {
   requiresAuth?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
+const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <PackageOpen className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Menu', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
+  { id: 'PLINKO', label: 'Build Box', icon: UpgraderIcon },
   { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];

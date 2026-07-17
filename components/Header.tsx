@@ -9,7 +9,6 @@ import React, {
   useState,
 } from "react";
 import {
-  Flame,
   Home as HomeIcon,
   AtSign,
   ChevronDown,
@@ -21,6 +20,7 @@ import {
   LogOut,
   Menu,
   Package,
+  PackageOpen,
   PenTool,
   Plus,
   RefreshCw,
@@ -64,7 +64,7 @@ type HeaderProps = {
 };
 
 const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <Flame className={className} aria-hidden="true" />
+  <PackageOpen className={className} aria-hidden="true" />
 );
 const GamesIcon: React.FC<{ className?: string }> = ({ className }) => (
   <Package className={className} aria-hidden="true" />
@@ -556,7 +556,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         : desktopNavButtonClass
                     }
                   >
-                    Upgrader
+                    Build a Box
                   </button>
                   <button
                     type="button"
@@ -843,7 +843,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
               >
                 <UpgraderIcon className="h-5 w-5 text-[#54f5b3]" />
-                Upgrader
+                Build a Box
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
