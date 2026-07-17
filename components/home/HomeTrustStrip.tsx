@@ -1,3 +1,13 @@
-import { Archive, Eye, PackageCheck, Truck } from 'lucide-react';
-import { TrustBadge } from '../ui/TrustBadge';
-export const HomeTrustStrip=()=> <section className="bg-pullz-canvas px-3 py-6 sm:px-6 lg:px-8"><div className="mx-auto grid max-w-[1250px] gap-3 sm:grid-cols-2 lg:grid-cols-4"><TrustBadge icon={Archive} title="Real Collectibles"/><TrustBadge icon={Eye} title="Visible Item Pools"/><TrustBadge icon={PackageCheck} title="Keep, Ship, or Sell"/><TrustBadge icon={Truck} title="Tracked Fulfillment"/></div></section>;
+import { Eye, PackageCheck, Scale, ShieldCheck } from 'lucide-react';
+import { PullzTrustBadge } from '../ui/PullzTrustBadge';
+
+export const HomeTrustStrip = () => (
+  <section className="pullz-home-trust-grid mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+      <PullzTrustBadge icon={PackageCheck} title="Authentic Collectibles" body="Physical items" />
+      <PullzTrustBadge icon={Eye} title="Visible Item Pools" body="Review before opening" />
+      <PullzTrustBadge icon={Scale} title="Keep, Ship, or Sell" body="Choose after reveal" />
+      <PullzTrustBadge icon={ShieldCheck} title="Provably Fair" body="Verifiable results" />
+    </div>
+  </section>
+);

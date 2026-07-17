@@ -67,6 +67,11 @@ export default {
         'pullz-lg': '0 24px 60px rgba(0,0,0,0.32)',
         'pullz-primary': '0 12px 30px rgba(36,107,253,0.24)',
       },
+      transitionDuration: {
+        180: '180ms',
+        220: '220ms',
+        280: '280ms',
+      },
     },
   },
   safelist: [],
