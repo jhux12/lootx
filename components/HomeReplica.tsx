@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Gift, ShieldCheck, Sparkles, Star, Trophy, Truck, Users, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
@@ -47,6 +47,15 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 
+const BOX_TAG_STYLES: Record<string, { label: string; className: string }> = {
+  hot: { label: 'Hot', className: 'bg-rose-500' },
+  tech: { label: 'Tech', className: 'bg-sky-500' },
+  pokemon: { label: 'Pokémon', className: 'bg-amber-400 text-[#241a00]' },
+  digital: { label: 'Digital', className: 'bg-violet-500' },
+  holiday: { label: 'Holiday', className: 'bg-emerald-500' }
+};
+const DEFAULT_BOX_TAG_STYLE = { label: 'Featured', className: 'bg-emerald-500' };
+
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.16),transparent_34%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.12),transparent_18%),linear-gradient(180deg,transparent_48%,rgba(0,0,0,0.28))]" />
@@ -71,6 +80,11 @@ const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) =>
             <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
             <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
           </div>
+        </div>
+        <div className="mt-2 flex items-center gap-0.5" aria-label="5 out of 5 stars">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Star key={index} className="h-3.5 w-3.5 fill-[#5df7b1] text-[#5df7b1]" />
+          ))}
         </div>
         {story.caption ? <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption}</p> : null}
       </div>
@@ -103,10 +117,8 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
   </button>
 );
 
-const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
-  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
-  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
-  const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes, onSignUp }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void; onSignUp: () => void }) => {
+  const { isAuthenticated, openAuthModal, setView, user } = useGame();
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
   const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
@@ -189,13 +201,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
 
   useEffect(() => {
-    const heroTimer = window.setInterval(() => {
-      setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
-    }, 10000);
-    return () => window.clearInterval(heroTimer);
-  }, []);
-
-  useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
     const loadReviews = () => {
@@ -252,49 +257,20 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     };
   }, []);
 
-  const heroSlides = ['deposit-match', 'hot-picks'] as const;
-  const showDepositSlide = activeHeroSlide === 0;
-
-  const goToHeroSlide = (direction: 1 | -1) => {
-    setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
-  };
-
-  const handleHeroTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    heroTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleHeroTouchEnd = (event: React.TouchEvent<HTMLButtonElement>) => {
-    const start = heroTouchStartRef.current;
-    heroTouchStartRef.current = null;
-    const touch = event.changedTouches[0];
-    if (!start || !touch) return;
-    const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
-    if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-    goToHeroSlide(deltaX < 0 ? 1 : -1);
-  };
-
-  const handleHeroAction = () => {
-    if (showDepositSlide) {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-      }
-
-      setTopUpModalIntent({
-        reason: 'insufficient_balance',
-        requiredCoins: 10000,
-        currentBalance: Number(user.balance ?? 0),
-        missingCoins: Math.max(0, 10000 - Number(user.balance ?? 0)),
-        preferredPackageUsd: 50
-      });
-      setShowTopUpModal(true);
+  const handleClaimFreeBox = () => {
+    if (!isAuthenticated) {
+      onSignUp();
       return;
     }
-
     onViewAllBoxes();
+  };
+
+  const handleReferFriend = () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setView({ type: 'REFERRALS' });
   };
 
   const handleSubmitReview = () => {
@@ -367,50 +343,52 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   return (
     <div className="animate-in fade-in duration-500">
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
-          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
-                  <Coins
-                    key={`hero-raining-coin-${coinIndex}`}
-                    className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
-                    style={{
-                      left: `${8 + ((coinIndex * 8) % 86)}%`,
-                      animationDelay: `${coinIndex * -0.45}s`,
-                      animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
-                      transform: `rotate(${coinIndex * 23}deg)`
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
-              </div>
-              <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
+        <div className="pullz-home-hero mx-auto flex h-[132px] w-full max-w-[1180px] gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:h-[164px] sm:gap-4 sm:overflow-visible sm:snap-none lg:h-[220px]">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleClaimFreeBox}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleClaimFreeBox(); } }}
+            aria-label={isAuthenticated ? 'Claim your free box' : 'Sign up and claim your free box'}
+            className="relative h-full w-full shrink-0 snap-center cursor-pointer overflow-hidden rounded-[1.28rem] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:w-[62%] sm:rounded-[1.6rem] sm:p-5 lg:p-8"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
+                <Coins
+                  key={`hero-raining-coin-${coinIndex}`}
+                  className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
+                  style={{
+                    left: `${8 + ((coinIndex * 8) % 86)}%`,
+                    animationDelay: `${coinIndex * -0.45}s`,
+                    animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
+                    transform: `rotate(${coinIndex * 23}deg)`
+                  }}
+                />
+              ))}
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
-              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
-              </div>
-              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
-                  </div>
-                ))}
-              </div>
+            <div className="relative z-10 flex h-full flex-col items-start justify-center">
+              <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Gift className="h-3 w-3 lg:h-4 lg:w-4" />Sign up bonus</div>
+              <h1 className="mt-2 max-w-[220px] text-[19px] font-black uppercase leading-[0.98] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[380px] sm:text-[28px] lg:max-w-[560px] lg:text-[46px]">Sign Up Today &amp; Claim Your Free Box</h1>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#5df7b1] px-4 py-2 text-[10px] font-black uppercase text-[#0d1a14] sm:px-5 sm:py-2.5 sm:text-xs lg:text-sm">{isAuthenticated ? 'Claim Free Box' : 'Sign Up Free'}</span>
+            </div>
+            <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
+          </div>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={handleReferFriend}
+            onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleReferFriend(); } }}
+            aria-label="Refer a friend and earn rewards"
+            className="relative h-full w-full shrink-0 snap-center cursor-pointer overflow-hidden rounded-[1.28rem] bg-[linear-gradient(160deg,#171c2c_0%,#232c47_100%)] p-3 text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:w-[38%] sm:rounded-[1.6rem] sm:p-5 lg:p-8"
+          >
+            <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-[#5df7b1]/18 blur-2xl sm:h-36 sm:w-36" />
+            <div className="relative z-10 flex h-full flex-col items-start justify-center">
+              <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-[#5df7b1] sm:px-3 sm:text-[10px] lg:text-xs"><Users className="h-3 w-3 lg:h-4 lg:w-4" />Referral program</div>
+              <h2 className="mt-2 max-w-[170px] text-[15px] font-black uppercase leading-[1.05] tracking-tight text-white sm:max-w-[220px] sm:text-[19px] lg:max-w-[280px] lg:text-2xl">Earn Rewards For Every Friend You Invite</h2>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#5df7b1]/60 px-3.5 py-1.5 text-[9px] font-black uppercase text-[#5df7b1] sm:px-4 sm:py-2 sm:text-[11px] lg:text-xs">Refer a Friend</span>
             </div>
           </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
-        </button>
-        <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
         </div>
       </section>
 
@@ -433,23 +411,37 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
       <section id="mobile-trending-boxes" className="pullz-home-trending-grid scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
-          <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
+          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Featured Boxes</h2></div>
+          <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">View All</button>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[158px] overflow-hidden rounded-xl bg-[#252b3a] p-3 text-left active:scale-[0.98] sm:h-[170px] lg:h-[188px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(93,247,177,0.12),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
-              <img src={box.image} alt="" width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="relative z-10 h-[106px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[116px] lg:h-[128px]" />
-              <span className="absolute left-1.5 top-1.5 z-20 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span>
-              <div className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-between gap-2 rounded-lg bg-black/22 px-2 py-1.5">
-                <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-[10px] font-black text-[#5df7b1] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+          {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => {
+            if (!box) {
+              return <div key={`trending-loading-${index}`} className="h-[238px] animate-pulse rounded-xl bg-[#242b31] sm:h-[256px] lg:h-[278px]" aria-hidden="true" />;
+            }
+            const tagStyle = BOX_TAG_STYLES[box.tag ?? ''] ?? DEFAULT_BOX_TAG_STYLE;
+            return (
+              <div
+                key={box.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenBox(box.id)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenBox(box.id); } }}
+                className="group relative flex h-[238px] cursor-pointer flex-col overflow-hidden rounded-xl bg-[#20242f] p-3 text-left active:scale-[0.98] sm:h-[256px] lg:h-[278px]"
+              >
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(93,247,177,0.10),transparent_40%)]" />
+                <span className={`absolute left-2 top-2 z-20 rounded px-1.5 py-0.5 text-[8px] font-black uppercase text-white ${tagStyle.className}`}>{tagStyle.label}</span>
+                <div className="relative z-10 flex flex-1 items-center justify-center pt-3">
+                  <img src={box.image} alt="" width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-[92px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[104px] lg:h-[118px]" />
+                </div>
+                <div className="relative z-10 mt-1 space-y-1.5">
+                  <p className="truncate text-[11px] font-black uppercase text-white sm:text-xs">{box.name}</p>
+                  <CoinAmount amount={Math.round(box.price)} className="text-[10px] font-black text-[#5df7b1] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+                  <div className="mt-1 w-full rounded-lg bg-gradient-to-r from-[#6225ef] to-[#4f7ff4] py-1.5 text-center text-[9px] font-black uppercase text-white sm:text-[10px]">Open Case</div>
+                </div>
               </div>
-            </button>
-          ) : (
-            <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#242b31] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -468,7 +460,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
       <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
+          <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Fresh Deliveries</h2></div>
           <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
             <span>Submit Your Pull, Get</span>
             <span className="inline-flex items-center gap-1 text-[#5df7b1]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
@@ -520,11 +512,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes, onSignUp }) => {
   return (
     <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} onSignUp={onSignUp} />
       </main>
     </div>
   );
