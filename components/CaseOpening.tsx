@@ -7,6 +7,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
 import { getSellBackValue } from '../utils/sellBack';
+import { trackGaEvent } from '../utils/googleAnalytics';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
@@ -458,6 +459,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
   const isRewardOpen = Boolean(inventoryId || pullPassClaimTier);
   const currentCasePrice = box ? toCoins(box.price, PRICE_UNIT_MODE) : NaN;
+  const currentCasePriceUsd = Number.isFinite(currentCasePrice) ? Math.max(0, Math.round(currentCasePrice) / 100) : 0;
+
+  React.useEffect(() => {
+    if (!box) return;
+    trackGaEvent('view_item', {
+      currency: 'USD',
+      value: currentCasePriceUsd,
+      items: [
+        {
+          item_id: String(box.id),
+          item_name: box.name,
+          item_category: 'box',
+          price: currentCasePriceUsd,
+          quantity: 1
+        }
+      ]
+    });
+  }, [box?.id, box?.name, currentCasePriceUsd]);
   const currentCaseXpPrice = Math.max(0, Math.floor(Number(box?.priceXP ?? 0)));
   const [pullPassCoinsPerXp, setPullPassCoinsPerXp] = useState(10);
   useEffect(() => {
@@ -1509,6 +1528,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             box_id: box.id,
             value: toCoins(Number(data.prize.price ?? 0), PRICE_UNIT_MODE),
             currency: 'COIN'
+          });
+          trackGaEvent('free_box_open', {
+            box_id: String(box.id),
+            box_name: box.name
           });
         }
         if ((data.currencyType ?? 'COIN') === 'COIN') {

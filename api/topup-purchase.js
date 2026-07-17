@@ -53,6 +53,8 @@ export default async function handler(req, res) {
     if (req.method === 'PATCH') {
       const markPurchaseTracked = body?.markPurchaseTracked === true;
       const markFirstDepositTracked = body?.markFirstDepositTracked === true;
+      const markGaPurchaseTracked = body?.markGaPurchaseTracked === true;
+      const markGaFirstDepositTracked = body?.markGaFirstDepositTracked === true;
 
       await firestore.runTransaction(async (transaction) => {
         const latest = await transaction.get(creditRef);
@@ -67,6 +69,12 @@ export default async function handler(req, res) {
         }
         if (markFirstDepositTracked && latestData.isFirstDeposit === true && !latestData.metaFirstDepositPixelTrackedAt) {
           update.metaFirstDepositPixelTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (markGaPurchaseTracked && !latestData.gaPurchaseTrackedAt) {
+          update.gaPurchaseTrackedAt = admin.firestore.FieldValue.serverTimestamp();
+        }
+        if (markGaFirstDepositTracked && latestData.isFirstDeposit === true && !latestData.gaFirstDepositTrackedAt) {
+          update.gaFirstDepositTrackedAt = admin.firestore.FieldValue.serverTimestamp();
         }
 
         if (Object.keys(update).length > 0) {
@@ -88,7 +96,9 @@ export default async function handler(req, res) {
         content_ids: [contentId],
         isFirstDeposit,
         firstDepositAlreadyTracked: Boolean(creditData.metaFirstDepositPixelTrackedAt),
-        firstDepositEventID: `first_deposit_${sessionId}`
+        firstDepositEventID: `first_deposit_${sessionId}`,
+        gaPurchaseAlreadyTracked: Boolean(creditData.gaPurchaseTrackedAt),
+        gaFirstDepositAlreadyTracked: Boolean(creditData.gaFirstDepositTrackedAt)
       }
     });
   } catch (error) {

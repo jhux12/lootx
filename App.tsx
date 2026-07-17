@@ -12,6 +12,7 @@ import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
+import { trackGaEvent, trackGaPageView } from './utils/googleAnalytics';
 import { auth } from './firebase';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
@@ -275,6 +276,64 @@ const DeferredAnalytics = React.memo(() => {
   return AnalyticsComponent ? <AnalyticsComponent /> : null;
 });
 DeferredAnalytics.displayName = 'DeferredAnalytics';
+
+const GoogleAnalyticsRouteTracker = React.memo(() => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let timeoutId: number | null = null;
+    const getPagePath = () => `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    const trackCurrentPage = () => {
+      const pagePath = getPagePath();
+      if (window.__pullzGaLastPagePath === pagePath) {
+        return;
+      }
+
+      window.__pullzGaLastPagePath = pagePath;
+      trackGaPageView(pagePath, document.title);
+    };
+
+    const scheduleTrackCurrentPage = () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(trackCurrentPage, 0);
+    };
+
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      const result = originalPushState.apply(this, args);
+      scheduleTrackCurrentPage();
+      return result;
+    };
+
+    window.history.replaceState = function (...args) {
+      const result = originalReplaceState.apply(this, args);
+      scheduleTrackCurrentPage();
+      return result;
+    };
+
+    window.addEventListener('popstate', scheduleTrackCurrentPage);
+    window.addEventListener('hashchange', scheduleTrackCurrentPage);
+    scheduleTrackCurrentPage();
+
+    return () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+      window.removeEventListener('popstate', scheduleTrackCurrentPage);
+      window.removeEventListener('hashchange', scheduleTrackCurrentPage);
+    };
+  }, []);
+
+  return null;
+});
+GoogleAnalyticsRouteTracker.displayName = 'GoogleAnalyticsRouteTracker';
 type MainContentProps = {
   isChatCollapsed: boolean;
 };
@@ -554,6 +613,34 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
         let markPurchaseTracked = false;
         let markFirstDepositTracked = false;
+        let markGaPurchaseTracked = false;
+        let markGaFirstDepositTracked = false;
+
+        if (purchase.gaPurchaseAlreadyTracked !== true) {
+          markGaPurchaseTracked = trackGaEvent('purchase', {
+            transaction_id: sessionId,
+            currency: purchase.currency ?? 'USD',
+            value: purchaseValue,
+            items: [
+              {
+                item_id: Array.isArray(purchase.content_ids) && purchase.content_ids[0] ? purchase.content_ids[0] : sessionId,
+                item_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up',
+                item_category: 'coin_package',
+                price: purchaseValue,
+                quantity: 1
+              }
+            ]
+          });
+        }
+
+        if (purchase.isFirstDeposit === true && purchase.gaFirstDepositAlreadyTracked !== true) {
+          markGaFirstDepositTracked = trackGaEvent('first_deposit', {
+            transaction_id: sessionId,
+            currency: purchase.currency ?? 'USD',
+            value: purchaseValue,
+            package_name: typeof purchase.content_name === 'string' ? purchase.content_name : 'Top Up'
+          });
+        }
 
         if (purchase.alreadyTracked !== true) {
           console.log('[Meta] Purchase candidate data:', purchase);
@@ -587,7 +674,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           }
         }
 
-        if (markPurchaseTracked || markFirstDepositTracked) {
+        if (markPurchaseTracked || markFirstDepositTracked || markGaPurchaseTracked || markGaFirstDepositTracked) {
           await fetch('/api/topup-purchase', {
             method: 'PATCH',
             headers: {
@@ -597,7 +684,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             body: JSON.stringify({
               sessionId,
               markPurchaseTracked,
-              markFirstDepositTracked
+              markFirstDepositTracked,
+              markGaPurchaseTracked,
+              markGaFirstDepositTracked
             })
           }).catch(() => undefined);
         }
@@ -609,8 +698,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           purchase.isFirstDeposit !== true ||
           purchase.firstDepositAlreadyTracked === true ||
           markFirstDepositTracked;
+        const gaPurchaseComplete =
+          purchase.gaPurchaseAlreadyTracked === true ||
+          markGaPurchaseTracked;
+        const gaFirstDepositComplete =
+          purchase.isFirstDeposit !== true ||
+          purchase.gaFirstDepositAlreadyTracked === true ||
+          markGaFirstDepositTracked;
 
-        if (purchaseComplete && firstDepositComplete) {
+        if (purchaseComplete && firstDepositComplete && gaPurchaseComplete && gaFirstDepositComplete) {
           const nextParams = new URLSearchParams(window.location.search);
           nextParams.delete('topup');
           nextParams.delete('session_id');
@@ -923,6 +1019,7 @@ function App() {
         <PreviewProvider>
           <ToastProvider>
             <AppShell />
+            <GoogleAnalyticsRouteTracker />
             <DeferredAnalytics />
           </ToastProvider>
         </PreviewProvider>

@@ -5,6 +5,7 @@ import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
 import { SHIPPING_PROTECTION_TIERS, SHIPPING_RATE_TIERS, SIGNATURE_REQUIRED_CENTS } from '../utils/shippingRates';
 import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
+import { trackGaEvent } from '../utils/googleAnalytics';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
@@ -68,6 +69,12 @@ const sanitizeDeep = (value: any): any => {
     return cleaned;
   }
   return value;
+};
+
+const coinsToUsdValue = (coins: number) => {
+  const normalizedCoins = Number(coins);
+  if (!Number.isFinite(normalizedCoins)) return 0;
+  return Math.max(0, Math.round(normalizedCoins) / 100);
 };
 
 const buildFallbackInstanceId = (item: Partial<InventoryItem>, fallbackId: string) => {
@@ -1751,6 +1758,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     void (async () => {
       try {
         await signInWithCustomToken(auth, customToken);
+        trackGaEvent('login', { method: 'google' });
         console.log('Custom token sign-in success');
         url.searchParams.delete('customToken');
         window.history.replaceState({}, '', `${url.pathname}${url.search}`);
@@ -2432,7 +2440,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return true;
   };
 
-  const trackCompleteRegistrationForNewUser = (firebaseUser: FirebaseUser) => {
+  const trackCompleteRegistrationForNewUser = (firebaseUser: FirebaseUser, method: 'email' | 'google' = 'email') => {
     if (!shouldTrackRegistrationForUser(firebaseUser.uid)) {
       return;
     }
@@ -2452,6 +2460,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     trackMetaEvent('CompleteRegistration', registrationData, {
       eventID: `complete_registration_${firebaseUser.uid}`
     });
+    trackGaEvent('sign_up', { method });
   };
 
   const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
@@ -2500,7 +2509,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       await setDoc(userRef, buildUserDocument(newUser), { merge: true });
       await tryApplyPendingReferralAttribution();
       try {
-        trackCompleteRegistrationForNewUser(firebaseUser);
+        trackCompleteRegistrationForNewUser(firebaseUser, 'google');
       } catch (err) {
         console.warn('Meta Google registration tracking failed', err);
       }
@@ -2578,6 +2587,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         remember ? browserLocalPersistence : browserSessionPersistence
       );
       const credential = await signInWithEmailAndPassword(auth, email, pass);
+      trackGaEvent('login', { method: 'email' });
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
         setPendingEmailVerification(redirectPath);
@@ -3065,7 +3075,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         meta: { inventoryId: instanceId }
       });
       await refreshInventory(auth.currentUser.uid);
-      return { creditCoins: Number(data?.creditCoins ?? 0) };
+      const sellbackCoins = Number(data?.creditCoins ?? 0);
+      trackGaEvent('sellback', {
+        item_id: String(itemToSell?.id ?? instanceId),
+        item_name: itemToSell?.name ?? 'Item',
+        value: coinsToUsdValue(sellbackCoins),
+        currency: 'USD'
+      });
+      return { creditCoins: sellbackCoins };
     } catch (error) {
       pendingSoldIdsRef.current.delete(instanceId);
       if (itemToSell) {
@@ -3146,6 +3163,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const shippedUserId = auth.currentUser.uid;
       void refreshInventory(shippedUserId).catch((refreshError) => {
         console.error('Failed to refresh inventory after shipment request', refreshError);
+      });
+      trackGaEvent('shipment_request', {
+        item_count: uniqueInstanceIds.length,
+        shipping_value: coinsToUsdValue(itemsToShip.reduce((sum, item) => sum + toCoins(Number(item.price ?? 0), PRICE_UNIT_MODE), 0)),
+        currency: 'USD'
       });
       return { shipmentId: data.shipmentId, shipmentBatchId: data.shipmentBatchId };
     } catch (error: any) {
