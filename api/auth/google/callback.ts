@@ -84,10 +84,12 @@ export default async function handler(req: any, res: any) {
     if (!payload.email || !payload.email_verified || !payload.sub) throw new Error('Google account email must be verified');
 
     let userRecord;
+    let createdNewUser = false;
     try {
       userRecord = await adminAuth.getUserByEmail(payload.email);
     } catch (error: any) {
       if (error?.code === 'auth/user-not-found') {
+        createdNewUser = true;
         userRecord = await adminAuth.createUser({
           uid: `google:${payload.sub}`,
           email: payload.email,
@@ -114,7 +116,12 @@ export default async function handler(req: any, res: any) {
     const customToken = await adminAuth.createCustomToken(userRecord.uid, { provider: 'google' });
     console.info('Firebase custom token created');
 
-    return res.redirect(`${getAppUrl()}/login?customToken=${encodeURIComponent(customToken)}`);
+    const redirectParams = new URLSearchParams({
+      customToken,
+      googleNewUser: createdNewUser ? '1' : '0'
+    });
+
+    return res.redirect(`${getAppUrl()}/login?${redirectParams.toString()}`);
   } catch (error) {
     console.error('Google OAuth callback failed', error);
     return res.redirect(`${getAppUrl()}/login?error=google_oauth_failed`);

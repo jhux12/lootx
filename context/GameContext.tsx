@@ -6,7 +6,7 @@ import { authedFetch } from '../utils/authedFetch';
 import { SHIPPING_PROTECTION_TIERS, SHIPPING_RATE_TIERS, SIGNATURE_REQUIRED_CENTS } from '../utils/shippingRates';
 import { trackEvent, trackMetaEvent } from '../utils/trackEvent';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
-import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
+import { clearPostSignupRedirect, consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import {
@@ -1746,6 +1746,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const url = new URL(window.location.href);
     const customToken = url.searchParams.get('customToken');
     if (!customToken) return;
+    const isGoogleNewUser = url.searchParams.get('googleNewUser') === '1';
 
     console.log('Custom token detected');
     void (async () => {
@@ -1753,10 +1754,18 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         await signInWithCustomToken(auth, customToken);
         console.log('Custom token sign-in success');
         url.searchParams.delete('customToken');
+        url.searchParams.delete('googleNewUser');
         window.history.replaceState({}, '', `${url.pathname}${url.search}`);
         setShowLoginModal(false);
-        const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
-        resolveEmailRedirect(redirectPath);
+
+        if (isGoogleNewUser) {
+          const redirectPath = consumePostSignupRedirect() || DEFAULT_POST_SIGNUP_REDIRECT;
+          resolveEmailRedirect(redirectPath);
+          return;
+        }
+
+        clearPostSignupRedirect();
+        resolveEmailRedirect('/');
       } catch (error) {
         console.error('Custom token sign-in failed', error);
       }
