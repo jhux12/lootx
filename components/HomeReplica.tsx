@@ -60,8 +60,8 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
 const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) => {
   const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
   return (
-    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#202337] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
-      <div className="aspect-[4/5] w-full overflow-hidden bg-[#141829]">
+    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#101827] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
+      <div className="aspect-[4/5] w-full overflow-hidden bg-[#0b1220]">
         <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={298} height={373} />
       </div>
       <div className="p-3">
@@ -80,12 +80,12 @@ const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) =>
 
 const MobileCustomerReviewSkeleton = () => (
   <div className="min-w-[298px] animate-pulse overflow-hidden rounded-md" aria-hidden="true">
-    <div className="aspect-[4/5] rounded-md bg-[#242b31]" />
+    <div className="aspect-[4/5] rounded-md bg-[#172033]" />
     <div className="flex items-center gap-2 px-1 pt-3">
-      <div className="h-9 w-9 rounded-full bg-[#242b31]" />
+      <div className="h-9 w-9 rounded-full bg-[#172033]" />
       <div className="space-y-2">
-        <div className="h-3 w-24 rounded bg-[#242b31]" />
-        <div className="h-2.5 w-16 rounded bg-[#242b31]" />
+        <div className="h-3 w-24 rounded bg-[#172033]" />
+        <div className="h-2.5 w-16 rounded bg-[#172033]" />
       </div>
     </div>
   </div>
@@ -95,9 +95,9 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
   <button
     type="button"
     onClick={onSubmit}
-    className="flex min-w-[298px] flex-col items-center justify-center rounded-md border-2 border-dashed border-[#5df7b1]/55 bg-[#202337]/78 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
+    className="flex min-w-[298px] flex-col items-center justify-center rounded-md border-2 border-dashed border-[#54f5b3]/55 bg-[#101827]/78 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
   >
-    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#5df7b1]/15 text-3xl">＋</div>
+    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#54f5b3]/15 text-3xl">＋</div>
     <h3 className="mt-4 text-xl font-black uppercase text-white">Submit Yours</h3>
     <p className="mt-2 max-w-[210px] text-sm font-bold leading-5 text-slate-300">Share your Pullz delivery or big hit for a chance to be featured.</p>
   </button>
@@ -369,8 +369,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#0b1220_0%,#205DD7_48%,#54f5b3_120%)] p-3 sm:p-5 lg:p-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(84,245,179,0.22),transparent_38%)]" />
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
                   <Coins
@@ -391,8 +391,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
               </div>
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#0b1220_0%,#205DD7_48%,#54f5b3_120%)] p-3 sm:p-5 lg:p-8">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(84,245,179,0.22),transparent_36%)]" />
               <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
                 <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
@@ -422,10 +422,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { label: 'Instant Sellback', sublabel: 'Get Coins Fast', icon: Zap },
             { label: 'Secure Payments', sublabel: 'Instant Delivery', icon: CreditCard }
           ].map(({ label, sublabel, icon: Icon }) => (
-            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#24314a] bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
-              <Icon className="mb-1.5 h-5 w-5 text-[#55f7c3]" strokeWidth={2.2} aria-hidden="true" />
+            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#697eab]/24 bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
+              <Icon className="mb-1.5 h-5 w-5 text-[#54f5b3]" strokeWidth={2.2} aria-hidden="true" />
               <span className="text-[10px] font-black uppercase leading-none tracking-tight text-white sm:text-[13px]">{label}</span>
-              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#55f7c3]">{sublabel}</span>
+              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#54f5b3]">{sublabel}</span>
             </div>
           ))}
         </div>
@@ -434,21 +434,21 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section id="mobile-trending-boxes" className="pullz-home-trending-grid scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
-          <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
+          <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#172033] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[158px] overflow-hidden rounded-xl bg-[#252b3a] p-3 text-left active:scale-[0.98] sm:h-[170px] lg:h-[188px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(93,247,177,0.12),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
+            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[158px] overflow-hidden rounded-xl bg-[#101827] p-3 text-left active:scale-[0.98] sm:h-[170px] lg:h-[188px]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(84,245,179,0.12),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
               <img src={box.image} alt="" width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="relative z-10 h-[106px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[116px] lg:h-[128px]" />
-              <span className="absolute left-1.5 top-1.5 z-20 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span>
+              <span className="absolute left-1.5 top-1.5 z-20 rounded bg-[#205DD7] px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span>
               <div className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-between gap-2 rounded-lg bg-black/22 px-2 py-1.5">
                 <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-[10px] font-black text-[#5df7b1] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+                <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-[10px] font-black text-[#54f5b3] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
               </div>
             </button>
           ) : (
-            <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#242b31] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
+            <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#172033] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
           ))}
         </div>
       </section>
@@ -456,12 +456,12 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
-          <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
+          <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#172033] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#172033] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
         </div>
         <div className="overflow-hidden">
           <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeLiveWinIndex * 108}px,0,0)` }}>
             {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
-            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#172033]" aria-hidden="true" />) : null}
           </div>
         </div>
       </section>
@@ -469,9 +469,9 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
-          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
+          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#172033] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
             <span>Submit Your Pull, Get</span>
-            <span className="inline-flex items-center gap-1 text-[#5df7b1]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
+            <span className="inline-flex items-center gap-1 text-[#54f5b3]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
@@ -488,10 +488,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { icon: '🏆', title: 'Pull Real Items', body: 'Every spin reveals an item you can keep or instantly sell back.' },
             { icon: '📦', title: 'Ship Your Wins', body: "Build an order and we’ll ship it directly to your door." }
           ].map((step) => (
-            <article key={step.title} className="relative overflow-hidden rounded-2xl border border-[#24314a] bg-[#101827] p-4 shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(93,247,177,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]" />
+            <article key={step.title} className="relative overflow-hidden rounded-2xl border border-[#697eab]/24 bg-[#101827] p-4 shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(84,245,179,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]" />
               <div className="relative z-10 flex items-start gap-3 sm:flex-col">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#242b31] text-2xl shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]" aria-hidden="true">{step.icon}</span>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#172033] text-2xl shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]" aria-hidden="true">{step.icon}</span>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-tight text-white">{step.title}</h3>
                   <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{step.body}</p>
@@ -506,13 +506,13 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <div className="fixed inset-0 z-[260] flex items-end bg-black/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
           <form onSubmit={handleSubmitReviewUpload} className="w-full rounded-2xl border border-white/10 bg-[#15192a] p-4 text-white shadow-2xl">
             <div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-black uppercase">Submit yours</h3><button type="button" onClick={() => setIsSubmitReviewOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-white/10">×</button></div>
-            <label className="block rounded-xl border border-dashed border-[#5df7b1]/50 bg-black/20 p-4 text-center text-sm font-bold text-slate-200">
+            <label className="block rounded-xl border border-dashed border-[#54f5b3]/50 bg-black/20 p-4 text-center text-sm font-bold text-slate-200">
               {submitReviewFile ? submitReviewFile.name : 'Tap to add an image'}
               <input type="file" accept="image/*" className="sr-only" onChange={(event) => setSubmitReviewFile(event.target.files?.[0] ?? null)} />
             </label>
             <textarea value={submitReviewCaption} onChange={(event) => setSubmitReviewCaption(event.target.value)} placeholder="Caption (optional)" className="mt-3 min-h-20 w-full rounded-xl border border-white/10 bg-[#0d1220] p-3 text-sm text-white" />
-            {submitReviewNotice && <p className="mt-2 text-sm font-bold text-[#5df7b1]">{submitReviewNotice}</p>}
-            <button type="submit" disabled={isSubmittingReview} className="mt-3 w-full rounded-xl bg-[#5df7b1] px-4 py-3 text-sm font-black uppercase text-[#101827] disabled:opacity-60">{isSubmittingReview ? 'Submitting...' : 'Submit for review'}</button>
+            {submitReviewNotice && <p className="mt-2 text-sm font-bold text-[#54f5b3]">{submitReviewNotice}</p>}
+            <button type="submit" disabled={isSubmittingReview} className="mt-3 w-full rounded-xl bg-[#54f5b3] px-4 py-3 text-sm font-black uppercase text-[#101827] disabled:opacity-60">{isSubmittingReview ? 'Submitting...' : 'Submit for review'}</button>
           </form>
         </div>
       )}
@@ -522,7 +522,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
   return (
-    <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
+    <div className="pullz-home-shell min-h-screen bg-[#050811] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
         <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
