@@ -41,7 +41,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" /></noscript>
-    <!-- Meta Pixel is queued immediately, then its network script is loaded on idle or first interaction. -->
+    <!-- Meta Pixel is queued immediately, then its network script is loaded after the first calm idle window. -->
     <script>
       (function(w,d,s,u,id){
         if(w.fbq)return;
@@ -50,21 +50,32 @@
         n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
         n('init', id);
         n('track', 'PageView');
+        var nav=w.navigator||{};
+        var connection=nav.connection||nav.mozConnection||nav.webkitConnection||{};
+        var mobile=w.matchMedia&&w.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+        var lowPower=mobile&&((nav.hardwareConcurrency&&nav.hardwareConcurrency<=4)||(nav.deviceMemory&&nav.deviceMemory<=4)||connection.saveData);
+        var delay=lowPower?15000:(mobile?9000:3500);
         var loaded=false;
         function load(){
           if(loaded)return;loaded=true;
-          window.removeEventListener('pointerdown',load);
-          window.removeEventListener('touchstart',load);
-          window.removeEventListener('keydown',load);
           var t=d.createElement(s);t.async=true;t.src=u;
           var first=d.getElementsByTagName(s)[0];first.parentNode.insertBefore(t,first);
         }
-        window.addEventListener('pointerdown',load,{once:true,passive:true});
-        window.addEventListener('touchstart',load,{once:true,passive:true});
-        window.addEventListener('keydown',load,{once:true});
-        if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:3500});}
-        else{setTimeout(load,3500);}
+        if('requestIdleCallback' in window){requestIdleCallback(load,{timeout:delay});}
+        else{setTimeout(load,delay);}
       })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js', '3861511834150011');
+    </script>
+    <script>
+      (function(w,d){
+        var nav=w.navigator||{};
+        var mobile=w.matchMedia&&w.matchMedia('(max-width: 768px), (pointer: coarse)').matches;
+        var reduced=w.matchMedia&&w.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var safari=/^((?!chrome|android).)*safari/i.test(nav.userAgent||'');
+        var lowPower=reduced||(mobile&&(((nav.hardwareConcurrency||8)<=4)||((nav.deviceMemory||8)<=4)||safari));
+        d.documentElement.classList.toggle('pullz-mobile-optimized', !!(mobile||lowPower));
+        d.documentElement.classList.toggle('pullz-low-performance', !!lowPower);
+        d.documentElement.classList.toggle('pullz-reduced-motion', !!reduced);
+      })(window, document);
     </script>
     <style>
       :root {
@@ -320,6 +331,13 @@
           opacity: 0 !important;
           filter: none !important;
           box-shadow: none !important;
+        }
+        html.pullz-mobile-optimized .ticker-animation {
+          animation: none !important;
+          transform: none !important;
+        }
+        html.pullz-mobile-optimized .live-wins-ticker {
+          will-change: auto;
         }
       }
 
