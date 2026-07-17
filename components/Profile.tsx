@@ -406,7 +406,7 @@ export const Profile: React.FC = () => {
   }, [activeInventory, search, rarity, type, sort]);
 
   const orders = useMemo<OrderSummary[]>(() => {
-    const pendingStatuses = new Set(['shipping', 'shipping_requested']);
+    const pendingStatuses = new Set(['pending_payment', 'pending_shipment', 'shipping', 'shipping_requested']);
     const shipmentOrders = (shipments as Shipment[])
       .filter((shipment) => shipment.uid === user.id && (shipment.status === 'shipped' || pendingStatuses.has(shipment.status)))
       .map((shipment) => ({
@@ -426,7 +426,7 @@ export const Profile: React.FC = () => {
 
     const shipmentInventoryIds = new Set(shipmentOrders.map((order) => order.inventoryId).filter(Boolean));
     const inventoryOrders = normalizedInventory
-      .filter((item) => (item.status === 'shipped' || item.status === 'shipping' || item.status === 'shipping_requested') && !shipmentInventoryIds.has(item.instanceId))
+      .filter((item) => (item.status === 'shipped' || item.status === 'pending_shipment' || item.status === 'shipping' || item.status === 'shipping_requested') && !shipmentInventoryIds.has(item.instanceId))
       .map((item) => ({
         id: item.instanceId,
         orderGroupId: item.instanceId,
