@@ -24,6 +24,7 @@ import {
   removeCategoryFromRow,
   saveHomepageConfig,
   subscribeHomepageConfig,
+  HomepageAssetUrls,
   updateCategoryInRow,
   updateRow
 } from '../../utils/homepageShowcase';
@@ -54,6 +55,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [demoBoxId, setDemoBoxId] = useState<string>('');
   const [trustImageUrl, setTrustImageUrl] = useState<string>('');
   const [trendingBoxIds, setTrendingBoxIds] = useState<string[]>([]);
+  const [assetUrls, setAssetUrls] = useState<HomepageAssetUrls>({});
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -62,6 +64,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         setDemoBoxId(config?.demoBoxId ?? '');
         setTrustImageUrl(config?.trustImageUrl ?? '');
         setTrendingBoxIds(config?.trendingBoxIds ?? []);
+        setAssetUrls(config?.assetUrls ?? {});
         setIsLoading(false);
       },
       () => {
@@ -94,23 +97,35 @@ export const HomepageShowcaseEditor: React.FC = () => {
     successMessage?: string,
     nextDemoBoxId = demoBoxId,
     nextTrustImageUrl = trustImageUrl,
-    nextTrendingBoxIds = trendingBoxIds
+    nextTrendingBoxIds = trendingBoxIds,
+    nextAssetUrls = assetUrls
   ) => {
     setShowcaseRows(nextRows);
     setDemoBoxId(nextDemoBoxId);
     setTrustImageUrl(nextTrustImageUrl);
     setTrendingBoxIds(nextTrendingBoxIds);
+    setAssetUrls(nextAssetUrls);
     try {
       await saveHomepageConfig({
         showcaseRows: nextRows,
         demoBoxId: nextDemoBoxId || null,
         trustImageUrl: nextTrustImageUrl || null,
-        trendingBoxIds: nextTrendingBoxIds
+        trendingBoxIds: nextTrendingBoxIds,
+        assetUrls: nextAssetUrls
       });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
       showToast('error', 'Something went wrong while saving.');
     }
+  };
+
+
+  const handleAssetUrlChange = (key: keyof HomepageAssetUrls, value: string) => {
+    setAssetUrls((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleAssetUrlsSave = () => {
+    persistRows(showcaseRows, 'Homepage asset URLs saved.', demoBoxId, trustImageUrl, trendingBoxIds, assetUrls);
   };
 
   const handleAddRow = () => {
@@ -364,6 +379,32 @@ export const HomepageShowcaseEditor: React.FC = () => {
           <p className="mt-2 text-xs text-gray-500">
             Select up to 6 boxes for the mobile homepage Trending Boxes grid.
           </p>
+        </div>
+      </div>
+
+
+      <div className="rounded-xl border border-gray-800 bg-[#131720] p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white">Homepage design asset URLs</h3>
+            <p className="text-xs text-gray-400">Paste hosted images used by the desktop and mobile homepage hero/how-it-works artwork.</p>
+          </div>
+          <button type="button" onClick={handleAssetUrlsSave} className="rounded-full bg-violet-600 px-4 py-2 text-xs font-bold uppercase text-white hover:bg-violet-500">Save asset URLs</button>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[
+            ['heroBoxUrl', 'Hero center box URL'],
+            ['heroLeftCardUrl', 'Hero left card URL'],
+            ['heroRightCardUrl', 'Hero right card URL'],
+            ['howOpenUrl', 'How it works open box URL'],
+            ['howPullUrl', 'How it works cards URL'],
+            ['howShipUrl', 'How it works package URL']
+          ].map(([key, label]) => (
+            <label key={key} className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              {label}
+              <Input value={String(assetUrls[key as keyof HomepageAssetUrls] ?? '')} onChange={(event) => handleAssetUrlChange(key as keyof HomepageAssetUrls, event.target.value)} placeholder="https://example.com/image.png" />
+            </label>
+          ))}
         </div>
       </div>
 

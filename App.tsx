@@ -14,7 +14,7 @@ import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
-import { subscribeHomepageConfig } from './utils/homepageShowcase';
+import { HomepageAssetUrls, subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -286,6 +286,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const [homepageTrendingBoxIds, setHomepageTrendingBoxIds] = useState<string[]>([]);
+  const [homepageAssetUrls, setHomepageAssetUrls] = useState<HomepageAssetUrls>({});
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
   const [showHomePrompt, setShowHomePrompt] = useState(false);
   const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
@@ -357,10 +358,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           const nextTrendingBoxIds = config?.trendingBoxIds ?? [];
           setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
           setHomepageTrendingBoxIds((current) => (current.join('|') === nextTrendingBoxIds.join('|') ? current : nextTrendingBoxIds));
+          setHomepageAssetUrls(config?.assetUrls ?? {});
         },
         () => {
           setHomepageDemoBoxId((current) => (current === null ? current : null));
           setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
+          setHomepageAssetUrls({});
         }
       );
     }, 4200);
@@ -653,6 +656,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           boxes={baseHomeBoxes}
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
+          assetUrls={homepageAssetUrls}
           isChatCollapsed={isChatCollapsed}
           onOpenBox={(boxId) => {
             playSound('click');

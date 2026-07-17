@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, CreditCard, ShieldCheck, Sparkles, Star, Trophy, Truck, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
+import { HomepageAssetUrls } from '../utils/homepageShowcase';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useGame } from '../context/GameContext';
@@ -15,6 +16,7 @@ type HomeReplicaProps = {
   onOpenBox: (boxId: string) => void;
   onViewAllBoxes: () => void;
   onSignUp: () => void;
+  assetUrls?: HomepageAssetUrls;
 };
 
 type MobileLiveWin = {
@@ -103,7 +105,7 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
   </button>
 );
 
-const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, trendingBoxIds, assetUrls = {}, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; assetUrls?: HomepageAssetUrls; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -366,51 +368,29 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
   return (
     <div className="animate-in fade-in duration-500">
-      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
-          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
-                  <Coins
-                    key={`hero-raining-coin-${coinIndex}`}
-                    className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
-                    style={{
-                      left: `${8 + ((coinIndex * 8) % 86)}%`,
-                      animationDelay: `${coinIndex * -0.45}s`,
-                      animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
-                      transform: `rotate(${coinIndex * 23}deg)`
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
-              </div>
-              <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
+      <section className="relative overflow-hidden px-4 pt-8 sm:px-6 lg:px-0 lg:pt-14">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_70%_40%,rgba(124,58,237,0.38),transparent_34%),radial-gradient(circle_at_45%_45%,rgba(37,99,235,0.24),transparent_38%)]" />
+        <div className="relative grid min-h-[300px] items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="z-10 text-center lg:text-left">
+            <h1 className="mx-auto max-w-[520px] text-[42px] font-black uppercase leading-[0.98] tracking-[-0.05em] text-white drop-shadow-2xl sm:text-[58px] lg:mx-0 lg:text-[64px]">
+              Open Boxes.<br />Win <span className="text-[#7c3cff]">Real</span> Cards.
+            </h1>
+            <p className="mt-4 text-lg font-medium text-slate-300 sm:text-xl">Collect, sell, or ship to your door.</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center lg:justify-start">
+              <button type="button" onClick={() => trendingBoxes[0] ? onOpenBox(trendingBoxes[0].id) : onViewAllBoxes()} className="rounded-lg bg-gradient-to-r from-[#7b2cff] to-[#3477ff] px-8 py-3.5 text-sm font-black uppercase text-white shadow-[0_0_28px_rgba(124,58,237,.35)] active:scale-[.98]">Open a box</button>
+              <button type="button" onClick={onViewAllBoxes} className="rounded-lg border border-white/15 bg-white/[0.04] px-8 py-3.5 text-sm font-black uppercase text-white hover:bg-white/10 active:scale-[.98]">View inventory</button>
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
-              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
-              </div>
-              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
-                  </div>
-                ))}
-              </div>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-300 lg:justify-start">
+              <span className="flex -space-x-2">{['A','B','C','D','E'].map((x) => <span key={x} className="grid h-6 w-6 place-items-center rounded-full border border-[#101827] bg-gradient-to-br from-orange-200 to-violet-500 text-[10px] font-black">{x}</span>)}</span>
+              <span>Join 85,000+ collectors</span><span className="font-black text-emerald-400">4.8</span><span className="flex text-emerald-400">{Array.from({length:5}).map((_,i)=><Star key={i} className="h-3 w-3 fill-current" />)}</span><span>Trustpilot</span>
             </div>
           </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
-        </button>
-        <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
+          <div className="relative h-[260px] sm:h-[360px] lg:h-[430px]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(147,51,234,.48),transparent_38%),linear-gradient(100deg,transparent,rgba(59,130,246,.28),transparent)] blur-sm" />
+            {assetUrls.heroLeftCardUrl && <img src={assetUrls.heroLeftCardUrl} alt="" className="absolute left-[4%] top-[12%] h-[110px] rotate-[-10deg] object-contain opacity-80 sm:h-[150px]" />}
+            <img src={assetUrls.heroBoxUrl || trendingBoxes[0]?.image || boxes[0]?.image} alt="Pullz featured box" className="absolute left-1/2 top-1/2 z-10 h-[250px] w-[72%] max-w-[520px] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_28px_45px_rgba(0,0,0,.65)] sm:h-[350px] lg:h-[420px]" />
+            {assetUrls.heroRightCardUrl && <img src={assetUrls.heroRightCardUrl} alt="" className="absolute right-[3%] top-[30%] h-[120px] rotate-[16deg] object-contain opacity-90 sm:h-[165px]" />}
+          </div>
         </div>
       </section>
 
@@ -484,18 +464,19 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <div className="mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">How It Works</h2></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
-            { icon: '🎁', title: 'Open a Box', body: 'Choose from Pokémon, Slabs, ETBs, and exclusive mystery boxes.' },
-            { icon: '🏆', title: 'Pull Real Items', body: 'Every spin reveals an item you can keep or instantly sell back.' },
-            { icon: '📦', title: 'Ship Your Wins', body: "Build an order and we’ll ship it directly to your door." }
+            { icon: '1', image: assetUrls.howOpenUrl, title: 'Open a Box', body: 'Choose from Pokémon, Slabs, ETBs, and exclusive mystery boxes.' },
+            { icon: '2', image: assetUrls.howPullUrl, title: 'Pull Real Items', body: 'Every spin reveals an item you can keep or instantly sell back.' },
+            { icon: '3', image: assetUrls.howShipUrl, title: 'Ship Your Wins', body: "Build an order and we’ll ship it directly to your door." }
           ].map((step) => (
             <article key={step.title} className="relative overflow-hidden rounded-2xl border border-[#24314a] bg-[#101827] p-4 shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(93,247,177,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]" />
               <div className="relative z-10 flex items-start gap-3 sm:flex-col">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#242b31] text-2xl shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]" aria-hidden="true">{step.icon}</span>
-                <div>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#7b2cff] to-[#3477ff] text-lg font-black shadow-[0_0_22px_rgba(124,58,237,.35)]" aria-hidden="true">{step.icon}</span>
+                <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-black uppercase tracking-tight text-white">{step.title}</h3>
                   <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{step.body}</p>
                 </div>
+                {step.image && <img src={step.image} alt="" className="ml-auto h-20 w-28 shrink-0 object-contain drop-shadow-[0_18px_22px_rgba(0,0,0,.45)] sm:absolute sm:right-4 sm:top-1/2 sm:h-24 sm:w-36 sm:-translate-y-1/2" loading="lazy" />}
               </div>
             </article>
           ))}
@@ -520,11 +501,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], assetUrls = {}, onOpenBox, onViewAllBoxes }) => {
   return (
-    <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
+    <div className="pullz-home-shell min-h-screen bg-[#030812] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} assetUrls={assetUrls} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );
