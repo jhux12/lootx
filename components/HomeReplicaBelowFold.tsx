@@ -178,7 +178,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-200/80">Upgrade items</p><h2 className="mt-1 text-2xl font-black tracking-tight">Top Upgrades</h2></div></div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {topUpgrades.map((upgrade) => (
-              <div key={upgrade.id} className="group min-h-[156px] rounded-xl border border-white/5 bg-[#22282c] p-3 transition-colors duration-200 ease-out hover:border-slate-400/35">
+              <div key={upgrade.id} className="group min-h-[156px] rounded-xl border border-white/5 bg-[#101827] p-3 transition-colors duration-200 ease-out hover:border-slate-400/35">
                 <p className="text-xs font-black text-yellow-300">{upgrade.multiplier}</p>
                 <div className="my-3 flex h-[80px] items-center justify-center">
                   <img src={upgrade.image} alt={upgrade.name} className="max-h-full max-w-full object-contain transition-transform duration-200 ease-out group-hover:scale-105" loading="lazy" decoding="async" width={160} height={160} />
@@ -190,7 +190,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:p-5">
+        <section className="rounded-2xl border border-white/[0.06] bg-[#101827]/72 p-4 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-sky-200/80">Leaderboards</p>
@@ -201,12 +201,12 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           <div className="grid gap-2">
             {!leaderboardLoaded ? (
               Array.from({ length: 3 }).map((_, index) => (
-                <div key={index} className="h-[66px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#1b2024]/70">
+                <div key={index} className="h-[66px] overflow-hidden rounded-xl border border-white/[0.06] bg-[#050811]/70">
                   <div className="h-full w-full -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                 </div>
               ))
             ) : leaderboardPreview.length ? leaderboardPreview.map((entry, index) => (
-              <div key={entry.id} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-[#1b2024]/70 px-3 py-3">
+              <div key={entry.id} className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-[#050811]/70 px-3 py-3">
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-xs font-black ${index === 0 ? 'bg-amber-300 text-black' : 'bg-white/[0.06] text-slate-200'}`}>#{index + 1}</span>
                 <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#7C5CFF] to-sky-400 text-sm font-black text-white">
                   {entry.avatar ? <img src={entry.avatar} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" /> : entry.name.charAt(0).toUpperCase()}
@@ -218,7 +218,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
                 <div className="shrink-0 text-right text-sm font-black text-slate-100 tabular-nums">{entry.points.toLocaleString()}</div>
               </div>
             )) : (
-              <div className="rounded-xl border border-white/[0.06] bg-[#1b2024]/70 px-4 py-5 text-center">
+              <div className="rounded-xl border border-white/[0.06] bg-[#050811]/70 px-4 py-5 text-center">
                 <p className="text-sm font-bold text-white">No active leaderboard entries yet.</p>
                 <p className="mt-1 text-xs leading-5 text-slate-400">Open boxes to be one of the first players on the current board.</p>
               </div>
@@ -227,7 +227,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
         </section>
 
         {showSignupCta && (
-          <section className="min-h-[150px] rounded-xl bg-[#22282c] p-5">
+          <section className="min-h-[150px] rounded-xl bg-[#101827] p-5">
             <h2 className="text-xl font-black">Get started with Pullz.gg</h2>
             <p className="mt-2 text-sm text-slate-300">Sign up and open mystery boxes in seconds.</p>
             <button
@@ -243,7 +243,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
           {faqs.map((faq) => {
             const isOpen = openFaqId === faq.id;
             return (
-              <div key={faq.id} className="overflow-hidden rounded-xl bg-[#22282c]">
+              <div key={faq.id} className="overflow-hidden rounded-xl bg-[#101827]">
                 <button
                   type="button"
                   onClick={() => setOpenFaqId((prev) => (prev === faq.id ? null : faq.id))}

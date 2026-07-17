@@ -253,8 +253,8 @@ export const Leaderboard: React.FC = () => {
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
   return (
-    <div className="min-h-screen bg-[#1b2024] text-white">
-      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#1b2024] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
+    <div className="min-h-screen bg-[#050811] text-white">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#050811] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
         <header className="flex items-center justify-between px-5 pb-5 pt-6 sm:px-8 sm:pt-8">
           <button
             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
@@ -276,9 +276,9 @@ export const Leaderboard: React.FC = () => {
 
         {showInfo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm sm:py-0" role="dialog" aria-modal="true" aria-labelledby="leaderboard-info-title">
-            <div className="max-h-[calc(100dvh-3rem)] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/[0.08] bg-[#20262b] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
+            <div className="max-h-[calc(100dvh-3rem)] w-full max-w-sm overflow-y-auto rounded-3xl border border-white/[0.08] bg-[#101827] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)]">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#050811] text-[#79a7ff]">
                   <Info className="h-5 w-5" />
                 </div>
                 <div>
@@ -300,18 +300,18 @@ export const Leaderboard: React.FC = () => {
         )}
 
         {settingsLoaded && !hasActiveLeaderboard ? (
-          <section className="mx-5 mt-10 rounded-[28px] bg-[#20262b]/72 px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#1b2024] text-[#79a7ff]"><Flame className="h-8 w-8" /></div>
+          <section className="mx-5 mt-10 rounded-[28px] bg-[#101827]/72 px-5 py-10 text-center shadow-[0_24px_70px_rgba(0,0,0,0.22)] sm:mx-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#050811] text-[#79a7ff]"><Flame className="h-8 w-8" /></div>
             <h2 className="mt-5 text-2xl font-black text-white">Starting Soon</h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-white/65">There isn’t a leaderboard running right now. Check back soon for the next competition and rewards drop.</p>
           </section>
         ) : (
           <div className="mt-5">
             {timeLeft && (
-              <section className="mx-5 mb-5 rounded-2xl bg-[#20262b]/72 p-3 sm:mx-8">
+              <section className="mx-5 mb-5 rounded-2xl bg-[#101827]/72 p-3 sm:mx-8">
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
-                    <div key={String(label)} className="rounded-xl bg-[#1b2024]/70 px-2 py-2">
+                    <div key={String(label)} className="rounded-xl bg-[#050811]/70 px-2 py-2">
                       <div className="text-base font-black text-[#79a7ff] sm:text-xl">{String(value).padStart(2, '0')}</div>
                       <div className="text-[9px] font-bold tracking-wider text-white/45 sm:text-[10px]">{label}</div>
                     </div>
@@ -323,7 +323,7 @@ export const Leaderboard: React.FC = () => {
             <section className="px-5 sm:px-8">
               <div className="grid min-h-[262px] grid-cols-3 items-end gap-0 sm:min-h-[310px] sm:gap-3">
                 {(loading ? Array.from({ length: 3 }) : topThree).map((entry, idx) => {
-                  if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#20262b]/72 sm:max-w-[150px]" />;
+                  if (!entry) return <div key={`loading-${idx}`} className="mx-auto mb-1 h-36 w-full max-w-[116px] animate-pulse rounded-[22px] bg-[#101827]/72 sm:max-w-[150px]" />;
                   const actualRank = leaders.findIndex((leader) => leader.uid === entry.uid) + 1;
                   const isFirst = actualRank === 1;
                   const isSecond = actualRank === 2;
@@ -334,10 +334,10 @@ export const Leaderboard: React.FC = () => {
                   const pointColor = isFirst ? 'text-[#ffc019]' : isSecond ? 'text-[#00b8ff]' : 'text-[#13df72]';
                   const rewardLabel = rewardByRule(settings, actualRank, entry.points).label;
                   return (
-                    <article key={entry.uid} className={`relative flex ${cardHeight} flex-col items-center rounded-t-[26px] border border-white/[0.06] bg-[#20262b]/72 px-2 pb-4 pt-10 text-center shadow-[0_16px_35px_rgba(5,8,12,0.22)] sm:px-4 sm:pt-12`}>
+                    <article key={entry.uid} className={`relative flex ${cardHeight} flex-col items-center rounded-t-[26px] border border-white/[0.06] bg-[#101827]/72 px-2 pb-4 pt-10 text-center shadow-[0_16px_35px_rgba(5,8,12,0.22)] sm:px-4 sm:pt-12`}>
                       {isFirst && <Crown className="absolute -top-[84px] h-12 w-12 rotate-[-10deg] fill-[#ffb600] text-[#ffb600] sm:-top-[98px] sm:h-14 sm:w-14" />}
                       <div className={`absolute left-1/2 top-0 flex ${avatarSize} -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-gradient-to-br ${frame} p-[3px] shadow-[0_10px_20px_rgba(0,0,0,0.25)]`}>
-                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#1b2024] text-2xl font-black text-white">
+                        <div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#050811] text-2xl font-black text-white">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
                       </div>
@@ -351,7 +351,7 @@ export const Leaderboard: React.FC = () => {
               </div>
             </section>
 
-            <section className="mt-7 rounded-t-[34px] border border-white/[0.06] bg-[#20262b]/72 px-5 pb-8 pt-5 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:mx-8 sm:rounded-[34px] sm:px-8">
+            <section className="mt-7 rounded-t-[34px] border border-white/[0.06] bg-[#101827]/72 px-5 pb-8 pt-5 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:mx-8 sm:rounded-[34px] sm:px-8">
               {loading ? (
                 <div className="space-y-4">{Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-[62px] animate-pulse rounded-2xl bg-white/5" />)}</div>
               ) : (
@@ -374,7 +374,7 @@ export const Leaderboard: React.FC = () => {
               )}
             </section>
 
-            <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 text-sm text-white/70 sm:mx-8">
+            <section className="mx-5 mt-5 rounded-2xl border border-white/[0.06] bg-[#101827]/72 p-4 text-sm text-white/70 sm:mx-8">
               <div><div className="font-bold text-white">Your rank: {myRank ? `#${myRank}` : 'Unranked'}</div><div className="mt-1 flex flex-wrap items-center gap-1"><span>{myPoints.toLocaleString()} points</span>{myReward && <><span>· Reward</span><img src={COIN_ICON} alt="Coins" className="h-3.5 w-3.5 object-contain" loading="lazy" decoding="async" /><span>{myReward.label}</span></>}</div></div>
             </section>
           </div>
