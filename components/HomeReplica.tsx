@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ArrowRight, Box, PackageCheck, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { ArrowRight, Box, Flame, PackageCheck, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 
@@ -40,43 +40,62 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
   }, [boxes, trendingBoxIds]);
 
   const heroBox = featuredBoxes[0] ?? boxes[0];
+  const heroBoxes = featuredBoxes.length ? featuredBoxes.slice(0, 4) : boxes.slice(0, 4);
 
   return (
     <div className="min-h-screen bg-[#171b20] text-white">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-3 pb-24 pt-3 sm:gap-6 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#20252c] shadow-[0_24px_70px_rgba(0,0,0,0.35)]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_10%,rgba(93,247,177,0.18),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(168,85,247,0.16),transparent_28%),linear-gradient(135deg,rgba(255,255,255,0.06),transparent_45%)]" />
-          <div className="relative grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:p-10">
+        <section className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,#4f26ef_0%,#557cf2_55%,#54e7b1_130%)] shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:rounded-[2rem]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.26),transparent_27%),radial-gradient(circle_at_80%_100%,rgba(93,247,177,0.26),transparent_34%),linear-gradient(90deg,rgba(13,17,23,0.10),rgba(13,17,23,0.36))]" />
+          <div className="absolute -right-20 top-1/2 hidden -translate-y-1/2 gap-3 opacity-95 sm:flex lg:right-8" aria-hidden="true">
+            {(heroBoxes.length ? heroBoxes : fallbackCards).map((box, index) => {
+              const realBox = 'id' in box ? box : null;
+              return (
+                <div key={realBox?.id ?? box.title} className="grid h-36 w-24 rotate-[-5deg] place-items-center rounded-[1.25rem] border border-white/10 bg-black/12 p-2 shadow-[0_24px_40px_rgba(0,0,0,0.28)] backdrop-blur-sm first:translate-y-4 even:rotate-[5deg] even:translate-y-[-10px] lg:h-48 lg:w-32">
+                  {realBox?.image ? <img src={realBox.image} alt="" className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /> : <span className="text-center text-xs font-black uppercase text-white/90">{box.title}</span>}
+                </div>
+              );
+            })}
+          </div>
+          <div className="relative grid min-h-[260px] gap-5 p-5 sm:min-h-[310px] sm:p-7 lg:min-h-[360px] lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.6fr)] lg:items-center lg:p-10">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#5df7b1]/30 bg-[#5df7b1]/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.24em] text-[#5df7b1]">
-                <Sparkles className="h-3.5 w-3.5" /> Minimal mystery boxes
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/22 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur">
+                <Flame className="h-3.5 w-3.5 text-[#5df7b1]" /> Trending now
               </div>
-              <h1 className="mt-5 text-balance text-4xl font-black uppercase leading-[0.92] tracking-[-0.06em] text-white sm:text-6xl lg:text-7xl">
-                Open boxes. Win real collectibles.
+              <h1 className="mt-4 max-w-[680px] text-balance text-[2.7rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-white drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)] sm:text-6xl lg:text-7xl">
+                Open the boxes everyone is watching.
               </h1>
-              <p className="mt-5 max-w-xl text-base font-semibold leading-7 text-slate-300 sm:text-lg">
-                A cleaner, darker homepage inspired by PackDraw's simple pack-first layout: bold cards, neon green accents, and quick paths to open, sell back, or ship your wins.
+              <p className="mt-4 max-w-xl text-sm font-bold leading-6 text-white/82 sm:text-base lg:text-lg">
+                A modern, minimal hero with the old Pullz banner energy: big gradient color, floating packs, and instant mobile-friendly actions.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <button type="button" onClick={onViewAllBoxes} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#5df7b1] px-6 text-sm font-black uppercase tracking-wide text-[#12161b] shadow-[0_12px_34px_rgba(93,247,177,0.26)] transition hover:bg-[#7ffac4] active:scale-[0.98]">
-                  Open boxes <ArrowRight className="h-4 w-4" />
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={onViewAllBoxes} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#5df7b1] px-6 text-sm font-black uppercase tracking-wide text-[#11161c] shadow-[0_14px_34px_rgba(37,244,159,0.32)] transition hover:bg-[#80fac5] active:scale-[0.98]">
+                  Browse boxes <ArrowRight className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={onSignUp} className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/12 bg-white/5 px-6 text-sm font-black uppercase tracking-wide text-white transition hover:bg-white/10 active:scale-[0.98]">
-                  Register free
+                <button type="button" onClick={onSignUp} className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/18 bg-white/12 px-6 text-sm font-black uppercase tracking-wide text-white backdrop-blur transition hover:bg-white/18 active:scale-[0.98]">
+                  Create account
                 </button>
+              </div>
+              <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:hidden" aria-hidden="true">
+                {(heroBoxes.length ? heroBoxes : fallbackCards).slice(0, 3).map((box, index) => {
+                  const realBox = 'id' in box ? box : null;
+                  return (
+                    <div key={realBox?.id ?? box.title} className="grid h-24 min-w-[76px] place-items-center rounded-2xl border border-white/10 bg-black/16 p-2 backdrop-blur">
+                      {realBox?.image ? <img src={realBox.image} alt="" className="h-full w-full object-contain drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /> : <span className="text-center text-[9px] font-black uppercase text-white/90">{box.title}</span>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <button type="button" onClick={() => heroBox ? onOpenBox(heroBox.id) : onViewAllBoxes()} className="group relative min-h-[320px] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#171b20] p-5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_50px_rgba(0,0,0,0.32)] transition hover:-translate-y-1 active:scale-[0.99] sm:min-h-[400px]">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_24%,rgba(93,247,177,0.20),transparent_34%),linear-gradient(180deg,transparent_46%,rgba(0,0,0,0.58))]" />
-              {heroBox?.image ? <img src={heroBox.image} alt="" className="relative z-10 mx-auto h-56 w-full object-contain drop-shadow-[0_26px_30px_rgba(0,0,0,0.46)] transition duration-300 group-hover:scale-105 sm:h-72" loading="eager" decoding="async" /> : <div className="relative z-10 grid h-56 place-items-center rounded-3xl bg-white/5 text-6xl sm:h-72">🎁</div>}
-              <div className="absolute inset-x-5 bottom-5 z-20 rounded-2xl border border-white/10 bg-[#20252c]/90 p-4 backdrop-blur">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5df7b1]">Featured pack</p>
-                    <h2 className="mt-1 truncate text-2xl font-black uppercase tracking-tight text-white">{heroBox?.name || 'Mystery Box'}</h2>
-                  </div>
-                  {heroBox ? <CoinAmount amount={Math.round(heroBox.price)} className="shrink-0 text-lg font-black text-[#5df7b1]" iconClassName="h-5 w-5" animated={false} /> : null}
+            <button type="button" onClick={() => heroBox ? onOpenBox(heroBox.id) : onViewAllBoxes()} className="group relative overflow-hidden rounded-[1.35rem] border border-white/14 bg-[#12161d]/72 p-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_18px_42px_rgba(0,0,0,0.26)] backdrop-blur-md transition hover:-translate-y-1 active:scale-[0.99] sm:hidden lg:block">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_16%,rgba(93,247,177,0.20),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(0,0,0,0.20))]" />
+              {heroBox?.image ? <img src={heroBox.image} alt="" className="relative z-10 mx-auto h-40 w-full object-contain drop-shadow-[0_22px_26px_rgba(0,0,0,0.42)] transition duration-300 group-hover:scale-105 lg:h-56" loading="eager" decoding="async" /> : <div className="relative z-10 grid h-40 place-items-center rounded-3xl bg-white/5 text-6xl lg:h-56">🎁</div>}
+              <div className="relative z-20 mt-3 rounded-2xl border border-white/10 bg-black/18 p-3 backdrop-blur">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#5df7b1]">Featured box</p>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <h2 className="min-w-0 truncate text-xl font-black uppercase tracking-tight text-white">{heroBox?.name || 'Mystery Box'}</h2>
+                  {heroBox ? <CoinAmount amount={Math.round(heroBox.price)} className="shrink-0 text-base font-black text-[#5df7b1]" iconClassName="h-4 w-4" animated={false} /> : null}
                 </div>
               </div>
             </button>
