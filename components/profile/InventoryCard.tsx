@@ -50,15 +50,27 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
     accent: '#a855f7'
   },
   legendary: {
-    card: 'border-white/10 bg-gradient-to-br from-orange-900/95 via-amber-950/90 to-slate-950/95',
-    badge: 'border-yellow-300/60 bg-yellow-500/15 text-yellow-100',
-    image: 'border-yellow-400/45 shadow-[0_0_24px_rgba(234,179,8,0.18)]',
+    card: 'border-white/10 bg-gradient-to-br from-yellow-400/90 via-amber-600/90 to-yellow-950/95',
+    badge: 'border-yellow-200/70 bg-yellow-400/20 text-yellow-50',
+    image: 'border-yellow-300/55 shadow-[0_0_26px_rgba(250,204,21,0.24)]',
     accent: '#fbbf24'
   }
 };
 export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, selectable, onToggleSelect, actionLabel, actionDisabled, onAction, secondaryActionLabel, secondaryActionDisabled = false, onSecondaryAction, layoutMode = 'grid' }) => {
   const rarityStyle = RARITY_STYLES[item.rarity] ?? RARITY_STYLES.common;
   const isList = layoutMode === 'list';
+  const isLegendary = item.rarity === 'legendary';
+  const selectedCardClass = isLegendary
+    ? 'border-yellow-200/85 ring-2 ring-yellow-300/55 shadow-[0_0_34px_rgba(250,204,21,0.38)]'
+    : 'border-purple-300/80 ring-2 ring-purple-400/50 shadow-[0_0_30px_rgba(168,85,247,0.36)]';
+  const selectedCheckClass = isLegendary
+    ? 'bg-yellow-400 text-yellow-950 shadow-[0_0_18px_rgba(250,204,21,0.68)]'
+    : 'bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]';
+  const cardBoxShadow = selected
+    ? isLegendary
+      ? `0 18px 34px rgba(0,0,0,0.32), 0 0 34px rgba(250,204,21,0.38), inset 0 0 0 1px ${rarityStyle.accent}55`
+      : `0 18px 34px rgba(0,0,0,0.32), 0 0 30px rgba(168,85,247,0.36), inset 0 0 0 1px ${rarityStyle.accent}44`
+    : `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${rarityStyle.accent}22`;
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -102,14 +114,14 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
         }
       }}
       className={`group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
-        selected ? 'border-purple-300/80 ring-2 ring-purple-400/50 shadow-[0_0_30px_rgba(168,85,247,0.36)]' : 'hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)]'
+        selected ? selectedCardClass : 'hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
-      style={{ boxShadow: `0 18px 34px rgba(0,0,0,0.32), inset 0 0 0 1px ${rarityStyle.accent}22` }}
+      style={{ boxShadow: cardBoxShadow }}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.12),transparent_18%),radial-gradient(circle_at_88%_24%,rgba(255,255,255,0.16),transparent_14%),linear-gradient(180deg,rgba(255,255,255,0.06)_0%,transparent_46%,rgba(0,0,0,0.18)_100%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-45" style={{ backgroundImage: `radial-gradient(circle at 94% 28%, ${rarityStyle.accent} 0 1.5px, transparent 2px), radial-gradient(circle at 8% 42%, ${rarityStyle.accent} 0 1px, transparent 1.8px), radial-gradient(circle at 54% 92%, ${rarityStyle.accent} 0 1px, transparent 1.8px)`, backgroundSize: '48px 52px' }} />
       {selected ? (
-        <span className="absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]">
+        <span className={`absolute right-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-full ${selectedCheckClass}`}>
           <Check className="h-3.5 w-3.5 stroke-[4]" />
         </span>
       ) : null}

@@ -90,7 +90,7 @@ const dropTableRarityAccent: Record<string, string> = {
   uncommon: 'from-emerald-900/95 via-emerald-950/90 to-slate-950/95',
   rare: 'from-sky-900/95 via-blue-950/90 to-slate-950/95',
   epic: 'from-violet-900/95 via-purple-950/90 to-slate-950/95',
-  legendary: 'from-orange-900/95 via-amber-950/90 to-slate-950/95'
+  legendary: 'from-yellow-400/90 via-amber-600/90 to-yellow-950/95'
 };
 
 const rarityIndicatorStyle: Record<string, { color: string; glow: string; label: string }> = {
