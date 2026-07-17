@@ -45,7 +45,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
   return (
     <div className="min-h-screen bg-[#171b20] text-white">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-3 pb-24 pt-3 sm:gap-6 sm:px-6 sm:pb-14 sm:pt-6 lg:px-8">
-        <section className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,#4f26ef_0%,#557cf2_55%,#54e7b1_130%)] shadow-[0_24px_70px_rgba(0,0,0,0.35)] sm:rounded-[2rem]">
+        <section className="relative overflow-hidden rounded-[1.1rem] border border-white/10 bg-[linear-gradient(135deg,#4f26ef_0%,#557cf2_55%,#54e7b1_130%)] shadow-[0_18px_46px_rgba(0,0,0,0.30)] sm:rounded-[2rem]">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.26),transparent_27%),radial-gradient(circle_at_80%_100%,rgba(93,247,177,0.26),transparent_34%),linear-gradient(90deg,rgba(13,17,23,0.10),rgba(13,17,23,0.36))]" />
           <div className="absolute -right-20 top-1/2 hidden -translate-y-1/2 gap-3 opacity-95 sm:flex lg:right-8" aria-hidden="true">
             {(heroBoxes.length ? heroBoxes : fallbackCards).map((box, index) => {
@@ -57,30 +57,30 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds 
               );
             })}
           </div>
-          <div className="relative grid min-h-[260px] gap-5 p-5 sm:min-h-[310px] sm:p-7 lg:min-h-[360px] lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.6fr)] lg:items-center lg:p-10">
+          <div className="relative grid min-h-[185px] gap-3 p-4 sm:min-h-[310px] sm:gap-5 sm:p-7 lg:min-h-[360px] lg:grid-cols-[minmax(0,0.9fr)_minmax(300px,0.6fr)] lg:items-center lg:p-10">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-black/22 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur">
-                <Flame className="h-3.5 w-3.5 text-[#5df7b1]" /> Trending now
+              <div className="inline-flex items-center gap-2 rounded-full bg-black/22 px-2.5 py-1 text-[9px] sm:px-3 sm:py-1.5 sm:text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur">
+                <Flame className="h-3 w-3 text-[#5df7b1] sm:h-3.5 sm:w-3.5" /> Trending now
               </div>
-              <h1 className="mt-4 max-w-[680px] text-balance text-[2.7rem] font-black uppercase leading-[0.88] tracking-[-0.07em] text-white drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)] sm:text-6xl lg:text-7xl">
+              <h1 className="mt-3 max-w-[680px] text-balance text-[2rem] font-black uppercase leading-[0.9] tracking-[-0.06em] text-white drop-shadow-[0_12px_24px_rgba(0,0,0,0.24)] sm:text-6xl lg:text-7xl">
                 Open the boxes everyone is watching.
               </h1>
-              <p className="mt-4 max-w-xl text-sm font-bold leading-6 text-white/82 sm:text-base lg:text-lg">
-                A modern, minimal hero with the old Pullz banner energy: big gradient color, floating packs, and instant mobile-friendly actions.
+              <p className="mt-3 max-w-xl text-xs font-bold leading-5 text-white/82 sm:mt-4 sm:text-base sm:leading-6 lg:text-lg">
+                A modern, minimal hero with the old Pullz banner energy in a tighter, mobile-first layout.
               </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <button type="button" onClick={onViewAllBoxes} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#5df7b1] px-6 text-sm font-black uppercase tracking-wide text-[#11161c] shadow-[0_14px_34px_rgba(37,244,159,0.32)] transition hover:bg-[#80fac5] active:scale-[0.98]">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-6 sm:flex sm:flex-row sm:gap-3">
+                <button type="button" onClick={onViewAllBoxes} className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full bg-[#5df7b1] px-3 text-[11px] sm:min-h-12 sm:gap-2 sm:px-6 sm:text-sm font-black uppercase tracking-wide text-[#11161c] shadow-[0_14px_34px_rgba(37,244,159,0.32)] transition hover:bg-[#80fac5] active:scale-[0.98]">
                   Browse boxes <ArrowRight className="h-4 w-4" />
                 </button>
-                <button type="button" onClick={onSignUp} className="inline-flex min-h-12 items-center justify-center rounded-full border border-white/18 bg-white/12 px-6 text-sm font-black uppercase tracking-wide text-white backdrop-blur transition hover:bg-white/18 active:scale-[0.98]">
+                <button type="button" onClick={onSignUp} className="inline-flex min-h-10 items-center justify-center rounded-full border border-white/18 bg-white/12 px-3 text-[11px] sm:min-h-12 sm:px-6 sm:text-sm font-black uppercase tracking-wide text-white backdrop-blur transition hover:bg-white/18 active:scale-[0.98]">
                   Create account
                 </button>
               </div>
-              <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:hidden" aria-hidden="true">
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:hidden" aria-hidden="true">
                 {(heroBoxes.length ? heroBoxes : fallbackCards).slice(0, 3).map((box, index) => {
                   const realBox = 'id' in box ? box : null;
                   return (
-                    <div key={realBox?.id ?? box.title} className="grid h-24 min-w-[76px] place-items-center rounded-2xl border border-white/10 bg-black/16 p-2 backdrop-blur">
+                    <div key={realBox?.id ?? box.title} className="grid h-16 min-w-[58px] place-items-center rounded-2xl border border-white/10 bg-black/16 p-2 backdrop-blur">
                       {realBox?.image ? <img src={realBox.image} alt="" className="h-full w-full object-contain drop-shadow-[0_12px_16px_rgba(0,0,0,0.35)]" loading={index === 0 ? 'eager' : 'lazy'} decoding="async" /> : <span className="text-center text-[9px] font-black uppercase text-white/90">{box.title}</span>}
                     </div>
                   );
