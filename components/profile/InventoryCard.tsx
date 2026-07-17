@@ -50,9 +50,9 @@ const RARITY_STYLES: Record<InventoryItem['rarity'], { card: string; badge: stri
     accent: '#a855f7'
   },
   legendary: {
-    card: 'border-white/10 bg-gradient-to-br from-orange-900/95 via-amber-950/90 to-slate-950/95',
-    badge: 'border-yellow-300/60 bg-yellow-500/15 text-yellow-100',
-    image: 'border-yellow-400/45 shadow-[0_0_24px_rgba(234,179,8,0.18)]',
+    card: 'border-white/10 bg-gradient-to-br from-yellow-400/90 via-amber-600/90 to-yellow-950/95',
+    badge: 'border-yellow-200/70 bg-yellow-400/20 text-yellow-50',
+    image: 'border-yellow-300/55 shadow-[0_0_26px_rgba(250,204,21,0.24)]',
     accent: '#fbbf24'
   }
 };

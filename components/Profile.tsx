@@ -72,7 +72,7 @@ type OrderGroupSummary = {
 const getRarityBadgeClass = (rarity: InventoryItem['rarity']) => {
   switch (rarity) {
     case 'legendary':
-      return 'border-yellow-400/40 bg-yellow-400/10 text-yellow-200 shadow-[0_0_18px_rgba(234,179,8,0.08)]';
+      return 'border-yellow-200/60 bg-yellow-400/20 text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.14)]';
     case 'epic':
       return 'border-purple-400/40 bg-purple-500/10 text-purple-200';
     case 'rare':
@@ -224,7 +224,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
             return (
               <article key={orderGroup.id} className="rounded-3xl border border-white/7 bg-[#101722] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
                 <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)_13rem] sm:items-stretch">
-                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] ${order.rarity === 'legendary' || order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
+                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] ${order.rarity === 'legendary' ? 'border-yellow-300/55 bg-gradient-to-br from-yellow-400/20 via-amber-500/15 to-[#090e16] shadow-[0_0_26px_rgba(250,204,21,0.24)]' : order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
                     <div className="flex h-full w-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${activeIndex * 100}%)` }}>
                       {orderGroup.items.map((item) => (
                         <div key={item.id} className="flex h-full w-full shrink-0 items-center justify-center p-3">
