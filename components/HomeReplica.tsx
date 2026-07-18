@@ -60,7 +60,7 @@ const MobileLiveWinCard: React.FC<{ win: MobileLiveWin; onOpenBox: (boxId: strin
 const MobileCustomerReviewCard: React.FC<{ story: MobileCustomerReview }> = ({ story }) => {
   const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
   return (
-    <article className="w-[168px] shrink-0 overflow-hidden rounded-2xl bg-[#f5f7fb] p-1.5 text-slate-950 shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:w-[196px]">
+    <article className="w-[168px] shrink-0 overflow-hidden rounded-2xl border border-[#8b5cf6]/20 bg-[#101827] p-1.5 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] sm:w-[196px]">
       <div className="relative aspect-[1.35] w-full overflow-hidden rounded-[1rem] bg-[#141829]">
         <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={196} height={145} />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
@@ -70,10 +70,10 @@ const MobileCustomerReviewCard: React.FC<{ story: MobileCustomerReview }> = ({ s
         </div>
       </div>
       <div className="flex items-center gap-2 px-1.5 py-2">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-xs font-black text-white ring-2 ring-sky-100">{initial}</div>
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-xs font-black text-white ring-2 ring-[#8b5cf6]/35">{initial}</div>
         <div className="min-w-0 leading-tight">
-          <div className="truncate text-sm font-black text-slate-950">{story.username || 'Pullz customer'}</div>
-          <div className="truncate text-[11px] font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
+          <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
+          <div className="truncate text-[11px] font-bold text-slate-400">{story.timestampLabel || 'recently'}</div>
         </div>
       </div>
     </article>
@@ -81,13 +81,13 @@ const MobileCustomerReviewCard: React.FC<{ story: MobileCustomerReview }> = ({ s
 };
 
 const MobileCustomerReviewSkeleton: React.FC = () => (
-  <div className="w-[168px] shrink-0 animate-pulse overflow-hidden rounded-2xl bg-[#f5f7fb] p-1.5 sm:w-[196px]" aria-hidden="true">
+  <div className="w-[168px] shrink-0 animate-pulse overflow-hidden rounded-2xl border border-[#8b5cf6]/20 bg-[#101827] p-1.5 sm:w-[196px]" aria-hidden="true">
     <div className="aspect-[1.35] rounded-[1rem] bg-[#242b31]" />
     <div className="flex items-center gap-2 px-1.5 py-2">
-      <div className="h-8 w-8 rounded-full bg-slate-300" />
+      <div className="h-8 w-8 rounded-full bg-[#242b31]" />
       <div className="space-y-2">
-        <div className="h-3 w-20 rounded bg-slate-300" />
-        <div className="h-2.5 w-14 rounded bg-slate-300" />
+        <div className="h-3 w-20 rounded bg-[#242b31]" />
+        <div className="h-2.5 w-14 rounded bg-[#242b31]" />
       </div>
     </div>
   </div>
