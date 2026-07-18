@@ -15,7 +15,7 @@ type NavItem = {
 
 const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
-  { id: 'HOME', label: 'Menu', icon: Home },
+  { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
   { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
@@ -34,7 +34,7 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(64px + max(env(safe-area-inset-bottom), 8px))');
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(62px + max(env(safe-area-inset-bottom), 8px))');
     return () => {
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -148,11 +148,11 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/96 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
-        height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
+        height: 'calc(62px + max(env(safe-area-inset-bottom), 8px))',
         bottom: 'var(--pullz-viewport-bottom-offset, 0px)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
         transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
@@ -162,7 +162,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
+      <nav className="grid h-full grid-cols-5 items-center gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
@@ -170,7 +170,7 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <div key={item.id} className="relative flex justify-center">
               {item.id === 'PROFILE' && showFreeBoxTooltip ? (
-                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-md border border-[#3a4146]/70 bg-[#1b2024] px-2 py-1 text-[10px] font-semibold text-slate-100 shadow-lg">
+                <div className="absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-emerald-300/25 bg-[#101827]/95 px-2 py-1 text-[10px] font-semibold text-emerald-100 shadow-lg backdrop-blur-md">
                   <div className="flex items-center gap-1.5">
                     <span>Free box available</span>
                     <button
@@ -187,8 +187,8 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
-                  isActive ? 'bg-[#242b31] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]' : 'text-slate-500 hover:bg-[#242b31] hover:text-slate-300'
+                className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-transparent px-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors duration-150 active:scale-[0.98] ${
+                  isActive ? 'border-blue-300/20 bg-[#13213a] text-[#7dd3fc]' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -202,10 +202,10 @@ export const MobileBottomNav: React.FC = () => {
                       </span>
                     )}
                     {isAuthenticated && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#54f5b3] ring-1 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#7dd3fc] ring-1 ring-[#070b13]" aria-hidden="true" />
                     )}
                     {hasFreeSignupBox && (
-                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#070b13]" aria-hidden="true" />
                     )}
                   </span>
                 ) : Icon ? (
