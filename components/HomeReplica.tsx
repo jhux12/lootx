@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Coins, CreditCard, Gift, ShieldCheck, Sparkles, Star, Trophy, Truck, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useGame } from '../context/GameContext';
+import { getBoxTags } from '../utils/boxTags';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -45,7 +47,48 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 };
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
-const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
+
+const HOME_LABEL_STYLES: Record<string, { text: string; className: string }> = {
+  hot: { text: 'Hot', className: 'bg-[#ff665f] text-[#260806]' },
+  new: { text: 'New', className: 'bg-[#37ed86] text-[#062011]' },
+  top: { text: 'Popular', className: 'bg-[#29b9ff] text-[#061720]' },
+  popular: { text: 'Popular', className: 'bg-[#29b9ff] text-[#061720]' },
+  limited: { text: 'Limited', className: 'bg-[#ffd34c] text-[#241a00]' }
+};
+const HOME_LABEL_PRIORITY = ['hot', 'new', 'top', 'popular', 'limited'];
+
+const getHomeCardLabel = (box: MysteryBox) => {
+  const tags = getBoxTags(box);
+  const match = HOME_LABEL_PRIORITY.find((tag) => tags.includes(tag));
+  return match ? HOME_LABEL_STYLES[match] : null;
+};
+
+const QUICK_CASE_GRADIENTS = [
+  'bg-[linear-gradient(135deg,#6b39de,#a257ff)]',
+  'bg-[linear-gradient(135deg,#ff4b8f,#6f2a97)]',
+  'bg-[linear-gradient(135deg,#26aaff,#25527f)]',
+  'bg-[linear-gradient(135deg,#ff9f30,#754412)]',
+  'bg-[linear-gradient(135deg,#47ec85,#28623e)]',
+  'bg-[linear-gradient(135deg,#f1d448,#66580f)]'
+];
+
+const QUICK_CASE_SUBTITLES: Record<string, string> = {
+  hot: 'Hot right now',
+  tech: 'Tech pulls',
+  pokemon: 'Fan favorite',
+  digital: 'Digital chase',
+  holiday: 'Limited drop'
+};
+const getQuickCaseSubtitle = (box: MysteryBox) => QUICK_CASE_SUBTITLES[box.tag ?? ''] ?? 'Popular pick';
+
+const HOME_TABS = [
+  { id: 'all', label: 'Featured' },
+  { id: 'new', label: 'New Boxes' },
+  { id: 'popular', label: 'Popular' },
+  { id: 'premium', label: 'Premium' },
+  { id: 'budget', label: 'Under 500' }
+] as const;
+type HomeTabId = (typeof HOME_TABS)[number]['id'];
 
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -60,34 +103,38 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
 const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) => {
   const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
   return (
-    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#202337] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
-      <div className="aspect-[4/5] w-full overflow-hidden bg-[#141829]">
-        <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={298} height={373} />
-      </div>
-      <div className="p-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-sm font-black text-white ring-2 ring-white/80">{initial}</div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
-            <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
-          </div>
+    <article className="min-w-[280px] max-w-[280px] shrink-0 rounded-xl border border-white/[0.075] bg-[#15141d] p-3.5 shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
+      <div className="flex items-center gap-2.5">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[linear-gradient(145deg,#8c49df,#2a1e3b)] text-sm font-black text-white">{initial}</div>
+        <div className="min-w-0">
+          <div className="truncate text-xs font-black text-white">{story.username || 'Pullz customer'}</div>
+          <div className="text-[10px] font-bold text-[#777482]">{story.timestampLabel || 'recently'}</div>
         </div>
-        {story.caption ? <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption}</p> : null}
+      </div>
+      {story.caption ? <p className="mt-3 text-xs font-semibold leading-5 text-[#aaa6b0]">{story.caption}</p> : null}
+      <div className="mt-3 aspect-[4/3] w-full overflow-hidden rounded-lg bg-[#0d0c13]">
+        <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={280} height={210} />
+      </div>
+      <div className="mt-2.5 flex items-center gap-0.5 text-[#37ed86]" aria-label="5 out of 5 stars">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Star key={index} className="h-3.5 w-3.5 fill-current" />
+        ))}
       </div>
     </article>
   );
 };
 
 const MobileCustomerReviewSkeleton = () => (
-  <div className="min-w-[298px] animate-pulse overflow-hidden rounded-md" aria-hidden="true">
-    <div className="aspect-[4/5] rounded-md bg-[#242b31]" />
-    <div className="flex items-center gap-2 px-1 pt-3">
-      <div className="h-9 w-9 rounded-full bg-[#242b31]" />
+  <div className="min-w-[280px] animate-pulse rounded-xl border border-white/[0.075] bg-[#15141d] p-3.5" aria-hidden="true">
+    <div className="flex items-center gap-2.5">
+      <div className="h-9 w-9 rounded-lg bg-[#1d1b29]" />
       <div className="space-y-2">
-        <div className="h-3 w-24 rounded bg-[#242b31]" />
-        <div className="h-2.5 w-16 rounded bg-[#242b31]" />
+        <div className="h-2.5 w-24 rounded bg-[#1d1b29]" />
+        <div className="h-2 w-16 rounded bg-[#1d1b29]" />
       </div>
     </div>
+    <div className="mt-3 h-8 w-full rounded bg-[#1d1b29]" />
+    <div className="mt-3 aspect-[4/3] w-full rounded-lg bg-[#1d1b29]" />
   </div>
 );
 
@@ -95,19 +142,18 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
   <button
     type="button"
     onClick={onSubmit}
-    className="flex min-w-[298px] flex-col items-center justify-center rounded-md border-2 border-dashed border-[#5df7b1]/55 bg-[#202337]/78 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
+    className="flex min-w-[280px] max-w-[280px] shrink-0 flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#37ed86]/45 bg-[#15141d]/80 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
   >
-    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#5df7b1]/15 text-3xl">＋</div>
-    <h3 className="mt-4 text-xl font-black uppercase text-white">Submit Yours</h3>
-    <p className="mt-2 max-w-[210px] text-sm font-bold leading-5 text-slate-300">Share your Pullz delivery or big hit for a chance to be featured.</p>
+    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#37ed86]/15 text-3xl">＋</div>
+    <h3 className="mt-4 text-lg font-black uppercase text-white">Submit Yours</h3>
+    <p className="mt-2 max-w-[210px] text-xs font-bold leading-5 text-[#a4a0ae]">Share your Pullz delivery or big hit for a chance to be featured.</p>
   </button>
 );
 
-const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
-  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
-  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
-  const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes, onSignUp }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void; onSignUp: () => void }) => {
+  const { isAuthenticated, openAuthModal, setView, user } = useGame();
   const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState<HomeTabId>('all');
   const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [isSubmitReviewOpen, setIsSubmitReviewOpen] = useState(false);
@@ -117,12 +163,32 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const cards = boxes.slice(0, 6);
   const originals = cards.length ? cards.slice(0, 3) : [];
-  const trendingBoxes = useMemo(() => {
-    const selected = trendingBoxIds
-      .map((id) => boxes.find((box) => box.id === id))
-      .filter(Boolean) as MysteryBox[];
-    return (selected.length ? selected : boxes).slice(0, 6);
-  }, [boxes, trendingBoxIds]);
+  const quickCases = useMemo(() => boxes.slice(0, 6), [boxes]);
+  const homeGridBoxes = useMemo(() => {
+    const withCoins = boxes.map((box) => ({ box, coins: toCoins(box.price, PRICE_UNIT_MODE), tags: getBoxTags(box) }));
+    let list = withCoins;
+    switch (activeTab) {
+      case 'new':
+        list = [...withCoins].sort((a, b) => (b.box.createdAt ?? 0) - (a.box.createdAt ?? 0));
+        break;
+      case 'popular':
+        list = [...withCoins].sort((a, b) => {
+          const aScore = a.tags.some((tag) => tag === 'popular' || tag === 'top' || tag === 'hot') ? 1 : 0;
+          const bScore = b.tags.some((tag) => tag === 'popular' || tag === 'top' || tag === 'hot') ? 1 : 0;
+          return bScore - aScore || b.coins - a.coins;
+        });
+        break;
+      case 'premium':
+        list = [...withCoins].sort((a, b) => b.coins - a.coins);
+        break;
+      case 'budget':
+        list = withCoins.filter(({ coins }) => coins < 500);
+        break;
+      default:
+        list = withCoins;
+    }
+    return list.slice(0, 10).map(({ box }) => box);
+  }, [boxes, activeTab]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
     const itemPool = boxes
       .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
@@ -189,13 +255,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
 
   useEffect(() => {
-    const heroTimer = window.setInterval(() => {
-      setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
-    }, 10000);
-    return () => window.clearInterval(heroTimer);
-  }, []);
-
-  useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
     const loadReviews = () => {
@@ -252,49 +311,25 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     };
   }, []);
 
-  const heroSlides = ['deposit-match', 'hot-picks'] as const;
-  const showDepositSlide = activeHeroSlide === 0;
-
-  const goToHeroSlide = (direction: 1 | -1) => {
-    setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
-  };
-
-  const handleHeroTouchStart = (event: React.TouchEvent<HTMLButtonElement>) => {
-    const touch = event.touches[0];
-    if (!touch) return;
-    heroTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
-  };
-
-  const handleHeroTouchEnd = (event: React.TouchEvent<HTMLButtonElement>) => {
-    const start = heroTouchStartRef.current;
-    heroTouchStartRef.current = null;
-    const touch = event.changedTouches[0];
-    if (!start || !touch) return;
-    const deltaX = touch.clientX - start.x;
-    const deltaY = touch.clientY - start.y;
-    if (Math.abs(deltaX) < 36 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-    goToHeroSlide(deltaX < 0 ? 1 : -1);
-  };
-
-  const handleHeroAction = () => {
-    if (showDepositSlide) {
-      if (!isAuthenticated) {
-        openAuthModal('login');
-        return;
-      }
-
-      setTopUpModalIntent({
-        reason: 'insufficient_balance',
-        requiredCoins: 10000,
-        currentBalance: Number(user.balance ?? 0),
-        missingCoins: Math.max(0, 10000 - Number(user.balance ?? 0)),
-        preferredPackageUsd: 50
-      });
-      setShowTopUpModal(true);
+  const handleClaimFreeBox = () => {
+    if (!isAuthenticated) {
+      onSignUp();
       return;
     }
-
     onViewAllBoxes();
+  };
+
+  const handleReferFriend = () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setView({ type: 'REFERRALS' });
+  };
+
+  const scrollToHowItWorks = () => {
+    if (typeof document === 'undefined') return;
+    document.getElementById('mobile-how-it-works')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleSubmitReview = () => {
@@ -366,51 +401,90 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
   return (
     <div className="animate-in fade-in duration-500">
+      <style>{`
+        @keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }
+        @keyframes pullz-hero-float { 50% { transform: translateY(-10px); } }
+        .pullz-hero-box { animation: pullz-hero-float 4.2s ease-in-out infinite; filter: drop-shadow(0 25px 28px rgba(0,0,0,.48)); }
+        .pullz-hero-box .pullz-box-item { position:absolute; width:34px; height:50px; border-radius:6px; box-shadow:0 9px 18px rgba(0,0,0,.25); }
+        .pullz-hero-box .pullz-box-item:nth-child(1){ left:2px; top:-34px; transform:rotate(-18deg); background:linear-gradient(145deg,#d1d1d7,#676873); }
+        .pullz-hero-box .pullz-box-item:nth-child(2){ left:44px; top:-44px; background:linear-gradient(145deg,#a950ff,#3c2454); }
+        .pullz-hero-box .pullz-box-item:nth-child(3){ right:2px; top:-34px; transform:rotate(17deg); background:linear-gradient(145deg,#ffbecf,#7d3d75); }
+        .pullz-hero-box .pullz-box-body { position:absolute; inset:0; clip-path:polygon(9% 0,91% 0,100% 15%,92% 100%,8% 100%,0 15%); background: linear-gradient(90deg,transparent 0 19%,rgba(255,255,255,.13) 20% 24%,transparent 25% 46%,rgba(255,255,255,.11) 47% 51%,transparent 52% 76%,rgba(255,255,255,.11) 77% 81%,transparent 82%), linear-gradient(145deg,#5c606a,#292b34 72%); }
+        .pullz-hero-box .pullz-box-body::before { content:""; position:absolute; left:14px; right:14px; top:26px; height:16px; background:linear-gradient(90deg,#6b3ce9,#a55eff); box-shadow:0 0 14px rgba(117,64,237,.56); }
+        .pullz-referral-art { clip-path:polygon(9% 0,91% 0,100% 15%,92% 100%,8% 100%,0 15%); background: linear-gradient(90deg,transparent 0 18%,rgba(255,255,255,.13) 19% 23%,transparent 24% 44%,rgba(255,255,255,.11) 45% 49%,transparent 50% 70%,rgba(255,255,255,.11) 71% 75%,transparent 76%), linear-gradient(145deg,#6d41ee,#29243d 70%); box-shadow:0 0 25px rgba(117,64,237,.36); }
+        .pullz-referral-art::before { content:"\\2197"; position:absolute; inset:0; display:grid; place-items:center; font-size:34px; font-weight:1000; color:#c9a7ff; }
+      `}</style>
+
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
-          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(93,247,177,0.22),transparent_38%)]" />
-              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
-                  <Coins
-                    key={`hero-raining-coin-${coinIndex}`}
-                    className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
-                    style={{
-                      left: `${8 + ((coinIndex * 8) % 86)}%`,
-                      animationDelay: `${coinIndex * -0.45}s`,
-                      animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
-                      transform: `rotate(${coinIndex * 23}deg)`
-                    }}
-                  />
-                ))}
-              </div>
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
-              </div>
-              <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {quickCases.map((box, index) => (
+            <button
+              key={box.id}
+              type="button"
+              onClick={() => onOpenBox(box.id)}
+              className="grid min-w-[150px] shrink-0 grid-cols-[38px_1fr_auto] items-center gap-2 rounded-xl border border-white/[0.075] bg-[#14131c] p-2 text-left transition-transform duration-150 hover:-translate-y-0.5"
+            >
+              <span className={`grid h-[38px] w-[38px] shrink-0 place-items-center overflow-hidden rounded-lg ${QUICK_CASE_GRADIENTS[index % QUICK_CASE_GRADIENTS.length]}`}>
+                {box.image ? <img src={box.image} alt="" className="h-7 w-7 object-contain" loading="lazy" decoding="async" /> : null}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[10px] font-black text-white">{box.name}</span>
+                <span className="mt-0.5 block truncate text-[8px] font-bold text-[#777482]">{getQuickCaseSubtitle(box)}</span>
+              </span>
+              <CoinAmount amount={Math.round(toCoins(box.price, PRICE_UNIT_MODE))} className="shrink-0 text-[9px] font-black text-[#d6d1df]" iconClassName="h-2.5 w-2.5" animated={false} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
+        <div className="mx-auto grid w-full max-w-[1180px] grid-cols-1 gap-2.5 sm:grid-cols-[1.35fr_.82fr] sm:gap-3">
+          <article className="relative overflow-hidden rounded-2xl border border-white/[0.075] bg-[radial-gradient(circle_at_72%_45%,rgba(131,58,244,.36),transparent_34%),linear-gradient(135deg,#24163a,#17131f_72%)] p-5 shadow-[0_28px_70px_rgba(0,0,0,.42)] sm:p-7 lg:p-9">
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map((coinIndex) => (
+                <Coins
+                  key={`hero-raining-coin-${coinIndex}`}
+                  className="absolute h-4 w-4 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/70 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-6 sm:w-6"
+                  style={{
+                    left: `${8 + ((coinIndex * 11) % 86)}%`,
+                    animationDelay: `${coinIndex * -0.6}s`,
+                    animationDuration: `${5.2 + (coinIndex % 4) * 0.55}s`,
+                    transform: `rotate(${coinIndex * 23}deg)`
+                  }}
+                />
+              ))}
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(93,247,177,0.22),transparent_36%)]" />
-              <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
-                <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
-                <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
-                <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
+            <div className="relative z-10 max-w-[380px]">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-[#854bff]/24 bg-[#7540ed]/13 px-3 py-1.5 text-[9px] font-black uppercase tracking-wide text-[#d8c4ff]">
+                <Gift className="h-3 w-3" />{isAuthenticated ? 'Boxes refreshed daily' : 'Free first box available'}
               </div>
-              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
-                  </div>
-                ))}
+              <h1 className="mt-3 max-w-[300px] text-[26px] font-black leading-[0.98] tracking-tight text-white sm:text-[36px] lg:text-[46px]">
+                {isAuthenticated ? 'Open your next Pullz box.' : 'Sign up and claim your first Pullz box.'}
+              </h1>
+              <p className="mt-3 max-w-[360px] text-[11px] leading-relaxed text-[#b1acbb] sm:text-xs">
+                Open curated cases containing real graded cards. Keep the item in your vault, request tracked shipping, or sell it back for coins.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" onClick={handleClaimFreeBox} className="inline-flex min-h-[38px] items-center justify-center rounded-lg bg-[linear-gradient(135deg,#8e4df7,#6635dd)] px-4 text-[10px] font-black uppercase text-white shadow-[0_12px_28px_rgba(101,52,221,.25)]">Claim Free Box</button>
+                <button type="button" onClick={scrollToHowItWorks} className="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-white/[0.14] bg-white/[0.03] px-4 text-[10px] font-black uppercase text-white">How Pullz Works</button>
               </div>
             </div>
-          </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
-        </button>
-        <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#52f7b0]' : 'bg-slate-600'}`} />)}
+            <div className="pullz-hero-box absolute bottom-3 right-1/2 hidden h-[128px] w-[165px] translate-x-1/2 sm:right-6 sm:block sm:h-[130px] sm:w-[168px] sm:translate-x-0 lg:right-9 lg:h-[152px] lg:w-[195px]" aria-hidden="true">
+              <div className="relative h-full w-full">
+                <span className="pullz-box-item" />
+                <span className="pullz-box-item" />
+                <span className="pullz-box-item" />
+                <div className="pullz-box-body" />
+              </div>
+            </div>
+          </article>
+
+          <article className="relative overflow-hidden rounded-2xl border border-white/[0.075] bg-[radial-gradient(circle_at_74%_35%,rgba(142,63,246,.33),transparent_37%),linear-gradient(135deg,#24173b,#17131f)] p-5 sm:p-6">
+            <h2 className="max-w-[235px] text-lg font-black leading-tight tracking-tight text-white sm:text-xl">Earn rewards when friends join.</h2>
+            <p className="mt-2.5 max-w-[210px] text-[11px] leading-relaxed text-[#aaa5b2]">Share your code and earn bonus coins after qualifying activity.</p>
+            <button type="button" onClick={handleReferFriend} className="mt-4 inline-flex min-h-[38px] items-center justify-center rounded-lg bg-[linear-gradient(135deg,#8e4df7,#6635dd)] px-4 text-[10px] font-black uppercase text-white shadow-[0_12px_28px_rgba(101,52,221,.25)]">Refer a Friend</button>
+            <div className="pullz-referral-art absolute bottom-3 right-3 hidden h-[80px] w-[100px] sm:block" aria-hidden="true" />
+          </article>
         </div>
       </section>
 
@@ -422,56 +496,81 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { label: 'Instant Sellback', sublabel: 'Get Coins Fast', icon: Zap },
             { label: 'Secure Payments', sublabel: 'Instant Delivery', icon: CreditCard }
           ].map(({ label, sublabel, icon: Icon }) => (
-            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-[#24314a] bg-[#101827] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
-              <Icon className="mb-1.5 h-5 w-5 text-[#55f7c3]" strokeWidth={2.2} aria-hidden="true" />
+            <div key={label} className="flex h-[72px] min-w-0 flex-col items-center justify-center rounded-[1rem] border border-white/[0.075] bg-[#12111a] text-center shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]" aria-label={`${label}: ${sublabel}`}>
+              <Icon className="mb-1.5 h-5 w-5 text-[#37ed86]" strokeWidth={2.2} aria-hidden="true" />
               <span className="text-[10px] font-black uppercase leading-none tracking-tight text-white sm:text-[13px]">{label}</span>
-              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#55f7c3]">{sublabel}</span>
+              <span className="mt-0.5 text-[7px] font-black uppercase tracking-wide text-[#37ed86]">{sublabel}</span>
             </div>
           ))}
         </div>
       </section>
 
       <section id="mobile-trending-boxes" className="pullz-home-trending-grid scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
-          <button type="button" onClick={onViewAllBoxes} className="rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98]">See more</button>
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {HOME_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`whitespace-nowrap rounded-lg border px-3 py-2 text-[9px] font-black uppercase transition-colors ${activeTab === tab.id ? 'border-[#7540ed]/50 bg-[#7540ed]/20 text-white' : 'border-white/[0.075] bg-[#12111a] text-[#8e8a96]'}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={onViewAllBoxes} className="shrink-0 text-[10px] font-black uppercase text-[#aba6b4]">View all boxes →</button>
         </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[158px] overflow-hidden rounded-xl bg-[#252b3a] p-3 text-left active:scale-[0.98] sm:h-[170px] lg:h-[188px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(93,247,177,0.12),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
-              <img src={box.image} alt="" width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="relative z-10 h-[106px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[116px] lg:h-[128px]" />
-              <span className="absolute left-1.5 top-1.5 z-20 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span>
-              <div className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-between gap-2 rounded-lg bg-black/22 px-2 py-1.5">
-                <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-[10px] font-black text-[#5df7b1] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {(homeGridBoxes.length ? homeGridBoxes : Array.from({ length: 10 }) as MysteryBox[]).map((box, index) => {
+            if (!box) {
+              return <div key={`trending-loading-${index}`} className="h-[220px] animate-pulse rounded-xl bg-[#171621] sm:h-[240px]" aria-hidden="true" />;
+            }
+            const label = getHomeCardLabel(box);
+            return (
+              <div
+                key={box.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenBox(box.id)}
+                onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenBox(box.id); } }}
+                className="group relative flex h-[220px] cursor-pointer flex-col overflow-hidden rounded-xl border border-white/[0.075] bg-[#15141d] p-2.5 text-left transition-transform duration-150 hover:-translate-y-1 sm:h-[240px]"
+              >
+                {label ? <span className={`absolute left-2 top-2 z-20 rounded px-1.5 py-0.5 text-[7px] font-black uppercase ${label.className}`}>{label.text}</span> : null}
+                <div className="relative z-10 flex flex-1 items-center justify-center rounded-lg bg-[#171621]">
+                  <img src={box.image} alt="" width={140} height={140} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-[86px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[96px]" />
+                </div>
+                <h3 className="mt-2 truncate text-[10px] font-bold text-white sm:text-[11px]">{box.name}</h3>
+                <div className="mt-1 flex items-center justify-between gap-2 text-[#777482]">
+                  <span className="text-[8px] font-bold">{box.items.length} possible pulls</span>
+                  <CoinAmount amount={Math.round(toCoins(box.price, PRICE_UNIT_MODE))} className="text-[9px] font-black text-white" iconClassName="h-2.5 w-2.5" animated={false} />
+                </div>
+                <div className="mt-2 w-full rounded-lg bg-[linear-gradient(135deg,#7843ef,#5c31ca)] py-1.5 text-center text-[8px] font-black uppercase text-white">Open Box</div>
               </div>
-            </button>
-          ) : (
-            <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#242b31] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
-          ))}
+            );
+          })}
         </div>
       </section>
 
       <section id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
-          <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
+          <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#12111a] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#12111a] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
         </div>
         <div className="overflow-hidden">
           <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeLiveWinIndex * 108}px,0,0)` }}>
             {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
-            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#171621]" aria-hidden="true" />) : null}
           </div>
         </div>
       </section>
 
       <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
-          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
+          <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Fresh Deliveries</h2></div>
+          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#12111a] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
             <span>Submit Your Pull, Get</span>
-            <span className="inline-flex items-center gap-1 text-[#5df7b1]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
+            <span className="inline-flex items-center gap-1 text-[#37ed86]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
@@ -488,10 +587,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             { icon: '🏆', title: 'Pull Real Items', body: 'Every spin reveals an item you can keep or instantly sell back.' },
             { icon: '📦', title: 'Ship Your Wins', body: "Build an order and we’ll ship it directly to your door." }
           ].map((step) => (
-            <article key={step.title} className="relative overflow-hidden rounded-2xl border border-[#24314a] bg-[#101827] p-4 shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(93,247,177,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]" />
+            <article key={step.title} className="relative overflow-hidden rounded-2xl border border-white/[0.075] bg-[#12111a] p-4 shadow-[inset_0_0_18px_rgba(255,255,255,0.025),0_10px_20px_rgba(0,0,0,0.16)]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(55,237,134,0.08),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent)]" />
               <div className="relative z-10 flex items-start gap-3 sm:flex-col">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#242b31] text-2xl shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]" aria-hidden="true">{step.icon}</span>
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#171621] text-2xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.075)]" aria-hidden="true">{step.icon}</span>
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-tight text-white">{step.title}</h3>
                   <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{step.body}</p>
@@ -506,13 +605,13 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         <div className="fixed inset-0 z-[260] flex items-end bg-black/70 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-sm">
           <form onSubmit={handleSubmitReviewUpload} className="w-full rounded-2xl border border-white/10 bg-[#15192a] p-4 text-white shadow-2xl">
             <div className="mb-3 flex items-center justify-between"><h3 className="text-lg font-black uppercase">Submit yours</h3><button type="button" onClick={() => setIsSubmitReviewOpen(false)} className="grid h-9 w-9 place-items-center rounded-full bg-white/10">×</button></div>
-            <label className="block rounded-xl border border-dashed border-[#5df7b1]/50 bg-black/20 p-4 text-center text-sm font-bold text-slate-200">
+            <label className="block rounded-xl border border-dashed border-[#37ed86]/50 bg-black/20 p-4 text-center text-sm font-bold text-slate-200">
               {submitReviewFile ? submitReviewFile.name : 'Tap to add an image'}
               <input type="file" accept="image/*" className="sr-only" onChange={(event) => setSubmitReviewFile(event.target.files?.[0] ?? null)} />
             </label>
             <textarea value={submitReviewCaption} onChange={(event) => setSubmitReviewCaption(event.target.value)} placeholder="Caption (optional)" className="mt-3 min-h-20 w-full rounded-xl border border-white/10 bg-[#0d1220] p-3 text-sm text-white" />
-            {submitReviewNotice && <p className="mt-2 text-sm font-bold text-[#5df7b1]">{submitReviewNotice}</p>}
-            <button type="submit" disabled={isSubmittingReview} className="mt-3 w-full rounded-xl bg-[#5df7b1] px-4 py-3 text-sm font-black uppercase text-[#101827] disabled:opacity-60">{isSubmittingReview ? 'Submitting...' : 'Submit for review'}</button>
+            {submitReviewNotice && <p className="mt-2 text-sm font-bold text-[#37ed86]">{submitReviewNotice}</p>}
+            <button type="submit" disabled={isSubmittingReview} className="mt-3 w-full rounded-xl bg-[#37ed86] px-4 py-3 text-sm font-black uppercase text-[#062011] disabled:opacity-60">{isSubmittingReview ? 'Submitting...' : 'Submit for review'}</button>
           </form>
         </div>
       )}
@@ -520,11 +619,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes, onSignUp }) => {
   return (
-    <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
+    <div className="pullz-home-shell min-h-screen bg-[#0b0a11] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} onSignUp={onSignUp} />
       </main>
     </div>
   );
