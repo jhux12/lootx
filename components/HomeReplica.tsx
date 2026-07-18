@@ -11,6 +11,7 @@ type HomeReplicaProps = {
   boxes: MysteryBox[];
   demoBoxId?: string | null;
   trendingBoxIds?: string[];
+  heroImageUrls?: string[];
   isChatCollapsed: boolean;
   onOpenBox: (boxId: string) => void;
   onViewAllBoxes: () => void;
@@ -46,6 +47,10 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
+const DEFAULT_HOME_HERO_IMAGES = [
+  MOBILE_DEPOSIT_MATCH_IMAGE,
+  ''
+];
 
 const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -103,7 +108,7 @@ const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
   </button>
 );
 
-const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, trendingBoxIds, heroImageUrls, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; heroImageUrls: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -253,6 +258,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   }, []);
 
   const heroSlides = ['deposit-match', 'hot-picks'] as const;
+  const resolvedHeroImages = heroSlides.map((_, index) => heroImageUrls[index]?.trim() || DEFAULT_HOME_HERO_IMAGES[index] || '');
   const showDepositSlide = activeHeroSlide === 0;
 
   const goToHeroSlide = (direction: 1 | -1) => {
@@ -366,10 +372,12 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
 
   return (
     <div className="animate-in fade-in duration-500">
-      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
+      <section className="relative left-1/2 w-screen -translate-x-1/2 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative h-[clamp(128px,31vw,220px)] w-full overflow-hidden text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[#060910] p-3 sm:p-5 lg:p-8">
+              {resolvedHeroImages[0] ? <img src={resolvedHeroImages[0]} alt="First deposit bonus" className="absolute inset-0 h-full w-full object-cover" loading="eager" decoding="async" fetchPriority="high" /> : null}
+              <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/10 to-black/20" />
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
@@ -392,7 +400,8 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(139,92,246,0.22),transparent_36%)]" />
+              {resolvedHeroImages[1] ? <img src={resolvedHeroImages[1]} alt="Trending boxes" className="absolute inset-0 h-full w-full object-cover" loading="lazy" decoding="async" /> : null}
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.58),rgba(0,0,0,0.12),rgba(0,0,0,0.35)),radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(139,92,246,0.22),transparent_36%)]" />
               <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
                 <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
@@ -524,11 +533,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], heroImageUrls = [], onOpenBox, onViewAllBoxes }) => {
   return (
-    <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
+    <div className="pullz-home-shell min-h-screen overflow-x-hidden bg-[#1b2024] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} heroImageUrls={heroImageUrls} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );

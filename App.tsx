@@ -286,6 +286,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const performanceMode = usePerformanceMode();
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const [homepageTrendingBoxIds, setHomepageTrendingBoxIds] = useState<string[]>([]);
+  const [homepageHeroImageUrls, setHomepageHeroImageUrls] = useState<string[]>([]);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
   const [showHomePrompt, setShowHomePrompt] = useState(false);
   const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
@@ -355,12 +356,15 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         (config) => {
           const nextDemoBoxId = config?.demoBoxId ?? null;
           const nextTrendingBoxIds = config?.trendingBoxIds ?? [];
+          const nextHeroImageUrls = config?.heroImageUrls ?? [];
           setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
           setHomepageTrendingBoxIds((current) => (current.join('|') === nextTrendingBoxIds.join('|') ? current : nextTrendingBoxIds));
+          setHomepageHeroImageUrls((current) => (current.join('|') === nextHeroImageUrls.join('|') ? current : nextHeroImageUrls));
         },
         () => {
           setHomepageDemoBoxId((current) => (current === null ? current : null));
           setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
+          setHomepageHeroImageUrls((current) => (current.length === 0 ? current : []));
         }
       );
     }, 4200);
@@ -653,6 +657,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           boxes={baseHomeBoxes}
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
+          heroImageUrls={homepageHeroImageUrls}
           isChatCollapsed={isChatCollapsed}
           onOpenBox={(boxId) => {
             playSound('click');

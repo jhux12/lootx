@@ -54,6 +54,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
   const [demoBoxId, setDemoBoxId] = useState<string>('');
   const [trustImageUrl, setTrustImageUrl] = useState<string>('');
   const [trendingBoxIds, setTrendingBoxIds] = useState<string[]>([]);
+  const [heroImageUrls, setHeroImageUrls] = useState<string[]>(['', '']);
 
   useEffect(() => {
     const unsubscribe = subscribeHomepageConfig(
@@ -62,6 +63,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         setDemoBoxId(config?.demoBoxId ?? '');
         setTrustImageUrl(config?.trustImageUrl ?? '');
         setTrendingBoxIds(config?.trendingBoxIds ?? []);
+        setHeroImageUrls([config?.heroImageUrls?.[0] ?? '', config?.heroImageUrls?.[1] ?? '']);
         setIsLoading(false);
       },
       () => {
@@ -94,18 +96,21 @@ export const HomepageShowcaseEditor: React.FC = () => {
     successMessage?: string,
     nextDemoBoxId = demoBoxId,
     nextTrustImageUrl = trustImageUrl,
-    nextTrendingBoxIds = trendingBoxIds
+    nextTrendingBoxIds = trendingBoxIds,
+    nextHeroImageUrls = heroImageUrls
   ) => {
     setShowcaseRows(nextRows);
     setDemoBoxId(nextDemoBoxId);
     setTrustImageUrl(nextTrustImageUrl);
     setTrendingBoxIds(nextTrendingBoxIds);
+    setHeroImageUrls(nextHeroImageUrls);
     try {
       await saveHomepageConfig({
         showcaseRows: nextRows,
         demoBoxId: nextDemoBoxId || null,
         trustImageUrl: nextTrustImageUrl || null,
-        trendingBoxIds: nextTrendingBoxIds
+        trendingBoxIds: nextTrendingBoxIds,
+        heroImageUrls: nextHeroImageUrls
       });
       if (successMessage) showToast('success', successMessage);
     } catch (error) {
@@ -126,11 +131,23 @@ export const HomepageShowcaseEditor: React.FC = () => {
     persistRows(showcaseRows, 'Trust image updated.', demoBoxId, trustImageUrl.trim());
   };
 
+  const handleHeroImageChange = (index: number, value: string) => {
+    setHeroImageUrls((current) => {
+      const next = [...current];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const handleHeroImagesSave = () => {
+    persistRows(showcaseRows, 'Hero images updated.', demoBoxId, trustImageUrl, trendingBoxIds, heroImageUrls.map((url) => url.trim()));
+  };
+
   const handleTrendingBoxToggle = (boxId: string) => {
     const nextTrendingBoxIds = trendingBoxIds.includes(boxId)
       ? trendingBoxIds.filter((id) => id !== boxId)
       : [...trendingBoxIds, boxId].slice(0, 6);
-    persistRows(showcaseRows, 'Trending boxes updated.', demoBoxId, trustImageUrl, nextTrendingBoxIds);
+    persistRows(showcaseRows, 'Trending boxes updated.', demoBoxId, trustImageUrl, nextTrendingBoxIds, heroImageUrls);
   };
 
   const handleDeleteRow = (rowId: string) => {
@@ -293,6 +310,47 @@ export const HomepageShowcaseEditor: React.FC = () => {
         >
           <Plus className="h-4 w-4" /> Add Row
         </button>
+      </div>
+
+
+      <div className="rounded-xl border border-gray-800 bg-[#131720] p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-white">Homepage Hero Images</h3>
+            <p className="text-sm text-gray-400">Use direct image links for the full-width mobile hero slides.</p>
+          </div>
+          <div className="rounded-lg border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs font-semibold text-violet-100">
+            Recommended size: 1600 × 420 px (minimum 1200 × 315 px), JPG/PNG/WebP, safe text centered vertically.
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {[
+            { label: 'Slide 1 image URL', placeholder: 'https://your-cdn.com/home-hero-deposit.webp' },
+            { label: 'Slide 2 image URL', placeholder: 'https://your-cdn.com/home-hero-trending.webp' }
+          ].map((field, index) => (
+            <label key={field.label} className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
+              {field.label}
+              <Input
+                type="url"
+                value={heroImageUrls[index] ?? ''}
+                onChange={(event) => handleHeroImageChange(index, event.target.value)}
+                onBlur={handleHeroImagesSave}
+                placeholder={field.placeholder}
+              />
+              <span className="block text-[11px] normal-case tracking-normal text-gray-500">
+                This slide crops with object-fit cover so it stays edge-to-edge on phones, tablets, and desktop widths.
+              </span>
+              {heroImageUrls[index]?.trim() && (
+                <img
+                  src={heroImageUrls[index].trim()}
+                  alt={`Homepage hero slide ${index + 1} preview`}
+                  className="mt-2 aspect-[16/4.2] w-full rounded-lg border border-gray-800 object-cover"
+                  loading="lazy"
+                />
+              )}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-800 bg-[#131720] p-4 lg:grid-cols-3">
