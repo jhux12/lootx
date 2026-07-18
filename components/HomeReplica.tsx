@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
@@ -47,7 +47,7 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 
-const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: (boxId: string) => void }) => (
+const MobileLiveWinCard: React.FC<{ win: MobileLiveWin; onOpenBox: (boxId: string) => void }> = ({ win, onOpenBox }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(255,255,255,0.16),transparent_34%),radial-gradient(circle_at_85%_20%,rgba(255,255,255,0.12),transparent_18%),linear-gradient(180deg,transparent_48%,rgba(0,0,0,0.28))]" />
     {win.image ? <img src={win.image} alt="" width={96} height={96} decoding="async" className="absolute inset-x-0 bottom-2 top-3 z-10 mx-auto h-[96px] w-[96px] object-contain drop-shadow-[0_13px_16px_rgba(0,0,0,0.42)]" loading="lazy" /> : null}
@@ -57,49 +57,51 @@ const MobileLiveWinCard = ({ win, onOpenBox }: { win: MobileLiveWin; onOpenBox: 
 );
 
 
-const MobileCustomerReviewCard = ({ story }: { story: MobileCustomerReview }) => {
+const MobileCustomerReviewCard: React.FC<{ story: MobileCustomerReview }> = ({ story }) => {
   const initial = (story.username || 'P').trim().charAt(0).toUpperCase();
   return (
-    <article className="min-w-[298px] overflow-hidden rounded-md bg-[#202337] shadow-[0_14px_28px_rgba(0,0,0,0.28)]">
-      <div className="aspect-[4/5] w-full overflow-hidden bg-[#141829]">
-        <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={298} height={373} />
-      </div>
-      <div className="p-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-sm font-black text-white ring-2 ring-white/80">{initial}</div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
-            <div className="text-xs font-bold text-slate-500">{story.timestampLabel || 'recently'}</div>
-          </div>
+    <article className="w-[168px] shrink-0 overflow-hidden rounded-2xl border border-[#8b5cf6]/20 bg-[#101827] p-1.5 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] sm:w-[196px]">
+      <div className="relative aspect-[1.35] w-full overflow-hidden rounded-[1rem] bg-[#141829]">
+        <img src={story.mediaUrl} alt={`${story.username || 'Customer'} Pullz review`} className="h-full w-full object-cover" loading="lazy" decoding="async" width={196} height={145} />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 to-transparent" />
+        <div className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-[#202337]/90 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-white shadow-lg backdrop-blur">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.85)]" aria-hidden="true" />
+          Hit proof
         </div>
-        {story.caption ? <p className="mt-3 text-sm font-bold leading-5 text-indigo-100">{story.caption}</p> : null}
+      </div>
+      <div className="flex items-center gap-2 px-1.5 py-2">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-orange-300 to-purple-500 text-xs font-black text-white ring-2 ring-[#8b5cf6]/35">{initial}</div>
+        <div className="min-w-0 leading-tight">
+          <div className="truncate text-sm font-black text-white">{story.username || 'Pullz customer'}</div>
+          <div className="truncate text-[11px] font-bold text-slate-400">{story.timestampLabel || 'recently'}</div>
+        </div>
       </div>
     </article>
   );
 };
 
-const MobileCustomerReviewSkeleton = () => (
-  <div className="min-w-[298px] animate-pulse overflow-hidden rounded-md" aria-hidden="true">
-    <div className="aspect-[4/5] rounded-md bg-[#242b31]" />
-    <div className="flex items-center gap-2 px-1 pt-3">
-      <div className="h-9 w-9 rounded-full bg-[#242b31]" />
+const MobileCustomerReviewSkeleton: React.FC = () => (
+  <div className="w-[168px] shrink-0 animate-pulse overflow-hidden rounded-2xl border border-[#8b5cf6]/20 bg-[#101827] p-1.5 sm:w-[196px]" aria-hidden="true">
+    <div className="aspect-[1.35] rounded-[1rem] bg-[#242b31]" />
+    <div className="flex items-center gap-2 px-1.5 py-2">
+      <div className="h-8 w-8 rounded-full bg-[#242b31]" />
       <div className="space-y-2">
-        <div className="h-3 w-24 rounded bg-[#242b31]" />
-        <div className="h-2.5 w-16 rounded bg-[#242b31]" />
+        <div className="h-3 w-20 rounded bg-[#242b31]" />
+        <div className="h-2.5 w-14 rounded bg-[#242b31]" />
       </div>
     </div>
   </div>
 );
 
-const MobileSubmitReviewCard = ({ onSubmit }: { onSubmit: () => void }) => (
+const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => (
   <button
     type="button"
     onClick={onSubmit}
-    className="flex min-w-[298px] flex-col items-center justify-center rounded-md border-2 border-dashed border-[#8b5cf6]/55 bg-[#202337]/78 p-5 text-center shadow-[0_14px_28px_rgba(0,0,0,0.24)] active:scale-[0.98]"
+    className="flex w-[168px] shrink-0 flex-col items-center justify-center rounded-2xl border border-dashed border-[#8b5cf6]/55 bg-[#202337]/78 p-3 text-center shadow-[0_10px_24px_rgba(0,0,0,0.18)] active:scale-[0.98] sm:w-[196px]"
   >
-    <div className="grid h-16 w-16 place-items-center rounded-full bg-[#8b5cf6]/15 text-3xl">＋</div>
-    <h3 className="mt-4 text-xl font-black uppercase text-white">Submit Yours</h3>
-    <p className="mt-2 max-w-[210px] text-sm font-bold leading-5 text-slate-300">Share your Pullz delivery or big hit for a chance to be featured.</p>
+    <div className="grid h-10 w-10 place-items-center rounded-full bg-[#8b5cf6]/15 text-2xl">＋</div>
+    <h3 className="mt-2 text-sm font-black uppercase text-white">Submit Yours</h3>
+    <p className="mt-1 text-[11px] font-bold leading-4 text-slate-300">Share a pull for a chance to be featured.</p>
   </button>
 );
 
@@ -435,6 +437,20 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
         </div>
       </section>
 
+      <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-4 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Community pulls</h2></div>
+          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex shrink-0 items-center justify-center gap-1 rounded-full bg-[#252d42] px-2.5 py-1.5 text-[9px] font-black uppercase text-slate-200 active:scale-[0.98]">
+            <span>Submit</span>
+            <span className="inline-flex items-center gap-0.5 text-[#a78bfa]"><img src={COIN_ICON} alt="" className="h-3 w-3" loading="lazy" decoding="async" />50</span>
+          </button>
+        </div>
+        <div className="flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {isReviewsLoading ? Array.from({ length: 2 }).map((_, index) => <MobileCustomerReviewSkeleton key={`review-loading-${index}`} />) : customerReviewCards.map((story) => <MobileCustomerReviewCard key={story.id} story={story} />)}
+          <MobileSubmitReviewCard onSubmit={handleSubmitReview} />
+        </div>
+      </section>
+
       <section id="mobile-trending-boxes" className="pullz-home-trending-grid scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2"><Box className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Trending Boxes</h2></div>
@@ -467,20 +483,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
             {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
             {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
           </div>
-        </div>
-      </section>
-
-      <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Customer Reviews</h2></div>
-          <button type="button" onClick={handleSubmitReview} aria-label="Submit your pull, get 50 coins" className="inline-flex w-full flex-wrap items-center justify-center gap-1.5 rounded-full bg-[#252d42] px-3 py-2 text-[10px] font-black uppercase text-slate-200 active:scale-[0.98] sm:w-auto sm:flex-nowrap">
-            <span>Submit Your Pull, Get</span>
-            <span className="inline-flex items-center gap-1 text-[#a78bfa]"><img src={COIN_ICON} alt="" className="h-3.5 w-3.5" loading="lazy" decoding="async" />50</span>
-          </button>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none]">
-          {isReviewsLoading ? Array.from({ length: 2 }).map((_, index) => <MobileCustomerReviewSkeleton key={`review-loading-${index}`} />) : customerReviewCards.map((story) => <MobileCustomerReviewCard key={story.id} story={story} />)}
-          <MobileSubmitReviewCard onSubmit={handleSubmitReview} />
         </div>
       </section>
 
