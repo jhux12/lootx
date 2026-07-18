@@ -478,6 +478,32 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
 
 
+  const mobileMenuButton = (
+    <button
+      type="button"
+      onClick={() => setIsMobileMenuOpen((open) => !open)}
+      className="group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
+      aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+      aria-expanded={isMobileMenuOpen}
+    >
+      {isMobileMenuOpen ? (
+        <X className="relative z-10 h-5 w-5" />
+      ) : (
+        <Menu className="relative z-10 h-5 w-5" />
+      )}
+    </button>
+  );
+
+  const mobileSignInButton = (
+    <button
+      type="button"
+      onClick={handleSignIn}
+      className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.24)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 lg:hidden"
+      aria-label="Sign in"
+    >
+      <LogIn className="h-5 w-5" />
+    </button>
+  );
 
   const dismissFreeBoxTooltip = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -500,19 +526,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-blue-300/15 lg:bg-[#0b111d]/88 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.34),0_0_42px_rgba(32,93,215,0.12)] xl:px-9">
               <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(32,93,215,0.24),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(84,245,179,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
               <div className="relative z-10 flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen((open) => !open)}
-                  className="group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
-                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  aria-expanded={isMobileMenuOpen}
-                >
-                  {isMobileMenuOpen ? (
-                    <X className="relative z-10 h-5 w-5" />
-                  ) : (
-                    <Menu className="relative z-10 h-5 w-5" />
-                  )}
-                </button>
+                {authInitialized && !isAuthenticated ? mobileSignInButton : mobileMenuButton}
                 <button
                   type="button"
                   onClick={() => navigate("HOME")}
@@ -709,16 +723,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 )}
 
                 {authInitialized && !isAuthenticated && (
-                  <div className="flex min-h-[44px] min-w-[132px] items-center gap-2 lg:hidden">
-                    <button
-                      type="button"
-                      onClick={handleSignIn}
-                      className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
-                      aria-label="Sign in"
-                    >
-                      <LogIn className="h-4 w-4" />
-                    </button>
+                  <div className="flex min-h-[44px] min-w-[174px] items-center justify-end gap-2 lg:hidden">
                     {startPullingButton}
+                    {mobileMenuButton}
                   </div>
                 )}
 
@@ -764,7 +771,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full overflow-y-auto overscroll-contain border-t border-blue-300/15 bg-[#070b13]/96 px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.5),0_0_44px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain border-t border-blue-300/15 bg-[#070b13]/96 px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.5),0_0_44px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
@@ -775,7 +782,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
-          <div className="relative flex min-h-full flex-col pb-4 pt-1">
+          <div className="relative flex min-h-full max-w-full flex-col overflow-x-hidden pb-4 pt-1">
             <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-blue-500/15 blur-3xl" />
             <span aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
             <div className="mb-7 flex w-full items-center justify-between gap-3">
