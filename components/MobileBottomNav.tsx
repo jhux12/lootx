@@ -15,7 +15,7 @@ type NavItem = {
 
 const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
-  { id: 'HOME', label: 'Menu', icon: Home },
+  { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
   { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
   { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
@@ -34,7 +34,7 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(72px + max(env(safe-area-inset-bottom), 10px))');
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(62px + max(env(safe-area-inset-bottom), 8px))');
     return () => {
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -148,13 +148,13 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,82px)] w-full border-t border-blue-300/15 bg-[#070b13]/94 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2.5 shadow-[0_-18px_50px_rgba(0,0,0,0.48),0_0_36px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/96 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
-        height: 'calc(72px + max(env(safe-area-inset-bottom), 10px))',
+        height: 'calc(62px + max(env(safe-area-inset-bottom), 8px))',
         bottom: 'var(--pullz-viewport-bottom-offset, 0px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 10px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
         transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
         WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
         willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
@@ -162,7 +162,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="relative grid h-full grid-cols-5 items-center gap-1 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.035] px-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_12%_0%,rgba(32,93,215,0.18),transparent_34%),radial-gradient(circle_at_88%_0%,rgba(84,245,179,0.10),transparent_32%)] before:content-['']">
+      <nav className="grid h-full grid-cols-5 items-center gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
@@ -170,7 +170,7 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <div key={item.id} className="relative flex justify-center">
               {item.id === 'PROFILE' && showFreeBoxTooltip ? (
-                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-xl border border-emerald-300/25 bg-[#071018]/95 px-2 py-1 text-[10px] font-semibold text-emerald-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+                <div className="absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-emerald-300/25 bg-[#101827]/95 px-2 py-1 text-[10px] font-semibold text-emerald-100 shadow-lg backdrop-blur-md">
                   <div className="flex items-center gap-1.5">
                     <span>Free box available</span>
                     <button
@@ -187,8 +187,8 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`relative z-10 flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-all duration-200 active:scale-[0.98] ${
-                  isActive ? 'bg-[linear-gradient(135deg,rgba(32,93,215,0.34),rgba(84,245,179,0.13))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.20),0_8px_22px_rgba(32,93,215,0.16)]' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'
+                className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-transparent px-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors duration-150 active:scale-[0.98] ${
+                  isActive ? 'border-blue-300/20 bg-[#13213a] text-[#7dd3fc]' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
