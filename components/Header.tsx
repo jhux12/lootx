@@ -494,22 +494,23 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       >
         <header
           ref={headerRef}
-          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-[#3a4146]/70 bg-[#1b2024] lg:px-4 lg:py-2`}
+          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-blue-400/10 bg-[#070b13]/92 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2`}
         >
           <div className="pt-[env(safe-area-inset-top,0px)]">
-            <nav className="relative mx-auto flex h-[52px] max-w-7xl items-center justify-between px-3 sm:h-[56px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[13px] lg:border lg:border-[#3a4146]/70 lg:bg-[#1b2024] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_18px_58px_rgba(0,0,0,0.24)] xl:px-9">
-              <div className="flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
+            <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-blue-300/15 lg:bg-[#0b111d]/88 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.34),0_0_42px_rgba(32,93,215,0.12)] xl:px-9">
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(32,93,215,0.24),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(84,245,179,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
+              <div className="relative z-10 flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen((open) => !open)}
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[#3a4146]/70 bg-[#242b31] text-slate-300 transition-colors hover:text-white lg:hidden"
+                  className="group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
                   aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                   aria-expanded={isMobileMenuOpen}
                 >
                   {isMobileMenuOpen ? (
-                    <X className="h-4 w-4" />
+                    <X className="relative z-10 h-5 w-5" />
                   ) : (
-                    <Menu className="h-4 w-4" />
+                    <Menu className="relative z-10 h-5 w-5" />
                   )}
                 </button>
                 <button
@@ -587,7 +588,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[360px]">
+              <div className="relative z-10 flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[360px]">
                 {!authInitialized ? (
                   <HeaderSkeleton />
                 ) : isAuthenticated ? (
@@ -756,14 +757,14 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-black/80 transition-opacity duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-[#02050c]/82 backdrop-blur-sm transition-opacity duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full overflow-y-auto overscroll-contain border-t border-[#3a4146]/70 bg-[#1b2024] px-4 pb-4 pt-3 shadow-[0_-18px_48px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full overflow-y-auto overscroll-contain border-t border-blue-300/15 bg-[#070b13]/96 px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.5),0_0_44px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
@@ -774,21 +775,23 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
-          <div className="flex min-h-full flex-col pb-4 pt-1">
+          <div className="relative flex min-h-full flex-col pb-4 pt-1">
+            <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-blue-500/15 blur-3xl" />
+            <span aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
             <div className="mb-7 flex w-full items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => navigate("PROFILE")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-[#242b31]"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-2 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:bg-white/[0.07]"
               >
                 {isAuthenticated ? (
                   <UserAvatar
                     user={user}
-                    className="h-14 w-14 rounded-full object-cover ring-1 ring-[#3a4146]/80"
+                    className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-300/25"
                     initialsClassName="text-base"
                   />
                 ) : (
-                  <div className="grid h-14 w-14 place-items-center rounded-full border border-[#3a4146]/70 bg-[#242b31] text-base font-black text-slate-100">
+                  <div className="grid h-14 w-14 place-items-center rounded-full border border-blue-300/20 bg-[#101827] text-base font-black text-blue-100">
                     <UserIcon className="h-6 w-6" />
                   </div>
                 )}
@@ -808,7 +811,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     setIsMobileMenuOpen(false);
                     void logout();
                   }}
-                  className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-200 transition-colors hover:bg-[#2d353c]"
+                  className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
                 >
                   Sign out
                 </button>
@@ -816,74 +819,74 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <button
                   type="button"
                   onClick={handleSignIn}
-                  className="shrink-0 rounded-xl border border-[#3a4146]/70 bg-[#242b31] px-3 py-2 text-xs font-black uppercase text-slate-100 transition-colors hover:bg-[#2d353c]"
+                  className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
                 >
                   Sign in
                 </button>
               )}
             </div>
 
-            <nav className="space-y-2" aria-label="Mobile menu links">
+            <nav className="relative z-10 space-y-2" aria-label="Mobile menu links">
               <button
                 onClick={() => navigate("HOME")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <HomeIcon className="h-5 w-5 text-[#54f5b3]" />
+                <HomeIcon className="h-5 w-5 text-[#7dd3fc]" />
                 Home
               </button>
               <button
                 onClick={() => navigate("BOXES")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <Package className="h-5 w-5 text-[#54f5b3]" />
+                <Package className="h-5 w-5 text-[#7dd3fc]" />
                 Boxes
               </button>
               <button
                 onClick={() => navigate("PLINKO")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PLINKO" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <UpgraderIcon className="h-5 w-5 text-[#54f5b3]" />
+                <UpgraderIcon className="h-5 w-5 text-[#7dd3fc]" />
                 Upgrader
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <Trophy className="h-5 w-5 text-[#54f5b3]" />
+                <Trophy className="h-5 w-5 text-[#7dd3fc]" />
                 Leaderboard
               </button>
               <button
                 onClick={() => navigate("BONUSES")}
-                className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <RefreshCw className="h-5 w-5 text-[#54f5b3]" />
+                <RefreshCw className="h-5 w-5 text-[#7dd3fc]" />
                 <span className="min-w-0 flex-1">Daily Spin</span>
                 {showDailySpinReady ? (
-                  <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#54f5b3]">Ready</span>
+                  <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#7dd3fc]">Ready</span>
                 ) : null}
               </button>
               <button
                 onClick={() => navigate("PROFILE")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[#242b31] text-[#54f5b3]" : "text-slate-200 hover:bg-[#242b31]"}`}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
-                <UserIcon className="h-5 w-5 text-[#54f5b3]" />
+                <UserIcon className="h-5 w-5 text-[#7dd3fc]" />
                 Profile
               </button>
             </nav>
 
-            <div className="mt-auto space-y-2 border-t border-[#3a4146]/70 pt-4">
+            <div className="mt-auto space-y-2 border-t border-blue-300/15 pt-4">
               <button
                 onClick={() => navigate("REFERRALS")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
               >
-                <Users className="h-5 w-5 text-[#54f5b3]" />
+                <Users className="h-5 w-5 text-[#7dd3fc]" />
                 Refer a Friend
               </button>
               <button
                 onClick={() => navigate("CONTACT")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-[#242b31]"
+                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
               >
-                <LifeBuoy className="h-5 w-5 text-[#54f5b3]" />
+                <LifeBuoy className="h-5 w-5 text-[#7dd3fc]" />
                 Support
               </button>
             </div>

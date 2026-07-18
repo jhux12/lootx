@@ -34,7 +34,7 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(64px + max(env(safe-area-inset-bottom), 8px))');
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(72px + max(env(safe-area-inset-bottom), 10px))');
     return () => {
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -148,13 +148,13 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,72px)] w-full border-t border-[#3a4146]/70 bg-[#1b2024] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 shadow-[0_-16px_34px_rgba(0,0,0,0.38)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,82px)] w-full border-t border-blue-300/15 bg-[#070b13]/94 px-2 pb-[max(env(safe-area-inset-bottom),10px)] pt-2.5 shadow-[0_-18px_50px_rgba(0,0,0,0.48),0_0_36px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
-        height: 'calc(64px + max(env(safe-area-inset-bottom), 8px))',
+        height: 'calc(72px + max(env(safe-area-inset-bottom), 10px))',
         bottom: 'var(--pullz-viewport-bottom-offset, 0px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 10px)',
         transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
         WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
         willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
@@ -162,7 +162,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="grid h-full grid-cols-5 items-center gap-0.5">
+      <nav className="relative grid h-full grid-cols-5 items-center gap-1 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.035] px-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_12%_0%,rgba(32,93,215,0.18),transparent_34%),radial-gradient(circle_at_88%_0%,rgba(84,245,179,0.10),transparent_32%)] before:content-['']">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
@@ -170,7 +170,7 @@ export const MobileBottomNav: React.FC = () => {
           return (
             <div key={item.id} className="relative flex justify-center">
               {item.id === 'PROFILE' && showFreeBoxTooltip ? (
-                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-md border border-[#3a4146]/70 bg-[#1b2024] px-2 py-1 text-[10px] font-semibold text-slate-100 shadow-lg">
+                <div className="absolute bottom-full left-1/2 z-20 mb-1.5 w-max -translate-x-1/2 rounded-xl border border-emerald-300/25 bg-[#071018]/95 px-2 py-1 text-[10px] font-semibold text-emerald-100 shadow-[0_10px_28px_rgba(0,0,0,0.45)] backdrop-blur-xl">
                   <div className="flex items-center gap-1.5">
                     <span>Free box available</span>
                     <button
@@ -187,8 +187,8 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleNav(item)}
-                className={`flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-colors active:scale-[0.98] ${
-                  isActive ? 'bg-[#242b31] text-[#54f5b3] shadow-[inset_0_0_0_1px_rgba(58,65,70,0.72)]' : 'text-slate-500 hover:bg-[#242b31] hover:text-slate-300'
+                className={`relative z-10 flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-2xl px-1 py-1 text-[9px] font-black uppercase tracking-wide transition-all duration-200 active:scale-[0.98] ${
+                  isActive ? 'bg-[linear-gradient(135deg,rgba(32,93,215,0.34),rgba(84,245,179,0.13))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.20),0_8px_22px_rgba(32,93,215,0.16)]' : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-100'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -202,10 +202,10 @@ export const MobileBottomNav: React.FC = () => {
                       </span>
                     )}
                     {isAuthenticated && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#54f5b3] ring-1 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#7dd3fc] ring-1 ring-[#070b13]" aria-hidden="true" />
                     )}
                     {hasFreeSignupBox && (
-                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#1b2024]" aria-hidden="true" />
+                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#070b13]" aria-hidden="true" />
                     )}
                   </span>
                 ) : Icon ? (
