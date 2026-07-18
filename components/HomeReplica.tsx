@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, ShieldCheck, Sparkles, Trophy, Truck, Users, Zap } from 'lucide-react';
+import { Box, ChevronLeft, ChevronRight, Coins, Gift, ShieldCheck, Sparkles, Trophy, Users, Zap } from 'lucide-react';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
@@ -367,32 +367,69 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   return (
     <div className="animate-in fade-in duration-500">
       <section className="px-0 pt-0 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-3 sm:pt-3">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[178px] w-full max-w-[1180px] overflow-hidden rounded-b-[1.15rem] border-b border-white/5 bg-[#05040b] text-left shadow-[0_18px_38px_rgba(0,0,0,0.46)] active:scale-[0.995] sm:h-[230px] sm:rounded-[1.6rem] lg:h-[300px] lg:rounded-[2rem]">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_46%,rgba(153,45,255,0.58),transparent_31%),radial-gradient(circle_at_15%_0%,rgba(61,25,115,0.7),transparent_38%),linear-gradient(120deg,#05030b_0%,#090618_47%,#020106_100%)]" />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.36),transparent_58%),radial-gradient(circle_at_63%_100%,rgba(117,32,255,0.34),transparent_29%)]" />
-          <div className="absolute left-4 top-4 z-20 inline-flex items-center gap-1.5 rounded-md bg-white/8 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white ring-1 ring-white/10 backdrop-blur sm:left-7 sm:top-6 sm:text-[11px] lg:text-sm"><Sparkles className="h-3 w-3 text-white" />50% Deposit Match</div>
-          <div className="relative z-10 flex h-full items-center">
-            <div className="w-[50%] pl-4 pt-6 sm:pl-7 lg:pl-12">
-              <h1 className="max-w-[185px] text-[20px] font-black uppercase leading-[0.98] tracking-[-0.04em] text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.7)] sm:max-w-[350px] sm:text-[38px] lg:max-w-[520px] lg:text-[62px]">Get a <span className="text-[#7d49ff]">50%</span> Bonus on Your First Deposit</h1>
-              <p className="mt-3 max-w-[170px] text-[8px] font-semibold leading-3 text-white/82 sm:max-w-[300px] sm:text-xs lg:max-w-[420px] lg:text-base">Kickstart your pulls with up to <span className="block pt-1 font-black text-[#8c47ff]">$1,000</span> in bonus coins!</p>
-              <div className="mt-3 flex items-center gap-3 sm:mt-5">
-                <span className="inline-flex h-11 min-w-[94px] items-center justify-center rounded-md bg-[#7427ee] px-3 text-[8px] font-black text-white shadow-[0_12px_30px_rgba(116,39,238,0.45)] sm:h-12 sm:min-w-[150px] sm:rounded-lg sm:text-sm">Deposit Now</span>
-                <span className="text-[8px] font-bold text-white/78 sm:text-sm">Learn More</span>
-              </div>
-            </div>
-            <div className="relative h-full flex-1">
-              <div className="absolute right-0 top-1/2 h-[155px] w-[185px] -translate-y-1/2 sm:right-7 sm:h-[220px] sm:w-[280px] lg:h-[300px] lg:w-[380px]">
-                <div className="absolute inset-x-6 bottom-4 h-12 rounded-full bg-[#7a22ff]/55 blur-2xl" />
-                <div className="absolute left-10 top-12 h-20 w-28 rotate-[-8deg] rounded-2xl border border-[#b566ff]/45 bg-[linear-gradient(145deg,#211336,#101020_55%,#06070e)] shadow-[inset_0_0_0_2px_rgba(255,255,255,0.04),0_0_36px_rgba(149,44,255,0.7)] sm:h-28 sm:w-40 lg:h-40 lg:w-56">
-                  <div className="absolute left-3 top-3 h-5 w-16 rounded bg-[#7f2cff]/70 sm:h-7 sm:w-24 lg:h-10 lg:w-32" />
-                  <div className="absolute bottom-3 left-3 h-9 w-4 rounded bg-[#8a31ff]/80 sm:h-14 sm:w-6 lg:h-20 lg:w-8" />
-                  <div className="absolute bottom-3 left-10 h-9 w-4 rounded bg-[#8a31ff]/80 sm:h-14 sm:w-6 lg:h-20 lg:w-8" />
-                  <div className="absolute right-3 top-4 h-11 w-4 rounded bg-[#1a1626] sm:h-16 sm:w-6 lg:h-24 lg:w-8" />
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[176px] w-full max-w-[1180px] overflow-hidden rounded-b-[1.15rem] border-b border-white/5 bg-[#05040b] text-left shadow-[0_18px_38px_rgba(0,0,0,0.46)] active:scale-[0.995] sm:h-[230px] sm:rounded-[1.6rem] lg:h-[300px] lg:rounded-[2rem]">
+          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
+            {heroSlides.map((slide) => {
+              const isDeposit = slide === 'deposit-match';
+              const heroBoxes = (trendingBoxes.length ? trendingBoxes : boxes).slice(0, isDeposit ? 3 : 4);
+
+              return (
+                <div key={slide} className="relative h-full w-full shrink-0 overflow-hidden bg-[#05040b]">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_43%,rgba(143,44,255,0.74),transparent_34%),radial-gradient(circle_at_20%_0%,rgba(63,22,112,0.72),transparent_36%),linear-gradient(120deg,#05030b_0%,#090618_48%,#020106_100%)]" />
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.34),transparent_58%),radial-gradient(circle_at_66%_102%,rgba(117,32,255,0.34),transparent_31%)]" />
+
+                  <div className="absolute left-4 top-3 z-20 inline-flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-white ring-1 ring-white/10 backdrop-blur sm:left-7 sm:top-6 sm:text-[11px] lg:text-sm">
+                    <Sparkles className="h-3 w-3 text-white" />{isDeposit ? '50% Deposit Match' : 'Trending Boxes'}
+                  </div>
+
+                  <div className="relative z-10 flex h-full items-center">
+                    <div className="w-[52%] pl-4 pt-7 sm:pl-7 lg:pl-12">
+                      <h1 className="max-w-[185px] text-[19px] font-black uppercase leading-[0.96] tracking-[-0.045em] text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.75)] sm:max-w-[350px] sm:text-[38px] lg:max-w-[520px] lg:text-[62px]">
+                        {isDeposit ? <>Get a <span className="text-[#8b4dff]">50%</span> Bonus on Your First Deposit</> : <>Open the Hottest Boxes Right Now</>}
+                      </h1>
+                      <p className="mt-2.5 max-w-[150px] text-[8px] font-semibold leading-3 text-white/90 sm:max-w-[300px] sm:text-xs lg:max-w-[420px] lg:text-base">
+                        {isDeposit ? <>Kickstart your pulls with up to <span className="block pt-1 font-black text-[#8c47ff]">$1,000</span> in bonus coins!</> : 'Fresh drops, new rewards, and boxes picked for today.'}
+                      </p>
+                      <div className="mt-3 flex items-center gap-3 sm:mt-5">
+                        <span className="inline-flex h-10 min-w-[94px] items-center justify-center rounded-md bg-[#7427ee] px-3 text-[8px] font-black text-white shadow-[0_12px_30px_rgba(116,39,238,0.45)] sm:h-12 sm:min-w-[150px] sm:rounded-lg sm:text-sm">{isDeposit ? 'Deposit Now' : 'Open Now'}</span>
+                        <span className="text-[8px] font-bold text-white/82 sm:text-sm">Learn More</span>
+                      </div>
+                    </div>
+
+                    <div className="relative h-full flex-1">
+                      <div className="absolute right-[-6px] top-1/2 h-[150px] w-[182px] -translate-y-1/2 sm:right-7 sm:h-[220px] sm:w-[280px] lg:h-[300px] lg:w-[380px]">
+                        <div className="absolute inset-x-5 bottom-4 h-14 rounded-full bg-[#7a22ff]/55 blur-2xl" />
+                        <div className="absolute bottom-5 right-7 h-[84px] w-[92px] rounded-2xl bg-[linear-gradient(145deg,#8d32ff,#4b18a3)] shadow-[inset_0_-18px_28px_rgba(0,0,0,0.26),0_0_34px_rgba(149,44,255,0.78)] sm:h-32 sm:w-36 lg:h-44 lg:w-48">
+                          <div className="absolute left-1/2 top-0 h-full w-[20%] -translate-x-1/2 bg-[#2b1264]/78" />
+                          <div className="absolute left-[-9%] top-[30%] h-[18%] w-[118%] bg-[#2b1264]/70" />
+                        </div>
+                        {heroBoxes.map((box, index) => (
+                          <img
+                            key={`${slide}-${box.id}`}
+                            src={box.image}
+                            alt=""
+                            width={160}
+                            height={160}
+                            loading={index === 0 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            fetchPriority={index === 0 ? 'high' : 'auto'}
+                            className="absolute object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.52)]"
+                            style={{
+                              width: index === 0 ? 'clamp(76px, 8vw, 132px)' : index === 1 ? 'clamp(62px, 6.7vw, 108px)' : 'clamp(54px, 5.8vw, 94px)',
+                              height: index === 0 ? 'clamp(76px, 8vw, 132px)' : index === 1 ? 'clamp(62px, 6.7vw, 108px)' : 'clamp(54px, 5.8vw, 94px)',
+                              left: index === 0 ? '17%' : index === 1 ? '38%' : index === 2 ? '10%' : '58%',
+                              top: index === 0 ? '18%' : index === 1 ? '8%' : index === 2 ? '45%' : '36%',
+                              transform: `rotate(${[-10, 8, -18, 14][index] ?? 0}deg)`
+                            }}
+                          />
+                        ))}
+                        {[0,1,2,3,4,5,6].map((i) => <Coins key={`${slide}-coin-${i}`} className="absolute h-5 w-5 text-[#8f43ff] drop-shadow-[0_0_14px_rgba(168,85,247,0.9)] sm:h-8 sm:w-8" style={{ left: `${8 + (i*19)%82}%`, top: `${4 + (i*15)%78}%`, transform: `rotate(${i*35}deg)` }} />)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 1) : boxes.slice(0, 1)).map((box) => <img key={box.id} src={box.image} alt="" className="absolute left-4 top-2 h-16 w-16 -rotate-12 object-contain drop-shadow-[0_12px_22px_rgba(141,42,255,0.7)] sm:h-24 sm:w-24 lg:h-32 lg:w-32" loading="eager" decoding="async" />)}
-                {[0,1,2,3,4,5].map((i) => <Coins key={i} className="absolute h-7 w-7 text-[#8f43ff] drop-shadow-[0_0_14px_rgba(168,85,247,0.9)] sm:h-10 sm:w-10" style={{ left: `${8 + (i*23)%82}%`, top: `${9 + (i*17)%72}%`, transform: `rotate(${i*35}deg)` }} />)}
-              </div>
-            </div>
+              );
+            })}
           </div>
           <button type="button" onClick={(event) => { event.stopPropagation(); goToHeroSlide(-1); }} aria-label="Previous promotion" className="absolute left-0 top-1/2 z-30 grid h-8 w-6 -translate-y-1/2 place-items-center rounded-r-lg bg-black/20 text-white/70"><ChevronLeft className="h-4 w-4" /></button>
           <button type="button" onClick={(event) => { event.stopPropagation(); goToHeroSlide(1); }} aria-label="Next promotion" className="absolute right-0 top-1/2 z-30 grid h-8 w-6 -translate-y-1/2 place-items-center rounded-l-lg bg-black/20 text-white/70"><ChevronRight className="h-4 w-4" /></button>
