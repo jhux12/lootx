@@ -407,13 +407,6 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, heroImageUrls, onOpenBox, on
                 <h1 className="mt-2 max-w-[180px] text-[18px] font-black uppercase leading-[0.95] tracking-tight text-white sm:max-w-[330px] sm:text-[30px] lg:max-w-[560px] lg:text-[56px]">Trending Boxes</h1>
                 <p className="mt-1.5 max-w-[168px] text-[8px] font-black uppercase leading-tight text-white/95 sm:max-w-[300px] sm:text-[11px] lg:max-w-[500px] lg:text-lg">Open the boxes everyone is watching right now.</p>
               </div>
-              <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
-                {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
-                  <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
           <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
