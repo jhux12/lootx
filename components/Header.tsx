@@ -516,7 +516,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
             <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-blue-300/15 lg:bg-[#0b111d]/88 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.34),0_0_42px_rgba(32,93,215,0.12)] xl:px-9">
               <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(32,93,215,0.24),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(84,245,179,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
               <div className="relative z-10 flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
-                {authInitialized && isAuthenticated ? mobileMenuButton : null}
                 <button
                   type="button"
                   onClick={() => navigate("HOME")}
@@ -744,6 +743,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         </button>
                       </div>
                     </div>
+                    {mobileMenuButton}
                   </div>
                 )}
               </div>
