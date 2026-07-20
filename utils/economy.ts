@@ -31,3 +31,9 @@ export const getXpCost = (priceCoins: number, settings?: Partial<EconomySettings
     Math.round((safePriceCoins / normalized.coinsPerDollar) * normalized.xpPerDollar)
   );
 };
+
+/** Single client-side conversion for coin-denominated product values. */
+export const coinsToUsd = (coins: number, settings?: Partial<EconomySettings> | null): number => {
+  const safeCoins = Number.isFinite(Number(coins)) ? Math.max(0, Number(coins)) : 0;
+  return Math.round((safeCoins / normalizeEconomySettings(settings).coinsPerDollar) * 100) / 100;
+};
