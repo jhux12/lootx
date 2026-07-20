@@ -121,7 +121,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
                 onClick={() => handleConsent('essential')}
                 className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-gray-200 transition hover:border-white/40 hover:text-white"
               >
-                Essential only
+                Necessary only
               </button>
               <button
                 type="button"
