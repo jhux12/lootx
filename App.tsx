@@ -17,6 +17,7 @@ import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CookieConsentToast } from './components/CookieConsentToast';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
 
 type TawkApi = {
@@ -919,6 +920,12 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
         <SiteFooter />
       </Suspense>
+      <CookieConsentToast
+        onAnalyticsConsent={() => {
+          initializeAnalytics();
+          trackPageView(view.type);
+        }}
+      />
     </main>
   );
 };
