@@ -289,9 +289,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   const [homepageDemoBoxId, setHomepageDemoBoxId] = useState<string | null>(null);
   const [homepageTrendingBoxIds, setHomepageTrendingBoxIds] = useState<string[]>([]);
   const trackedPurchaseSessionsRef = useRef<Set<string>>(new Set());
-  const [showHomePrompt, setShowHomePrompt] = useState(false);
-  const [homePromptVariant, setHomePromptVariant] = useState<'default' | 'returning'>('default');
-  const homePromptTrackedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -389,61 +386,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     initializeAnalytics();
     trackPageView(view.type);
   }, [view.type]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (view.type !== 'HOME' || isAuthenticated) return;
-    if (window.sessionStorage.getItem('homePromptShown') === 'true' || window.sessionStorage.getItem('homePromptDismissed') === 'true') return;
-
-    let timeoutId: number | null = window.setTimeout(() => {
-      setShowHomePrompt(true);
-      setHomePromptVariant('default');
-    }, 22000);
-
-    const showPrompt = (variant: 'default' | 'returning') => {
-      if (window.sessionStorage.getItem('homePromptShown') === 'true' || window.sessionStorage.getItem('homePromptDismissed') === 'true') return;
-      setHomePromptVariant(variant);
-      setShowHomePrompt(true);
-    };
-
-    const onScroll = () => {
-      const doc = document.documentElement;
-      const maxScrollable = doc.scrollHeight - window.innerHeight;
-      if (maxScrollable <= 0) return;
-      const depth = (window.scrollY / maxScrollable) * 100;
-      if (depth >= 45) {
-        showPrompt('returning');
-      }
-    };
-
-    const onExitIntent = (event: MouseEvent) => {
-      if (window.innerWidth < 1024) return;
-      if (event.clientY <= 6) {
-        showPrompt('default');
-      }
-    };
-
-    const listenerDelayId = window.setTimeout(() => {
-      window.addEventListener('scroll', onScroll, { passive: true });
-      document.addEventListener('mouseout', onExitIntent);
-    }, 1500);
-
-    return () => {
-      if (timeoutId) window.clearTimeout(timeoutId);
-      window.clearTimeout(listenerDelayId);
-      window.removeEventListener('scroll', onScroll);
-      document.removeEventListener('mouseout', onExitIntent);
-    };
-  }, [isAuthenticated, view.type]);
-
-  useEffect(() => {
-    if (!showHomePrompt || homePromptTrackedRef.current) return;
-    homePromptTrackedRef.current = true;
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('homePromptShown', 'true');
-    }
-    trackEvent('homepage_idle_prompt_shown', { variant: homePromptVariant });
-  }, [homePromptVariant, showHomePrompt]);
 
   useEffect(() => {
     if (performanceMode.isLowPower) return;
@@ -680,40 +622,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           }}
         />
       )}
-      {view.type === 'HOME' && showHomePrompt && !isAuthenticated && (
-        <div className="fixed bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+0.75rem)] left-1/2 z-[150] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 rounded-2xl border border-slate-500/25 bg-[#22282c]/95 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:bottom-4">
-          <p className="text-base font-bold text-white">{homePromptVariant === 'returning' ? 'Finish your free pull' : 'Your first pull is free 🎁'}</p>
-          <p className="mt-1 text-sm text-slate-300">{homePromptVariant === 'returning' ? 'You’re one step away from opening your first box' : 'Open your first box — no deposit needed'}</p>
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                trackEvent('homepage_idle_prompt_clicked', { action: 'primary' });
-                trackEvent('signup_cta_clicked', { placement: 'home_prompt' });
-                setPostSignupRedirect('/case/free-box');
-                setShowHomePrompt(false);
-                openAuthModal('register');
-              }}
-              className="flex-1 rounded-xl bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-slate-600"
-            >
-              Open Free Box
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.sessionStorage.setItem('homePromptDismissed', 'true');
-                }
-                setShowHomePrompt(false);
-              }}
-              className="rounded-xl border border-slate-400/30 px-4 py-2.5 text-sm text-slate-200 transition-colors duration-200 hover:bg-slate-500/10"
-            >
-              Maybe later
-            </button>
-          </div>
-        </div>
-      )}
-      
       {view.type === 'BOXES' && (
         <div className="w-full">
           <BoxCatalog isChatCollapsed={isChatCollapsed} />
