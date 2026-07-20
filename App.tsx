@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from './components/Header';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
@@ -263,8 +263,13 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
   );
 };
 
-const DeferredAnalytics = React.memo(() => {
+const DeferredAnalytics = React.memo(({ viewType }: { viewType: string }) => {
   const [AnalyticsComponent, setAnalyticsComponent] = useState<React.ComponentType | null>(null);
+
+  useEffect(() => runAfterIdleOrInteraction(() => {
+    initializeAnalytics();
+    trackPageView(viewType);
+  }), [viewType]);
 
   useEffect(() => runAfterIdleOrInteraction(() => {
     void import('@vercel/analytics/react')
@@ -382,7 +387,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     return () => window.clearTimeout(timeoutId);
   }, [performanceMode.isLowPower, view.type]);
 
-  useEffect(() => {
+  const handleAnalyticsConsent = useCallback(() => {
     initializeAnalytics();
     trackPageView(view.type);
   }, [view.type]);
@@ -828,12 +833,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
         <SiteFooter />
       </Suspense>
-      <CookieConsentToast
-        onAnalyticsConsent={() => {
-          initializeAnalytics();
-          trackPageView(view.type);
-        }}
-      />
+      <CookieConsentToast onAnalyticsConsent={handleAnalyticsConsent} />
+      <DeferredAnalytics viewType={view.type} />
     </main>
   );
 };
@@ -846,7 +847,6 @@ function App() {
         <PreviewProvider>
           <ToastProvider>
             <AppShell />
-            <DeferredAnalytics />
           </ToastProvider>
         </PreviewProvider>
         </GameProvider>
