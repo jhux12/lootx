@@ -22,6 +22,7 @@ import { trackEvent } from '../utils/trackEvent';
 import { usePerformanceMode } from '../src/lib/performance';
 import pullzLogo from '../assets/pullz-p.PNG';
 import { lockPageScroll } from '../utils/scrollLock';
+import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -475,6 +476,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const previewTotalXp = Math.max(0, previewXpFromSpend + previewXpFromOpen);
   const currentXpBalance = Math.max(0, Math.floor(Number(user.xpBalance ?? user.xp ?? 0)));
   const [economySettings, setEconomySettings] = useState(DEFAULT_ECONOMY_SETTINGS);
+  useEffect(() => {
+    if (!box) return;
+    const usdValue = coinsToUsd(Number(box.price ?? 0), economySettings);
+    trackViewBox({ currency: 'USD', value: usdValue, items: [{ item_id: box.id, item_name: box.name, item_category: box.category ?? 'box', price: usdValue, quantity: 1 }], box_id: box.id, box_name: box.name, box_type: box.category ?? 'box', coin_price: Number(box.price ?? 0), is_free: Boolean(isFree), is_daily: Boolean(box.isDaily), is_user_created: Boolean(box.isUserCreated) }, `${box.id}:${isFree ? 'free' : 'paid'}`);
+  }, [box, economySettings, isFree]);
   const isBalanceLoading = isAuthenticated && !authInitialized;
   const xpCostForCoinCase = useMemo(() => getXpCost(currentCasePrice, economySettings), [currentCasePrice, economySettings]);
   const xpProgress = useMemo(() => {
@@ -1435,6 +1441,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
+        trackBoxOpenStart({ box_id: box.id, box_name: box.name, box_type: box.category ?? 'box', coin_price: Number(box.price ?? 0), usd_value: coinsToUsd(Number(box.price ?? 0), economySettings), is_free: Boolean(isFree), balance_before: Number(balance ?? 0), entry_point: 'case_opening' }, operationId);
         const data = await authedFetch<{
           ok: boolean;
           price: number;
@@ -1503,6 +1510,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         };
 
         addInventoryItemFromServer(inventoryItem);
+        const analyticsPayload = { box_id: box.id, box_name: box.name, box_type: box.category ?? 'box', coin_price: Number(data.price ?? box.price ?? 0), usd_value: coinsToUsd(Number(data.price ?? box.price ?? 0), economySettings), is_free: Boolean(isFree), item_id: winner.id, item_name: winner.name, item_rarity: winner.rarity, item_value_coins: Number(winner.price ?? 0), item_value_usd: coinsToUsd(Number(winner.price ?? 0), economySettings), balance_before: Number(balance ?? 0), balance_after: Number(data.newCoinBalance ?? data.newCoins ?? balance ?? 0), open_id: data.openId, entry_point: 'case_opening' };
+        trackBoxOpen(analyticsPayload, data.openId);
+        trackItemWon({ ...analyticsPayload, inventory_instance_id: data.inventoryId }, data.openId);
         if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
           await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
           trackEvent('free_spin_completed', {
@@ -1510,6 +1520,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             value: toCoins(Number(data.prize.price ?? 0), PRICE_UNIT_MODE),
             currency: 'COIN'
           });
+          trackFreeBoxClaim({ box_id: box.id, box_name: box.name, item_id: winner.id, item_name: winner.name, item_value_coins: Number(winner.price ?? 0), item_value_usd: coinsToUsd(Number(winner.price ?? 0), economySettings) }, data.openId);
         }
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
@@ -1848,6 +1859,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         try {
           await sellItem(wonInventoryItem.instanceId);
           setRewardResolved(true);
+          trackSellBack({ box_id: box?.id, box_name: box?.name, item_id: wonInventoryItem.id, item_name: wonInventoryItem.name, original_item_value_coins: Number(wonInventoryItem.price ?? 0), sellback_value_coins: getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate), sellback_value_usd: coinsToUsd(getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate)), sellback_rate: sellBackRate, inventory_instance_id: wonInventoryItem.instanceId }, wonInventoryItem.instanceId);
           if (isFree) {
             trackEvent('free_box_item_sold_back', {
               item_id: wonInventoryItem.id,
@@ -1909,6 +1921,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       playSound('click');
       if (wonItem && !rewardResolved) {
         setRewardResolved(true);
+        trackItemKept({ box_id: box?.id, box_name: box?.name, item_id: wonItem.id, item_name: wonItem.name, item_value_coins: Number(wonItem.price ?? 0), item_value_usd: coinsToUsd(Number(wonItem.price ?? 0)) }, wonInventoryItem?.instanceId ?? wonItem.id);
         if (isFree) {
           trackEvent('free_box_item_kept', {
             item_id: wonItem.id,

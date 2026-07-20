@@ -16,6 +16,7 @@ import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
 import { MobileBottomNav } from './profile/MobileBottomNav';
+import { coinsToUsd, trackShippingRequested, trackShippingStart } from '../services/analytics';
 
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
@@ -756,6 +757,8 @@ export const Profile: React.FC = () => {
       return;
     }
     const itemsToShip = selectedShipmentItems.filter((item) => canSelectShipment(item));
+    const shipmentValueCoins = itemsToShip.reduce((total, item) => total + Number(item.price ?? 0), 0);
+    trackShippingStart({ item_count: itemsToShip.length, total_item_value_coins: shipmentValueCoins, total_item_value_usd: coinsToUsd(shipmentValueCoins), shipping_cost_coins: 0, shipping_cost_usd: 0 }, itemsToShip.map((item) => item.instanceId).sort().join(':'));
     setIsSubmittingShipment(true);
     try {
       const shipmentResult = await shipItem(itemsToShip.map((item) => item.instanceId), { shippingProtection: shippingProtectionSelected, signatureRequired: signatureRequiredSelected });
@@ -764,6 +767,7 @@ export const Profile: React.FC = () => {
         return;
       }
       if (!shipmentResult) return;
+      trackShippingRequested({ shipment_id: shipmentResult.shipmentId ?? shipmentResult.shipmentBatchId, item_count: itemsToShip.length, total_item_value_coins: shipmentValueCoins, total_item_value_usd: coinsToUsd(shipmentValueCoins), shipping_cost_coins: 0, shipping_cost_usd: 0, payment_method: 'coins' }, shipmentResult.shipmentId ?? shipmentResult.shipmentBatchId ?? itemsToShip.map((item) => item.instanceId).sort().join(':'));
       setShippingDepositNotice(null);
       setShippingDepositMessage(null);
       setSelectedShipments([]);

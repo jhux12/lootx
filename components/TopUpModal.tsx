@@ -10,6 +10,7 @@ import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
+import { getAttribution, getGaClientId, trackBeginCheckout, trackEvent as trackGaEvent } from '../services/analytics';
 
 
 const generateCheckoutEventId = () => {
@@ -290,7 +291,10 @@ export const TopUpModal: React.FC = () => {
               packageId: selectedPackage.id,
               eventId,
               fbp,
-              fbc
+              fbc,
+              gaClientId: getGaClientId(),
+              attribution: getAttribution(),
+              checkoutSource: topUpModalIntent?.source ?? 'top_up_modal'
             })
           });
           if (!response.ok) {
@@ -298,6 +302,10 @@ export const TopUpModal: React.FC = () => {
             throw new Error(message || 'Unable to start checkout.');
           }
           const data = await response.json();
+          trackBeginCheckout({ currency: 'USD', value: priceValue, payment_type: 'stripe', items: [{ item_id: selectedPackage.id, item_name: selectedPackage.name || selectedPackage.id, item_category: 'coin_package', price: priceValue, quantity: 1 }], coin_amount: Number(selectedPackage.coins ?? 0), bonus_coin_amount: Number(selectedPackage.bonusCoins ?? 0), package_id: selectedPackage.id, checkout_session_id: data.sessionId, is_first_deposit_intent: isFirstDepositEligible, checkout_source: topUpModalIntent?.source ?? 'top_up_modal', missing_coins: isInsufficientBalanceFlow ? missingCoins : undefined }, data.sessionId);
+          if (topUpModalIntent?.source === 'post_free_box') {
+            trackGaEvent('free_box_to_checkout', { package_id: selectedPackage.id, checkout_session_id: data.sessionId }, data.sessionId);
+          }
           const stripe = await getStripe();
           if (!stripe) {
             throw new Error('Stripe failed to initialize.');

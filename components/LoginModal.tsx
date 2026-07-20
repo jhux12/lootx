@@ -10,6 +10,7 @@ import { getAuthErrorMessage } from '../utils/authErrors';
 import { toast } from '../src/ui/toast/toast';
 import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { lockPageScroll } from '../utils/scrollLock';
+import { trackEvent as trackGaEvent } from '../services/analytics';
 
 const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Account ready. We sent a verification email for when you are ready to ship items.';
@@ -70,6 +71,7 @@ export const LoginModal: React.FC = () => {
 
     try {
       if (mode === 'register') {
+        trackGaEvent('sign_up_start', { method: 'email', location: 'auth_modal' }, 'email_auth_modal');
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
         if (!emailSignupConsent) {
           setUserError('Please confirm the checkbox to continue with email registration.');
