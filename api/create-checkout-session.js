@@ -23,6 +23,9 @@ export default async function handler(req, res) {
     const eventId = typeof body?.eventId === 'string' ? body.eventId.trim() : '';
     const fbp = typeof body?.fbp === 'string' ? body.fbp.trim() : '';
     const fbc = typeof body?.fbc === 'string' ? body.fbc.trim() : '';
+    const gaClientId = typeof body?.gaClientId === 'string' ? body.gaClientId.trim().slice(0, 100) : '';
+    const attribution = body?.attribution && typeof body.attribution === 'object' ? body.attribution : {};
+    const checkoutSource = typeof body?.checkoutSource === 'string' ? body.checkoutSource.trim().slice(0, 80) : 'top_up_modal';
     const normalizedEventId = eventId || `checkout_${Date.now()}_${decoded.uid.slice(0, 8)}`;
     if (!packageId || typeof packageId !== 'string') {
       return sendJson(res, 400, { error: 'Missing packageId' });
@@ -89,6 +92,12 @@ export default async function handler(req, res) {
         eventId: normalizedEventId.slice(0, 200),
         fbp: fbp.slice(0, 200),
         fbc: fbc.slice(0, 200)
+        ,gaClientId,
+        checkoutSource,
+        firstTouchSource: typeof attribution.source === 'string' ? attribution.source.slice(0, 100) : '',
+        firstTouchMedium: typeof attribution.medium === 'string' ? attribution.medium.slice(0, 100) : '',
+        firstTouchCampaign: typeof attribution.campaign === 'string' ? attribution.campaign.slice(0, 100) : '',
+        firstTouchContent: typeof attribution.content === 'string' ? attribution.content.slice(0, 100) : ''
       }
     });
 

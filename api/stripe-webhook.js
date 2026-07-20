@@ -5,6 +5,7 @@ import { appendLedgerEntry } from './_lib/ledger.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralDepositQualified } from './_lib/referrals.js';
 import { recordBalanceChange } from './_lib/balanceAudit.js';
+import { sendGa4Event } from './_lib/ga4.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -104,6 +105,7 @@ export default async function handler(req, res) {
     const uid = metadata.uid;
     const fbp = typeof metadata.fbp === 'string' ? metadata.fbp.trim() : '';
     const fbc = typeof metadata.fbc === 'string' ? metadata.fbc.trim() : '';
+    const gaClientId = typeof metadata.gaClientId === 'string' ? metadata.gaClientId.trim() : '';
     const totalCoins = Number(metadata.coins ?? 0);
     let baseCoins = Number(metadata.baseCoins ?? 0);
     let bonusCoins = Number(metadata.bonusCoins ?? 0);
@@ -261,6 +263,22 @@ export default async function handler(req, res) {
     const amountTotal = Number(session.amount_total ?? 0);
     const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
     const eventId = `purchase_${session.id}`;
+
+    // This record is independent of crediting and makes GA delivery idempotent on webhook replay.
+    if (newlyCredited && gaClientId) {
+      const gaRef = firestore.collection('ga4_events').doc(`purchase_${session.id}`);
+      try {
+        const shouldSend = await firestore.runTransaction(async (transaction) => {
+          if ((await transaction.get(gaRef)).exists) return false;
+          transaction.set(gaRef, { createdAt: admin.firestore.FieldValue.serverTimestamp(), transactionId: session.id }); return true;
+        });
+        if (shouldSend) {
+          const params = { transaction_id: session.id, currency: 'USD', value: purchaseValue, tax: 0, shipping: 0, payment_type: 'stripe', items: [{ item_id: String(packageId || 'coin_package'), item_name: packageName || 'Coin package', item_category: 'coin_package', price: purchaseValue, quantity: 1 }], coin_amount: baseCoins, bonus_coin_amount: bonusCoins, package_id: packageId || undefined, is_first_purchase: isFirstDeposit, checkout_source: metadata.checkoutSource || 'top_up_modal' };
+          await sendGa4Event({ clientId: gaClientId, name: 'purchase', params });
+          if (isFirstDeposit) await sendGa4Event({ clientId: gaClientId, name: 'first_purchase', params: { ...params, first_touch_source: metadata.firstTouchSource || undefined, first_touch_medium: metadata.firstTouchMedium || undefined, first_touch_campaign: metadata.firstTouchCampaign || undefined, first_touch_content: metadata.firstTouchContent || undefined } });
+        }
+      } catch (gaError) { console.error('stripe-webhook GA4 event error', { eventId, message: gaError?.message }); }
+    }
 
     try {
       const userSnap = uid ? await firestore.collection('users').doc(uid).get() : null;

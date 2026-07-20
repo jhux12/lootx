@@ -9,6 +9,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
+import { trackLogin, trackSignUp } from '../services/analytics';
 import {
   User as FirebaseUser,
   AuthCredential,
@@ -2578,6 +2579,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         remember ? browserLocalPersistence : browserSessionPersistence
       );
       const credential = await signInWithEmailAndPassword(auth, email, pass);
+      trackLogin('email');
       if (!credential.user.emailVerified) {
         const redirectPath = consumePostSignupRedirect() || getCurrentPath() || DEFAULT_POST_SIGNUP_REDIRECT;
         setPendingEmailVerification(redirectPath);
@@ -2660,6 +2662,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const register = async (name: string, email: string, pass: string) => {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
+      trackSignUp({ method: 'email', has_referral: Boolean(sessionStorage.getItem('pendingReferralCode')), signup_location: 'auth_modal' });
       trackEvent('email_signup_completed');
 
       try {

@@ -17,6 +17,7 @@ import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { usePerformanceMode } from './src/lib/performance';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
 
 type TawkApi = {
   hideWidget?: () => void;
@@ -384,6 +385,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [performanceMode.isLowPower, view.type]);
 
   useEffect(() => {
+    initializeAnalytics();
+    trackPageView(view.type);
+  }, [view.type]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     if (view.type !== 'HOME' || isAuthenticated) return;
     if (window.sessionStorage.getItem('homePromptShown') === 'true' || window.sessionStorage.getItem('homePromptDismissed') === 'true') return;
@@ -493,6 +499,8 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('topup') !== 'success') return;
+
+    trackGaEvent('checkout_return', { checkout_status: 'success' }, params.get('session_id') || undefined);
 
     const sessionId = params.get('session_id');
     if (!sessionId || trackedPurchaseSessionsRef.current.has(sessionId)) return;
