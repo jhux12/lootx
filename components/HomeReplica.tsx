@@ -8,6 +8,7 @@ import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useGame } from '../context/GameContext';
+import { usePerformanceMode } from '../src/lib/performance';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
@@ -122,11 +123,51 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
   </button>
 );
 
+const MobileLiveWins = React.memo(({ wins, originals, onOpenBox }: { wins: MobileLiveWin[]; originals: MysteryBox[]; onOpenBox: (boxId: string) => void }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const sectionRef = useRef<HTMLElement>(null);
+  const performanceMode = usePerformanceMode();
+  const displayedWins = useMemo(() => wins.length ? [...wins, ...wins] : [], [wins]);
+
+  useEffect(() => {
+    const element = sectionRef.current;
+    if (!element || !('IntersectionObserver' in window)) return undefined;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry?.isIntersecting ?? false), { threshold: 0.05 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
+    const rotateTimer = window.setInterval(() => setActiveIndex((current) => (current + 1) % wins.length), 2400);
+    return () => window.clearInterval(rotateTimer);
+  }, [isVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, wins.length]);
+
+  return (
+    <section ref={sectionRef} id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
+        <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
+      </div>
+      <div className="overflow-hidden">
+        <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeIndex * 108}px,0,0)` }}>
+          {(displayedWins.length ? displayedWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
+          {!displayedWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+        </div>
+      </div>
+    </section>
+  );
+});
+MobileLiveWins.displayName = 'MobileLiveWins';
+
 const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const [activeLiveWinIndex, setActiveLiveWinIndex] = useState(0);
+  const heroSectionRef = useRef<HTMLElement>(null);
+  const [isHeroVisible, setIsHeroVisible] = useState(true);
+  const performanceMode = usePerformanceMode();
   const [customerReviews, setCustomerReviews] = useState<MobileCustomerReview[]>([]);
   const [isReviewsLoading, setIsReviewsLoading] = useState(true);
   const [isSubmitReviewOpen, setIsSubmitReviewOpen] = useState(false);
@@ -193,18 +234,17 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
       boxId
     }));
   }, [boxes]);
-  const displayedLiveWins = mobileLiveWins.length ? [...mobileLiveWins, ...mobileLiveWins] : [];
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
 
   useEffect(() => {
-    if (mobileLiveWins.length <= 1) return undefined;
-    const rotateTimer = window.setInterval(() => {
-      setActiveLiveWinIndex((current) => (current + 1) % mobileLiveWins.length);
-    }, 2400);
-    return () => window.clearInterval(rotateTimer);
-  }, [mobileLiveWins.length]);
+    const element = heroSectionRef.current;
+    if (!element || !('IntersectionObserver' in window)) return undefined;
+    const observer = new IntersectionObserver(([entry]) => setIsHeroVisible(entry?.isIntersecting ?? false), { threshold: 0.05 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
 
   const showFreeBoxSlide = isAuthenticated && Boolean(freeSignupBox) && !user.lastFreeBoxClaim;
@@ -214,12 +254,12 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   }, [showFreeBoxSlide]);
 
   useEffect(() => {
-    if (showFreeBoxSlide) return undefined;
+    if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
     }, 10000);
     return () => window.clearInterval(heroTimer);
-  }, [showFreeBoxSlide]);
+  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -397,14 +437,14 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
 
   return (
     <div className="animate-in fade-in duration-500">
-      <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
+      <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
-          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
+          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
-              <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
-                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((coinIndex) => (
+              {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+                {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
                   <Coins
                     key={`hero-raining-coin-${coinIndex}`}
                     className="absolute h-5 w-5 animate-[hero-coin-rain_5.8s_linear_infinite] text-amber-300/80 drop-shadow-[0_8px_12px_rgba(0,0,0,0.26)] sm:h-7 sm:w-7 lg:h-10 lg:w-10"
@@ -416,7 +456,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
                     }}
                   />
                 ))}
-              </div>
+              </div> : null}
               <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
                 <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
@@ -503,18 +543,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
         </div>
       </section>
 
-      <section id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
-          <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
-        </div>
-        <div className="overflow-hidden">
-          <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeLiveWinIndex * 108}px,0,0)` }}>
-            {(displayedLiveWins.length ? displayedLiveWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
-            {!displayedLiveWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
-          </div>
-        </div>
-      </section>
+      <MobileLiveWins wins={mobileLiveWins} originals={originals} onOpenBox={onOpenBox} />
 
       <HowItWorksSection boxes={boxes} />
       <HomepageFaqSection />

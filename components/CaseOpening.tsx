@@ -2071,7 +2071,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 {/* The Moving Reel */}
                 <div
                     ref={scrollContainerRef}
-                    className="pullz-spinner-track flex will-change-transform transition-opacity duration-300 opacity-100"
+                    className={`pullz-spinner-track flex transition-opacity duration-300 opacity-100 ${isSpinning ? 'will-change-transform' : ''}`}
                     style={{
                       gap: `${spinnerGap}px`,
                       transform: 'translate3d(0,0,0)',
