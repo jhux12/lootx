@@ -447,6 +447,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     openAuthModal("login");
   }, [openAuthModal, playSound]);
 
+  const scrollToSpinSection = useCallback((sectionId: string) => {
+    const section = document.getElementById(sectionId);
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setIsMobileMenuOpen(false);
+  }, []);
+
   const handleLogout = useCallback(() => {
     playSound("click");
     void logout();
@@ -529,7 +535,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   />
                 </button>
 
-                <div className="hidden items-center gap-2 lg:flex xl:gap-3">
+                {view.type === 'SPIN' && <div className="hidden items-center gap-2 lg:flex xl:gap-3">{[
+                  ['how', 'How It Works'], ['featured', 'Featured Pulls'], ['winners', 'Winners'], ['faq', 'FAQ']
+                ].map(([id, label]) => <button key={id} type="button" onClick={() => scrollToSpinSection(id)} className={desktopNavButtonClass}>{label}</button>)}</div>}
+                <div className={`${view.type === 'SPIN' ? 'hidden' : 'hidden items-center gap-2 lg:flex xl:gap-3'}`}>
                   <button
                     type="button"
                     onClick={() => navigate("HOME")}
@@ -823,7 +832,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               )}
             </div>
 
-            <nav className="relative z-10 space-y-2" aria-label="Mobile menu links">
+            {view.type === 'SPIN' ? (
+              <nav className="relative z-10 space-y-2" aria-label="Spin page sections">
+                {[
+                  ['how', 'How It Works'], ['featured', 'Featured Pulls'], ['winners', 'Winners'], ['faq', 'FAQ']
+                ].map(([id, label]) => (
+                  <button key={id} type="button" onClick={() => scrollToSpinSection(id)} className="flex min-h-14 w-full items-center rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-violet-500/10 hover:text-white">
+                    {label}
+                  </button>
+                ))}
+              </nav>
+            ) : <nav className="relative z-10 space-y-2" aria-label="Mobile menu links">
               <button
                 onClick={() => navigate("HOME")}
                 className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
@@ -869,7 +888,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <UserIcon className="h-5 w-5 text-[#7dd3fc]" />
                 Profile
               </button>
-            </nav>
+            </nav>}
 
             <div className="mt-auto space-y-2 border-t border-blue-300/15 pt-4">
               <button

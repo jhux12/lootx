@@ -1,6 +1,6 @@
 const POST_SIGNUP_REDIRECT_KEY = 'postSignupRedirect';
 
-export const DEFAULT_POST_SIGNUP_REDIRECT = '/case/free-box';
+export const DEFAULT_POST_SIGNUP_REDIRECT = '/';
 
 export const setPostSignupRedirect = (path: string = DEFAULT_POST_SIGNUP_REDIRECT) => {
   if (typeof window === 'undefined') return;
