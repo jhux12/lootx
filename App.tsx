@@ -607,6 +607,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'HOME' && (
         <HomeReplica
           boxes={baseHomeBoxes}
+          freeSignupBox={boxes.find((box) => box.isDaily) ?? null}
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
           isChatCollapsed={isChatCollapsed}
