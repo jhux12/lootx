@@ -75,18 +75,18 @@ const drawerCardClass =
 const desktopNavButtonBaseClass =
   "group relative flex h-11 items-center justify-center rounded-[11px] border px-4 text-[14px] font-semibold xl:px-6 xl:text-[15px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]";
 
-const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-white/78 hover:border-white/10 hover:bg-[#101827]/70 hover:text-white`;
+const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-white/78 hover:border-violet-300/20 hover:bg-violet-500/10 hover:text-white`;
 
-const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-[#233148]/80 bg-[#101a2b]/86 text-blue-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_26px_rgba(0,0,0,0.18)]`;
+const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-violet-300/25 bg-violet-500/15 text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_26px_rgba(0,0,0,0.22)]`;
 
 const desktopMenuPanelClass =
-  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#101820]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(34,211,238,0.05)] backdrop-blur-2xl transition-all duration-200 before:absolute before:-top-3 before:left-0 before:h-3 before:w-full before:content-[""]';
+  'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#0b0e15]/95 p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(124,60,255,0.16)] backdrop-blur-2xl transition-all duration-200 before:absolute before:-top-3 before:left-0 before:h-3 before:w-full before:content-[""]';
 
 const desktopMenuItemClass =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white";
 
 const utilityButtonClass =
-  "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-[#273044]/80 bg-[#0e1420]/78 text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-blue-300/35 hover:bg-[#141d2d] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60";
+  "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/[0.045] text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-violet-300/35 hover:bg-violet-500/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60";
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -510,11 +510,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       >
         <header
           ref={headerRef}
-          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-blue-400/10 bg-[#070b13]/92 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2`}
+          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-violet-300/15 bg-[#05060a]/80 shadow-[0_12px_34px_rgba(0,0,0,0.32)] backdrop-blur-xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2`}
         >
           <div className="pt-[env(safe-area-inset-top,0px)]">
-            <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-blue-300/15 lg:bg-[#0b111d]/88 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.34),0_0_42px_rgba(32,93,215,0.12)] xl:px-9">
-              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(32,93,215,0.24),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(84,245,179,0.12),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
+            <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-violet-300/15 lg:bg-[#0b0e15]/88 lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.34),0_0_42px_rgba(124,60,255,0.16)] xl:px-9">
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(124,60,255,0.26),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(77,141,255,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
               <div className="relative z-10 flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
                 {authInitialized && isAuthenticated ? mobileMenuButton : null}
                 <button

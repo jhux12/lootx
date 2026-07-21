@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Menu, Play, X } from 'lucide-react';
+import { Play, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { trackEvent } from '../utils/trackEvent';
@@ -40,7 +40,6 @@ export const SpinLandingPage: React.FC = () => {
   const goToBoxes = () => setView({ type: 'BOXES' });
   return <div className="pullz-landing">
     <style>{styles}</style>
-    <header className="pl-nav"><div className="pl-shell pl-navin"><a className="pl-logo" href="/" onClick={(e) => { e.preventDefault(); setView({ type: 'HOME' }); }}>pullz<span>.gg</span></a><nav className="pl-navlinks"><a href="#how">How It Works</a><a href="#featured">Featured Pulls</a><a href="#winners">Winners</a></nav><button className="pl-cta pl-desktop-cta" onClick={claim}>Claim Your Free Pull</button><button className="pl-ghost pl-mobile-menu" aria-label="Open navigation menu"><Menu size={20} /></button></div></header>
     <main><div className="pl-shell">
       <section className="pl-hero"><div className="pl-copy"><div className="pl-eyebrow"><i /> Real cards. Real shipments. Your first pull is free.</div><h1>PULL YOUR<br /><span>FIRST CARD FREE.</span></h1><p className="pl-lead">Open your first mystery pull in under 30 seconds. Win authentic graded Pokémon cards and collectibles shipped directly to your door.</p><div className="pl-actions"><button className="pl-cta" onClick={claim}>🎁 &nbsp; CLAIM YOUR FREE PULL</button><button className="pl-ghost" onClick={() => setIsVideoOpen(true)}><Play size={15} fill="currentColor" /> WATCH A LIVE PULL</button></div><div className="pl-trustrow">{trustItems.map(([image, token, title, text]) => <article className="pl-trust" key={title}><div className="pl-trust-icon"><img src={media(image, token)} alt="" /></div><b>{title}</b><small>{text}</small></article>)}</div></div>
         <div className="pl-visual" aria-label="Featured graded collectible cards"><div className="pl-art"><div className="pl-orbit" /><div className="pl-float a" /><div className="pl-float b" /><div className="pl-float c" /><img className="pl-slab left" src={media('Untitled design.svg', '9d00502f-9317-4880-87aa-7da6fe392b45')} alt="" /><img className="pl-slab center" src={media('Untitled design (2).svg', '0bc8a362-65f2-4fc0-84da-2ccefabb8294')} alt="Featured graded collectible card" /><img className="pl-slab right" src={media('Untitled design (1).svg', '6fcb9e37-025c-4ac8-a20d-ec3cf2fad353')} alt="" /><div className="pl-platform" /></div></div></section>

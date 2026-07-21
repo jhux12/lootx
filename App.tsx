@@ -830,11 +830,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         {showEmailVerifiedModal && <EmailVerifiedModal />}
         {showTopUpModal && <TopUpModal />}
       </Suspense>
-      {view.type !== 'SPIN' && (
-        <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
-          <SiteFooter />
-        </Suspense>
-      )}
+      <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
+        <SiteFooter />
+      </Suspense>
       <CookieConsentToast onAnalyticsConsent={handleAnalyticsConsent} />
       <DeferredAnalytics viewType={view.type} />
     </main>
@@ -874,8 +872,7 @@ const getNavigationScrollKey = (view: ReturnType<typeof useGame>['view']) => {
 
 const AppShell = () => {
   const { view } = useGame();
-  // The campaign page supplies its own full navigation and footer treatment.
-  const shouldUseStickyHeader = view.type !== 'SPIN';
+  const shouldUseStickyHeader = true;
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
 
@@ -893,11 +890,11 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white font-sans selection:bg-violet-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
-      {shouldUseStickyHeader && <Header onOpenInbox={() => undefined} isSticky />}
+      <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-      {shouldUseStickyHeader && <MobileBottomNav />}
+      <MobileBottomNav />
       <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
       <ResetPasswordModal />
     </div>
