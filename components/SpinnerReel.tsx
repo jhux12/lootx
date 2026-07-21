@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePerformanceMode } from '../src/lib/performance';
 
 export interface ReelItem {
@@ -119,6 +119,8 @@ const hashSeed = (input: string) => {
 export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, spinKey, state, durationMs, onSpinComplete }) => {
   const [transitionEnabled, setTransitionEnabled] = useState(false);
   const [translateX, setTranslateX] = useState(0);
+  const reelRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(true);
   const performanceMode = usePerformanceMode();
   const reelLength = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_REEL_LENGTH : DESKTOP_REEL_LENGTH;
   const stopIndex = performanceMode.isMobile || performanceMode.isLowPower ? MOBILE_STOP_INDEX : DESKTOP_STOP_INDEX;
@@ -135,13 +137,12 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
   }, [pool, reelLength, spinKey, stopIndex, winningItem]);
 
   useEffect(() => {
-    const preloadLimit = performanceMode.isMobile || performanceMode.isLowPower ? 18 : 42;
-    const uniqueImageUrls: string[] = Array.from(new Set(reelItems.map((item) => item.imageUrl).filter((imageUrl): imageUrl is string => Boolean(imageUrl)))).slice(0, preloadLimit);
-    uniqueImageUrls.forEach((imageUrl) => {
-      const image = new Image();
-      image.src = imageUrl;
-    });
-  }, [performanceMode.isLowPower, performanceMode.isMobile, reelItems]);
+    const element = reelRef.current;
+    if (!element || !('IntersectionObserver' in window)) return undefined;
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry?.isIntersecting ?? true), { threshold: 0.01 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const centerOffset = useMemo(() => `calc(50% - ${CARD_WIDTH / 2}px)`, []);
   const targetTranslateX = useMemo(() => -(stopIndex * STEP), [stopIndex]);
@@ -178,15 +179,15 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
   }, [durationMs, onSpinComplete, state, spinKey, targetTranslateX]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-gray-700/70 bg-[#0b0f18] h-[124px] sm:h-[132px]">
+    <div ref={reelRef} className="relative w-full overflow-hidden rounded-xl border border-gray-700/70 bg-[#0b0f18] h-[124px] sm:h-[132px]">
       <div className="pointer-events-none absolute inset-y-0 left-1/2 z-10 w-[2px] -translate-x-1/2 bg-gradient-to-b from-transparent via-[#205DD7] to-transparent" />
 
       <div className="absolute left-0 top-1/2 -translate-y-1/2" style={{ transform: `translate(${centerOffset}, -50%)` }}>
         <div
-          className={`pullz-spinner-track flex gap-3 ${state === 'IDLE' ? 'animate-reel-idle' : ''}`}
+          className="pullz-spinner-track flex gap-3"
           style={{
-            transform: state === 'IDLE' ? undefined : `translate3d(${translateX}px, 0, 0)`,
-            willChange: state === 'SPIN' ? 'transform' : 'auto',
+            transform: `translate3d(${translateX}px, 0, 0)`,
+            willChange: state === 'SPIN' && isVisible && !performanceMode.isHidden ? 'transform' : 'auto',
             transition: transitionEnabled ? `transform ${durationMs}ms cubic-bezier(0.08, 0.78, 0.22, 1)` : 'none'
           }}
         >
@@ -227,8 +228,6 @@ export const SpinnerReel: React.FC<SpinnerReelProps> = ({ items, winningItem, sp
           })}
         </div>
       </div>
-
-      <style>{`@keyframes reelIdle { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-280px,0,0); } } .animate-reel-idle { animation: reelIdle 7s linear infinite; }`}</style>
     </div>
   );
 };

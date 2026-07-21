@@ -15,7 +15,7 @@ import { trackEvent, trackMetaEvent } from './utils/trackEvent';
 import { auth } from './firebase';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
-import { usePerformanceMode } from './src/lib/performance';
+import { PerformanceModeProvider, usePerformanceMode } from './src/lib/performance';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
@@ -846,9 +846,11 @@ function App() {
       <SoundProvider>
         <GameProvider>
         <PreviewProvider>
-          <ToastProvider>
-            <AppShell />
-          </ToastProvider>
+          <PerformanceModeProvider>
+            <ToastProvider>
+              <AppShell />
+            </ToastProvider>
+          </PerformanceModeProvider>
         </PreviewProvider>
         </GameProvider>
       </SoundProvider>
