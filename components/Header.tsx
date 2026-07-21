@@ -448,9 +448,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   }, [openAuthModal, playSound]);
 
   const scrollToSpinSection = useCallback((sectionId: string) => {
-    const section = document.getElementById(sectionId);
-    section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setIsMobileMenuOpen(false);
+    // Wait for the fixed mobile menu and its backdrop to release the viewport
+    // before starting the smooth scroll.
+    window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 180);
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -770,7 +773,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain border-t border-blue-300/15 bg-[#070b13]/96 px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.5),0_0_44px_rgba(32,93,215,0.12)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain border-t border-violet-300/15 bg-[radial-gradient(circle_at_50%_15%,rgba(124,60,255,0.20),transparent_38%),radial-gradient(circle_at_10%_95%,rgba(77,141,255,0.13),transparent_42%),#05060a]/[.98] px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.5)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
@@ -782,8 +785,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-label="Mobile navigation menu"
         >
           <div className="relative flex min-h-full max-w-full flex-col overflow-x-hidden pb-4 pt-1">
-            <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-blue-500/15 blur-3xl" />
-            <span aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
+            <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
+            <span aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
             <div className="mb-7 flex w-full items-center justify-between gap-3">
               <button
                 type="button"
@@ -890,7 +893,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               </button>
             </nav>}
 
-            <div className="mt-auto space-y-2 border-t border-blue-300/15 pt-4">
+            {view.type !== 'SPIN' && <div className="mt-auto space-y-2 border-t border-blue-300/15 pt-4">
               <button
                 onClick={() => navigate("REFERRALS")}
                 className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
@@ -905,7 +908,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 <LifeBuoy className="h-5 w-5 text-[#7dd3fc]" />
                 Support
               </button>
-            </div>
+            </div>}
           </div>
         </div>
       </div>
