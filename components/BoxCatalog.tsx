@@ -388,7 +388,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="w-full bg-[#1b2024] pb-20 text-white">
+    <div className="w-full bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] pb-20 text-white">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -511,7 +511,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#1b2024]/95 backdrop-blur">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#05060a]/95 backdrop-blur">
         <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
           <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
               <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">

@@ -146,6 +146,10 @@ export const MobileBottomNav: React.FC = () => {
     setIsFreeBoxTooltipDismissed(true);
   };
 
+  // The spin campaign uses the section-based header navigation instead of the
+  // application-wide bottom navigation.
+  if (view.type === 'SPIN') return null;
+
   const nav = (
     <div
       className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/96 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${

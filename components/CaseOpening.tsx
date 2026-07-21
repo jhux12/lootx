@@ -350,7 +350,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       : 0.82);
   const isReady = Boolean(box) && hasItems;
   const isAdmin = Boolean(user?.isAdmin);
-  const hideDropTableOdds = Boolean(isFree);
+  // Daily signup boxes are always free openings, including legacy URLs that may
+  // not carry the explicit `isFree` route flag.
+  const isFreeOpening = Boolean(isFree || box?.isDaily);
+  const hideDropTableOdds = isFreeOpening;
   const cheapestPaidBox = useMemo(() => {
     const paidBoxes = boxes.filter((entry) => {
       const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
@@ -2178,7 +2181,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       )}
                     </span>
                  </button>
-                {!isFree && !isRewardOpen && (
+                {!isFreeOpening && !isRewardOpen && (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleTryFree}

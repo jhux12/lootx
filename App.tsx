@@ -607,12 +607,13 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'HOME' && (
         <HomeReplica
           boxes={baseHomeBoxes}
+          freeSignupBox={boxes.find((box) => box.isDaily) ?? null}
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
           isChatCollapsed={isChatCollapsed}
-          onOpenBox={(boxId) => {
+          onOpenBox={(boxId, isFree = false) => {
             playSound('click');
-            setView({ type: 'CASE_OPENING', boxId });
+            setView({ type: 'CASE_OPENING', boxId, isFree });
           }}
           onViewAllBoxes={() => {
             playSound('click');
@@ -890,12 +891,9 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <div className="min-h-[100dvh] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
+    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white font-sans selection:bg-violet-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
-      <Header
-        onOpenInbox={() => undefined}
-        isSticky={shouldUseStickyHeader}
-      />
+      <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
       <MobileBottomNav />
       <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />

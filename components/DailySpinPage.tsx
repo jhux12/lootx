@@ -195,11 +195,11 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
 
   return (
     <div
-      className={`w-full flex flex-col items-center ${embedded ? "min-h-[560px]" : "min-h-[calc(100vh-70px)]"} bg-neutral-950 relative overflow-hidden rounded-2xl border border-neutral-800`}
+      className={`w-full flex flex-col items-center ${embedded ? "min-h-[560px]" : "min-h-[calc(100vh-70px)]"} bg-[#05060a] relative overflow-hidden rounded-2xl border border-white/10`}
     >
-      <div className="absolute inset-0 z-0 bg-neutral-950">
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/40 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-neutral-950 to-neutral-950" />
+      <div className="absolute inset-0 z-0 bg-[#05060a]">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#05060a] via-[#05060a]/40 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem)]" />
         <BackgroundFloatingCoins />
       </div>
 

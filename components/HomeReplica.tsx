@@ -11,10 +11,11 @@ import { useGame } from '../context/GameContext';
 
 type HomeReplicaProps = {
   boxes: MysteryBox[];
+  freeSignupBox?: MysteryBox | null;
   demoBoxId?: string | null;
   trendingBoxIds?: string[];
   isChatCollapsed: boolean;
-  onOpenBox: (boxId: string) => void;
+  onOpenBox: (boxId: string, isFree?: boolean) => void;
   onViewAllBoxes: () => void;
   onSignUp: () => void;
 };
@@ -95,6 +96,20 @@ const MobileCustomerReviewSkeleton: React.FC = () => (
   </div>
 );
 
+const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(120deg,#5525cf_0%,#5146dd_52%,#4275e8_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(255,255,255,.14),transparent_28%),radial-gradient(circle_at_88%_75%,rgba(152,90,255,.40),transparent_46%)]" />
+    <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
+      <div className="min-w-0">
+        <p className="inline-flex rounded-full bg-[#3b278f]/55 px-3 py-1 text-[9px] font-black uppercase tracking-[.08em] text-white shadow-sm sm:text-[11px]">New user bonus</p>
+        <h1 className="mt-2 max-w-[285px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-white sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]">Your Free Box Is Ready</h1>
+        <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#5428c9] shadow-[0_8px_20px_rgba(0,0,0,.16)] sm:px-4 sm:text-xs">Open now</span>
+      </div>
+      {box.image ? <img src={box.image} alt={box.name} className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
+    </div>
+  </div>
+);
+
 const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => (
   <button
     type="button"
@@ -107,7 +122,7 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
   </button>
 );
 
-const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -192,12 +207,19 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   }, [mobileLiveWins.length]);
 
 
+  const showFreeBoxSlide = isAuthenticated && Boolean(freeSignupBox) && !user.lastFreeBoxClaim;
+
   useEffect(() => {
+    if (showFreeBoxSlide) setActiveHeroSlide(0);
+  }, [showFreeBoxSlide]);
+
+  useEffect(() => {
+    if (showFreeBoxSlide) return undefined;
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
     }, 10000);
     return () => window.clearInterval(heroTimer);
-  }, []);
+  }, [showFreeBoxSlide]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -256,8 +278,9 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
     };
   }, []);
 
-  const heroSlides = ['deposit-match', 'hot-picks'] as const;
-  const showDepositSlide = activeHeroSlide === 0;
+  const heroSlides = showFreeBoxSlide ? ['free-box', 'deposit-match', 'hot-picks'] : ['deposit-match', 'hot-picks'];
+  const showFreeBoxHero = showFreeBoxSlide && activeHeroSlide === 0;
+  const showDepositSlide = activeHeroSlide === (showFreeBoxSlide ? 1 : 0);
 
   const goToHeroSlide = (direction: 1 | -1) => {
     setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
@@ -281,6 +304,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   };
 
   const handleHeroAction = () => {
+    if (showFreeBoxHero && freeSignupBox) {
+      onOpenBox(freeSignupBox.id, true);
+      return;
+    }
     if (showDepositSlide) {
       if (!isAuthenticated) {
         openAuthModal('login');
@@ -373,6 +400,7 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
+            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
@@ -411,10 +439,10 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
               </div>
             </div>
           </div>
-          <span className="sr-only">{showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
+          <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
         </div>
       </section>
 
@@ -509,11 +537,11 @@ const MobileHomePreview = ({ boxes, trendingBoxIds, onOpenBox, onViewAllBoxes }:
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, freeSignupBox, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
   return (
-    <div className="pullz-home-shell min-h-screen bg-[#1b2024] text-white">
+    <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );

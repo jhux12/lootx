@@ -32,7 +32,7 @@ export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
 
   return (
-    <footer className="mt-20 border-t border-cyan-400/15 bg-transparent py-10 text-sm text-slate-300">
+    <footer className="mt-20 border-t border-violet-300/15 bg-[#05060a] py-10 text-sm text-slate-300">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
@@ -51,7 +51,7 @@ export const SiteFooter: React.FC = () => {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 min-w-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-slate-200 transition-colors hover:border-cyan-300/25 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/70 sm:h-10 sm:w-10 sm:rounded-full sm:border-cyan-400/25 sm:bg-[#25313a]"
+                className="inline-flex h-11 min-w-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.045] text-slate-200 transition-colors hover:border-violet-300/35 hover:bg-violet-500/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/70 sm:h-10 sm:w-10 sm:rounded-full sm:border-violet-300/25 sm:bg-violet-500/10"
                 aria-label={label}
               >
                 <Icon className="h-5 w-5" />
