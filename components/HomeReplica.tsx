@@ -96,6 +96,21 @@ const MobileCustomerReviewSkeleton: React.FC = () => (
   </div>
 );
 
+const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(120deg,#5525cf_0%,#5146dd_52%,#4275e8_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(255,255,255,.14),transparent_28%),radial-gradient(circle_at_88%_75%,rgba(152,90,255,.40),transparent_46%)]" />
+    <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
+      <div className="min-w-0">
+        <p className="inline-flex rounded-full bg-[#3b278f]/55 px-3 py-1 text-[9px] font-black uppercase tracking-[.08em] text-white shadow-sm sm:text-[11px]">New user bonus</p>
+        <h1 className="mt-2 max-w-[285px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-white sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]">Your Free Box Is Ready</h1>
+        <p className="mt-2 text-[11px] font-bold text-white/90 sm:text-sm lg:text-lg">Open it now and reveal your first pull.</p>
+        <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#5428c9] shadow-[0_8px_20px_rgba(0,0,0,.16)] sm:px-4 sm:text-xs">Open now</span>
+      </div>
+      {box.image ? <img src={box.image} alt={box.name} className="h-[126px] w-[126px] object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-[164px] sm:w-[164px] lg:h-[225px] lg:w-[225px]" /> : null}
+    </div>
+  </div>
+);
+
 const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => (
   <button
     type="button"
@@ -386,7 +401,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
       <section className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            {showFreeBoxSlide && freeSignupBox && <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#5421c8_0%,#376fd6_100%)] p-3 sm:p-5 lg:p-8"><div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(255,255,255,.24),transparent_34%),radial-gradient(circle_at_80%_100%,rgba(124,60,255,.55),transparent_44%)]" /><div className="relative z-10 flex h-full items-center justify-between gap-3 sm:px-5"><div className="max-w-[57%]"><div className="inline-flex rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:text-[10px] lg:text-xs">New user bonus</div><h1 className="mt-2 text-[22px] font-black uppercase leading-[.95] tracking-tight text-white sm:text-[34px] lg:text-[56px]">Your Free Box Is Ready</h1><p className="mt-1 text-[9px] font-bold text-white/90 sm:text-xs lg:text-base">Open it now and reveal your first pull.</p><span className="mt-3 inline-flex rounded-lg bg-white px-3 py-2 text-[9px] font-black uppercase tracking-wide text-[#5225c8] sm:text-xs">Open now</span></div>{freeSignupBox.image && <img src={freeSignupBox.image} alt={freeSignupBox.name} className="h-[112px] w-[112px] object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,.4)] sm:h-[148px] sm:w-[148px] lg:h-[205px] lg:w-[205px]" />}</div></div>}
+            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
