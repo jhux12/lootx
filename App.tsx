@@ -611,9 +611,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
           isChatCollapsed={isChatCollapsed}
-          onOpenBox={(boxId) => {
+          onOpenBox={(boxId, isFree = false) => {
             playSound('click');
-            setView({ type: 'CASE_OPENING', boxId });
+            setView({ type: 'CASE_OPENING', boxId, isFree });
           }}
           onViewAllBoxes={() => {
             playSound('click');

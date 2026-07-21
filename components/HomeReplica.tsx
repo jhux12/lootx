@@ -15,7 +15,7 @@ type HomeReplicaProps = {
   demoBoxId?: string | null;
   trendingBoxIds?: string[];
   isChatCollapsed: boolean;
-  onOpenBox: (boxId: string) => void;
+  onOpenBox: (boxId: string, isFree?: boolean) => void;
   onViewAllBoxes: () => void;
   onSignUp: () => void;
 };
@@ -122,7 +122,7 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
   </button>
 );
 
-const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -305,7 +305,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
 
   const handleHeroAction = () => {
     if (showFreeBoxHero && freeSignupBox) {
-      onOpenBox(freeSignupBox.id);
+      onOpenBox(freeSignupBox.id, true);
       return;
     }
     if (showDepositSlide) {
