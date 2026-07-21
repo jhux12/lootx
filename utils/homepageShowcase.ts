@@ -38,6 +38,7 @@ export type HomepageConfig = {
   demoBoxId?: string | null;
   trustImageUrl?: string | null;
   trendingBoxIds?: string[];
+  heroImageUrls?: string[];
 };
 
 export const MAX_SHOWCASE_BOXES = 12;
@@ -135,6 +136,9 @@ export const subscribeHomepageConfig = (
         trustImageUrl: typeof data.trustImageUrl === 'string' && data.trustImageUrl.trim() ? data.trustImageUrl : null,
         trendingBoxIds: Array.isArray(data.trendingBoxIds)
           ? data.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim())
+          : [],
+        heroImageUrls: Array.isArray(data.heroImageUrls)
+          ? data.heroImageUrls.map((url) => (typeof url === 'string' ? url.trim() : '')).slice(0, 2)
           : []
       });
     },
@@ -152,7 +156,7 @@ export const subscribeHomepageConfig = (
 
 export const saveHomepageConfig = async (configOrRows: HomepageConfig | ShowcaseRow[]) => {
   const config = Array.isArray(configOrRows)
-    ? { showcaseRows: configOrRows, demoBoxId: null, trustImageUrl: null, trendingBoxIds: [] }
+    ? { showcaseRows: configOrRows, demoBoxId: null, trustImageUrl: null, trendingBoxIds: [], heroImageUrls: [] }
     : configOrRows;
   const normalizedRows = normalizeShowcaseRows(config.showcaseRows);
   const demoBoxId = typeof config.demoBoxId === 'string' && config.demoBoxId.trim()
@@ -164,7 +168,10 @@ export const saveHomepageConfig = async (configOrRows: HomepageConfig | Showcase
   const trendingBoxIds = Array.isArray(config.trendingBoxIds)
     ? config.trendingBoxIds.filter((id) => typeof id === 'string' && id.trim()).slice(0, 6)
     : [];
-  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl, trendingBoxIds }, { merge: true });
+  const heroImageUrls = Array.isArray(config.heroImageUrls)
+    ? config.heroImageUrls.map((url) => (typeof url === 'string' ? url.trim() : '')).slice(0, 2)
+    : [];
+  await setDoc(HOMEPAGE_DOC_REF, { showcaseRows: normalizedRows, demoBoxId, trustImageUrl, trendingBoxIds, heroImageUrls }, { merge: true });
 };
 
 export const addRow = (rows: ShowcaseRow[]) => {
@@ -188,14 +195,14 @@ export const updateRow = (
   rows: ShowcaseRow[],
   rowId: string,
   patch: Partial<ShowcaseRow>
-) =>
+): ShowcaseRow[] =>
   rows.map((row) =>
     row.id === rowId
-      ? {
+      ? normalizeShowcaseRow({
           ...row,
           ...patch,
           updatedAt: Timestamp.now()
-        }
+        })
       : row
   );
 
