@@ -1,198 +1,58 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Gift, Sparkles, User } from 'lucide-react';
+import { Menu, Play, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { trackEvent } from '../utils/trackEvent';
-import { subscribeHomepageConfig } from '../utils/homepageShowcase';
-import { getBoxTags } from '../utils/boxTags';
 
-const PRIZE_SKELETON_COUNT = 6;
-const SPARKLE_DOTS = [
-  'left-[8%] top-[18%] h-2 w-2 bg-cyan-300/80',
-  'left-[18%] top-[72%] h-1.5 w-1.5 bg-fuchsia-300/80',
-  'right-[14%] top-[20%] h-2.5 w-2.5 bg-amber-200/80',
-  'right-[7%] top-[62%] h-1.5 w-1.5 bg-emerald-300/80'
-];
+const ASSET = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2F';
+const media = (name: string, token: string) => `${ASSET}${encodeURIComponent(name)}?alt=media&token=${token}`;
+
+const trustItems = [
+  ['trust-items-shipped-64.png', '7ad0463a-f52a-48cb-89e4-479bc18e9aa0', '2,300+ Items Shipped', 'Thousands of graded collectibles safely delivered to collectors.'],
+  ['trust-provably-fair-64.png', '6646aca4-4e6a-4667-8856-a829fca17258', 'Provably Fair', 'Every pull is verifiable through our transparent fairness system.'],
+  ['trust-free-first-pull-64.webp', '8c626fa1-0ff6-4d1f-94df-7bc2491a45af', 'Free First Pull', 'Create an account and open your first pull with no deposit required.']
+] as const;
+
+const steps = [
+  ['how-it-works-1-create-account-128.png', '0e74a454-3fc5-4d0e-88aa-5ab98d254dcd', 'Create Your Account', 'Sign up in seconds and secure your account.'],
+  ['how-it-works-2-free-pull-128.png', 'fb653e65-2275-444e-b811-6f5c9d91bc2d', 'Claim Your Free Pull', 'Get a free mystery pull instantly. No deposit needed.'],
+  ['how-it-works-3-keep-or-sell-128.png', '766bd5f5-e89d-4786-a69b-b7e95a1fa178', 'Keep It or Sell Back', 'Keep your win or sell it back for coins and open more.']
+] as const;
 
 export const SpinLandingPage: React.FC = () => {
   const { boxes, isAuthenticated, user, openAuthModal, setView } = useGame();
-  const [trustImageUrl, setTrustImageUrl] = useState('');
-
-  const freeSignupBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
-  const hasClaimedFreeBox = Boolean(user.lastFreeBoxClaim);
-
-  const showcaseItems = useMemo(
-    () =>
-      boxes
-        .filter((box) => getBoxTags(box).includes('pokemon'))
-        .flatMap((box) =>
-          box.items.map((item) => ({
-            ...item,
-            showcaseId: `${box.id}-${item.id}`
-          }))
-        )
-        .sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
-        .slice(0, 12),
-    [boxes]
-  );
-
-  const handleGetFreeBox = () => {
-    if (!freeSignupBox) return;
-
-    if (isAuthenticated) {
-      setView({ type: 'CASE_OPENING', boxId: freeSignupBox.id, isFree: true });
-      return;
-    }
-
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const freeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
+  const claimed = Boolean(user.lastFreeBoxClaim);
+  const claim = () => {
+    if (!freeBox || claimed) return;
+    if (isAuthenticated) { setView({ type: 'CASE_OPENING', boxId: freeBox.id, isFree: true }); return; }
     trackEvent('signup_cta_clicked', { placement: 'spin_landing' });
     setPostSignupRedirect('/case/free-box');
     openAuthModal('register');
   };
-
+  useEffect(() => { trackEvent('free_box_page_viewed', { page: '/spin' }); }, []);
   useEffect(() => {
-    trackEvent('free_box_page_viewed', { page: '/spin' });
-
-    const unsubscribe = subscribeHomepageConfig(
-      (config) => {
-        setTrustImageUrl(config?.trustImageUrl ?? '');
-      },
-      () => {
-        setTrustImageUrl('');
-      }
-    );
-
-    return () => unsubscribe();
+    const close = (event: KeyboardEvent) => event.key === 'Escape' && setIsVideoOpen(false);
+    document.addEventListener('keydown', close);
+    return () => document.removeEventListener('keydown', close);
   }, []);
-
-  const hasPrizeItems = showcaseItems.length > 0;
-  const carouselItems = hasPrizeItems ? [...showcaseItems, ...showcaseItems] : [];
-
-  return (
-    <section className="relative min-h-[calc(100vh-64px)] overflow-hidden bg-[#14191f] px-3 py-6 text-white sm:px-6 sm:py-10">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-10%,rgba(125,211,252,0.18),transparent_32%),radial-gradient(circle_at_14%_28%,rgba(217,70,239,0.12),transparent_28%),radial-gradient(circle_at_86%_18%,rgba(251,191,36,0.14),transparent_24%),linear-gradient(180deg,#182027_0%,#11161b_100%)]" />
-      <div className="pointer-events-none absolute -top-32 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-cyan-300/[0.08] blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 right-[-8rem] h-72 w-72 rounded-full bg-fuchsia-400/[0.08] blur-3xl" />
-      {SPARKLE_DOTS.map((classes, index) => (
-        <span
-          key={classes}
-          className={`pointer-events-none absolute rounded-full shadow-[0_0_24px_currentColor] motion-safe:animate-[spinLandingFloat_4s_ease-in-out_infinite] ${classes}`}
-          style={{ animationDelay: `${index * 0.55}s` }}
-          aria-hidden="true"
-        />
-      ))}
-
-      <div className="relative z-10 mx-auto w-full max-w-6xl space-y-8 sm:space-y-10">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.055] px-4 py-9 text-center shadow-[0_24px_90px_rgba(5,8,12,0.48)] backdrop-blur sm:rounded-[2rem] sm:px-8 sm:py-14">
-          <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-200/50 to-transparent" />
-          <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-300/10 blur-2xl" />
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">New User Bonus</p>
-          <h1 className="mt-3 text-balance text-4xl font-black leading-tight text-white sm:text-6xl">First Pull On Us</h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 sm:text-lg">
-            Create your account and unlock your free mystery box instantly.
-          </p>
-
-          <div className="relative mx-auto mt-6 max-w-5xl overflow-hidden rounded-3xl border border-white/10 bg-black/25 px-3 py-4 shadow-[inset_0_0_38px_rgba(125,211,252,0.06)] sm:mt-8 sm:px-4">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-[#1b2024] to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-[#1b2024] to-transparent" />
-            <div className={hasPrizeItems ? 'flex w-max gap-3 pb-1 pt-1 motion-safe:animate-[spinLandingMarquee_24s_linear_infinite] hover:[animation-play-state:paused] sm:gap-4' : 'flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 pt-1 sm:gap-4'}>
-              {hasPrizeItems
-                ? carouselItems.map((item, index) => (
-                    <article
-                      key={`${item.showcaseId}-${index}`}
-                      className="group w-[132px] shrink-0 snap-start rounded-2xl border border-white/10 bg-white/[0.065] p-2.5 shadow-[0_10px_26px_rgba(5,8,12,0.22)] transition duration-300 hover:-translate-y-1 hover:scale-[1.025] hover:border-cyan-200/35 hover:shadow-[0_18px_36px_rgba(34,211,238,0.13)] sm:w-[164px] sm:p-3"
-                    >
-                      <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xl bg-black/25 p-2 sm:h-28">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.16),transparent_44%)] opacity-70" />
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            loading="lazy"
-                            className="relative z-10 mx-auto h-20 w-20 object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 sm:h-24 sm:w-24"
-                          />
-                        ) : (
-                          <div className="h-20 w-20 animate-pulse rounded-lg bg-white/[0.06] sm:h-24 sm:w-24" aria-hidden="true" />
-                        )}
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-center text-xs font-semibold text-white sm:text-sm">{item.name}</p>
-                    </article>
-                  ))
-                : Array.from({ length: PRIZE_SKELETON_COUNT }).map((_, index) => (
-                    <article
-                      key={`prize-skeleton-${index}`}
-                      className="min-w-[136px] snap-start rounded-2xl border border-white/5 bg-[#252c32] p-3 sm:min-w-[164px]"
-                      aria-hidden="true"
-                    >
-                      <div className="h-24 animate-pulse rounded-xl bg-white/[0.06] sm:h-28" />
-                      <div className="mx-auto mt-3 h-3 w-4/5 animate-pulse rounded-full bg-white/[0.06]" />
-                      <div className="mx-auto mt-2 h-3 w-3/5 animate-pulse rounded-full bg-white/[0.045]" />
-                    </article>
-                  ))}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGetFreeBox}
-            disabled={!freeSignupBox || hasClaimedFreeBox}
-            className="mt-6 inline-flex min-h-12 w-full max-w-xs items-center justify-center rounded-xl bg-gradient-to-r from-cyan-200 via-white to-amber-100 px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-[#14191f] shadow-[0_14px_34px_rgba(34,211,238,0.16)] transition hover:scale-[1.015] hover:shadow-[0_18px_42px_rgba(251,191,36,0.18)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            Open My Free Box
-          </button>
-
-          {trustImageUrl.trim() && (
-            <img
-              src={trustImageUrl.trim()}
-              alt="Trusted by players"
-              loading="lazy"
-              className="mx-auto mt-4 max-h-12 w-auto max-w-[220px] object-contain opacity-90 sm:max-h-14 sm:max-w-xs"
-            />
-          )}
-
-          <p className="mt-3 text-xs text-slate-300 sm:text-sm">No purchase required • Real items • Instant pull</p>
-
-          {(hasClaimedFreeBox || !freeSignupBox) && (
-            <div className="mx-auto mt-4 max-w-xl rounded-xl border border-white/[0.06] bg-[#252c32] px-4 py-2 text-xs text-slate-300 sm:text-sm">
-              {hasClaimedFreeBox
-                ? 'You already claimed your signup free box on this account.'
-                : 'No free signup box is configured yet. Please check back shortly.'}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-3xl border border-white/10 bg-white/[0.055] p-4 shadow-[0_14px_38px_rgba(5,8,12,0.24)] backdrop-blur sm:p-6">
-          <h2 className="text-center text-xl font-bold text-white sm:text-2xl">How It Works</h2>
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {[
-              { icon: User, step: 'Step 1', text: 'Create Account' },
-              { icon: Gift, step: 'Step 2', text: 'Open My Free Box' },
-              { icon: Sparkles, step: 'Step 3', text: 'Open & Win Real Items' }
-            ].map((item) => (
-              <article
-                key={item.step}
-                className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 text-center shadow-[0_0_0_rgba(0,0,0,0)] transition hover:-translate-y-0.5 hover:border-cyan-200/35 hover:shadow-[0_12px_26px_rgba(5,8,12,0.28)]"
-              >
-                <item.icon className="mx-auto h-5 w-5 text-slate-300" />
-                <p className="mt-3 text-[11px] uppercase tracking-[0.2em] text-slate-400">{item.step}</p>
-                <p className="mt-1 text-sm font-medium text-white">{item.text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-      </div>
-
-      <style>{`
-        @keyframes spinLandingMarquee {
-          from { transform: translate3d(0, 0, 0); }
-          to { transform: translate3d(-50%, 0, 0); }
-        }
-
-        @keyframes spinLandingFloat {
-          0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .55; }
-          50% { transform: translate3d(0, -14px, 0) scale(1.35); opacity: 1; }
-        }
-      `}</style>
-    </section>
-  );
+  const goToBoxes = () => setView({ type: 'BOXES' });
+  return <div className="pullz-landing">
+    <style>{styles}</style>
+    <header className="pl-nav"><div className="pl-shell pl-navin"><a className="pl-logo" href="/" onClick={(e) => { e.preventDefault(); setView({ type: 'HOME' }); }}>pullz<span>.gg</span></a><nav className="pl-navlinks"><a href="#how">How It Works</a><a href="#featured">Featured Pulls</a><a href="#winners">Winners</a></nav><button className="pl-cta pl-desktop-cta" onClick={claim}>Claim Your Free Pull</button><button className="pl-ghost pl-mobile-menu" aria-label="Open navigation menu"><Menu size={20} /></button></div></header>
+    <main><div className="pl-shell">
+      <section className="pl-hero"><div className="pl-copy"><div className="pl-eyebrow"><i /> Real cards. Real shipments. Your first pull is free.</div><h1>PULL YOUR<br /><span>FIRST CARD FREE.</span></h1><p className="pl-lead">Open your first mystery pull in under 30 seconds. Win authentic graded Pokémon cards and collectibles shipped directly to your door.</p><div className="pl-actions"><button className="pl-cta" onClick={claim}>🎁 &nbsp; CLAIM YOUR FREE PULL</button><button className="pl-ghost" onClick={() => setIsVideoOpen(true)}><Play size={15} fill="currentColor" /> WATCH A LIVE PULL</button></div><div className="pl-trustrow">{trustItems.map(([image, token, title, text]) => <article className="pl-trust" key={title}><div className="pl-trust-icon"><img src={media(image, token)} alt="" /></div><b>{title}</b><small>{text}</small></article>)}</div></div>
+        <div className="pl-visual" aria-label="Featured graded collectible cards"><div className="pl-art"><div className="pl-orbit" /><div className="pl-float a" /><div className="pl-float b" /><div className="pl-float c" /><img className="pl-slab left" src={media('Untitled design.svg', '9d00502f-9317-4880-87aa-7da6fe392b45')} alt="" /><img className="pl-slab center" src={media('Untitled design (2).svg', '0bc8a362-65f2-4fc0-84da-2ccefabb8294')} alt="Featured graded collectible card" /><img className="pl-slab right" src={media('Untitled design (1).svg', '6fcb9e37-025c-4ac8-a20d-ec3cf2fad353')} alt="" /><div className="pl-platform" /></div></div></section>
+      <section id="winners" className="pl-social"><div className="pl-social-head"><div><em>TRUSTED BY COLLECTORS</em><h2>Real pulls. Real deliveries.</h2></div><div><strong>2,300+</strong><small>items shipped to collectors</small></div></div><div className="pl-collector"><div className="pl-reviews">{['“Pulled my first PSA 10 on day one.”', '“Shipping was faster than expected.”', '“I sold back one card and opened another box immediately.”', '“Everything arrived exactly as shown.”'].map((quote) => <div className="pl-review" key={quote}><span>★★★★★</span><p>{quote}</p></div>)}</div><div className="pl-mosaic">{['https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/live-community-submissions%2Fhpu7GXqOSdULbP9bzbesU809a4F2-1784085781459-screenshot-2026-07-14-230848.png?alt=media&token=7cc76521-2284-487f-9298-2178db573f49','https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Stories%2FScreenshot%202026-05-29%20at%205.07.00%E2%80%AFPM.png?alt=media&token=8225097c-81b3-40b9-a2e8-8473a14027a9','https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FScreenshot%202026-07-21%20at%204.33.37%E2%80%AFPM.png?alt=media&token=7f5f05c9-8fbb-441f-9016-aa156b7edb95','https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/live-community%2F1779746774126-screenshot-2026-05-25-at-6.04.59-pm.png?alt=media&token=b594ddd1-228a-4c24-86b5-1129c6b1abb9'].map((src, i) => <img key={src} src={src} alt={`Collector pull ${i + 1}`} loading="lazy" />)}</div></div></section>
+      <section id="how"><h2 className="pl-title">HOW IT WORKS</h2><div className="pl-steps">{steps.map(([image, token, title, text], index) => <article className="pl-step" key={title}><img src={media(image, token)} alt="" /><div><i>{index + 1}</i><h3>{title}</h3><p>{text}</p></div></article>)}</div></section>
+      <section id="featured"><h2 className="pl-title">FEATURED PULLS</h2><div className="pl-products">{[['Starter Collection', '$2.00', '$8.45'], ['Premium Pokémon', '$8.00', '$26.30'], ["Collector's Vault", '$20.00', '$65.80']].map(([name, price, average]) => <article className="pl-product" key={name}><div className="pl-box">PULLZ</div><div><h3>{name}</h3><small>Starting at</small><strong>{price}</strong><small>Top chase • Avg. value {average}</small><button className="pl-cta" onClick={goToBoxes}>VIEW BOX</button></div></article>)}</div></section>
+      <section className="pl-final"><h2>Your First Pull Is Waiting.</h2><p>Create an account and reveal your first collectible in under 30 seconds.</p><button className="pl-cta" disabled={!freeBox || claimed} onClick={claim}>{claimed ? 'FREE PULL CLAIMED' : 'Claim Your Free Pull'}</button></section>
+    </div></main>
+    <div className={`pl-modal ${isVideoOpen ? 'open' : ''}`} aria-hidden={!isVideoOpen} onClick={(e) => e.currentTarget === e.target && setIsVideoOpen(false)}><div className="pl-video-shell"><span>Live Pull</span><button aria-label="Close video" onClick={() => setIsVideoOpen(false)}><X /></button>{isVideoOpen && <video src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FAQN70eIudMFMcX2WPxIBdaOh9f9wUBGbHNk8gl8MlRqD02MyUg0TTErjNGLSmG29zH8WhlklL0HpqCSDCWmz8qM3o4QpdFv9YAZsLTc.mp4?alt=media&token=1d657690-6861-4180-aab3-0cdd071c7dd0" controls autoPlay playsInline />}</div></div>
+  </div>;
 };
+
+const styles = `
+.pullz-landing{--bg:#05060a;--text:#f7f8fb;--muted:#a9afbd;--line:rgba(255,255,255,.1);--purple:#7c3cff;--blue:#4d8dff;--lime:#b5ff37;background:radial-gradient(circle at 68% 10%,rgba(92,50,255,.2),transparent 24rem),radial-gradient(circle at 28% 35%,rgba(28,119,255,.1),transparent 30rem),var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;min-height:100dvh}.pullz-landing *{box-sizing:border-box}.pl-shell{width:min(1440px,calc(100% - 32px));margin:auto}.pl-nav{height:76px;display:flex;align-items:center;position:sticky;top:0;z-index:30;background:rgba(5,6,10,.72);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.05)}.pl-navin{display:flex;align-items:center;justify-content:space-between;width:100%}.pl-logo{font-weight:900;font-size:30px;font-style:italic;letter-spacing:-2px;text-decoration:none}.pl-logo span{color:#7266ff}.pl-navlinks{display:flex;gap:34px;color:#d6d9e2;font-size:14px}.pl-navlinks a{text-decoration:none;color:inherit}.pl-cta,.pl-ghost{border:0;border-radius:14px;padding:14px 22px;font-weight:800;cursor:pointer}.pl-cta{color:#fff;background:linear-gradient(135deg,var(--purple),var(--blue));box-shadow:0 10px 35px rgba(90,67,255,.35)}.pl-cta:disabled{opacity:.5;cursor:not-allowed}.pl-ghost{color:#fff;background:rgba(255,255,255,.02);border:1px solid var(--line);display:inline-flex;gap:8px;align-items:center;justify-content:center}.pl-mobile-menu{display:none}.pl-hero{min-height:560px;display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:center;padding:44px 0 24px}.pl-eyebrow{display:inline-flex;gap:8px;align-items:center;color:#d8d5ff;font-size:13px}.pl-eyebrow i{width:7px;height:7px;border-radius:50%;background:#7c3cff;box-shadow:0 0 18px #7c3cff}.pl-copy h1{font-size:clamp(52px,6vw,96px);line-height:.95;letter-spacing:-5px;margin:18px 0 24px}.pl-copy h1 span{background:linear-gradient(90deg,#b05cff,#4d8dff);background-clip:text;color:transparent}.pl-lead{font-size:20px;line-height:1.55;color:#c5cad5;max-width:680px}.pl-actions{display:flex;gap:14px;margin:28px 0 30px}.pl-trustrow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.pl-trust{min-height:154px;padding:20px 18px;border:1px solid rgba(255,255,255,.09);border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));box-shadow:0 14px 40px rgba(0,0,0,.18)}.pl-trust-icon{width:54px;height:54px;border:1px solid rgba(139,92,246,.3);border-radius:15px;display:grid;place-items:center;background:rgba(124,60,255,.08)}.pl-trust-icon img{width:34px;height:34px;object-fit:contain}.pl-trust b,.pl-trust small{display:block}.pl-trust b{margin-top:14px;font-size:16px}.pl-trust small,.pl-product small{color:var(--muted);font-size:12px;line-height:1.45;margin-top:5px}.pl-visual{min-height:470px;display:grid;place-items:center}.pl-art{position:relative;width:min(100%,700px);aspect-ratio:1;display:grid;place-items:center}.pl-orbit{position:absolute;inset:11%;border-radius:50%;background:radial-gradient(circle,rgba(116,62,255,.18),transparent 70%);border:1px solid rgba(124,60,255,.18);box-shadow:0 0 70px rgba(77,141,255,.22);animation:pl-pulse 5.5s ease-in-out infinite}.pl-slab{position:absolute;z-index:3;width:41%;filter:drop-shadow(0 28px 50px rgba(0,0,0,.58))}.pl-slab.left{left:12%;top:27%;transform:rotate(-9deg) scale(.75);animation:pl-left 6s ease-in-out infinite}.pl-slab.center{left:32%;top:20%;width:36%;animation:pl-center 5s ease-in-out infinite}.pl-slab.right{right:11%;top:28%;transform:rotate(9deg) scale(.73);animation:pl-right 6.4s ease-in-out infinite}.pl-platform{position:absolute;left:18%;right:18%;bottom:15%;height:4.8%;border-radius:50%;border:2px solid rgba(133,92,255,.9);box-shadow:0 0 20px #6d4bff,0 0 75px rgba(40,101,255,.48);z-index:1}.pl-float{position:absolute;width:10%;aspect-ratio:.68;border-radius:12%;background:linear-gradient(145deg,rgba(77,141,255,.75),rgba(124,60,255,.45));opacity:.34}.pl-float.a{left:2%;top:19%;transform:rotate(-22deg)}.pl-float.b{right:1%;top:20%;transform:rotate(18deg)}.pl-float.c{left:15%;bottom:18%;transform:rotate(13deg)}.pl-social{background:linear-gradient(180deg,#10141d,#090c12);border:1px solid var(--line);border-radius:22px;padding:26px;margin:12px 0 56px}.pl-social-head{display:flex;justify-content:space-between;align-items:end;gap:24px;margin-bottom:22px}.pl-social-head em{font-size:12px;letter-spacing:.16em;color:#aaa4ff;font-weight:800;font-style:normal}.pl-social-head h2{margin:6px 0 0;font-size:28px}.pl-social-head>div:last-child{text-align:right}.pl-social-head strong,.pl-product strong{display:block;font-size:30px}.pl-social-head small{font-size:13px;color:var(--muted)}.pl-collector{display:grid;grid-template-columns:1.15fr .85fr;gap:24px}.pl-reviews{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.pl-review{font-size:13px;color:#d1d5df;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:15px}.pl-review span{color:#ffc94a}.pl-review p{margin:8px 0 0}.pl-mosaic{display:grid;grid-template-columns:repeat(2,170px);gap:10px;justify-content:end}.pl-mosaic img{width:170px;height:138px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.08)}.pullz-landing section:not(.pl-hero):not(.pl-social):not(.pl-final){padding:54px 0}.pl-title{text-align:center;font-size:34px;margin:0 0 28px}.pl-steps,.pl-products{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.pl-step,.pl-product{background:linear-gradient(180deg,#0e121b,#090c12);border:1px solid var(--line);border-radius:18px;padding:22px;display:flex;gap:16px;align-items:center}.pl-step img{width:78px;height:78px;object-fit:contain}.pl-step i{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--purple),#5825d7);display:grid;place-items:center;font-style:normal;font-weight:900}.pl-step h3{margin:7px 0;font-size:17px}.pl-step p{margin:0;color:var(--muted);font-size:14px}.pl-product{display:grid;grid-template-columns:145px 1fr;gap:20px;min-height:260px}.pl-box{height:100%;min-height:190px;border-radius:18px;display:grid;place-items:center;font-size:26px;font-weight:900;background:linear-gradient(140deg,#0b4b34,#11291f 45%,#050706)}.pl-product:nth-child(2) .pl-box{background:linear-gradient(140deg,#5a1ea3,#1d1237 45%,#07050a)}.pl-product:nth-child(3) .pl-box{background:linear-gradient(140deg,#9e6a0d,#2a1b05 45%,#070503)}.pl-product h3{font-size:22px;margin:8px 0 18px}.pl-product strong{color:var(--lime)}.pl-product .pl-cta{width:100%;padding:11px 14px;margin-top:18px}.pl-final{border:1px solid var(--line);border-radius:24px;padding:54px;text-align:center;background:radial-gradient(circle at 50% 0,rgba(124,60,255,.22),transparent 55%),#0b0e15;margin:60px 0}.pl-final h2{font-size:44px;margin:0 0 14px}.pl-final p{color:var(--muted);margin-bottom:24px}.pl-modal{position:fixed;inset:0;z-index:999;display:grid;place-items:center;padding:24px;background:rgba(3,5,12,.82);backdrop-filter:blur(18px);opacity:0;visibility:hidden;pointer-events:none;transition:.22s}.pl-modal.open{opacity:1;visibility:visible;pointer-events:auto}.pl-video-shell{position:relative;width:min(92vw,420px);aspect-ratio:9/16;border-radius:26px;overflow:hidden;background:#000;border:1px solid rgba(255,255,255,.12)}.pl-video-shell video{width:100%;height:100%;object-fit:cover}.pl-video-shell span,.pl-video-shell button{position:absolute;z-index:2;top:12px;background:rgba(5,6,10,.62);border:1px solid rgba(255,255,255,.16);color:#fff}.pl-video-shell span{left:12px;padding:8px 11px;border-radius:99px;font-size:12px;font-weight:700}.pl-video-shell button{right:12px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center}@keyframes pl-center{50%{transform:translateY(-16px)}}@keyframes pl-left{50%{transform:rotate(-8deg) scale(.75) translateY(-12px)}}@keyframes pl-right{50%{transform:rotate(8deg) scale(.73) translateY(-14px)}}@keyframes pl-pulse{50%{transform:scale(1.02);opacity:1}}@media(max-width:980px){.pl-navlinks,.pl-desktop-cta{display:none}.pl-mobile-menu{display:inline-grid;place-items:center}.pl-hero{grid-template-columns:1fr;padding-top:40px}.pl-copy{text-align:center}.pl-lead{margin:auto}.pl-actions{justify-content:center}.pl-trustrow{max-width:760px;margin:auto}.pl-visual{min-height:450px}.pl-collector{grid-template-columns:1fr}.pl-products,.pl-steps{grid-template-columns:1fr}}@media(max-width:640px){.pl-shell{width:min(100% - 22px,560px)}.pl-nav{height:64px}.pl-logo{font-size:25px}.pl-hero{padding:28px 0 10px;min-height:auto}.pl-copy h1{font-size:48px;letter-spacing:-3px}.pl-lead{font-size:16px}.pl-actions{flex-direction:column}.pl-actions button{width:100%}.pl-trustrow{grid-template-columns:1fr;gap:10px}.pl-trust{min-height:auto;padding:15px 16px;display:grid;grid-template-columns:50px 1fr;column-gap:13px;text-align:left}.pl-trust-icon{grid-row:1/3;width:50px;height:50px}.pl-trust b{margin-top:0}.pl-visual{min-height:300px}.pl-art{width:min(105vw,400px)}.pl-social{padding:18px}.pl-social-head{align-items:flex-start;flex-direction:column;gap:10px}.pl-social-head>div:last-child{text-align:left}.pl-reviews{grid-template-columns:1fr}.pl-mosaic{grid-template-columns:repeat(2,145px);justify-content:center;gap:8px}.pl-mosaic img{width:145px;height:118px}.pullz-landing section:not(.pl-hero):not(.pl-social):not(.pl-final){padding:40px 0}.pl-title{font-size:28px}.pl-step{align-items:flex-start}.pl-step img{width:64px;height:64px}.pl-product{grid-template-columns:110px 1fr;padding:16px;min-height:210px}.pl-product h3{font-size:18px;margin-top:0}.pl-box{min-height:175px}.pl-final{padding:36px 20px}.pl-final h2{font-size:34px}.pl-modal{padding:10px}.pl-video-shell{width:min(96vw,390px);max-height:90vh;border-radius:20px}}@media(prefers-reduced-motion:reduce){.pl-orbit,.pl-slab{animation:none!important}}
+`;

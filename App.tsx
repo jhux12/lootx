@@ -830,9 +830,11 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         {showEmailVerifiedModal && <EmailVerifiedModal />}
         {showTopUpModal && <TopUpModal />}
       </Suspense>
-      <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
-        <SiteFooter />
-      </Suspense>
+      {view.type !== 'SPIN' && (
+        <Suspense fallback={<div className="min-h-[220px]" aria-hidden="true" />}>
+          <SiteFooter />
+        </Suspense>
+      )}
       <CookieConsentToast onAnalyticsConsent={handleAnalyticsConsent} />
       <DeferredAnalytics viewType={view.type} />
     </main>
@@ -872,7 +874,8 @@ const getNavigationScrollKey = (view: ReturnType<typeof useGame>['view']) => {
 
 const AppShell = () => {
   const { view } = useGame();
-  const shouldUseStickyHeader = true;
+  // The campaign page supplies its own full navigation and footer treatment.
+  const shouldUseStickyHeader = view.type !== 'SPIN';
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
 
@@ -892,12 +895,9 @@ const AppShell = () => {
   return (
     <div className="min-h-[100dvh] bg-[#1b2024] text-white font-sans selection:bg-blue-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
-      <Header
-        onOpenInbox={() => undefined}
-        isSticky={shouldUseStickyHeader}
-      />
+      {shouldUseStickyHeader && <Header onOpenInbox={() => undefined} isSticky />}
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-      <MobileBottomNav />
+      {shouldUseStickyHeader && <MobileBottomNav />}
       <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
       <ResetPasswordModal />
     </div>
