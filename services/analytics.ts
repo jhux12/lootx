@@ -37,8 +37,13 @@ export const getGaClientId = () => { if (typeof document === 'undefined') return
 export const initializeAnalytics = () => {
   if (!enabled()) { debug('initialize', { skipped: true, reason: 'missing_measurement_id_or_consent' }); return false; }
   if (window.gtag || document.querySelector('script[data-pullz-ga4]')) { debug('initialize', { skipped: true, reason: 'already_initialized' }); return false; }
-  const id = measurementId()!; window.dataLayer = window.dataLayer || []; window.gtag = (...args) => window.dataLayer!.push(args);
-  window.gtag('js', new Date()); window.gtag('config', id, { send_page_view: false, debug_mode: debugEnabled() });
+  const id = measurementId()!;
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function gtag(..._args: unknown[]) {
+    window.dataLayer!.push(arguments);
+  };
+  window.gtag('js', new Date());
+  window.gtag('config', id, { send_page_view: false, debug_mode: debugEnabled() });
   const script = document.createElement('script'); script.async = true; script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`; script.dataset.pullzGa4 = 'true'; document.head.appendChild(script); captureAttribution(); debug('initialize', { skipped: false }); return true;
 };
 export const trackEvent = (name: Ga4EventName, params: AnalyticsParams = {}, dedupeKey?: string) => {
