@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  CookieConsentValue,
   getCookieConsent,
-  hasAnalyticsConsent,
   hasMarketingConsent,
   loadMarketingScripts,
   setCookieConsent
@@ -39,9 +37,6 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
   useEffect(() => {
     const consent = getCookieConsent();
     if (consent) {
-      if (hasAnalyticsConsent(consent)) {
-        onAnalyticsConsent?.();
-      }
       if (hasMarketingConsent(consent)) {
         loadMarketingScripts();
       }
@@ -57,7 +52,7 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
     }
 
     return clearTimers;
-  }, [isPromoVisible, onAnalyticsConsent]);
+  }, [isPromoVisible]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,16 +76,23 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
     return () => window.removeEventListener('pullz:open-cookie-settings', reopen);
   }, []);
 
-  const handleConsent = (value: CookieConsentValue) => {
-    setCookieConsent(value);
-    if (hasAnalyticsConsent(value)) {
-      onAnalyticsConsent?.();
-    }
-    if (hasMarketingConsent(value)) {
-      loadMarketingScripts();
-    }
+  const closeToast = () => {
     setIsOpen(false);
     setIsExpanded(false);
+  };
+
+  const handleNecessaryOnly = () => {
+    setCookieConsent('essential');
+    closeToast();
+  };
+
+  const handleAcceptAll = () => {
+    setCookieConsent('all');
+    onAnalyticsConsent?.();
+    if (hasMarketingConsent('all')) {
+      loadMarketingScripts();
+    }
+    closeToast();
   };
 
   if (!isOpen) return null;
@@ -118,14 +120,14 @@ export const CookieConsentToast: React.FC<CookieConsentToastProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => handleConsent('essential')}
+                onClick={handleNecessaryOnly}
                 className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-gray-200 transition hover:border-white/40 hover:text-white"
               >
                 Necessary only
               </button>
               <button
                 type="button"
-                onClick={() => handleConsent('all')}
+                onClick={handleAcceptAll}
                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-4 py-1 text-[11px] font-semibold text-white shadow-[0_0_12px_rgba(32,93,215,0.6)] transition hover:brightness-110"
               >
                 Accept all
