@@ -253,8 +253,8 @@ export const Leaderboard: React.FC = () => {
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
   return (
-    <div className="min-h-screen bg-[#1b2024] text-white">
-      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#1b2024] pb-8 sm:max-w-[720px] lg:max-w-[960px]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-transparent pb-8 sm:max-w-[720px] lg:max-w-[960px]">
         <header className="flex items-center justify-between px-5 pb-5 pt-6 sm:px-8 sm:pt-8">
           <button
             onClick={() => { playSound('click'); setView({ type: 'HOME' }); }}
