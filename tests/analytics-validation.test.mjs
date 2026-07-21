@@ -21,6 +21,11 @@ test('client validation strips PII and undefined values and persists session ded
   assert.match(analytics, /session_deduplicated/);
 });
 
+test('GA4 command queue pushes the gtag arguments object', () => {
+  assert.match(analytics, /function\s+gtag\s*\([^)]*\)\s*\{\s*window\.dataLayer!\.push\(arguments\);\s*\}/);
+  assert.doesNotMatch(analytics, /dataLayer!\.push\(args\)/);
+});
+
 test('purchase and first purchase only originate in the verified webhook flow', () => {
   assert.match(webhook, /constructEvent/);
   assert.match(webhook, /ga4_events/);
