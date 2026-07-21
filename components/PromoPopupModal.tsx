@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import pullzLogo from '../assets/pullz-p.PNG';
+import pullzIcon from '../assets/png/pullz-icon-color-2048.png';
 import { useGame } from '../context/GameContext';
 import { lockPageScroll } from '../utils/scrollLock';
 
@@ -13,7 +13,7 @@ type PromoPopupModalProps = {
 
 export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClose, onSignUp, onSignIn }) => {
   const { stripeSettings } = useGame();
-  const popupImage = stripeSettings.boxCatalogHeroImageUrl || stripeSettings.authPopupImageUrl || pullzLogo;
+  const popupImage = stripeSettings.boxCatalogHeroImageUrl || stripeSettings.authPopupImageUrl || pullzIcon;
   useEffect(() => {
     if (!isOpen) return undefined;
 
@@ -66,9 +66,8 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
             </button>
 
             <div className="relative z-10 text-center">
-              <div className="mb-3 flex items-center justify-center gap-2">
-                <img src={pullzLogo} alt="Pullz.gg logo" className="h-7 w-7 rounded-full border border-white/10 bg-black/30 p-1" loading="lazy" decoding="async" width={64} height={64} style={{ aspectRatio: "1 / 1" }} />
-                <span className="text-base font-semibold text-white">Pullz.gg</span>
+              <div className="mb-3 flex items-center justify-center">
+                <img src={pullzIcon} alt="Pullz" className="h-9 w-auto object-contain" loading="lazy" decoding="async" width={2048} height={2341} style={{ aspectRatio: "2048 / 2341" }} />
               </div>
               <h2 id="promo-popup-title" className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">
                 Get your <span className="text-cyan-300">free</span> box!

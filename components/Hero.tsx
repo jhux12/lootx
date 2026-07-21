@@ -1,6 +1,6 @@
 import React from 'react';
 import heroImage from '../assets/hero.png';
-import pullzPattern from '../assets/pullz-p.PNG';
+import pullzPattern from '../assets/png/pullz-icon-color-2048.png';
 import { useGame } from '../context/GameContext';
 import { setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { trackEvent } from '../utils/trackEvent';
