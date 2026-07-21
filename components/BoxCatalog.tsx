@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, ShieldCheck, Sparkles, Tag, SlidersHorizontal, X } from 'lucide-react';
+import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
@@ -469,46 +469,25 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="relative mx-auto max-w-[1320px] px-3 pb-5 pt-5 sm:px-5 sm:pt-8">
-        <div className="grid items-center gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,470px)]">
-          <div className="order-2 lg:order-1">
-            <h1 className="text-4xl font-extrabold uppercase tracking-tight text-white sm:text-5xl">Boxes</h1>
-            <p className="mt-2 max-w-xl text-base text-slate-300 sm:text-lg">
-              Open premium mystery boxes and win <span className="text-[#5da0ff]">real items</span>.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#67a6ff]" />
-                Provably Fair
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Sparkles className="h-3.5 w-3.5 text-[#9a88ff]" />
-                Real Items
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-slate-200">
-                <Tag className="h-3.5 w-3.5 text-[#67a6ff]" />
-                Sell Back
-              </span>
-            </div>
+      <div className="pullz-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
+        <section className="pullz-boxes-hero" aria-labelledby="boxes-hero-title">
+          <div className="pullz-boxes-hero-copy">
+            <h1 id="boxes-hero-title">Open. Pull.<br /><span>Collect.</span></h1>
+            <p>Explore premium mystery boxes packed with real graded collectibles. Keep what you win or sell it back instantly.</p>
           </div>
-          <div className="order-1 flex justify-center lg:order-2 lg:justify-end">
-            <div className="relative w-full max-w-[460px]">
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 hidden h-56 -translate-y-1/2 rounded-[42px] bg-[radial-gradient(120%_90%_at_24%_30%,rgba(63,109,255,0.45)_0%,rgba(63,109,255,0.18)_28%,rgba(63,109,255,0)_62%),radial-gradient(105%_95%_at_78%_72%,rgba(122,77,255,0.34)_0%,rgba(122,77,255,0.14)_30%,rgba(122,77,255,0)_65%),linear-gradient(110deg,rgba(32,108,255,0.12)_8%,rgba(95,71,255,0.2)_48%,rgba(154,136,255,0.08)_100%)] blur-2xl sm:block sm:h-64" />
-              {stripeSettings.boxCatalogHeroImageUrl ? (
-                <img
-                  src={stripeSettings.boxCatalogHeroImageUrl}
-                  alt="Box catalog hero"
-                  className="relative mx-auto h-44 w-full object-contain sm:h-56 lg:h-64"
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="async"
-                  width={460}
-                  height={256}
-                />
-              ) : null}
-            </div>
+
+          <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
+            <div className="pullz-boxes-hero-orbit" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="eager" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="eager" decoding="async" />
+            <div className="pullz-boxes-hero-platform" />
+            <span className="pullz-boxes-particle pullz-boxes-particle-1" />
+            <span className="pullz-boxes-particle pullz-boxes-particle-2" />
+            <span className="pullz-boxes-particle pullz-boxes-particle-3" />
+            <span className="pullz-boxes-particle pullz-boxes-particle-4" />
           </div>
-        </div>
+        </section>
       </div>
 
       <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#05060a]/95 backdrop-blur">
