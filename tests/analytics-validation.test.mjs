@@ -21,6 +21,22 @@ test('client validation strips PII and undefined values and persists session ded
   assert.match(analytics, /session_deduplicated/);
 });
 
+test('GA4 waits for gtag.js before setup and flushes events queued while loading', () => {
+  assert.match(analytics, /let isLoading = false/);
+  assert.match(analytics, /let isInitialized = false/);
+  assert.match(analytics, /const queuedEvents: QueuedEvent\[\] = \[\]/);
+  assert.match(analytics, /script\.onload = \(\) => \{/);
+  assert.match(analytics, /script\.onerror = \(\) => \{/);
+  assert.match(analytics, /const flushQueuedEvents = \(\) => \{[\s\S]*queuedEvents\.splice\(0\)/);
+
+  const onload = analytics.indexOf('script.onload =');
+  const setup = analytics.indexOf("window.gtag('js', new Date())", onload);
+  const flush = analytics.indexOf('flushQueuedEvents();', onload);
+  assert.ok(onload >= 0 && setup > onload, 'gtag setup must occur in script.onload');
+  assert.ok(flush > setup, 'queued events must flush after gtag config');
+  assert.doesNotMatch(analytics, /already_initialized/);
+});
+
 test('purchase and first purchase only originate in the verified webhook flow', () => {
   assert.match(webhook, /constructEvent/);
   assert.match(webhook, /ga4_events/);

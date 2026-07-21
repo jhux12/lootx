@@ -12,6 +12,10 @@ export type Ga4EventName = typeof GA4_EVENT_NAMES[number];
 const EVENTS = new Set<string>(GA4_EVENT_NAMES);
 const PII_KEY = /^(email|mail|full_name|first_name|last_name|address|street|city|zip|postal_code|phone|username|password|customer|uid|user_id|external_id|stripe_customer_id)$/i;
 const SESSION_DEDUP_PREFIX = 'pullz_ga4_sent:';
+type QueuedEvent = { name: Ga4EventName; payload: AnalyticsParams };
+const queuedEvents: QueuedEvent[] = [];
+let isLoading = false;
+let isInitialized = false;
 const measurementId = () => import.meta.env.VITE_GA4_MEASUREMENT_ID?.trim();
 const enabled = () => typeof window !== 'undefined' && Boolean(measurementId()) && hasAnalyticsConsent(getCookieConsent());
 const debugEnabled = () => typeof window !== 'undefined' && (import.meta.env.VITE_APP_ENV !== 'production' || new URLSearchParams(location.search).get('ga_debug') === '1');
@@ -34,12 +38,42 @@ export const captureAttribution = (): Attribution | null => {
 };
 export const getAttribution = (key: 'pullz_first_touch' | 'pullz_last_touch' = 'pullz_first_touch'): Attribution | null => { try { return typeof window === 'undefined' ? null : JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
 export const getGaClientId = () => { if (typeof document === 'undefined') return ''; const id = measurementId()?.replace(/^G-/, ''); const match = id && document.cookie.match(new RegExp(`(?:^|; )_ga_${id}=GS\\d+\\.\\d+\\.(\\d+)\\.(\\d+)`)); return match ? `${match[1]}.${match[2]}` : (document.cookie.match(/(?:^|; )_ga=GA\d+\.\d+\.(\d+\.\d+)/)?.[1] || ''); };
+
+const sendEvent = (name: Ga4EventName, payload: AnalyticsParams) => window.gtag?.('event', name, payload);
+const flushQueuedEvents = () => {
+  const events = queuedEvents.splice(0);
+  events.forEach(({ name, payload }) => sendEvent(name, payload));
+};
+
 export const initializeAnalytics = () => {
   if (!enabled()) { debug('initialize', { skipped: true, reason: 'missing_measurement_id_or_consent' }); return false; }
-  if (window.gtag || document.querySelector('script[data-pullz-ga4]')) { debug('initialize', { skipped: true, reason: 'already_initialized' }); return false; }
-  const id = measurementId()!; window.dataLayer = window.dataLayer || []; window.gtag = (...args) => window.dataLayer!.push(args);
-  window.gtag('js', new Date()); window.gtag('config', id, { send_page_view: false, debug_mode: debugEnabled() });
-  const script = document.createElement('script'); script.async = true; script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`; script.dataset.pullzGa4 = 'true'; document.head.appendChild(script); captureAttribution(); debug('initialize', { skipped: false }); return true;
+  if (isInitialized) { debug('initialize', { skipped: true, reason: 'initialized' }); return true; }
+  if (isLoading) { debug('initialize', { skipped: true, reason: 'loading' }); return true; }
+
+  const id = measurementId()!;
+  const script = document.createElement('script');
+  isLoading = true;
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+  script.dataset.pullzGa4 = 'true';
+  script.onload = () => {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = (...args) => window.dataLayer!.push(args);
+    window.gtag('js', new Date());
+    window.gtag('config', id, { send_page_view: false, debug_mode: debugEnabled() });
+    isLoading = false;
+    isInitialized = true;
+    flushQueuedEvents();
+    debug('initialize', { skipped: false, queued_events_flushed: true });
+  };
+  script.onerror = () => {
+    isLoading = false;
+    debug('initialize', { skipped: true, reason: 'script_load_failed' });
+  };
+  document.head.appendChild(script);
+  captureAttribution();
+  debug('initialize', { skipped: false, loading: true });
+  return true;
 };
 export const trackEvent = (name: Ga4EventName, params: AnalyticsParams = {}, dedupeKey?: string) => {
   const payload = sanitizeAnalyticsParams(params); const key = dedupeKey ? `${name}:${dedupeKey}` : undefined;
@@ -47,7 +81,10 @@ export const trackEvent = (name: Ga4EventName, params: AnalyticsParams = {}, ded
   if (!enabled()) { debug(name, { skipped: true, reason: 'missing_measurement_id_or_consent', dedupe_key: key, payload }); return false; }
   if (key && wasSentThisSession(key)) { debug(name, { skipped: true, reason: 'session_deduplicated', dedupe_key: key, payload }); return false; }
   initializeAnalytics(); if (key) markSentThisSession(key);
-  const finalPayload = { ...payload, ...(debugEnabled() ? { debug_mode: true } : {}) }; window.gtag?.('event', name, finalPayload); debug(name, { skipped: false, dedupe_key: key, payload: finalPayload }); return true;
+  const finalPayload = { ...payload, ...(debugEnabled() ? { debug_mode: true } : {}) };
+  if (isInitialized) sendEvent(name, finalPayload);
+  else queuedEvents.push({ name, payload: finalPayload });
+  debug(name, { skipped: false, dedupe_key: key, payload: finalPayload, queued: !isInitialized }); return true;
 };
 export const trackPageView = (app_view: string) => typeof window !== 'undefined' && trackEvent('page_view', { page_title: document.title, page_location: `${location.origin}${location.pathname}`, page_path: location.pathname, app_view }, `${app_view}:${location.pathname}`);
 export const setAnalyticsUser = (_opaqueId: string) => undefined;
