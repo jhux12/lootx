@@ -473,7 +473,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         <section className="pullz-boxes-hero" aria-labelledby="boxes-hero-title">
           <div className="pullz-boxes-hero-copy">
             <h1 id="boxes-hero-title">Open. Pull.<br /><span>Collect.</span></h1>
-            <p>Explore premium mystery boxes packed with real graded collectibles. Keep what you win or sell it back instantly.</p>
           </div>
 
           <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
