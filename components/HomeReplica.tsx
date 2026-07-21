@@ -103,10 +103,9 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
       <div className="min-w-0">
         <p className="inline-flex rounded-full bg-[#3b278f]/55 px-3 py-1 text-[9px] font-black uppercase tracking-[.08em] text-white shadow-sm sm:text-[11px]">New user bonus</p>
         <h1 className="mt-2 max-w-[285px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-white sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]">Your Free Box Is Ready</h1>
-        <p className="mt-2 text-[11px] font-bold text-white/90 sm:text-sm lg:text-lg">Open it now and reveal your first pull.</p>
         <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#5428c9] shadow-[0_8px_20px_rgba(0,0,0,.16)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} className="h-[126px] w-[126px] object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-[164px] sm:w-[164px] lg:h-[225px] lg:w-[225px]" /> : null}
+      {box.image ? <img src={box.image} alt={box.name} className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
     </div>
   </div>
 );
