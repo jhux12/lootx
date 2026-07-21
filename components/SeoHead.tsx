@@ -12,7 +12,7 @@ const SITE_URL = 'https://pullz.gg';
 const SOCIAL_TITLE = 'Pullz.gg | Open Digital Boxes. Win Real Cards.';
 const META_DESCRIPTION = 'Open digital boxes and win real Pokémon cards. Every win is a real item that can be shipped directly to your door. Provably fair and secure.';
 const SOCIAL_DESCRIPTION = 'Ship real items to your door. Provably fair. Claim your first box free.';
-const SOCIAL_IMAGE = `${SITE_URL}/assets/webimg.png`;
+const SOCIAL_IMAGE = `${SITE_URL}/assets/png/pullz-horizontal-dark-2400.png`;
 const CANONICAL_URL = SITE_URL;
 const HOMEPAGE_DESCRIPTION = META_DESCRIPTION;
 
@@ -163,14 +163,14 @@ export const SeoHead = ({ view }: { view: ViewState }) => {
     ensureMeta('meta[property="og:image"]', { property: 'og:image', content: SOCIAL_IMAGE });
     ensureMeta('meta[property="og:url"]', { property: 'og:url', content: CANONICAL_URL });
     ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' });
-    ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '1200' });
-    ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '630' });
+    ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '2400' });
+    ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '619' });
 
     ensureMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
     ensureMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: SOCIAL_TITLE });
     ensureMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: SOCIAL_DESCRIPTION });
     ensureMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: SOCIAL_IMAGE });
-    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz.gg social preview' });
+    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz logo' });
   }, [view]);
 
   return null;

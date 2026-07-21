@@ -36,14 +36,14 @@ export const SiteFooter: React.FC = () => {
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
-          <BrandLockup
-            className="justify-start"
-            logoClassName="h-10 w-10 md:h-12 md:w-12"
-            logoWidth={1024}
-            logoHeight={1024}
-            textClassName="text-lg"
-            showTextOnMobile
-          />
+          <button
+            type="button"
+            onClick={() => setView({ type: 'HOME' })}
+            className="inline-flex min-h-11 items-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+            aria-label="Go to Pullz home"
+          >
+            <BrandLockup className="justify-start" logoClassName="h-9 w-auto md:h-10" />
+          </button>
           <div className="grid w-full grid-cols-4 gap-2 text-white sm:w-auto sm:flex sm:items-center sm:gap-3" aria-label="Pullz.gg social links">
             {socialLinks.map(({ href, label, Icon }) => (
               <a

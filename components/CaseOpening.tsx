@@ -20,7 +20,8 @@ import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/m
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import { usePerformanceMode } from '../src/lib/performance';
-import pullzLogo from '../assets/pullz-p.PNG';
+import pullzLogo from '../assets/png/pullz-icon-color-2048.png';
+import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 
@@ -204,7 +205,7 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
   try {
     const [itemResponse, logoImage] = await Promise.all([
       fetch(item.image, { mode: 'cors' }),
-      loadImageElement(pullzLogo)
+      loadImageElement(pullzHorizontalLogo)
     ]);
     if (!itemResponse.ok) return null;
 
@@ -243,8 +244,8 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       context.fillStyle = glow;
       context.fillRect(0, 0, canvas.width, canvas.height);
 
-      const logoWidth = 200;
-      const logoHeight = 200;
+      const logoWidth = 360;
+      const logoHeight = 93;
       context.globalAlpha = 0.95;
       context.drawImage(logoImage, canvas.width / 2 - logoWidth / 2, 48, logoWidth, logoHeight);
       context.globalAlpha = 1;
@@ -252,20 +253,20 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
       context.fillStyle = '#a5b4fc';
       context.font = '700 36px Inter, system-ui, sans-serif';
       context.textAlign = 'center';
-      context.fillText('PULLZ.GG UNBOXING', canvas.width / 2, 280);
+      context.fillText('UNBOXING', canvas.width / 2, 210);
 
       context.fillStyle = '#ffffff';
       context.font = '800 62px Inter, system-ui, sans-serif';
-      context.fillText(item.name.slice(0, 36), canvas.width / 2, 360);
+      context.fillText(item.name.slice(0, 36), canvas.width / 2, 300);
 
       context.fillStyle = '#cbd5e1';
       context.font = '500 32px Inter, system-ui, sans-serif';
-      context.fillText(`From ${caseName}`, canvas.width / 2, 410);
+      context.fillText(`From ${caseName}`, canvas.width / 2, 350);
 
       const cardWidth = 820;
       const cardHeight = 740;
       const cardX = (canvas.width - cardWidth) / 2;
-      const cardY = 470;
+      const cardY = 410;
 
       context.fillStyle = 'rgba(10, 14, 22, 0.7)';
       context.strokeStyle = 'rgba(32,93,215,0.45)';
