@@ -11,6 +11,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { db } from '../firebase';
 import { storage } from '../firebaseStorage';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
+import { HomepageSettingsEditor } from './admin/HomepageSettingsEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
@@ -3800,7 +3801,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
                     {activeTab === 'referrals' && 'Referral Program'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
-                    {activeTab === 'homepage' && 'Homepage Showcase'}
+                    {activeTab === 'homepage' && 'Homepage Settings'}
                     {activeTab === 'boxes-page' && 'Boxes Page'}
                     {activeTab === 'case-lab' && 'Box Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
@@ -6784,6 +6785,7 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: HOMEPAGE */}
             {activeTab === 'homepage' && (
                 <div className="space-y-6">
+                    <HomepageSettingsEditor />
                     <HomepageShowcaseEditor />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">

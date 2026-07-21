@@ -192,6 +192,23 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /publicActivity/{activityId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /homepageCommunity/{entryId} {
+      allow read: if resource.data.enabled == true
+        && resource.data.published == true
+        && resource.data.approved == true;
+      allow write: if isAdmin();
+    }
+
+    match /homepageSupportingCards/{entryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /polls/{pollId} {
       allow read: if true;
       allow write: if isAdmin();

@@ -6,7 +6,7 @@ import { PreviewProvider } from './context/PreviewContext';
 import { ShieldAlert } from 'lucide-react';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { HomeReplica } from './components/HomeReplica';
+import { PremiumHomepage } from './components/PremiumHomepage';
 import { VerifyEmailPage } from './components/VerifyEmailPage';
 import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { SeoHead } from './components/SeoHead';
@@ -605,11 +605,9 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     <main className="flex-1 min-w-0 pb-[90px] sm:pb-10 transition-[width] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
       <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
-        <HomeReplica
+        <PremiumHomepage
           boxes={baseHomeBoxes}
-          demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
-          isChatCollapsed={isChatCollapsed}
           onOpenBox={(boxId) => {
             playSound('click');
             setView({ type: 'CASE_OPENING', boxId });
