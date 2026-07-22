@@ -23,18 +23,7 @@ import { coinsToUsd, trackShippingRequested, trackShippingStart } from '../servi
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
 
-const AVATAR_PRESETS = [
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Preston',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Cyber',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Robo',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Gamer',
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Midnight',
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Dusty',
-  'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=Loot'
-];
+
 
 type MobileTab = 'inventory' | 'orders' | 'account';
 type AccountPanel = 'overview' | 'security' | 'settings';
@@ -339,7 +328,6 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [securityForm, setSecurityForm] = useState({
     username: user.name ?? '',
     email: user.email ?? auth.currentUser?.email ?? '',
@@ -668,17 +656,6 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
 
 
 
-  const handleSaveAvatar = async () => {
-    setIsSavingAvatar(true);
-    try {
-      await updateUserInfo(user.name, securityForm.avatar || user.avatar);
-      toast.success('Profile picture updated.');
-    } catch {
-      toast.error('Could not update profile picture.');
-    } finally {
-      setIsSavingAvatar(false);
-    }
-  };
 
   const handleSaveUsername = async () => {
     const nextUsername = securityForm.username.trim();
@@ -837,6 +814,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
+  const boxesOpened = Number(user.challengeStats?.boxesOpened ?? normalizedInventory.filter((item) => item.provenance?.sourceType === 'case_open').length);
 
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
@@ -878,26 +856,26 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
 
   return (
     <div className="min-h-screen bg-[#090a0e] px-3 py-4 text-white sm:px-5 sm:py-6">
-      <main className="mx-auto w-full max-w-5xl pb-20 md:pb-6">
-        <section className="relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_50%_-35%,rgba(111,83,255,0.22),transparent_48%),linear-gradient(180deg,#14141b_0%,#0d0e13_100%)] px-4 pb-5 pt-5 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:pb-7 sm:pt-7">
-          <button type="button" onClick={() => setShowEditProfile(true)} className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-bold text-gray-400 transition hover:bg-white/5 hover:text-white sm:right-6 sm:top-6" aria-label="Edit profile">
+      <main className="mx-auto w-full max-w-[30rem] overflow-hidden bg-[#08080a] pb-20 md:pb-6">
+        <section className="relative overflow-hidden border-b border-white/5 bg-[#08080a] px-5 pb-6 pt-7 sm:px-7">
+          <button type="button" onClick={() => setShowEditProfile(true)} className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-bold text-[#5e5e64] transition hover:bg-white/5 hover:text-white" aria-label="Edit profile">
             <Edit3 className="h-3.5 w-3.5" /> Edit
           </button>
           <div className="flex flex-col items-center text-center">
-            <UserAvatar user={user} className="h-20 w-20 rounded-full border-2 border-white/15 bg-[#242631] shadow-[0_0_0_5px_rgba(255,255,255,0.03)] sm:h-24 sm:w-24" />
-            <h1 className="mt-3 max-w-full truncate text-2xl font-black tracking-[-0.04em] sm:text-3xl">{displayUsername}</h1>
-            <p className="mt-1 text-xs font-medium text-gray-500 sm:text-sm">Member since {joinedDate}</p>
+            <UserAvatar user={user} className="h-16 w-16 rounded-full bg-[#24242a] sm:h-20 sm:w-20" />
+            <h1 className="mt-3 max-w-full truncate text-xl font-black tracking-[-0.04em] sm:text-2xl">{displayUsername}</h1>
+            <p className="mt-1 text-xs font-medium text-[#5f5f65]">Member since {joinedDate}</p>
           </div>
-          <div className="mt-6 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/[0.07] bg-black/15 py-3 sm:mx-auto sm:max-w-xl">
-            <div className="px-2 text-center"><p className="text-lg font-black sm:text-2xl">{activeInventory.length}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500 sm:text-xs">Items</p></div>
-            <div className="px-2 text-center"><p className="text-lg font-black sm:text-2xl"><AnimatedNumber value={xp} /></p><p className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-gray-500 sm:text-xs"><img src={XP_ICON} alt="" className="h-3 w-3" /> XP</p></div>
-            <div className="px-2 text-center"><p className="text-lg font-black sm:text-2xl">{orders.length}</p><p className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-500 sm:text-xs">Orders</p></div>
+          <div className="mt-5 grid grid-cols-3 divide-x divide-white/[0.06]">
+            <div className="px-2 text-center"><CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-base font-black text-white sm:text-lg" iconClassName="h-3.5 w-3.5" /><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Coins</p></div>
+            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{activeInventory.length}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Items</p></div>
+            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{boxesOpened}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Boxes Opened</p></div>
           </div>
         </section>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-[#17181e] p-1.5 sm:max-w-md">
-          <button type="button" onClick={() => setActiveTab('inventory')} className={`rounded-xl px-4 py-3 text-sm font-black transition ${activeTab === 'inventory' ? 'bg-[#f4f4f5] text-[#111217] shadow-sm' : 'text-gray-500 hover:text-white'}`}>Inventory</button>
-          <button type="button" onClick={() => setActiveTab('orders')} className={`rounded-xl px-4 py-3 text-sm font-black transition ${activeTab === 'orders' ? 'bg-[#f4f4f5] text-[#111217] shadow-sm' : 'text-gray-500 hover:text-white'}`}>History</button>
+        <div className="grid grid-cols-2 gap-2 bg-[#08080a] px-5 py-4 sm:px-7">
+          <button type="button" onClick={() => setActiveTab('inventory')} className={`rounded-lg px-4 py-2.5 text-sm font-black transition ${activeTab === 'inventory' ? 'bg-[#f1f1f2] text-[#121216]' : 'bg-[#19191d] text-[#77777e] hover:text-white'}`}>Inventory</button>
+          <button type="button" onClick={() => setActiveTab('orders')} className={`rounded-lg px-4 py-2.5 text-sm font-black transition ${activeTab === 'orders' ? 'bg-[#f1f1f2] text-[#121216]' : 'bg-[#19191d] text-[#77777e] hover:text-white'}`}>History</button>
         </div>
 
         <div className="mt-5">
@@ -921,7 +899,6 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
           addressForm={addressForm} setAddressForm={setAddressForm} onSaveAddress={handleSaveAddress} isSavingAddress={isSavingAddress}
           securityForm={securityForm} setSecurityForm={setSecurityForm} onSaveUsername={handleSaveUsername} onSaveEmail={handleSaveEmail} onSavePassword={handleSavePassword}
           isSavingUsername={isSavingUsername} isSavingEmail={isSavingEmail} isSavingPassword={isSavingPassword}
-          avatarOptions={AVATAR_PRESETS} onSaveAvatar={handleSaveAvatar} isSavingAvatar={isSavingAvatar}
           onClose={() => setShowEditProfile(false)}
         />
       )}

@@ -33,9 +33,6 @@ interface AccountViewProps {
   isSavingUsername: boolean;
   isSavingEmail: boolean;
   isSavingPassword: boolean;
-  avatarOptions: string[];
-  onSaveAvatar: () => void;
-  isSavingAvatar: boolean;
   onClose: () => void;
 }
 
@@ -44,14 +41,15 @@ const inputClassName = 'w-full rounded-lg border border-white/10 bg-[#f4f4f5] px
 export const AccountView: React.FC<AccountViewProps> = ({
   user, addressForm, setAddressForm, onSaveAddress, isSavingAddress, securityForm, setSecurityForm,
   onSaveUsername, onSaveEmail, onSavePassword, isSavingUsername, isSavingEmail, isSavingPassword,
-  avatarOptions, onSaveAvatar, isSavingAvatar, onClose
+  onClose
 }) => {
   const updateSecurity = (key: keyof SecurityForm, value: string) => setSecurityForm({ ...securityForm, [key]: value });
   const updateAddress = (key: keyof ShippingAddress, value: string) => setAddressForm({ ...addressForm, [key]: value });
   const saveProfile = () => {
     if (securityForm.username.trim() && securityForm.username.trim() !== (user.name ?? '').trim()) onSaveUsername();
+    if (securityForm.email.trim() && securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.currentPassword.trim()) onSaveEmail();
+    if (securityForm.currentPassword && securityForm.newPassword && securityForm.confirmPassword) onSavePassword();
     onSaveAddress();
-    if (securityForm.avatar && securityForm.avatar !== user.avatar) onSaveAvatar();
   };
 
   return (
@@ -69,7 +67,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
             <div className="space-y-2">
               <input aria-label="Username" value={securityForm.username} onChange={(event) => updateSecurity('username', event.target.value)} placeholder="Username" className={inputClassName} />
               <input aria-label="Email address" type="email" value={securityForm.email} onChange={(event) => updateSecurity('email', event.target.value)} placeholder="Email address" className={inputClassName} />
-              <button type="button" onClick={onSaveEmail} disabled={isSavingEmail || !securityForm.currentPassword.trim()} className="text-xs font-bold text-violet-300 disabled:opacity-40">{isSavingEmail ? 'Updating email…' : 'Update email with current password below'}</button>
             </div>
           </fieldset>
 
@@ -79,7 +76,6 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <input aria-label="Current password" type="password" value={securityForm.currentPassword} onChange={(event) => updateSecurity('currentPassword', event.target.value)} placeholder="Current password" className={inputClassName} />
               <input aria-label="New password" type="password" value={securityForm.newPassword} onChange={(event) => updateSecurity('newPassword', event.target.value)} placeholder="New password" className={inputClassName} />
               <input aria-label="Confirm new password" type="password" value={securityForm.confirmPassword} onChange={(event) => updateSecurity('confirmPassword', event.target.value)} placeholder="Confirm new password" className={inputClassName} />
-              <button type="button" onClick={onSavePassword} disabled={isSavingPassword || !securityForm.currentPassword || !securityForm.newPassword || !securityForm.confirmPassword} className="text-xs font-bold text-violet-300 disabled:opacity-40">{isSavingPassword ? 'Updating password…' : 'Update password'}</button>
             </div>
           </fieldset>
 
@@ -95,17 +91,11 @@ export const AccountView: React.FC<AccountViewProps> = ({
             </div>
           </fieldset>
 
-          <fieldset>
-            <legend className="mb-2 text-xs font-black uppercase tracking-wider text-gray-500">Profile Picture</legend>
-            <div className="grid grid-cols-5 gap-2">
-              {avatarOptions.map((avatar) => <button type="button" key={avatar} onClick={() => updateSecurity('avatar', avatar)} className={`overflow-hidden rounded-xl border-2 ${securityForm.avatar === avatar ? 'border-violet-400' : 'border-transparent opacity-60 hover:opacity-100'}`}><img src={avatar} alt="Avatar option" className="h-11 w-full bg-white/5 object-cover" /></button>)}
-            </div>
-          </fieldset>
         </div>
 
         <div className="mt-7 grid grid-cols-2 gap-3">
           <button type="button" onClick={onClose} className="rounded-xl px-4 py-3 text-sm font-bold text-gray-400 transition hover:bg-white/5 hover:text-white">Cancel</button>
-          <button type="button" onClick={saveProfile} disabled={isSavingAddress || isSavingUsername || isSavingAvatar} className="rounded-xl bg-[#f4f4f5] px-4 py-3 text-sm font-black text-[#14151a] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">{isSavingAddress || isSavingUsername || isSavingAvatar ? 'Saving…' : 'Save Changes'}</button>
+          <button type="button" onClick={saveProfile} disabled={isSavingAddress || isSavingUsername || isSavingEmail || isSavingPassword} className="rounded-xl bg-[#f4f4f5] px-4 py-3 text-sm font-black text-[#14151a] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">{isSavingAddress || isSavingUsername || isSavingEmail || isSavingPassword ? 'Saving…' : 'Save Changes'}</button>
         </div>
       </section>
     </div>
