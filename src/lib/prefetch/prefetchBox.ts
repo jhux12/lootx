@@ -16,6 +16,13 @@ const shouldSkipPrefetch = () => {
 
 const shouldSkipItemImages = () => getEffectiveConnection() === '3g';
 
+const premiumRarityRank = (rarity?: string) => {
+  const value = String(rarity ?? '').toLowerCase();
+  if (value.includes('legend')) return 2;
+  if (value.includes('epic')) return 1;
+  return 0;
+};
+
 const preloadImage = (imageUrl?: string) => {
   if (!imageUrl || typeof Image === 'undefined' || imagePrefetches.has(imageUrl) || shouldSkipPrefetch()) return;
   imagePrefetches.add(imageUrl);
@@ -42,7 +49,8 @@ export const prefetchBox = async (
   if (!shouldSkipItemImages()) {
     box?.items
       .slice()
-      .sort((a, b) => b.price - a.price)
+      // Match the opening reel: warm the most visible premium drops first.
+      .sort((a, b) => premiumRarityRank(b.rarity) - premiumRarityRank(a.rarity) || b.price - a.price)
       .slice(0, 3)
       .forEach((item) => {
         const itemWithThumbnail = item as typeof item & { thumbnail?: string; thumbnailUrl?: string; imageThumb?: string };
