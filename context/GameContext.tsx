@@ -2082,8 +2082,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     // Home has its own bounded summary repository; do not start the global
-    // catalog/legacy compatibility query merely because the homepage mounted.
-    if (view.type === 'HOME') return;
+    // catalog/legacy compatibility query on routes with their own summary loader.
+    if (view.type === 'HOME' || view.type === 'BOXES') return;
     if (typeof window === 'undefined') return;
     let cancelled = false;
     const loadBoxes = () => {
