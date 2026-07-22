@@ -76,8 +76,9 @@ const SPINNER_MOTION = {
   nearMissChance: 0.42,
   durationVarianceMs: 180,
   initialBlurDurationMs: 260,
-  previewCycleDurationMs: 12000,
-  previewCycleDurationMobileMs: 9000
+  // Keep the idle preview deliberately unhurried; it is ambient anticipation, not a spin.
+  previewCycleDurationMs: 30000,
+  previewCycleDurationMobileMs: 26000
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
