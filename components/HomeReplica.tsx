@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, ShieldCheck, Sparkles, Trophy, Truck, Zap } from 'lucide-react';
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, RefreshCw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
 import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
@@ -489,18 +489,18 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
       <section className="pullz-home-trust-grid mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#070a12]/92 p-1.5 shadow-[inset_0_0_20px_rgba(255,255,255,0.025),0_12px_30px_rgba(0,0,0,0.28)] sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-white/10 sm:rounded-2xl sm:p-0">
           {[
-            { value: '100K+', label: 'Boxes Opened', icon: Box },
-            { value: '25K+', label: 'Users', icon: Trophy },
-            { value: '15K+', label: 'Items Shipped', icon: Truck },
-            { value: 'Provably Fair', label: 'Verified Odds', icon: ShieldCheck }
-          ].map(({ value, label, icon: Icon }) => (
-            <div key={label} className="flex min-h-[62px] min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#101827]/82 px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[68px] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-3 lg:px-4" aria-label={`${value}: ${label}`}>
+            { title: 'First Pull Free', description: 'No deposit required', icon: Gift },
+            { title: 'Real Cards', description: 'Shipped to your door', icon: Truck },
+            { title: 'Provably Fair', description: 'Every pull verifiable', icon: ShieldCheck },
+            { title: 'Keep or Sell', description: 'You’re always in control', icon: RefreshCw }
+          ].map(({ title, description, icon: Icon }) => (
+            <div key={title} className="flex min-h-[68px] min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#101827]/82 px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[72px] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-3 lg:px-4" aria-label={`${title}: ${description}`}>
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#a78bfa] shadow-[0_0_18px_rgba(139,92,246,0.18)] sm:h-9 sm:w-9">
                 <Icon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div className="min-w-0 leading-none">
-                <span className="block truncate text-[15px] font-black uppercase tracking-tight text-white sm:text-[17px] lg:text-xl">{value}</span>
-                <span className="mt-1 block truncate text-[8px] font-black uppercase tracking-[0.08em] text-slate-400 sm:text-[9px]">{label}</span>
+                <span className="block text-[11px] font-black uppercase leading-tight tracking-tight text-white sm:text-[13px] lg:text-[15px]">{title}</span>
+                <span className="mt-1 block text-[8px] font-black uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[9px] lg:text-[10px]">{description}</span>
               </div>
             </div>
           ))}
