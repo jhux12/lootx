@@ -12,27 +12,18 @@ import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { InventoryItem, Shipment, ShippingAddress } from '../types';
-import { AccountSidebar } from './profile/AccountSidebar';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
 import { MobileBottomNav } from './profile/MobileBottomNav';
+import { UserAvatar } from './UserAvatar';
+import { XP_ICON } from '../constants';
+import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import { coinsToUsd, trackShippingRequested, trackShippingStart } from '../services/analytics';
 
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
 
 
-const AVATAR_PRESETS = [
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
-  'https://api.dicebear.com/7.x/avataaars/svg?seed=Preston',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Cyber',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Robo',
-  'https://api.dicebear.com/7.x/bottts/svg?seed=Gamer',
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Midnight',
-  'https://api.dicebear.com/7.x/adventurer/svg?seed=Dusty',
-  'https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy',
-  'https://api.dicebear.com/7.x/lorelei/svg?seed=Loot'
-];
+
 
 type MobileTab = 'inventory' | 'orders' | 'account';
 type AccountPanel = 'overview' | 'security' | 'settings';
@@ -121,6 +112,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'shipped'>('all');
   const [orderSearch, setOrderSearch] = useState('');
   const [activeItemIndexes, setActiveItemIndexes] = useState<Record<string, number>>({});
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
   const filteredOrders = useMemo(() => {
     const term = orderSearch.trim().toLowerCase();
@@ -163,132 +155,36 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   ];
 
   return (
-    <section className="mx-auto w-full max-w-5xl space-y-4 pb-3 text-white sm:space-y-5">
-      <header>
-        <h2 className="text-[1.7rem] font-extrabold leading-tight tracking-[-0.04em] text-white sm:text-3xl">Orders</h2>
-        <p className="mt-1 text-sm font-medium text-gray-400 sm:text-base">Track your rewards from case openings.</p>
-      </header>
-
-      <div className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-3">
-        <div className="rounded-2xl border border-purple-400/20 bg-[#111421]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
-          <div className="flex items-center gap-4">
-            <Package className="h-8 w-8 text-purple-400" />
-            <div><p className="text-2xl font-black leading-none">{orderGroups.length}</p><p className="mt-1 text-sm font-medium text-gray-400">Total Orders</p></div>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-sky-400/15 bg-[#101823]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
-          <div className="flex items-center gap-4">
-            <Truck className="h-8 w-8 text-sky-400" />
-            <div><p className="text-2xl font-black leading-none">{shippedCount}</p><p className="mt-1 text-sm font-medium text-gray-400">Shipped</p></div>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-amber-300/20 bg-[#171916]/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_35px_rgba(0,0,0,0.22)]">
-          <div className="flex items-center gap-4">
-            <Clock className="h-8 w-8 text-amber-300" />
-            <div><p className="text-2xl font-black leading-none">{pendingCount}</p><p className="mt-1 text-sm font-medium text-gray-400">Pending</p></div>
-          </div>
-        </div>
+    <section className="w-full bg-[#08080a] px-5 pb-6 sm:px-10">
+      <div className="mb-4 flex items-center justify-between">
+        <div><h2 className="text-base font-black text-white">History</h2><p className="mt-1 text-xs text-[#68686f]">Your shipped and pending rewards.</p></div>
+        <span className="rounded-full bg-[#1a1a1e] px-3 py-1.5 text-xs font-bold text-[#aaaab0]">{orderGroups.length} orders</span>
       </div>
-
-      <div className="rounded-3xl border border-white/10 bg-[#0d131c]/80 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-1 pb-3">
-          <div className="flex gap-5 sm:gap-8">
-            {filterTabs.map((tab) => (
-              <button key={tab.id} type="button" onClick={() => setStatusFilter(tab.id)} className={`relative pb-3 text-sm font-bold transition sm:text-base ${statusFilter === tab.id ? 'text-white' : 'text-gray-400 hover:text-white'}`}>
-                {tab.label}
-                {statusFilter === tab.id ? <span className="absolute inset-x-0 -bottom-[13px] h-0.5 rounded-full bg-purple-400 shadow-[0_0_14px_rgba(192,132,252,0.9)]" /> : null}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={() => setStatusFilter(statusFilter === 'all' ? 'pending' : 'all')} className="flex items-center gap-2 rounded-2xl border border-white/10 bg-[#111824] px-3 py-2 text-sm font-bold text-white transition hover:border-purple-300/40 hover:bg-purple-500/10">
-            <Filter className="h-4 w-4" /> Filters <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-xs text-white">{activeFilterCount}</span>
-          </button>
-        </div>
-
-        <label className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-[#111720] px-4 py-3 text-gray-400 focus-within:border-purple-300/40 focus-within:ring-2 focus-within:ring-purple-500/20">
-          <Search className="h-5 w-5 shrink-0" />
-          <input value={orderSearch} onChange={(event) => setOrderSearch(event.target.value)} placeholder="Search orders..." className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-gray-500 sm:text-base" />
-        </label>
-
-        <div className="mt-4 space-y-3">
-          {filteredOrders.length === 0 ? (
-            <div className="rounded-3xl border border-white/10 bg-[#111720] p-8 text-center">
-              <PackageCheck className="mx-auto h-10 w-10 text-purple-300" />
-              <h3 className="mt-3 text-lg font-bold">No orders found</h3>
-              <p className="mt-1 text-sm text-gray-400">Try changing your search or status filters.</p>
-            </div>
-          ) : filteredOrders.map((orderGroup) => {
+      {orderGroups.length === 0 ? (
+        <div className="rounded-xl border border-white/[0.07] bg-[#111116] px-5 py-12 text-center"><PackageCheck className="mx-auto h-8 w-8 text-[#6c6c74]" /><p className="mt-3 text-sm font-bold text-white">No order history yet</p><p className="mt-1 text-xs text-[#66666d]">Shipped rewards will appear here.</p></div>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {orderGroups.map((orderGroup) => {
             const activeIndex = Math.min(activeItemIndexes[orderGroup.id] ?? 0, orderGroup.items.length - 1);
             const order = orderGroup.items[activeIndex] ?? orderGroup.items[0];
-            const placedDate = getCompactOrderDate(orderGroup.createdAt ?? orderGroup.shippedAt);
-            const shippedDetail = orderGroup.status === 'shipped' ? (orderGroup.trackingNumber || 'Tracking unavailable') : 'Pending';
-            return (
-              <article key={orderGroup.id} className="rounded-3xl border border-white/7 bg-[#101722] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:p-4">
-                <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)_13rem] sm:items-stretch">
-                  <div className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl border bg-[#090e16] ${order.rarity === 'legendary' ? 'border-yellow-300/55 bg-gradient-to-br from-yellow-400/20 via-amber-500/15 to-[#090e16] shadow-[0_0_26px_rgba(250,204,21,0.24)]' : order.rarity === 'epic' ? 'border-purple-400/45 shadow-[0_0_24px_rgba(168,85,247,0.22)]' : 'border-white/12'}`}>
-                    <div className="flex h-full w-full transition-transform duration-300 ease-out" style={{ transform: `translateX(-${activeIndex * 100}%)` }}>
-                      {orderGroup.items.map((item) => (
-                        <div key={item.id} className="flex h-full w-full shrink-0 items-center justify-center p-3">
-                          <img src={item.image} alt={item.name} className="h-full w-full object-contain transition-opacity duration-300" loading="lazy" decoding="async" />
-                        </div>
-                      ))}
-                    </div>
-                    {orderGroup.items.length > 1 ? (
-                      <div className="absolute inset-x-2 top-1/2 flex -translate-y-1/2 justify-between">
-                        <button type="button" onClick={(event) => { event.stopPropagation(); setActiveItemIndex(orderGroup.id, orderGroup.items.length, -1); }} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:bg-purple-500/60" aria-label="Previous item in order"><ChevronLeft className="h-5 w-5" /></button>
-                        <button type="button" onClick={(event) => { event.stopPropagation(); setActiveItemIndex(orderGroup.id, orderGroup.items.length, 1); }} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur transition hover:bg-purple-500/60" aria-label="Next item in order"><ChevronRight className="h-5 w-5" /></button>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="min-w-0 py-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${getRarityBadgeClass(order.rarity)}`}>{order.rarity}</span>
-                      <span className={`rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${orderGroup.status === 'shipped' ? 'border-emerald-400/35 bg-emerald-500/10 text-emerald-200' : 'border-amber-300/35 bg-amber-400/10 text-amber-200'}`}>{orderGroup.status}</span>
-                    </div>
-                    <h3 className="mt-3 line-clamp-2 text-lg font-black leading-tight tracking-[-0.03em] text-white sm:text-xl">{order.name}</h3>
-                    <p className="mt-2 text-sm font-semibold text-gray-500">Order #{orderGroup.id.slice(0, 8)}{orderGroup.items.length > 1 ? ` • Item ${activeIndex + 1} of ${orderGroup.items.length}` : ''}</p>
-                    <div className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border border-white/8 bg-[#111924]">
-                      <div className="border-r border-white/8 px-3 py-2"><p className="text-[11px] font-bold text-gray-500">Won on</p><p className="mt-1 text-sm font-bold text-white">{formatOrderDate(order.createdAt)}</p></div>
-                      <div className="px-3 py-2"><p className="text-[11px] font-bold text-gray-500">Value</p><p className="mt-1 text-sm font-bold text-white"><CoinAmount amount={order.value} /></p></div>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-white/8 pt-2 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
-                    <div className="space-y-3">
-                      {[
-                        ['Order Placed', placedDate, true],
-                        ['Processing', placedDate, true],
-                        ['Shipped', shippedDetail, orderGroup.status === 'shipped']
-                      ].map(([label, date, complete], index, steps) => (
-                        <div key={label as string} className="relative flex gap-3">
-                          {index < steps.length - 1 ? <span className={`absolute left-[9px] top-5 h-8 w-px ${complete ? 'bg-emerald-400' : 'bg-gray-600'}`} /> : null}
-                          <span className={`relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${complete ? 'border-emerald-400 bg-emerald-400 text-[#092016]' : 'border-gray-600 bg-[#111720] text-gray-500'}`}>
-                            {complete ? <Check className="h-3 w-3 stroke-[4]" /> : null}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-sm font-extrabold leading-tight text-white">{label}</p>
-                            <p className="text-sm font-medium leading-tight text-gray-400">{date}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {orderGroup.trackingNumber ? <button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, orderGroup.trackingNumber as string); }} className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-bold text-blue-100 hover:bg-white/5">{copiedTrackingId === orderGroup.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Tracking</button> : null}
-                  </div>
-                </div>
-              </article>
-            );
+            const isExpanded = expandedOrderIds.has(orderGroup.id);
+            const trackingNumber = orderGroup.trackingNumber;
+            const toggleExpanded = () => setExpandedOrderIds((current) => {
+              const next = new Set(current);
+              if (next.has(orderGroup.id)) next.delete(orderGroup.id); else next.add(orderGroup.id);
+              return next;
+            });
+            return <article key={orderGroup.id} className="min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#111116] transition hover:border-white/15">
+              <div className="flex items-center gap-3 p-3">
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#09090c] p-1.5"><img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" />{orderGroup.items.length > 1 ? <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[9px] font-bold">+{orderGroup.items.length - 1}</span> : null}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold text-white">{order.name}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${orderGroup.status === 'shipped' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-amber-300/10 text-amber-200'}`}>{orderGroup.status === 'shipped' ? 'Shipped' : 'Pending'}</span></div><p className="mt-1 text-xs text-[#6c6c74]">{formatOrderDate(orderGroup.createdAt)}</p><CoinAmount amount={order.value} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 text-xs font-bold text-white" iconClassName="h-3.5 w-3.5" /></div>
+              </div>
+              {trackingNumber ? <div className="mx-3 mb-3 flex min-w-0 items-center gap-2 rounded-lg bg-black/20 px-2.5 py-2"><span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#71717a]">Tracking</span><code className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d2d2d8]">{trackingNumber}</code><button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, trackingNumber); }} className="shrink-0 rounded px-1.5 py-1 text-[10px] font-black text-white transition hover:bg-white/10">{copiedTrackingId === orderGroup.id ? 'Copied' : 'Copy'}</button></div> : null}
+              {orderGroup.items.length > 1 ? <><button type="button" onClick={toggleExpanded} aria-expanded={isExpanded} className="flex w-full items-center justify-between border-t border-white/[0.06] px-3 py-2.5 text-xs font-bold text-[#b6b6be] transition hover:bg-white/[0.03] hover:text-white"><span>{isExpanded ? 'Hide' : 'Show'} all {orderGroup.items.length} items</span><ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></button>{isExpanded ? <div className="space-y-2 border-t border-white/[0.06] bg-black/10 p-3">{orderGroup.items.map((item) => <div key={item.id} className="flex items-center gap-2"><img src={item.image} alt="" className="h-9 w-9 rounded bg-[#09090c] object-contain p-1" loading="lazy" /><p className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d4d4da]">{item.name}</p><CoinAmount amount={item.value} formatOptions={{ maximumFractionDigits: 0 }} className="text-[11px] font-bold text-white" iconClassName="h-3 w-3" /></div>)}</div> : null}</> : null}
+            </article>;
           })}
         </div>
-      </div>
-
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#111824] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-3">
-          <ShieldCheck className="h-9 w-9 shrink-0 text-purple-400" />
-          <div><p className="font-bold text-white">All items are 100% real and shipped to your door.</p><p className="text-sm text-gray-400">You can sell back any item for Pullz Coins anytime.</p></div>
-        </div>
-        <button type="button" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-2 text-sm font-bold text-gray-200 hover:bg-white/5">How It Works <ExternalLink className="h-4 w-4" /></button>
-      </div>
+      )}
     </section>
   );
 };
@@ -307,10 +203,11 @@ const normalizeItems = (items: InventoryItem[]) =>
     };
   });
 
-export const Profile: React.FC = () => {
+export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) => {
   const { user, inventory, shipments, boxes, sellItem, shipItem, stripeSettings, openAuthModal, setView, setShowTopUpModal, setTopUpModalIntent, updateAddress, updateUserInfo } = useGame();
 
-  const [activeTab, setActiveTab] = useState<MobileTab>('inventory');
+  const [activeTab, setActiveTab] = useState<MobileTab>(initialTab ?? 'inventory');
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [search, setSearch] = useState('');
   const [rarity, setRarity] = useState('all');
   const [type, setType] = useState('all');
@@ -336,7 +233,6 @@ export const Profile: React.FC = () => {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
   const [securityForm, setSecurityForm] = useState({
     username: user.name ?? '',
     email: user.email ?? auth.currentUser?.email ?? '',
@@ -665,17 +561,6 @@ export const Profile: React.FC = () => {
 
 
 
-  const handleSaveAvatar = async () => {
-    setIsSavingAvatar(true);
-    try {
-      await updateUserInfo(user.name, securityForm.avatar || user.avatar);
-      toast.success('Profile picture updated.');
-    } catch {
-      toast.error('Could not update profile picture.');
-    } finally {
-      setIsSavingAvatar(false);
-    }
-  };
 
   const handleSaveUsername = async () => {
     const nextUsername = securityForm.username.trim();
@@ -834,16 +719,7 @@ export const Profile: React.FC = () => {
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
-
-  const quickActions = [
-    { label: 'Overview', active: activeTab === 'account' && activeAccountPanel === 'overview', onClick: () => { setActiveTab('account'); setActiveAccountPanel('overview'); } },
-    { label: 'Inventory', active: activeTab === 'inventory', onClick: () => { setActiveTab('inventory'); } },
-    { label: 'Orders', active: activeTab === 'orders', onClick: () => { setActiveTab('orders'); } },
-    { label: 'Settings', active: activeTab === 'account' && activeAccountPanel === 'settings', onClick: () => { setActiveTab('account'); setActiveAccountPanel('settings'); } },
-    { label: 'Security', active: activeTab === 'account' && activeAccountPanel === 'security', onClick: () => { setActiveTab('account'); setActiveAccountPanel('security'); } },
-    { label: 'Rewards', onClick: () => setView({ type: 'BONUSES' as const }) },
-    { label: 'Referrals', onClick: () => setView({ type: 'REFERRALS' as const }), isNew: true }
-  ];
+  const boxesOpened = Number(user.challengeStats?.boxesOpened ?? normalizedInventory.filter((item) => item.provenance?.sourceType === 'case_open').length);
 
   const inventoryTotalValue = filteredInventory.reduce((sum, item) => sum + toCoins(item.price, PRICE_UNIT_MODE), 0);
   const availableToShip = filteredInventory.filter((item) => canSelectShipment(item)).length;
@@ -884,92 +760,55 @@ export const Profile: React.FC = () => {
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
 
   return (
-    <div className="min-h-screen bg-[#1b2024] px-4 py-4 md:px-6 md:py-6">
-      <div className="mx-auto flex max-w-[1280px] gap-6 pb-20 md:pb-4">
-        <AccountSidebar
-          user={user}
-          username={displayUsername}
-          memberSince={joinedDate}
-          xp={xp}
-          balance={balance}
-          quickActions={quickActions}
-          activePanel={activeAccountPanel}
-          onSelectPanel={(panel) => {
-            setActiveTab('account');
-            setActiveAccountPanel(panel);
-          }}
-        />
-
-        <div className="flex-1">
-          <div className="mb-4 flex w-fit max-w-full gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-[#1f252c] p-1 [scrollbar-width:none] md:max-w-md [&::-webkit-scrollbar]:hidden">
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'inventory' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('inventory')}>Inventory</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'orders' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => setActiveTab('orders')}>Orders</button>
-            <button className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${activeTab === 'account' ? 'bg-[#205DD7] text-white' : 'text-gray-400'}`} onClick={() => { setActiveTab('account'); setActiveAccountPanel('overview'); }}>Profile</button>
-            {hasDailyFreeBoxAvailable ? (
-              <button
-                className="shrink-0 rounded-xl bg-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-200"
-                onClick={() => {
-                  if (!dailyFreeBox) return;
-                  setView({ type: 'CASE_OPENING', boxId: dailyFreeBox.id, isFree: true });
-                }}
-              >
-                Free Box
-              </button>
-            ) : null}
+    <div className="min-h-screen bg-[#090a0e] px-3 py-4 text-white sm:px-5 sm:py-6">
+      <main className="mx-auto w-full max-w-[30rem] overflow-hidden bg-[#08080a] pb-20 sm:max-w-6xl sm:rounded-[2rem] sm:border sm:border-white/10 sm:shadow-[0_30px_100px_rgba(0,0,0,0.38)] md:pb-6">
+        <section className="relative overflow-hidden border-b border-white/5 bg-[#08080a] px-5 pb-6 pt-7 sm:px-10 sm:py-9">
+          <button type="button" onClick={() => setShowEditProfile(true)} className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-bold text-[#5e5e64] transition hover:bg-white/5 hover:text-white" aria-label="Edit profile">
+            <Edit3 className="h-3.5 w-3.5" /> Edit
+          </button>
+          <div className="flex flex-col items-center text-center sm:flex-row sm:gap-6 sm:text-left">
+            <UserAvatar user={user} className="h-16 w-16 rounded-full bg-[#24242a] sm:h-20 sm:w-20" />
+            <div><h1 className="mt-3 max-w-full truncate text-xl font-black tracking-[-0.04em] sm:mt-0 sm:text-3xl">{displayUsername}</h1>
+            <p className="mt-1 text-xs font-medium text-[#5f5f65]">Member since {joinedDate}</p></div>
           </div>
+          <div className="mt-5 grid sm:mx-auto sm:max-w-2xl grid-cols-3 divide-x divide-white/[0.06]">
+            <div className="px-2 text-center"><CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-base font-black text-white sm:text-lg" iconClassName="h-3.5 w-3.5" /><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Coins</p></div>
+            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{activeInventory.length}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Items</p></div>
+            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{boxesOpened}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Boxes Opened</p></div>
+          </div>
+        </section>
 
-          {activeTab === 'inventory' ? (
+        <div className="grid grid-cols-2 gap-2 bg-[#08080a] px-5 py-4 sm:mx-auto sm:max-w-2xl sm:px-7">
+          <button type="button" onClick={() => setActiveTab('inventory')} className={`rounded-lg px-4 py-2.5 text-sm font-black transition ${activeTab === 'inventory' ? 'bg-[#f1f1f2] text-[#121216]' : 'bg-[#19191d] text-[#77777e] hover:text-white'}`}>Inventory</button>
+          <button type="button" onClick={() => setActiveTab('orders')} className={`rounded-lg px-4 py-2.5 text-sm font-black transition ${activeTab === 'orders' ? 'bg-[#f1f1f2] text-[#121216]' : 'bg-[#19191d] text-[#77777e] hover:text-white'}`}>History</button>
+        </div>
+
+        <div className="mt-5">
+          {activeTab === 'orders' ? <OrdersView orders={orders} /> : (
             <InventoryView
               items={filteredInventory}
               selectedIds={selectedShipments}
               onToggleSelect={(id) => setSelectedShipments((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))}
               onReviewShipping={() => handleOpenShippingReview(selectedShipments)}
-              search={search}
-              setSearch={setSearch}
-              rarity={rarity}
-              setRarity={setRarity}
-              type={type}
-              setType={setType}
-              sort={sort}
-              setSort={setSort}
-              getAction={getActionForItem}
-              isSelectable={canSelectShipment}
-              totalValue={inventoryTotalValue}
-              availableToShip={availableToShip}
-              selectedValue={selectedShipmentValue}
-            />
-          ) : activeTab === 'orders' ? (
-            <OrdersView orders={orders} />
-          ) : (
-            <AccountView
-              user={user}
-              username={displayUsername}
-              memberSince={joinedDate}
-              xp={xp}
-              balance={balance}
-              activePanel={activeAccountPanel}
-              onSelectPanel={setActiveAccountPanel}
-              addressForm={addressForm}
-              setAddressForm={setAddressForm}
-              onSaveAddress={handleSaveAddress}
-              isSavingAddress={isSavingAddress}
-              securityForm={securityForm}
-              setSecurityForm={setSecurityForm}
-              onSaveUsername={handleSaveUsername}
-              onSaveEmail={handleSaveEmail}
-              onSavePassword={handleSavePassword}
-              isSavingUsername={isSavingUsername}
-              isSavingEmail={isSavingEmail}
-              isSavingPassword={isSavingPassword}
-              avatarOptions={AVATAR_PRESETS}
-              onSaveAvatar={handleSaveAvatar}
-              isSavingAvatar={isSavingAvatar}
+              search={search} setSearch={setSearch} rarity={rarity} setRarity={setRarity} type={type} setType={setType} sort={sort} setSort={setSort}
+              getAction={getActionForItem} isSelectable={canSelectShipment} totalValue={inventoryTotalValue} availableToShip={availableToShip} selectedValue={selectedShipmentValue}
             />
           )}
         </div>
-      </div>
+      </main>
 
-      {!showShippingReview && <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} onGames={() => setView({ type: 'BOXES' })} onRewards={() => setView({ type: 'BONUSES' })} />}
+      {showEditProfile && (
+        <AccountView
+          user={user} username={displayUsername} memberSince={joinedDate} xp={xp} balance={balance}
+          activePanel={activeAccountPanel} onSelectPanel={setActiveAccountPanel}
+          addressForm={addressForm} setAddressForm={setAddressForm} onSaveAddress={handleSaveAddress} isSavingAddress={isSavingAddress}
+          securityForm={securityForm} setSecurityForm={setSecurityForm} onSaveUsername={handleSaveUsername} onSaveEmail={handleSaveEmail} onSavePassword={handleSavePassword}
+          isSavingUsername={isSavingUsername} isSavingEmail={isSavingEmail} isSavingPassword={isSavingPassword}
+          onClose={() => setShowEditProfile(false)}
+        />
+      )}
+
+      {!showShippingReview && <MobileBottomNav activeTab={activeTab} onTabChange={(tab) => { if (tab === 'account') setShowEditProfile(true); else setActiveTab(tab); }} onGames={() => setView({ type: 'BOXES' })} onRewards={() => setView({ type: 'BONUSES' })} />}
 
       {tradeInModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
