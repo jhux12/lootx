@@ -45,7 +45,7 @@ type CatalogBoxModel = {
   box: MysteryBox;
   id: string;
   name: string;
-  searchName: string;
+  searchTerms: string;
   priceCoins: number;
   createdAt?: number;
   tags: string[];
@@ -86,7 +86,9 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
     box,
     id: box.id,
     name: box.name,
-    searchName: box.name.toLowerCase(),
+    // Search the information a visitor can use to identify a box, not just its
+    // title. This makes queries such as a card name, set, or category useful.
+    searchTerms: [box.name, ...tags, ...box.items.map((item) => item.name)].join(' ').toLowerCase(),
     priceCoins: getBoxPrice(box),
     createdAt: box.createdAt,
     tags,
@@ -216,6 +218,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [isHowItWorksAnimatingIn, setIsHowItWorksAnimatingIn] = useState(false);
@@ -279,15 +282,19 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const normalizedSearchQuery = deferredSearchQuery.toLowerCase().trim();
+  const normalizedSearchTerms = useMemo(
+    () => normalizedSearchQuery.split(/\s+/).filter(Boolean),
+    [normalizedSearchQuery]
+  );
 
   const filteredBoxes = useMemo(() => {
     return catalogModels.filter((model) => {
       const matchesCategory = activeCategory === 'all' || model.tags.includes(normalizeBoxTag(activeCategory));
-      const matchesSearch = model.searchName.includes(normalizedSearchQuery);
+      const matchesSearch = normalizedSearchTerms.every((term) => model.searchTerms.includes(term));
       const matchesAffordability = !showAffordableOnly || model.priceCoins <= balance;
       return matchesCategory && matchesSearch && matchesAffordability;
     });
-  }, [activeCategory, balance, catalogModels, normalizedSearchQuery, showAffordableOnly]);
+  }, [activeCategory, balance, catalogModels, normalizedSearchTerms, showAffordableOnly]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
@@ -415,6 +422,23 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isSortOpen]);
 
+  // The bottom nav competes with the mobile keyboard and sort sheet. Suppress
+  // it for the duration of either interaction and always restore it on exit.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const filtersAreBeingSelected = isSearchFocused || isSortOpen;
+    window.dispatchEvent(new CustomEvent('pullz:mobile-bottom-nav-visibility', {
+      detail: { hidden: filtersAreBeingSelected }
+    }));
+
+    return () => {
+      window.dispatchEvent(new CustomEvent('pullz:mobile-bottom-nav-visibility', {
+        detail: { hidden: false }
+      }));
+    };
+  }, [isSearchFocused, isSortOpen]);
+
   const clearFilters = useCallback(() => {
     setActiveCategory('all');
     setSearchQuery('');
@@ -539,6 +563,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               className="h-[50px] w-full rounded-[14px] border border-[#24242c] bg-[#131318] py-3 pl-11 pr-11 text-base text-[#f2f2f5] placeholder:text-[#7a7a88] outline-none transition focus:border-[#5b6bf5] focus:ring-1 focus:ring-[#5b6bf5]"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
               aria-label="Search boxes"
             />
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
