@@ -22,12 +22,17 @@ const useMediaQuery = (query: string) => {
     const media = window.matchMedia(query);
     const handler = () => setMatches(media.matches);
     handler();
-    if ('addEventListener' in media) {
+    if (typeof media.addEventListener === 'function') {
       media.addEventListener('change', handler);
       return () => media.removeEventListener('change', handler);
     }
-    media.addListener(handler);
-    return () => media.removeListener(handler);
+    // Legacy Safari versions use MediaQueryListListener rather than EventTarget.
+    const legacyMedia = media as MediaQueryList & {
+      addListener?: (listener: () => void) => void;
+      removeListener?: (listener: () => void) => void;
+    };
+    legacyMedia.addListener?.(handler);
+    return () => legacyMedia.removeListener?.(handler);
   }, [query]);
 
   return matches;

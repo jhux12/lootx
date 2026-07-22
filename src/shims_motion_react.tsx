@@ -86,7 +86,7 @@ function stripMotionProps<T extends AnyProps>(props: T): AnyProps {
   return next;
 }
 
-function createMotionTag(tag: keyof JSX.IntrinsicElements) {
+function createMotionTag(tag: keyof React.JSX.IntrinsicElements) {
   return React.forwardRef<HTMLElement, AnyProps>((props, ref) => {
     const { animate, initial, style, ...rest } = props;
     const passthrough = stripMotionProps(rest);
@@ -120,7 +120,7 @@ export const motion = new Proxy(
   {},
   {
     get(_target, prop) {
-      return createMotionTag(prop as keyof JSX.IntrinsicElements);
+      return createMotionTag(prop as keyof React.JSX.IntrinsicElements);
     }
   }
 ) as Record<string, React.ForwardRefExoticComponent<any>>;

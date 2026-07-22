@@ -18,14 +18,21 @@ export const listPlinkoBoards = async (): Promise<PlinkoBoard[]> => {
   return snapshot.docs.map((boardDoc) => normalizePlinkoBoard(boardDoc.id, boardDoc.data()));
 };
 
-export const listPlinkoPoolItems = async (poolId: string) => {
+export type PlinkoPoolItem = {
+  id: string;
+  name?: string;
+  imageUrl?: string;
+  coinValue?: number;
+};
+
+export const listPlinkoPoolItems = async (poolId: string): Promise<PlinkoPoolItem[]> => {
   const poolQuery = query(
     collection(db, 'plinkoPools', poolId, 'items'),
     where('enabled', '==', true),
     orderBy('coinValue', 'asc')
   );
   const snapshot = await getDocs(poolQuery);
-  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as PlinkoPoolItem));
 };
 
 export const attemptPlinko = async (payload: { bet: number; clientSeed?: string }) => {

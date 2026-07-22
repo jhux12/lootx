@@ -79,7 +79,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [push]);
 
   useEffect(() => () => {
-    Object.values(timers.current).forEach((timer) => window.clearTimeout(timer));
+    Object.values(timers.current).forEach((timer) => {
+      if (typeof timer === 'number') window.clearTimeout(timer);
+    });
   }, []);
 
   const value = useMemo(() => ({ dismiss }), [dismiss]);

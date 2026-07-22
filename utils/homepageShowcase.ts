@@ -188,14 +188,14 @@ export const updateRow = (
   rows: ShowcaseRow[],
   rowId: string,
   patch: Partial<ShowcaseRow>
-) =>
+): ShowcaseRow[] =>
   rows.map((row) =>
     row.id === rowId
-      ? {
+      ? normalizeShowcaseRow({
           ...row,
           ...patch,
           updatedAt: Timestamp.now()
-        }
+        } as Partial<ShowcaseRow> & Record<string, unknown>)
       : row
   );
 

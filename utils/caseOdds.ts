@@ -135,14 +135,14 @@ export const buildOddsWithRiskAndTargetEV = (
 
 export const runRiskBalanceDevCheck = () => {
   const sampleItems: CaseItem[] = [
-    { name: 'Canvas Sticker', price: 2, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
-    { name: 'Spray Paint', price: 6, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
-    { name: 'Sports Bottle', price: 12, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
-    { name: 'Leather Wallet', price: 20, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
-    { name: 'Wireless Earbuds', price: 45, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
-    { name: 'Smart Speaker', price: 80, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
-    { name: 'Luxury Watch', price: 160, image: '', rarity: 'epic', chance: 0, color: '#a855f7' },
-    { name: 'Collector Drone', price: 320, image: '', rarity: 'legendary', chance: 0, color: '#fbbf24' }
+    { id: 'canvas-sticker', name: 'Canvas Sticker', price: 2, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
+    { id: 'spray-paint', name: 'Spray Paint', price: 6, image: '', rarity: 'common', chance: 0, color: '#9ca3af' },
+    { id: 'sports-bottle', name: 'Sports Bottle', price: 12, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
+    { id: 'leather-wallet', name: 'Leather Wallet', price: 20, image: '', rarity: 'uncommon', chance: 0, color: '#22c55e' },
+    { id: 'wireless-earbuds', name: 'Wireless Earbuds', price: 45, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
+    { id: 'smart-speaker', name: 'Smart Speaker', price: 80, image: '', rarity: 'rare', chance: 0, color: '#3b82f6' },
+    { id: 'luxury-watch', name: 'Luxury Watch', price: 160, image: '', rarity: 'epic', chance: 0, color: '#a855f7' },
+    { id: 'collector-drone', name: 'Collector Drone', price: 320, image: '', rarity: 'legendary', chance: 0, color: '#fbbf24' }
   ];
 
   const targetEV = 0.65;

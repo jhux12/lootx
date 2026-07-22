@@ -345,7 +345,6 @@ export default function UpgraderPage() {
       const audio = new Audio(url);
       audio.preload = 'auto';
       audio.volume = volume;
-      audio.playsInline = true;
       audio.setAttribute('playsinline', 'true');
       audio.setAttribute('webkit-playsinline', 'true');
       return audio;
@@ -569,7 +568,7 @@ export default function UpgraderPage() {
           .sort((a, b) => Math.abs(a.price - desired) - Math.abs(b.price - desired))[0];
         return candidate ? { item: candidate, label: range.label } : null;
       })
-      .filter((entry): entry is { item: EliteItem; label: string } => Boolean(entry));
+      .filter((entry): entry is { item: EliteItem; label: 'Safe' | 'Balanced' | 'High Risk' } => Boolean(entry));
   }, [source, targetItems]);
 
   const visibleInventoryItems = useMemo(

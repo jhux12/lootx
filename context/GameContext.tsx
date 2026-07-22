@@ -669,6 +669,7 @@ type PersistUserData = Partial<{
 
 type GoogleAuthResult =
   | { status: 'success' }
+  | { status: 'redirect-started' }
   | { status: 'link-required'; email: string; credential: AuthCredential }
   | { status: 'error'; message: string };
 
@@ -2069,12 +2070,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       })();
     };
-    const idleId = 'requestIdleCallback' in window
-      ? window.requestIdleCallback(loadItems, { timeout: 2500 })
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleId = typeof idleWindow.requestIdleCallback === 'function'
+      ? idleWindow.requestIdleCallback(loadItems, { timeout: 2500 })
       : window.setTimeout(loadItems, 1200);
     return () => {
       cancelled = true;
-      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
+      if (typeof idleWindow.cancelIdleCallback === 'function' && typeof idleId === 'number') idleWindow.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
   }, [isAuthenticated, user.isAdmin]);
@@ -2195,12 +2200,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       })();
     };
-    const idleId = 'requestIdleCallback' in window
-      ? window.requestIdleCallback(loadBoxes, { timeout: 1600 })
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const idleId = typeof idleWindow.requestIdleCallback === 'function'
+      ? idleWindow.requestIdleCallback(loadBoxes, { timeout: 1600 })
       : window.setTimeout(loadBoxes, 700);
     return () => {
       cancelled = true;
-      if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
+      if (typeof idleWindow.cancelIdleCallback === 'function' && typeof idleId === 'number') idleWindow.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
   }, [isAuthenticated, user.isAdmin, view.type]);
@@ -2483,7 +2492,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (!userSnapshot.exists()) {
       const baseUsername = buildBaseUsername(displayName, email);
-      const username = await ensureUniqueUsername(baseUsername);
+      const username = await reserveUniqueUsername(firebaseUser.uid, baseUsername);
       const createdAt = Date.now();
       const avatar = photoURL || '';
       const newUser: User = {

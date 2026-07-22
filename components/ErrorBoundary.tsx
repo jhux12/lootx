@@ -26,9 +26,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   private recover = () => {
-    this.setState({ hasError: false });
-    if (this.props.onRecover) {
-      this.props.onRecover();
+    const component = this as unknown as { setState: (state: ErrorBoundaryState) => void; props: ErrorBoundaryProps };
+    component.setState({ hasError: false });
+    if (component.props.onRecover) {
+      component.props.onRecover();
       return;
     }
     if (typeof window !== 'undefined') {
@@ -37,7 +38,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   };
 
   render() {
-    if (!this.state.hasError) return this.props.children;
+    const component = this as unknown as { props: ErrorBoundaryProps };
+    if (!this.state.hasError) return component.props.children;
 
     return (
       <div className="flex min-h-[60dvh] items-center justify-center bg-[#1b2024] px-4 py-12 text-white">
@@ -45,16 +47,16 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 text-2xl font-black text-cyan-200">
             P
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">{this.props.title ?? 'Pullz hit a snag'}</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">{component.props.title ?? 'Pullz hit a snag'}</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            {this.props.message ?? 'Something unexpected happened. Your balance, account, and case results are safe. Try again to continue.'}
+            {component.props.message ?? 'Something unexpected happened. Your balance, account, and case results are safe. Try again to continue.'}
           </p>
           <button
             type="button"
             onClick={this.recover}
             className="mt-6 min-h-11 w-full rounded-xl bg-[#205DD7] px-4 py-3 text-sm font-extrabold text-white transition hover:bg-[#1f6bea] active:scale-[0.98]"
           >
-            {this.props.actionLabel ?? 'Reload Pullz'}
+            {component.props.actionLabel ?? 'Reload Pullz'}
           </button>
         </div>
       </div>

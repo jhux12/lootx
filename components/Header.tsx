@@ -305,16 +305,20 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       return;
     }
     let idleId: number | null = null;
-    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    let timeoutId: number | null = null;
     const enable = () => setEnableRewardsRealtime(true);
-    if ("requestIdleCallback" in window)
-      idleId = window.requestIdleCallback(enable, {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (typeof idleWindow.requestIdleCallback === "function")
+      idleId = idleWindow.requestIdleCallback(enable, {
         timeout: 3000,
       }) as unknown as number;
     else timeoutId = window.setTimeout(enable, 3000);
     return () => {
-      if (idleId !== null && "cancelIdleCallback" in window)
-        window.cancelIdleCallback(idleId);
+      if (idleId !== null && typeof idleWindow.cancelIdleCallback === "function")
+        idleWindow.cancelIdleCallback(idleId);
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
   }, [isAuthenticated]);

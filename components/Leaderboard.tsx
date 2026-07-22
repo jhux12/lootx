@@ -79,7 +79,8 @@ const rewardByRule = (settings: RewardsSettings, rank: number | null, points: nu
   }
 
   if (settings.rewardRules.payoutType === 'item') {
-    return { label: source.rewardItemId ? String(source.rewardItemId) : 'Item', coins: 0 };
+    const rewardItemId = 'rewardItemId' in source ? source.rewardItemId : undefined;
+    return { label: rewardItemId ? String(rewardItemId) : 'Item', coins: 0 };
   }
 
   return { label: '0', coins: 0 };
