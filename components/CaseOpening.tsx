@@ -2557,26 +2557,75 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         </div>
 
         {showPostFreeBoxModal && (
-          <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          <div className="fixed inset-0 z-[125] flex items-center justify-center bg-[#070611]/75 p-3 backdrop-blur-sm sm:p-5">
             <div
-              className="relative w-full max-w-md rounded-2xl border border-amber-300/30 bg-[#111725] p-5 shadow-2xl sm:p-6"
+              className="relative w-full max-w-[28rem] overflow-hidden rounded-[1.35rem] border border-violet-300/20 bg-[radial-gradient(circle_at_50%_-15%,rgba(117,82,255,0.22),transparent_39%),linear-gradient(145deg,#151225_0%,#0c0b17_64%,#11101d_100%)] px-4 pb-5 pt-3 shadow-[0_26px_80px_rgba(0,0,0,0.6)] sm:px-7 sm:pb-7 sm:pt-5"
               role="dialog"
               aria-modal="true"
               aria-labelledby="first-deposit-offer-title"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-200">First-deposit match</p>
-              <h3 id="first-deposit-offer-title" className="mt-2 text-xl font-black text-white sm:text-2xl">
-                Your first pull was on us. Want another?
-              </h3>
-              <p className="mt-3 text-sm font-semibold text-slate-100">Get a 50% bonus on your first deposit.</p>
-              <div className="mt-5 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  redirectToBoxesCatalog();
+                }}
+                className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-slate-300 transition hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 sm:right-4 sm:top-4"
+                aria-label="Maybe later, return to boxes"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="relative mx-auto h-[166px] w-[220px] sm:h-[178px] sm:w-[240px]" aria-hidden="true">
+                <span className="absolute left-4 top-8 h-2 w-2 rounded-sm bg-violet-400 shadow-[0_0_12px_3px_rgba(167,139,250,0.6)]" />
+                <span className="absolute right-7 top-6 h-1.5 w-1.5 rounded-full bg-fuchsia-300 shadow-[0_0_12px_3px_rgba(232,121,249,0.5)]" />
+                <span className="absolute bottom-8 right-2 h-2 w-2 rounded-sm bg-indigo-300 shadow-[0_0_12px_3px_rgba(129,140,248,0.55)]" />
+                {["-rotate-12 -translate-x-9 translate-y-6", "rotate-12 translate-x-9 translate-y-6", "z-[1]"].map((cardPosition, index) => (
+                  <div
+                    key={cardPosition}
+                    className={`absolute left-1/2 top-7 h-[112px] w-[78px] -translate-x-1/2 overflow-hidden rounded-md border border-violet-200/50 bg-[#25213a] shadow-[0_14px_26px_rgba(0,0,0,0.48)] ${cardPosition}`}
+                  >
+                    <img
+                      src={index === 2 ? (wonItem?.image || box?.image || pullzLogo) : (box?.image || wonItem?.image || pullzLogo)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-center">
+                <h3 id="first-deposit-offer-title" className="text-[22px] font-black uppercase leading-tight tracking-[-0.035em] text-white sm:text-[26px]">
+                  Your first pull was on us
+                </h3>
+                <p className="mt-1 text-sm font-bold text-[#9ea5ff] sm:text-base">Keep the collection going</p>
+                <p className="mt-5 text-sm text-slate-300 sm:text-base">Get a <span className="font-extrabold text-fuchsia-300">50%</span> bonus on your first deposit.</p>
+              </div>
+
+              <div className="mt-5 grid grid-cols-[0.85fr_auto_0.8fr_auto_1.2fr] items-center rounded-xl border border-white/10 bg-black/20 px-2 py-3 text-center sm:px-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You deposit</p>
+                  <p className="mt-1 text-base font-black text-white sm:text-lg">$10</p>
+                </div>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Bonus</p>
+                  <p className="mt-1 text-base font-black text-fuchsia-300 sm:text-lg">+$5</p>
+                </div>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You receive</p>
+                  <p className="mt-1 whitespace-nowrap text-sm font-black text-white sm:text-base">🪙 1,500 coins</p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={handlePostFreePrimaryAction}
-                  className="min-h-12 w-full rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#03131a] transition hover:brightness-110 active:scale-[0.99]"
+                  className="min-h-[52px] w-full rounded-xl bg-gradient-to-r from-[#4d70ff] via-[#7b55ff] to-[#d63ee9] px-4 py-3 text-sm font-black text-white shadow-[0_10px_26px_rgba(125,71,255,0.38)] transition hover:brightness-110 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200"
                 >
-                  Claim Offer
+                  Deposit $10 + Get 500 Bonus Coins&nbsp; ›
                 </button>
                 <button
                   type="button"
@@ -2584,11 +2633,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     playSound('click');
                     redirectToBoxesCatalog();
                   }}
-                  className="min-h-11 w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10 active:scale-[0.99]"
+                  className="min-h-10 w-full rounded-xl px-4 py-2 text-sm font-bold text-slate-300 transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
                 >
                   Maybe Later
                 </button>
               </div>
+              <p className="mt-2 text-center text-[10px] text-slate-500">Offer applies to your first deposit only. Bonus terms apply.</p>
             </div>
           </div>
         )}
