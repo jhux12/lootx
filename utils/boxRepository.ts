@@ -17,6 +17,18 @@ export const getBoxSummaryPage = async (pageSize: number, cursor?: QueryDocument
  boxes.forEach((box) => summaryCache.set(box.id, box));
  return { boxes, cursor: snapshot.docs.at(-1) ?? null, hasMore: snapshot.size === pageSize };
 };
+
+const homepageCache = new Map<number, BoxSummary[]>();
+const homepageInFlight = new Map<number, Promise<BoxSummary[]>>();
+/** Homepage-only cache: it never shares a cursor or page state with BoxCatalog. */
+export const getHomepageSummaries = (pageSize: number) => {
+ const cached = homepageCache.get(pageSize); if (cached) return Promise.resolve(cached);
+ const ongoing = homepageInFlight.get(pageSize); if (ongoing) return ongoing;
+ const request = getBoxSummaryPage(pageSize).then(({ boxes }) => { homepageCache.set(pageSize, boxes); return boxes; }).finally(() => homepageInFlight.delete(pageSize));
+ homepageInFlight.set(pageSize, request); return request;
+};
+export const invalidateHomepageSummaries = (pageSize?: number) => { if (pageSize) homepageCache.delete(pageSize); else homepageCache.clear(); };
+
 export const getBoxDetail = (boxId: string, map: (id: string, data: Record<string, any>) => MysteryBox) => {
  if (detailCache.has(boxId)) return Promise.resolve(detailCache.get(boxId)!);
  const ongoing = detailInFlight.get(boxId); if (ongoing) return ongoing;
