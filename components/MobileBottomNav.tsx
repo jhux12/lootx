@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
-import { useGame } from '../context/GameContext';
+import { useAuth, useBoxes, useUI } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
 
@@ -23,7 +23,9 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export const MobileBottomNav: React.FC = () => {
-  const { view, setView, isAuthenticated, openAuthModal, user, boxes, showTopUpModal } = useGame();
+  const { view, setView, showTopUpModal } = useUI();
+  const { isAuthenticated, openAuthModal, user } = useAuth();
+  const { boxes } = useBoxes();
   const { playSound } = useSound();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
@@ -152,7 +154,7 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/96 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-10px_30px_rgba(0,0,0,0.34)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/96 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-6px_16px_rgba(0,0,0,0.28)] transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{

@@ -501,6 +501,7 @@ export const AdminPanel: React.FC = () => {
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
 
   useEffect(() => {
+      if (activeTab !== 'dashboard') return;
       const pathLabel = 'adminNotifications';
       console.log('READING FIRESTORE PATH', pathLabel);
       const noticesQuery = query(collection(db, 'adminNotifications'), orderBy('createdAt', 'desc'), limit(30));
@@ -531,7 +532,7 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   const filteredAdminItems = useMemo(() => {
       const query = itemSearchQuery.trim().toLowerCase();
@@ -717,11 +718,13 @@ export const AdminPanel: React.FC = () => {
   const clampedTargetEV = Math.min(1.5, Math.max(0.5, safeTargetEVInput));
 
   useEffect(() => {
+      if (activeTab !== 'support') return;
       const supportPathLabel = 'supportCases';
       console.log('READING FIRESTORE PATH', supportPathLabel);
       const supportQuery = query(
           collection(db, 'supportCases'),
-          orderBy('lastUpdatedAt', 'desc')
+          orderBy('lastUpdatedAt', 'desc'),
+          limit(50)
       );
       const unsubscribe = onSnapshot(supportQuery, (snapshot) => {
           console.log('SNAPSHOT OK', {
@@ -746,12 +749,13 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
+      if (activeTab !== 'bonuses') return;
       const itemsPathLabel = 'xpShopItems';
       console.log('READING FIRESTORE PATH', itemsPathLabel);
-      const itemsQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'));
+      const itemsQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'), limit(100));
       const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
           console.log('SNAPSHOT OK', {
               path: itemsPathLabel,
@@ -791,12 +795,13 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
+      if (activeTab !== 'bonuses') return;
       const redemptionsPathLabel = 'xpRedemptions';
       console.log('READING FIRESTORE PATH', redemptionsPathLabel);
-      const redemptionsQuery = query(collection(db, 'xpRedemptions'), orderBy('createdAt', 'desc'));
+      const redemptionsQuery = query(collection(db, 'xpRedemptions'), orderBy('createdAt', 'desc'), limit(100));
       const unsubscribe = onSnapshot(redemptionsQuery, (snapshot) => {
           console.log('SNAPSHOT OK', {
               path: redemptionsPathLabel,
@@ -825,7 +830,7 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   const handleDeleteUser = async (userId: string) => {
       const targetUser = users.find((profile) => profile.id === userId);
@@ -1232,6 +1237,7 @@ export const AdminPanel: React.FC = () => {
   }, [bonusSettings]);
 
   useEffect(() => {
+      if (activeTab !== 'bonuses') return;
       const rewardsPathLabel = 'settings/rewards';
       console.log('READING FIRESTORE PATH', rewardsPathLabel);
       const rewardsRef = doc(db, 'settings', 'rewards');
@@ -1269,10 +1275,11 @@ export const AdminPanel: React.FC = () => {
           });
       });
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
 
   useEffect(() => {
+      if (activeTab !== 'bonuses') return;
       const pullPassPathLabel = 'settings/pullPass';
       console.log('READING FIRESTORE PATH', pullPassPathLabel);
       const pullPassRef = doc(db, 'settings', 'pullPass');
@@ -1290,7 +1297,7 @@ export const AdminPanel: React.FC = () => {
           console.error('Failed to subscribe to Pull Pass settings', error);
       });
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   const handleSavePullPassSettings = async () => {
       try {
@@ -1529,6 +1536,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   useEffect(() => {
+      if (activeTab !== 'settings' && activeTab !== 'bonuses') return;
       const economyPathLabel = 'settings/economy';
       console.log('READING FIRESTORE PATH', economyPathLabel);
       const economyRef = doc(db, 'settings', 'economy');
@@ -1555,7 +1563,7 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
       console.log('SELECTED USER', selectedUserId);

@@ -47,7 +47,22 @@
     font-size: 12px;
     padding: 10px 8px;
     border-radius: 10px 0 0 10px;
+    /* A fixed blur repaints continuously while mobile chrome scrolls. */
+    background: #121216;
+    backdrop-filter: none;
   }
+}
+
+@media (max-width: 768px), (prefers-reduced-motion: reduce) {
+  #pullz-support-tab { backdrop-filter: none; }
+  .pullz-mobile-bottom-nav { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html.pullz-tab-hidden .ticker-animation,
+  html.pullz-tab-hidden [class*="animate-"],
+  html.pullz-mobile-optimized .ticker-animation { animation-play-state: paused !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
 /* Boxes catalog hero */

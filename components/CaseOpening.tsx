@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
-import { CaseItem, InventoryItem } from '../types';
+import { CaseItem, InventoryItem, MysteryBox } from '../types';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
@@ -12,6 +12,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
 import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { getBoxDetail, invalidateBoxDetail } from '../utils/boxRepository';
 import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
 import { toast } from '../src/ui/toast/toast';
 import { BlurImage } from '../src/ui/images/BlurImage';
@@ -106,6 +107,15 @@ const rarityIndicatorStyle: Record<string, { color: string; glow: string; label:
   common: { color: '#9ca3af', glow: 'rgba(156,163,175,0.65)', label: 'Common' }
 };
 
+const mapBoxDetail = (id: string, data: Record<string, any>): MysteryBox => {
+  const source = Array.isArray(data.items) ? data.items : Array.isArray(data.prizes) ? data.prizes : [];
+  const items = source.map((item: Record<string, any>, index: number) => {
+    const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
+    return { id: item.id ?? `${id}-${index}`, name: item.name ?? 'Mystery Item', price: Number(item.value ?? item.price ?? 0), image: item.image ?? '', rarity, chance: Number(item.weight ?? item.chance ?? 0), color: item.color ?? '#9ca3af', brand: item.brand ?? '', category: item.category ?? '', tags: Array.isArray(item.tags) ? item.tags : [], sizes: Array.isArray(item.sizes) ? item.sizes : [], redeemable: item.redeemable !== false } as CaseItem;
+  });
+  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
+};
+
 const normalizeRarityKey = (rarity?: string) => {
   const value = String(rarity ?? 'common').toLowerCase();
   if (value.includes('legend')) return 'legendary';
@@ -188,6 +198,18 @@ const buildExcitementPreviewReel = (items: CaseItem[]) => {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+// Invert the x curve then evaluate y. This is the same CSS cubic-bezier timing
+// function WAAPI uses, without reading composited styles back from the browser.
+const cubicBezierProgress = (progress: number, x1: number, y1: number, x2: number, y2: number) => {
+  const sample = (t: number, a: number, b: number) => 3 * a * (1 - t) * (1 - t) * t + 3 * b * (1 - t) * t * t + t * t * t;
+  let low = 0; let high = 1;
+  for (let i = 0; i < 16; i += 1) {
+    const mid = (low + high) / 2;
+    if (sample(mid, x1, x2) < progress) low = mid; else high = mid;
+  }
+  return sample((low + high) / 2, y1, y2);
+};
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -353,14 +375,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [prepareCaseAudio]);
 
   const matchedBox = boxes.find(b => b.id === boxId);
-  const box = matchedBox ?? boxes[0];
+  const [loadedBox, setLoadedBox] = useState<MysteryBox | null>(null);
+  const [boxLoadError, setBoxLoadError] = useState<string | null>(null);
+  const [detailReload, setDetailReload] = useState(0);
+  const box = loadedBox ?? matchedBox;
 
   useEffect(() => {
-    if (boxes.length === 0) return;
-    if (!matchedBox) {
-      setView({ type: 'HOME' });
-    }
-  }, [boxes.length, matchedBox, setView]);
+    let cancelled = false;
+    // Summaries deliberately omit prize arrays. Resolve a full document only for
+    // this route, which also preserves direct URLs outside the first catalog page.
+    if (matchedBox?.items?.length) { setLoadedBox(null); setBoxLoadError(null); return; }
+    void getBoxDetail(boxId, mapBoxDetail).then((detail) => {
+      if (cancelled) return;
+      if (!detail) { setBoxLoadError('This case is no longer available.'); return; }
+      setLoadedBox(detail); setBoxLoadError(null);
+    }).catch(() => { if (!cancelled) setBoxLoadError('Unable to load this case. Please try again.'); });
+    return () => { cancelled = true; };
+  }, [boxId, detailReload, matchedBox?.id, matchedBox?.items?.length]);
+
 
   const items = box?.items ?? [];
   const hasItems = items.length > 0;
@@ -1168,26 +1200,41 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
+    // The reel itself is animated by WAAPI.  Never read its computed transform here:
+    // style reads force a composited animation back onto the main thread.  The known
+    // timeline and keyframes let us calculate the approximate centre position instead.
     let frameId: number | null = null;
-    const syncCenterItem = () => {
-      if (document.visibilityState === 'hidden') return;
-      const transform = window.getComputedStyle(container).transform;
-      const matrix = transform && transform !== 'none' ? new DOMMatrixReadOnly(transform) : null;
-      const x = matrix ? matrix.m41 : 0;
-      const index = getCenteredIndexFromTranslate(x);
-      const previousIndex = lastCenterIndexRef.current;
-      if (index !== previousIndex) {
-        lastCenterIndexRef.current = index;
-        if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-          playSound('spin-tick');
-          lastTickedCenterIndexRef.current = index;
-        }
-        if (!reduceSpinnerRerenders) {
-          setCurrentCenterIndex(index);
+    let lastSampleAt = -Infinity;
+    const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
+    const translateAt = (elapsed: number) => {
+      const progress = clamp(elapsed / resolvedDuration, 0, 1);
+      if (progress <= overshootOffset) return overshootTarget * cubicBezierProgress(progress / overshootOffset, 0.24, 0.62, 0.18, 1);
+      if (progress <= preSettleOffset) {
+        const local = (progress - overshootOffset) / Math.max(0.001, preSettleOffset - overshootOffset);
+        return overshootTarget + (jitterLandingTranslate - overshootTarget) * cubicBezierProgress(local, 0.12, 0.82, 0.2, 1);
+      }
+      const local = (progress - preSettleOffset) / Math.max(0.001, 1 - preSettleOffset);
+      return jitterLandingTranslate + (centeredTranslate - jitterLandingTranslate) * cubicBezierProgress(local, 0.16, 0.72, 0.28, 1);
+    };
+    const syncCenterItem = (now: number) => {
+      if (document.visibilityState !== 'hidden' && now - lastSampleAt >= sampleIntervalMs) {
+        lastSampleAt = now;
+        const elapsed = Number(animation.currentTime ?? Math.max(0, now - (animation.startTime ?? now)));
+        const index = getCenteredIndexFromTranslate(translateAt(elapsed));
+        const previousIndex = lastCenterIndexRef.current;
+        if (index !== previousIndex) {
+          lastCenterIndexRef.current = index;
+          if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
+            playSound('spin-tick');
+            lastTickedCenterIndexRef.current = index;
+          }
+          if (!reduceSpinnerRerenders) setCurrentCenterIndex(index);
         }
       }
-      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-      frameId = tickFrameRef.current;
+      if (isSpinningRef.current) {
+        tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+        frameId = tickFrameRef.current;
+      }
     };
     tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
     frameId = tickFrameRef.current;
@@ -1309,7 +1356,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     // remaining lazy requests, so waiting for every possible drop delays the page
     // without improving the first visible frame.
     const preloadLimit = options.preloadAll
-      ? (reduceMobileEffects ? 12 : 18)
+      ? (reduceMobileEffects ? 8 : 16)
       : (reduceMobileEffects ? 4 : 6);
     const loadTimeoutMs = options.preloadAll
       ? (reduceMobileEffects ? 1800 : 2500)
@@ -2056,8 +2103,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
-            <p className="text-white text-lg font-semibold">Loading box...</p>
-            <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this box.</p>
+            {boxLoadError ? <>
+              <p className="text-white text-lg font-semibold">Case unavailable</p>
+              <p className="text-gray-400 text-sm mt-2">{boxLoadError}</p>
+              <div className="mt-5 flex justify-center gap-3">
+                <button type="button" onClick={() => { invalidateBoxDetail(boxId); setBoxLoadError(null); setDetailReload((value) => value + 1); }} className="rounded-lg bg-brand-blue px-4 py-2 text-sm font-semibold text-white">Retry</button>
+                <button type="button" onClick={() => setView({ type: 'BOXES' })} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white">Back</button>
+              </div>
+            </> : <>
+              <p className="text-white text-lg font-semibold">Loading box...</p>
+              <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this box.</p>
+            </>}
           </div>
         </div>
       ) : (

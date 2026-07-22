@@ -111,8 +111,19 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
   }, [battleId]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 300);
-    return () => window.clearInterval(timer);
+    // Countdown precision does not need three full route renders per second.
+    let timer: number | null = null;
+    const update = () => setNow(Date.now());
+    const start = () => {
+      if (timer !== null || document.hidden) return;
+      update();
+      timer = window.setInterval(update, 1000);
+    };
+    const stop = () => { if (timer !== null) window.clearInterval(timer); timer = null; };
+    const onVisibility = () => { if (document.hidden) stop(); else start(); };
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility); };
   }, []);
 
   useEffect(() => {

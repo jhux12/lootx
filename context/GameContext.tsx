@@ -2008,7 +2008,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users, isAuthenticated, user.id, user.createdAt, user.topPullsPublic]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // The complete item catalogue includes admin-only pricing and metadata. Public
+    // case pages receive their prize list with the selected box, so do not transfer
+    // up to 500 catalogue documents to every visitor.
+    if (typeof window === 'undefined' || !isAuthenticated || !user.isAdmin) {
+      setItems((current) => current.length === CASE_ITEMS.length ? current : CASE_ITEMS);
+      return;
+    }
     let cancelled = false;
     const loadItems = () => {
       if (cancelled) return;
@@ -2070,7 +2076,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, []);
+  }, [isAuthenticated, user.isAdmin]);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
@@ -2081,9 +2087,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (cancelled) return;
       void (async () => {
       try {
-        const boxesPath = 'boxes?limit=250';
+        // Legacy fallback until the documented boxSummaries collection is deployed.
+        const boxesPath = 'boxSummaries?limit=48';
         console.log('READING FIRESTORE PATH', boxesPath);
-        const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
+        // Firestore cannot field-project a document. Prefer the deployment-managed
+        // summary collection; use a bounded legacy fallback while it is populated.
+        let snapshot;
+        try {
+          snapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
+          if (snapshot.empty) throw new Error('boxSummaries is empty during migration');
+        } catch (summaryError) {
+          console.warn('boxSummaries unavailable; using bounded legacy box fallback', summaryError);
+          snapshot = await getDocs(query(collection(db, 'boxes'), limit(48)));
+        }
         if (cancelled) return;
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
