@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -38,6 +38,11 @@ const TAG_STYLES: Record<string, string> = {
 };
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
+
+const normalizeSearchText = (value: string) => value
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
 
 type CatalogItemPreview = Pick<CaseItem, 'id' | 'name' | 'image'>;
 
@@ -88,7 +93,7 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
     name: box.name,
     // Search the information a visitor can use to identify a box, not just its
     // title. This makes queries such as a card name, set, or category useful.
-    searchTerms: [box.name, ...tags, ...box.items.map((item) => item.name)].join(' ').toLowerCase(),
+    searchTerms: normalizeSearchText([box.name, ...tags, ...box.items.map((item) => item.name)].join(' ')),
     priceCoins: getBoxPrice(box),
     createdAt: box.createdAt,
     tags,
@@ -280,21 +285,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
   }, [catalogModels, stripeSettings.boxTagIcons]);
 
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const normalizedSearchQuery = deferredSearchQuery.toLowerCase().trim();
-  const normalizedSearchTerms = useMemo(
-    () => normalizedSearchQuery.split(/\s+/).filter(Boolean),
-    [normalizedSearchQuery]
-  );
+  // Filter from the controlled input value directly. Deferring this value made
+  // the visible catalog lag behind what a visitor had typed.
+  const normalizedSearchQuery = normalizeSearchText(searchQuery);
 
   const filteredBoxes = useMemo(() => {
     return catalogModels.filter((model) => {
       const matchesCategory = activeCategory === 'all' || model.tags.includes(normalizeBoxTag(activeCategory));
-      const matchesSearch = normalizedSearchTerms.every((term) => model.searchTerms.includes(term));
+      const matchesSearch = !normalizedSearchQuery || model.searchTerms.includes(normalizedSearchQuery);
       const matchesAffordability = !showAffordableOnly || model.priceCoins <= balance;
       return matchesCategory && matchesSearch && matchesAffordability;
     });
-  }, [activeCategory, balance, catalogModels, normalizedSearchTerms, showAffordableOnly]);
+  }, [activeCategory, balance, catalogModels, normalizedSearchQuery, showAffordableOnly]);
 
   const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
 
