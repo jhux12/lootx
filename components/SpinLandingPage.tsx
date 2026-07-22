@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Play, X } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { trackEvent } from '../utils/trackEvent';
 import { subscribeHomepageConfig } from '../utils/homepageShowcase';
 import { CoinAmount } from './CoinAmount';
 import { HomepageFaqSection } from './HomepageFaqSection';
+import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 
 const ASSET = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2F';
 const media = (name: string, token: string) => `${ASSET}${encodeURIComponent(name)}?alt=media&token=${token}`;
@@ -25,14 +26,22 @@ export const SpinLandingPage: React.FC = () => {
   const { boxes, isAuthenticated, user, openAuthModal, setView } = useGame();
   const [isVideoOpen, setIsVideoOpen] = useState(false);
   const [featuredBoxIds, setFeaturedBoxIds] = useState<string[]>([]);
+  const shouldReturnHomeAfterAuth = useRef(false);
   const freeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
   const claimed = Boolean(user.lastFreeBoxClaim);
   const claim = () => {
     if (!freeBox || claimed) return;
     if (isAuthenticated) { setView({ type: 'CASE_OPENING', boxId: freeBox.id, isFree: true }); return; }
+    shouldReturnHomeAfterAuth.current = true;
+    setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
     trackEvent('signup_cta_clicked', { placement: 'spin_landing' });
     openAuthModal('register');
   };
+  useEffect(() => {
+    if (!shouldReturnHomeAfterAuth.current || !isAuthenticated) return;
+    shouldReturnHomeAfterAuth.current = false;
+    setView({ type: 'HOME' });
+  }, [isAuthenticated, setView]);
   useEffect(() => { trackEvent('free_box_page_viewed', { page: '/spin' }); }, []);
   useEffect(() => subscribeHomepageConfig((config) => setFeaturedBoxIds(config?.trendingBoxIds ?? []), () => setFeaturedBoxIds([])), []);
   useEffect(() => {
