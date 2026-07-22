@@ -211,9 +211,17 @@ export const TopUpModal: React.FC = () => {
   }, [defaultPackage, displayedPackages, selectedPackageId]);
 
   React.useEffect(() => {
-    if (!isPostFreeBoxFlow || displayedPackages.length === 0) {
+    if (!isPostFreeBoxFlow) {
       return;
     }
+
+    // The post-free-box offer promises the first-deposit match, so reveal that
+    // package group before choosing the $10 package within it.
+    if (!showFirstDepositPackages) {
+      setShowFirstDepositPackages(true);
+      return;
+    }
+    if (displayedPackages.length === 0) return;
 
     const preferredUsd = Number(topUpModalIntent?.preferredPackageUsd ?? 50);
     const preferredPackage = displayedPackages.find((pkg) => Math.abs(parseDisplayPrice(pkg.displayPrice) - preferredUsd) < 0.001);
@@ -222,7 +230,7 @@ export const TopUpModal: React.FC = () => {
     setSelectedPackageId(preferredPackage.id);
     setHasUserSelectedPackage(false);
     autoSelectAppliedRef.current = true;
-  }, [displayedPackages, isPostFreeBoxFlow, topUpModalIntent?.preferredPackageUsd]);
+  }, [displayedPackages, isPostFreeBoxFlow, showFirstDepositPackages, topUpModalIntent?.preferredPackageUsd]);
 
   React.useEffect(() => {
     if (isPostFreeBoxFlow) {

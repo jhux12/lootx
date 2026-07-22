@@ -410,23 +410,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   // not carry the explicit `isFree` route flag.
   const isFreeOpening = Boolean(isFree || box?.isDaily);
   const hideDropTableOdds = isFreeOpening;
-  const cheapestPaidBox = useMemo(() => {
-    const paidBoxes = boxes.filter((entry) => {
-      const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
-      return entry.isDaily !== true && (entry.currencyType ?? 'COIN') !== 'XP' && coinPrice > 0;
-    });
-    if (!paidBoxes.length) return null;
-    return paidBoxes.reduce((lowest, next) => {
-      const lowestPrice = toCoins(Number(lowest.price ?? 0), PRICE_UNIT_MODE);
-      const nextPrice = toCoins(Number(next.price ?? 0), PRICE_UNIT_MODE);
-      return nextPrice < lowestPrice ? next : lowest;
-    });
-  }, [boxes]);
-  const cheapestPaidBoxPrice = useMemo(
-    () => (cheapestPaidBox ? toCoins(Number(cheapestPaidBox.price ?? 0), PRICE_UNIT_MODE) : 0),
-    [cheapestPaidBox]
-  );
-
   // Sort items high to low for display purposes
   const displayItems = useMemo(() => [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
@@ -468,8 +451,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
-  const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
-  const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
 
@@ -501,8 +482,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const releaseItemModalScrollLockRef = useRef<(() => void) | null>(null);
   const topUpTriggerLockRef = useRef(false);
-  const preFreeSpinBalanceRef = useRef<number | null>(null);
-  const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
+  const pendingPostFreeBoxFlowRef = useRef(false);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
@@ -1549,7 +1529,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         toast.info("Free signup box already claimed.");
         return;
       }
-      preFreeSpinBalanceRef.current = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
     }
 
     setIsSpinning(true);
@@ -1665,9 +1644,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
           syncBalance(updatedCoinBalance);
           if (isFree) {
-            const baselineBalance = Number(preFreeSpinBalanceRef.current ?? balance ?? user.balance ?? 0);
-            const coinsWon = Math.max(0, Math.floor(updatedCoinBalance - baselineBalance));
-            pendingPostFreeBoxFlowRef.current = { coinsWon };
+            pendingPostFreeBoxFlowRef.current = true;
           }
           if (!isFree) {
             const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
@@ -1918,7 +1895,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
 
-  const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
+  const redirectToBoxesCatalog = () => {
+    setShowPostFreeBoxModal(false);
+    pendingPostFreeBoxFlowRef.current = false;
+    setView({ type: 'BOXES' });
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/boxes');
+    }
+  };
+
+  const closeWinModal = () => {
     setIsSellingItem(false);
     setIsWinImageZoomed(false);
     if (!rewardResolved) {
@@ -1928,46 +1914,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     resetReelTrackPosition();
     setWonInventoryItem(null);
 
-    const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
-    if (shouldRedirectToCatalog) {
-      setShowPostFreeBoxModal(false);
-      pendingPostFreeBoxFlowRef.current = null;
-      setView({ type: 'BOXES' });
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/boxes');
-      }
-      return;
-    }
-
-    const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
-    if (pendingPostFreeBoxFlow) {
-      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-      setPostFreeBoxCoinsWon(pendingPostFreeBoxFlow.coinsWon);
-      setPostFreeBoxCoinsShort(Math.max(0, Math.ceil(cheapestPaidBoxPrice - availableCoins)));
+    if (pendingPostFreeBoxFlowRef.current) {
       setShowPostFreeBoxModal(true);
-      pendingPostFreeBoxFlowRef.current = null;
+      pendingPostFreeBoxFlowRef.current = false;
     }
   };
 
   const handlePostFreePrimaryAction = () => {
     playSound('click');
     setShowPostFreeBoxModal(false);
-    const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-    if (cheapestPaidBox && availableCoins >= cheapestPaidBoxPrice) {
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem(AUTO_OPEN_BOX_STORAGE_KEY, cheapestPaidBox.id);
-      }
-      setView({ type: 'CASE_OPENING', boxId: cheapestPaidBox.id });
-      return;
-    }
-
     setTopUpModalIntent({
       reason: 'insufficient_balance',
-      requiredCoins: cheapestPaidBoxPrice,
-      currentBalance: availableCoins,
-      missingCoins: Math.max(0, cheapestPaidBoxPrice - availableCoins),
+      requiredCoins: 1500,
+      currentBalance: Number(balance ?? user.balance ?? 0),
+      missingCoins: 1500,
       source: 'post_free_box',
-      preferredPackageUsd: 50
+      preferredPackageUsd: 10
     });
     setShowTopUpModal(true);
   };
@@ -2010,7 +1972,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           setIsSellingItem(false);
         }
     }
-    closeWinModal({ redirectToBoxesCatalog: true });
+    closeWinModal();
     setIsSellingItem(false);
   };
 
@@ -2070,7 +2032,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         }
       }
       setIsSellingItem(false);
-      closeWinModal({ redirectToBoxesCatalog: true });
+      closeWinModal();
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -2597,14 +2559,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {showPostFreeBoxModal && (
           <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111725] p-5 shadow-2xl sm:p-6">
-              <h3 className="text-xl font-black text-white sm:text-2xl">
-                You got {postFreeBoxCoinsWon.toLocaleString()} coins 🎉
+            <div
+              className="relative w-full max-w-md rounded-2xl border border-amber-300/30 bg-[#111725] p-5 shadow-2xl sm:p-6"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="first-deposit-offer-title"
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-200">First-deposit match</p>
+              <h3 id="first-deposit-offer-title" className="mt-2 text-xl font-black text-white sm:text-2xl">
+                Your first pull was on us. Want another?
               </h3>
-              <p className="mt-2 text-sm text-slate-300">
-                {postFreeBoxCoinsShort > 0
-                  ? `You’re only ${postFreeBoxCoinsShort.toLocaleString()} coins away from your first box`
-                  : 'You have enough to open your first box'}
+              <p className="mt-3 text-sm font-semibold text-slate-100">Get a 50% bonus on your first deposit.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Deposit $10 and receive 1,500 coins—$15 total.
               </p>
               <div className="mt-5 flex flex-col gap-3">
                 <button
@@ -2612,17 +2579,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   onClick={handlePostFreePrimaryAction}
                   className="min-h-12 w-full rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#03131a] transition hover:brightness-110 active:scale-[0.99]"
                 >
-                  Unlock your first box
+                  Deposit $10 + Get 500 Bonus Coins
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     playSound('click');
-                    setShowPostFreeBoxModal(false);
+                    redirectToBoxesCatalog();
                   }}
-                  className="mx-auto text-xs font-semibold text-slate-400 transition hover:text-slate-200"
+                  className="min-h-11 w-full rounded-xl border border-white/20 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10 active:scale-[0.99]"
                 >
-                  Maybe later
+                  Maybe Later
                 </button>
               </div>
             </div>
