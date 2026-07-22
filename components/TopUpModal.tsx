@@ -41,6 +41,7 @@ export const TopUpModal: React.FC = () => {
   const [recommendedPackageId, setRecommendedPackageId] = useState<string | null>(null);
   const [showFirstDepositPackages, setShowFirstDepositPackages] = useState(false);
   const autoSelectAppliedRef = React.useRef(false);
+  const postFreeOfferAutoShownRef = React.useRef(false);
   const isPostFreeBoxFlow = topUpModalIntent?.source === 'post_free_box';
   const activePackages = useMemo(() => {
     return coinPackages
@@ -228,15 +229,18 @@ export const TopUpModal: React.FC = () => {
 
   React.useEffect(() => {
     if (!isPostFreeBoxFlow) {
+      postFreeOfferAutoShownRef.current = false;
       return;
     }
 
-    // The post-free-box offer promises the first-deposit match, so reveal that
-    // package group before choosing the $10 package within it.
-    if (!showFirstDepositPackages) {
+    // Open the matching offers when this flow first starts, but let customers
+    // switch back to standard packages without immediately toggling it on again.
+    if (!postFreeOfferAutoShownRef.current) {
+      postFreeOfferAutoShownRef.current = true;
       setShowFirstDepositPackages(true);
       return;
     }
+    if (!showFirstDepositPackages) return;
     if (displayedPackages.length === 0) return;
 
     const preferredUsd = Number(topUpModalIntent?.preferredPackageUsd ?? 50);
