@@ -14,11 +14,12 @@ export const getCookieConsent = (): CookieConsentValue | null => {
 export const setCookieConsent = (value: CookieConsentValue) => {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(STORAGE_KEY, value);
+  window.dispatchEvent(new CustomEvent('pullz:cookie-consent', { detail: value }));
 };
 
 export const hasAnalyticsConsent = (value?: CookieConsentValue | null) => value === 'all';
 
-export const hasMarketingConsent = (_value?: CookieConsentValue | null) => false;
+export const hasMarketingConsent = (value?: CookieConsentValue | null) => value === 'all';
 
 export const loadMarketingScripts = () => {
   // Ads will be enabled later

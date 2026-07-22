@@ -18,6 +18,7 @@ import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { PerformanceModeProvider, usePerformanceMode } from './src/lib/performance';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsentToast } from './components/CookieConsentToast';
+import { getCookieConsent, hasAnalyticsConsent } from './utils/cookieConsent';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
 
 type TawkApi = {
@@ -151,63 +152,29 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
   const [hasLoadFailed, setHasLoadFailed] = useState(false);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
-
+    // Tawk is deliberately loaded only after an explicit Support interaction.
+    // Installing handlers alone is cheap; the third-party script is not.
+    if (!isChatOpen || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
     const pullzWindow = window as PullzWindow;
-    const showTab = () => {
-      setIsChatOpen(false);
-      setIsTabVisible(!isAdminPage);
-    };
-    const hideDefaultWidget = () => {
-      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
-        pullzWindow.Tawk_API.hideWidget();
-      }
-    };
-
+    const showTab = () => { setIsChatOpen(false); setIsTabVisible(!isAdminPage); };
+    const hideDefaultWidget = () => pullzWindow.Tawk_API?.hideWidget?.();
     pullzWindow.Tawk_API = pullzWindow.Tawk_API || {};
     pullzWindow.Tawk_LoadStart = pullzWindow.Tawk_LoadStart || new Date();
-    pullzWindow.Tawk_API.onLoad = () => {
-      setHasLoadFailed(false);
-      hideDefaultWidget();
-      showTab();
-    };
-    pullzWindow.Tawk_API.onChatMinimized = () => {
-      hideDefaultWidget();
-      showTab();
-    };
+    pullzWindow.Tawk_API.onLoad = () => { setHasLoadFailed(false); pullzWindow.Tawk_API?.showWidget?.(); pullzWindow.Tawk_API?.maximize?.(); };
+    pullzWindow.Tawk_API.onChatMinimized = () => { hideDefaultWidget(); showTab(); };
     pullzWindow.Tawk_API.onChatHidden = showTab;
-
-    const existingScript = document.getElementById(TAWK_SCRIPT_ID) as HTMLScriptElement | null;
-    if (!existingScript) {
-      const script = document.createElement('script');
-      script.id = TAWK_SCRIPT_ID;
-      script.async = true;
-      script.src = TAWK_SCRIPT_SRC;
-      script.charset = 'UTF-8';
-      script.setAttribute('crossorigin', '*');
-      script.onerror = () => {
-        setHasLoadFailed(true);
-        setIsChatOpen(false);
-        setIsTabVisible(!isAdminPage);
-      };
+    let script = document.getElementById(TAWK_SCRIPT_ID) as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.id = TAWK_SCRIPT_ID; script.async = true; script.src = TAWK_SCRIPT_SRC;
+      script.charset = 'UTF-8'; script.setAttribute('crossorigin', '*');
+      script.onerror = () => { setHasLoadFailed(true); showTab(); };
       document.body.appendChild(script);
-    } else {
-      existingScript.onerror = () => {
-        setHasLoadFailed(true);
-        setIsChatOpen(false);
-        setIsTabVisible(!isAdminPage);
-      };
-      hideDefaultWidget();
-    }
-
+    } else { pullzWindow.Tawk_API?.showWidget?.(); pullzWindow.Tawk_API?.maximize?.(); }
     return () => {
-      if (pullzWindow.Tawk_API) {
-        pullzWindow.Tawk_API.onLoad = undefined;
-        pullzWindow.Tawk_API.onChatMinimized = undefined;
-        pullzWindow.Tawk_API.onChatHidden = undefined;
-      }
+      if (pullzWindow.Tawk_API) { pullzWindow.Tawk_API.onLoad = undefined; pullzWindow.Tawk_API.onChatMinimized = undefined; pullzWindow.Tawk_API.onChatHidden = undefined; }
     };
-  }, [isAdminPage]);
+  }, [isAdminPage, isChatOpen]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -231,7 +198,15 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
   }, [isAdminPage, isChatOpen]);
 
   const openSupportChat = () => {
-    if (isAdminPage || hasLoadFailed || typeof window === 'undefined') return;
+    if (isAdminPage || typeof window === 'undefined') return;
+    if (hasLoadFailed) {
+      document.getElementById(TAWK_SCRIPT_ID)?.remove();
+      setHasLoadFailed(false);
+    }
+    // This state change mounts the lazy script effect. A loaded widget opens
+    // immediately; otherwise its onLoad handler opens it.
+    setIsChatOpen(true);
+    setIsTabVisible(false);
     const tawkApi = (window as PullzWindow).Tawk_API;
 
     if (typeof tawkApi?.showWidget === 'function') {
@@ -244,7 +219,6 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
       return;
     }
 
-    setIsTabVisible(true);
   };
 
   if (isAdminPage || !isTabVisible) return null;
@@ -297,6 +271,14 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    // Session replay is strictly opt-in and avoided on constrained/mobile sessions.
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!hasAnalyticsConsent(getCookieConsent()) || performanceMode.isMobile || performanceMode.isLowPower || performanceMode.prefersReducedMotion || saveData) return;
+    // Stable per-session 10% sample prevents a sampling flip during navigation.
+    const sampleKey = 'pullz:clarity-sample';
+    const sampled = sessionStorage.getItem(sampleKey) ?? (Math.random() < 0.1 ? '1' : '0');
+    sessionStorage.setItem(sampleKey, sampled);
+    if (sampled !== '1') return;
 
     const clarityWindow = window as ClarityWindow;
     if (!clarityWindow.__pullzClarityInitialized) {
@@ -350,7 +332,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       trackClarityPageView();
     }
     return cancelClarityLoad;
-  }, [performanceMode.isLowPower, performanceMode.isMobile]);
+  }, [performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -592,10 +574,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
     };
   }, [isAuthenticated, user?.id]);
 
-  const baseHomeBoxes = useMemo(
-    () => boxes.filter(box => !box.isUserCreated && !box.isDaily && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0)),
-    [boxes]
-  );
 
 
 
@@ -606,8 +584,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       <Suspense fallback={<LoadingSpinner />}>
       {view.type === 'HOME' && (
         <HomeReplica
-          boxes={baseHomeBoxes}
-          freeSignupBox={boxes.find((box) => box.isDaily) ?? null}
           demoBoxId={homepageDemoBoxId}
           trendingBoxIds={homepageTrendingBoxIds}
           isChatCollapsed={isChatCollapsed}
