@@ -2081,6 +2081,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    // Home has its own bounded summary repository; do not start the global
+    // catalog/legacy compatibility query merely because the homepage mounted.
+    if (view.type === 'HOME') return;
     if (typeof window === 'undefined') return;
     let cancelled = false;
     const loadBoxes = () => {
@@ -2200,7 +2203,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, [isAuthenticated, user.isAdmin]);
+  }, [isAuthenticated, user.isAdmin, view.type]);
 
   useEffect(() => {
     const interval = setInterval(() => {
