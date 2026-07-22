@@ -2095,14 +2095,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('READING FIRESTORE PATH', boxesPath);
         // Firestore cannot field-project a document. Prefer the deployment-managed
         // summary collection; use a bounded legacy fallback while it is populated.
-        let snapshot;
-        try {
-          snapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
-          if (snapshot.empty) throw new Error('boxSummaries is empty during migration');
-        } catch (summaryError) {
-          console.warn('boxSummaries unavailable; using bounded legacy box fallback', summaryError);
-          snapshot = await getDocs(query(collection(db, 'boxes'), limit(48)));
-        }
+        const summarySnapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
+        // A compatibility read is allowed only after a successful, confirmed-empty
+        // migration collection. Network/permission/query failures stay errors.
+        const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
+        const snapshot = summarySnapshot.empty && legacyFallbackEnabled
+          ? await getDocs(query(collection(db, 'boxes'), limit(48)))
+          : summarySnapshot;
         if (cancelled) return;
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
