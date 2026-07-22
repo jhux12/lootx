@@ -7,12 +7,11 @@ import { db } from '../firebase';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
-import { useGame } from '../context/GameContext';
+import { useAuth, useUI } from '../context/GameContext';
+import { getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 
 type HomeReplicaProps = {
-  boxes: MysteryBox[];
-  freeSignupBox?: MysteryBox | null;
   demoBoxId?: string | null;
   trendingBoxIds?: string[];
   isChatCollapsed: boolean;
@@ -162,7 +161,8 @@ const MobileLiveWins = React.memo(({ wins, originals, onOpenBox }: { wins: Mobil
 MobileLiveWins.displayName = 'MobileLiveWins';
 
 const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
-  const { isAuthenticated, openAuthModal, setShowTopUpModal, setTopUpModalIntent, user } = useGame();
+  const { isAuthenticated, openAuthModal, user } = useAuth();
+  const { setShowTopUpModal, setTopUpModalIntent } = useUI();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const heroSectionRef = useRef<HTMLElement>(null);
@@ -566,11 +566,26 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   );
 };
 
-export const HomeReplica: React.FC<HomeReplicaProps> = ({ boxes, freeSignupBox, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
+  const performanceMode = usePerformanceMode();
+  const [homepageBoxes, setHomepageBoxes] = useState<MysteryBox[]>([]);
+  const [summaryError, setSummaryError] = useState(false);
+  const [configuredBoxes, setConfiguredBoxes] = useState<MysteryBox[]>([]);
+  // Mobile renders six cards; desktop gets a modest twelve-summary buffer.
+  const summaryLimit = performanceMode.isMobile ? 8 : 12;
+  const loadSummaries = () => {
+    setSummaryError(false);
+    void getHomepageSummaries(summaryLimit).then(async (page) => { setHomepageBoxes(page); setConfiguredBoxes(await getConfiguredHomepageSummaries(trendingBoxIds, page)); }).catch(() => setSummaryError(true));
+  };
+  useEffect(() => { loadSummaries(); }, [summaryLimit]);
+  const boxes = homepageBoxes;
+  const resolvedTrendingBoxIds = configuredBoxes.length ? configuredBoxes.map((box) => box.id) : trendingBoxIds;
+  const freeSignupBox = boxes.find((box) => box.isDaily) ?? null;
   return (
     <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
+      {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={resolvedTrendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );

@@ -2008,7 +2008,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users, isAuthenticated, user.id, user.createdAt, user.topPullsPublic]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // The complete item catalogue includes admin-only pricing and metadata. Public
+    // case pages receive their prize list with the selected box, so do not transfer
+    // up to 500 catalogue documents to every visitor.
+    if (typeof window === 'undefined' || !isAuthenticated || !user.isAdmin) {
+      setItems((current) => current.length === CASE_ITEMS.length ? current : CASE_ITEMS);
+      return;
+    }
     let cancelled = false;
     const loadItems = () => {
       if (cancelled) return;
@@ -2070,20 +2076,32 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, []);
+  }, [isAuthenticated, user.isAdmin]);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    // Home has its own bounded summary repository; do not start the global
+    // catalog/legacy compatibility query merely because the homepage mounted.
+    if (view.type === 'HOME') return;
     if (typeof window === 'undefined') return;
     let cancelled = false;
     const loadBoxes = () => {
       if (cancelled) return;
       void (async () => {
       try {
-        const boxesPath = 'boxes?limit=250';
+        // Legacy fallback until the documented boxSummaries collection is deployed.
+        const boxesPath = 'boxSummaries?limit=48';
         console.log('READING FIRESTORE PATH', boxesPath);
-        const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
+        // Firestore cannot field-project a document. Prefer the deployment-managed
+        // summary collection; use a bounded legacy fallback while it is populated.
+        const summarySnapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
+        // A compatibility read is allowed only after a successful, confirmed-empty
+        // migration collection. Network/permission/query failures stay errors.
+        const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
+        const snapshot = summarySnapshot.empty && legacyFallbackEnabled
+          ? await getDocs(query(collection(db, 'boxes'), limit(48)))
+          : summarySnapshot;
         if (cancelled) return;
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
@@ -2184,7 +2202,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, [isAuthenticated, user.isAdmin]);
+  }, [isAuthenticated, user.isAdmin, view.type]);
 
   useEffect(() => {
     const interval = setInterval(() => {

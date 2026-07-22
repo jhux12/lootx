@@ -26,13 +26,19 @@ export const PollsPage: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+    let inFlight = false;
+    let controller: AbortController | null = null;
 
     const loadPolls = async () => {
+      if (inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
+      controller?.abort();
+      controller = new AbortController();
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('/api/polls/list', { method: 'GET' });
+        const response = await fetch('/api/polls/list', { method: 'GET', signal: controller.signal });
         const payload = await response.json().catch(() => null) as { ok?: boolean; polls?: unknown[]; error?: string } | null;
 
         if (!response.ok || !payload?.ok) {
@@ -57,23 +63,27 @@ export const PollsPage: React.FC = () => {
 
         setPolls(next);
       } catch (loadError) {
+        if ((loadError as DOMException)?.name === 'AbortError') return;
         console.error('Failed to load polls', loadError);
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load polls right now.');
         }
       } finally {
+        inFlight = false;
         if (!cancelled) setLoading(false);
       }
     };
 
+    const onVisibility = () => { if (!document.hidden) void loadPolls(); };
     void loadPolls();
-    const interval = window.setInterval(() => {
-      void loadPolls();
-    }, 30000);
+    const interval = window.setInterval(() => void loadPolls(), 30000);
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       cancelled = true;
+      controller?.abort();
       window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
