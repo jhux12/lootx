@@ -335,25 +335,20 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion]);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    const cancel = runAfterIdleOrInteraction(() => {
-      unsubscribe = subscribeHomepageConfig(
-        (config) => {
-          const nextDemoBoxId = config?.demoBoxId ?? null;
-          const nextTrendingBoxIds = config?.trendingBoxIds ?? [];
-          setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
-          setHomepageTrendingBoxIds((current) => (current.join('|') === nextTrendingBoxIds.join('|') ? current : nextTrendingBoxIds));
-        },
-        () => {
-          setHomepageDemoBoxId((current) => (current === null ? current : null));
-          setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
-        }
-      );
-    }, 4200);
-    return () => {
-      cancel();
-      unsubscribe?.();
-    };
+    // Trending selections determine the first homepage content users see, so do
+    // not defer this subscription behind the rest of the non-critical work.
+    return subscribeHomepageConfig(
+      (config) => {
+        const nextDemoBoxId = config?.demoBoxId ?? null;
+        const nextTrendingBoxIds = config?.trendingBoxIds ?? [];
+        setHomepageDemoBoxId((current) => (current === nextDemoBoxId ? current : nextDemoBoxId));
+        setHomepageTrendingBoxIds((current) => (current.join('|') === nextTrendingBoxIds.join('|') ? current : nextTrendingBoxIds));
+      },
+      () => {
+        setHomepageDemoBoxId((current) => (current === null ? current : null));
+        setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
+      }
+    );
   }, []);
 
   useEffect(() => {

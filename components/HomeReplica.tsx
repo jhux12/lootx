@@ -197,10 +197,9 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   const [liveWinBoxes, setLiveWinBoxes] = useState<MysteryBox[]>([]);
   const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(true);
   const trendingBoxes = useMemo(() => {
-    const selected = trendingBoxIds
+    return trendingBoxIds
       .map((id) => boxes.find((box) => box.id === id))
       .filter(Boolean) as MysteryBox[];
-    return (selected.length ? selected : boxes).slice(0, 6);
   }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
     const itemPool = liveWinBoxes
@@ -611,17 +610,29 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
   const summaryLimit = performanceMode.isMobile ? 8 : 12;
   const loadSummaries = () => {
     setSummaryError(false);
-    void getHomepageSummaries(summaryLimit).then(async (page) => { setHomepageBoxes(page); setConfiguredBoxes(await getConfiguredHomepageSummaries(trendingBoxIds, page)); }).catch(() => setSummaryError(true));
+    void getHomepageSummaries(summaryLimit).then((page) => setHomepageBoxes(page)).catch(() => setSummaryError(true));
   };
   useEffect(() => { loadSummaries(); }, [summaryLimit]);
-  const boxes = homepageBoxes;
-  const resolvedTrendingBoxIds = configuredBoxes.length ? configuredBoxes.map((box) => box.id) : trendingBoxIds;
-  const freeSignupBox = boxes.find((box) => box.isDaily) ?? null;
+  const trendingBoxIdKey = trendingBoxIds.join('|');
+  useEffect(() => {
+    let cancelled = false;
+    setConfiguredBoxes([]);
+    void getConfiguredHomepageSummaries(trendingBoxIds, homepageBoxes).then((selected) => {
+      if (!cancelled) setConfiguredBoxes(selected);
+    });
+    return () => { cancelled = true; };
+  }, [homepageBoxes, trendingBoxIdKey]);
+  const boxes = useMemo(() => {
+    const byId = new Map(homepageBoxes.map((box) => [box.id, box]));
+    configuredBoxes.forEach((box) => byId.set(box.id, box));
+    return [...byId.values()];
+  }, [homepageBoxes, configuredBoxes]);
+  const freeSignupBox = homepageBoxes.find((box) => box.isDaily) ?? null;
   return (
     <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
       {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={resolvedTrendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );
