@@ -1568,6 +1568,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     setIsAuthenticated(true);
+    const postAuthRedirect = consumePostSignupRedirect();
+    if (postAuthRedirect) {
+      resolveEmailRedirect(postAuthRedirect);
+    }
     void syncAdminClaim(firebaseUser);
 
     const userPath = `users/${uid}`;
