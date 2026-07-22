@@ -1,177 +1,61 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
 
-type SeoConfig = {
-  title: string;
-  description: string;
-  path: string;
-  robots: 'index, follow' | 'noindex, nofollow';
+const STATIC_IMAGE = 'https://pullz.gg/assets/png/pullz-horizontal-dark-2400.png';
+// Search currently opens in-app rather than on a crawlable public route.
+const HAS_PUBLIC_SEARCH_PAGE = false;
+const meta = (selector: string, attrs: Record<string, string>, enabled = true) => {
+  let el = document.head.querySelector<HTMLMetaElement>(selector);
+  if (!enabled) { el?.remove(); return; }
+  if (!el) { el = document.createElement('meta'); document.head.appendChild(el); }
+  Object.entries(attrs).forEach(([key, value]) => el!.setAttribute(key, value));
 };
-
-const SITE_URL = 'https://pullz.gg';
-const SOCIAL_TITLE = 'Pullz.gg | Open Digital Boxes. Win Real Cards.';
-const META_DESCRIPTION = 'Open digital boxes and win real Pokémon cards. Every win is a real item that can be shipped directly to your door. Provably fair and secure.';
-const SOCIAL_DESCRIPTION = 'Ship real items to your door. Provably fair. Claim your first box free.';
-const SOCIAL_IMAGE = `${SITE_URL}/assets/png/pullz-horizontal-dark-2400.png`;
-const CANONICAL_URL = SITE_URL;
-const HOMEPAGE_DESCRIPTION = META_DESCRIPTION;
-
-const ensureMeta = (selector: string, attributes: Record<string, string>) => {
-  let node = document.head.querySelector<HTMLMetaElement>(selector);
-  if (!node) {
-    node = document.createElement('meta');
-    document.head.appendChild(node);
-  }
-  Object.entries(attributes).forEach(([key, value]) => node!.setAttribute(key, value));
-  return node;
+const link = (rel: string, href: string, enabled = true) => {
+  let el = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+  if (!enabled) { el?.remove(); return; }
+  if (!el) { el = document.createElement('link'); el.rel = rel; document.head.appendChild(el); }
+  el.href = href;
 };
-
-const ensureCanonical = () => {
-  let node = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-  if (!node) {
-    node = document.createElement('link');
-    node.setAttribute('rel', 'canonical');
-    document.head.appendChild(node);
-  }
-  return node;
+const jsonLd = (id: string, value?: object) => { let el = document.getElementById(id) as HTMLScriptElement | null; if (!value) { el?.remove(); return; } if (!el) { el = document.createElement('script'); el.id = id; el.type = 'application/ld+json'; document.head.appendChild(el); } el.textContent = JSON.stringify(value); };
+// Additional markup is intentionally limited to harmless metadata and links; executable code is never injected.
+const applyAdditionalHeadMarkup = (markup: string) => {
+  document.head.querySelectorAll('[data-pullz-seo-additional]').forEach((node) => node.remove());
+  if (!markup.trim()) return;
+  const parsed = new DOMParser().parseFromString(markup, 'text/html');
+  Array.from(parsed.head.children).forEach((candidate) => {
+    if (!(candidate instanceof HTMLMetaElement || candidate instanceof HTMLLinkElement)) return;
+    const identity = candidate instanceof HTMLMetaElement
+      ? candidate.getAttribute('name') ? `meta[name="${candidate.getAttribute('name')}"]` : candidate.getAttribute('property') ? `meta[property="${candidate.getAttribute('property')}"]` : ''
+      : candidate.getAttribute('rel') ? `link[rel="${candidate.getAttribute('rel')}"]` : '';
+    if (!identity || document.head.querySelector(identity)) return;
+    const copy = candidate.cloneNode(true) as HTMLElement; copy.dataset.pullzSeoAdditional = 'true'; document.head.appendChild(copy);
+  });
 };
-
-const getSeoConfigForView = (view: ViewState): SeoConfig => {
-  switch (view.type) {
-    case 'HOME':
-      return {
-        title: SOCIAL_TITLE,
-        description: HOMEPAGE_DESCRIPTION,
-        path: '/',
-        robots: 'index, follow'
-      };
-    case 'BOXES':
-      return {
-        title: 'Boxes | Pokémon Mystery Boxes | Pullz.gg',
-        description: 'Browse Pokémon mystery boxes on Pullz.gg by budget, rarity, and collectible drop style.',
-        path: '/boxes',
-        robots: 'index, follow'
-      };
-    case 'LEADERBOARD':
-      return {
-        title: 'Leaderboards | Pullz.gg',
-        description: 'See Pullz.gg leaderboard standings, top players, and current rewards competition details.',
-        path: '/leaderboards',
-        robots: 'index, follow'
-      };
-    case 'CONTACT':
-      return {
-        title: 'Contact Us | Pullz.gg',
-        description: 'Need help with your Pullz.gg account, mystery box rewards, shipments, or orders? Contact support.',
-        path: '/contact',
-        robots: 'index, follow'
-      };
-    case 'FAQ':
-      return {
-        title: 'FAQ | Pullz.gg',
-        description: 'Find answers about Pullz.gg Pokémon mystery boxes, rewards, sell-back options, shipping, and fairness.',
-        path: '/faq',
-        robots: 'index, follow'
-      };
-    case 'ABOUT':
-      return {
-        title: 'About Pullz.gg | Pokémon Mystery Boxes',
-        description: 'Learn about Pullz.gg, an online Pokémon mystery box platform for winning real collectibles.',
-        path: '/about',
-        robots: 'index, follow'
-      };
-    case 'SHIPPING_POLICY':
-      return {
-        title: 'Shipping Policy | Pullz.gg',
-        description: 'Learn how Pullz.gg handles shipment requests for eligible physical collectibles won on the site.',
-        path: '/shipping-policy',
-        robots: 'index, follow'
-      };
-    case 'REFUND_POLICY':
-      return {
-        title: 'Refund Policy | Pullz.gg',
-        description: 'Review Pullz.gg refund expectations for site credit purchases, mystery box openings, and support reviews.',
-        path: '/refund-policy',
-        robots: 'index, follow'
-      };
-    case 'TERMS':
-      return {
-        title: 'Terms of Service | Pullz.gg',
-        description: 'Review the Pullz.gg Terms of Service, eligibility rules, and platform usage policies.',
-        path: '/terms',
-        robots: 'index, follow'
-      };
-    case 'PRIVACY':
-      return {
-        title: 'Privacy Policy | Pullz.gg',
-        description: 'Learn how Pullz.gg handles, protects, and processes your account and gameplay data.',
-        path: '/privacy',
-        robots: 'index, follow'
-      };
-    case 'PROVABLY_FAIR':
-      return {
-        title: 'Provably Fair | Pullz.gg',
-        description: 'Understand how Pullz.gg provably fair seeds, nonces, and verification proofs work.',
-        path: '/provably-fair',
-        robots: 'index, follow'
-      };
-    case 'PROFILE':
-    case 'INVENTORY':
-    case 'BONUSES':
-    case 'QUESTS':
-    case 'POLLS':
-    case 'REFERRALS':
-    case 'PLINKO':
-    case 'CUSTOM_CREATOR':
-    case 'CASE_OPENING':
-    case 'BATTLES':
-    case 'BATTLE_ARENA':
-    case 'SPIN':
-    case 'VERIFY_EMAIL':
-    case 'ADMIN':
-    case 'ADMIN_UPGRADER_SETTINGS':
-    case 'ADMIN_UPGRADER_TARGETS':
-      return {
-        title: 'Pullz.gg',
-        description: 'Private or app-only Pullz.gg area.',
-        path: window.location.pathname || '/',
-        robots: 'noindex, nofollow'
-      };
-    default:
-      return {
-        title: SOCIAL_TITLE,
-        description: HOMEPAGE_DESCRIPTION,
-        path: window.location.pathname || '/',
-        robots: 'noindex, nofollow'
-      };
-  }
-};
+const privateView = (view: ViewState) => ['PROFILE', 'INVENTORY', 'BONUSES', 'QUESTS', 'POLLS', 'REFERRALS', 'PLINKO', 'CUSTOM_CREATOR', 'CASE_OPENING', 'BATTLES', 'BATTLE_ARENA', 'SPIN', 'VERIFY_EMAIL', 'ADMIN', 'ADMIN_UPGRADER_SETTINGS', 'ADMIN_UPGRADER_TARGETS'].includes(view.type);
 
 export const SeoHead = ({ view }: { view: ViewState }) => {
+  const [settings, setSettings] = useState<SeoSettings>(DEFAULT_SEO_SETTINGS);
+  useEffect(() => onSnapshot(doc(db, 'site', 'seo'), snap => setSettings(normalizeSeoSettings(snap.data() as Partial<SeoSettings>)), () => setSettings(DEFAULT_SEO_SETTINGS)), []);
   useEffect(() => {
-    const seo = getSeoConfigForView(view);
-    document.title = seo.title;
-    ensureCanonical().setAttribute('href', CANONICAL_URL);
-
-    ensureMeta('meta[name="description"]', { name: 'description', content: seo.description });
-    ensureMeta('meta[name="robots"]', { name: 'robots', content: seo.robots });
-
-    ensureMeta('meta[property="og:type"]', { property: 'og:type', content: 'website' });
-    ensureMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'Pullz.gg' });
-    ensureMeta('meta[property="og:title"]', { property: 'og:title', content: SOCIAL_TITLE });
-    ensureMeta('meta[property="og:description"]', { property: 'og:description', content: SOCIAL_DESCRIPTION });
-    ensureMeta('meta[property="og:image"]', { property: 'og:image', content: SOCIAL_IMAGE });
-    ensureMeta('meta[property="og:url"]', { property: 'og:url', content: CANONICAL_URL });
-    ensureMeta('meta[property="og:image:type"]', { property: 'og:image:type', content: 'image/png' });
-    ensureMeta('meta[property="og:image:width"]', { property: 'og:image:width', content: '2400' });
-    ensureMeta('meta[property="og:image:height"]', { property: 'og:image:height', content: '619' });
-
-    ensureMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
-    ensureMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: SOCIAL_TITLE });
-    ensureMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: SOCIAL_DESCRIPTION });
-    ensureMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: SOCIAL_IMAGE });
-    ensureMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: 'Pullz logo' });
-  }, [view]);
-
+    const isPrivate = privateView(view); const base = settings.canonicalUrl || DEFAULT_SEO_SETTINGS.canonicalUrl;
+    const canonical = isPrivate ? `${base.replace(/\/$/, '')}${window.location.pathname}` : base;
+    const robots = isPrivate ? 'noindex,nofollow' : `${settings.indexPage ? 'index' : 'noindex'},${settings.followLinks ? 'follow' : 'nofollow'}`;
+    const ogTitle = settings.openGraphTitle || settings.seoTitle; const ogDescription = settings.openGraphDescription || settings.metaDescription;
+    const ogImage = settings.openGraphImage || settings.fallbackOpenGraphImage || settings.homepageShareImage || STATIC_IMAGE;
+    const twitterImage = settings.twitterImage || settings.fallbackTwitterImage || ogImage;
+    document.title = isPrivate ? settings.siteName : settings.seoTitle;
+    link('canonical', canonical); link('icon', settings.faviconUrl, !!settings.faviconUrl); link('apple-touch-icon', settings.appleTouchIcon, !!settings.appleTouchIcon);
+    meta('meta[name="description"]', { name: 'description', content: isPrivate ? 'Private Pullz.gg area.' : settings.metaDescription }); meta('meta[name="robots"]', { name: 'robots', content: robots });
+    meta('meta[property="og:type"]', { property: 'og:type', content: 'website' }); meta('meta[property="og:site_name"]', { property: 'og:site_name', content: settings.siteName }); meta('meta[property="og:title"]', { property: 'og:title', content: ogTitle }); meta('meta[property="og:description"]', { property: 'og:description', content: ogDescription }); meta('meta[property="og:image"]', { property: 'og:image', content: ogImage }); meta('meta[property="og:url"]', { property: 'og:url', content: canonical });
+    meta('meta[name="twitter:card"]', { name: 'twitter:card', content: settings.twitterCard }); meta('meta[name="twitter:title"]', { name: 'twitter:title', content: settings.twitterTitle || ogTitle }); meta('meta[name="twitter:description"]', { name: 'twitter:description', content: settings.twitterDescription || ogDescription }); meta('meta[name="twitter:image"]', { name: 'twitter:image', content: twitterImage });
+    meta('meta[name="google-site-verification"]', { name: 'google-site-verification', content: settings.googleVerification }, !!settings.googleVerification); meta('meta[name="msvalidate.01"]', { name: 'msvalidate.01', content: settings.bingVerification }, !!settings.bingVerification); meta('meta[name="p:domain_verify"]', { name: 'p:domain_verify', content: settings.pinterestVerification }, !!settings.pinterestVerification); meta('meta[name="yandex-verification"]', { name: 'yandex-verification', content: settings.yandexVerification }, !!settings.yandexVerification);
+    const url = settings.businessUrl || base; const org = settings.enableOrganizationSchema ? { '@context': 'https://schema.org', '@type': 'Organization', name: settings.organizationName || settings.siteName, url, description: settings.organizationDescription || undefined, email: settings.businessEmail || undefined, logo: settings.schemaLogo || settings.businessLogo || undefined, sameAs: settings.socialProfiles.filter(Boolean) } : undefined;
+    const website = settings.enableWebsiteSchema ? { '@context': 'https://schema.org', '@type': 'WebSite', name: settings.siteName, url, ...(settings.enableSearchActionSchema && HAS_PUBLIC_SEARCH_PAGE ? { potentialAction: { '@type': 'SearchAction', target: `${url.replace(/\/$/, '')}/search?q={search_term_string}`, 'query-input': 'required name=search_term_string' } } : {}) } : undefined;
+    jsonLd('pullz-seo-organization', org); jsonLd('pullz-seo-website', website);
+    applyAdditionalHeadMarkup(settings.additionalHeadMarkup);
+  }, [settings, view]);
   return null;
 };

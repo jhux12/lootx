@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Search } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
@@ -17,6 +17,7 @@ import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
+import { SeoManager } from './admin/SeoManager';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -399,7 +400,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -3781,6 +3782,9 @@ export const AdminPanel: React.FC = () => {
                    >
                        <ScrollText className="w-4 h-4" /> Footer Pages
                    </button>
+                   <button onClick={() => setActiveTab('seo')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'seo' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}>
+                       <Search className="w-4 h-4" /> SEO Manager
+                   </button>
                    <button
                      onClick={() => setActiveTab('settings')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'settings' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -3814,6 +3818,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'footer-pages' && 'Footer Pages'}
                     {activeTab === 'market-pricing' && 'Market Pricing'}
+                    {activeTab === 'seo' && 'SEO Manager'}
                 </h1>
                 <p className="text-gray-400 text-sm">Welcome back, Administrator. System is operating normally.</p>
             </div>
@@ -7050,6 +7055,8 @@ export const AdminPanel: React.FC = () => {
             {activeTab === 'footer-pages' && (
                 <FooterPagesEditor />
             )}
+
+            {activeTab === 'seo' && <SeoManager />}
 
             {/* TAB: SETTINGS */}
             {activeTab === 'settings' && (
