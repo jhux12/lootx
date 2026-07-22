@@ -1506,7 +1506,7 @@ export const AdminPanel: React.FC = () => {
                   transaction.set(userRef, { balance: nextBalance }, { merge: true });
                   transaction.set(leaderboardRef, {
                       rewardApprovedAt: Date.now(),
-                      rewardApprovedBy: user.id,
+                      rewardApprovedBy: adminUser.id,
                       rewardApprovedCoins: winner.rewardCoins
                   }, { merge: true });
               });
@@ -1705,7 +1705,7 @@ export const AdminPanel: React.FC = () => {
   const itemCategoryOptions = useMemo(() => {
       const categories = new Set<string>();
       items.forEach((item) => {
-          const category = item.category?.trim();
+          const category = typeof item.category === 'string' ? item.category.trim() : '';
           if (category) categories.add(category);
       });
       return Array.from(categories).sort((a, b) => a.localeCompare(b));
@@ -1726,7 +1726,7 @@ export const AdminPanel: React.FC = () => {
           Object.entries(boxTagIconsDraft)
               .map(([tag, iconValue]) => {
                   const normalizedTag = tag.trim().toLowerCase();
-                  const trimmedValue = iconValue.trim();
+                  const trimmedValue = typeof iconValue === 'string' ? iconValue.trim() : '';
                   const sanitizedFa = sanitizeFontAwesomeClass(trimmedValue);
                   const normalizedValue = sanitizedFa || (/^https?:\/\//i.test(trimmedValue) ? trimmedValue : '');
                   return [normalizedTag, normalizedValue] as const;
@@ -2977,7 +2977,7 @@ export const AdminPanel: React.FC = () => {
       });
   }, [balanceAuditCurrencyFilter, balanceAuditDirectionFilter, balanceAuditEntries, balanceAuditReasonFilter, balanceAuditSearch, selectedUserId]);
   const balanceAuditReasons = useMemo(
-      () => Array.from(new Set(selectedBalanceAudits.map((entry) => entry.reason))).sort((a, b) => a.localeCompare(b)),
+      () => Array.from(new Set<string>(selectedBalanceAudits.map((entry) => entry.reason))).sort((a, b) => a.localeCompare(b)),
       [selectedBalanceAudits]
   );
   const selectedAdminLogs = isRealSelectedUserId(selectedUserId) ? adminLogs[selectedUserId!] ?? [] : [];

@@ -302,7 +302,12 @@ export const PlinkoPage: React.FC = () => {
     if (!board || !settings) return;
 
     const loadSlotPreviews = async () => {
-      const uniquePoolIds = Array.from(new Set(board.slots.map((slot) => slot.poolId).filter(Boolean)));
+      const uniquePoolIds: string[] = [...new Set<string>(
+        board.slots.reduce<string[]>((poolIds, slot) => {
+          if (typeof slot.poolId === 'string' && slot.poolId.length > 0) poolIds.push(slot.poolId);
+          return poolIds;
+        }, [])
+      )];
       const pools = await Promise.all(uniquePoolIds.map(async (poolId) => ({ poolId, items: await listPlinkoPoolItems(poolId) })));
       const poolMap = new Map(pools.map((entry) => [entry.poolId, entry.items]));
       const center = board.rows / 2;

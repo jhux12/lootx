@@ -82,7 +82,7 @@ export const CustomCaseCreator: React.FC = () => {
           price: boxPrice,
           image: selectedBoxImage || 'https://picsum.photos/300', // Default image for custom boxes
           accentColor: '#205DD7', // Brand blue for custom
-          tag: 'New',
+          tag: 'hot',
           items: selectedItems,
           targetEV: DEFAULT_TARGET_EV,
           riskLevel: FIXED_RISK_LEVEL,

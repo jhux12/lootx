@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { InventoryItem, Item } from './upgraderTypes';
 import { AlertCircle, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
-import { UpgraderSettings } from '../../utils/upgrader';
+import { UpgraderSettings } from '../../../utils/upgrader';
 
 interface UpgraderPreviewBarProps {
   source: InventoryItem | null;
