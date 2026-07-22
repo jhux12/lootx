@@ -4,11 +4,11 @@ import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { MysteryBox } from '../types';
+import { CaseItem, MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useAuth, useUI } from '../context/GameContext';
-import { getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
+import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 
 type HomeReplicaProps = {
@@ -49,6 +49,23 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
+
+const mapHomepageLiveWinBox = (id: string, data: Record<string, any>): MysteryBox => ({
+  id,
+  name: String(data.name ?? 'Mystery Box'),
+  price: Number(data.price ?? 0),
+  image: typeof data.image === 'string' ? data.image : '',
+  accentColor: typeof data.accentColor === 'string' ? data.accentColor : '#3b82f6',
+  items: Array.isArray(data.items) ? data.items.map((item: Partial<CaseItem>, index: number): CaseItem => ({
+    id: String(item.id ?? `${id}-item-${index}`),
+    name: String(item.name ?? 'Mystery Item'),
+    price: Number(item.price ?? 0),
+    image: typeof item.image === 'string' ? item.image : '',
+    rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(String(item.rarity)) ? item.rarity as CaseItem['rarity'] : 'common',
+    chance: Number(item.chance ?? 0),
+    color: typeof item.color === 'string' ? item.color : '#64748b'
+  })) : []
+});
 
 const MobileLiveWinCard: React.FC<{ win: MobileLiveWin; onOpenBox: (boxId: string) => void }> = ({ win, onOpenBox }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -122,7 +139,7 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
   </button>
 );
 
-const MobileLiveWins = React.memo(({ wins, originals, onOpenBox }: { wins: MobileLiveWin[]; originals: MysteryBox[]; onOpenBox: (boxId: string) => void }) => {
+const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: MobileLiveWin[]; isLoading: boolean; onOpenBox: (boxId: string) => void }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
@@ -151,8 +168,9 @@ const MobileLiveWins = React.memo(({ wins, originals, onOpenBox }: { wins: Mobil
       </div>
       <div className="overflow-hidden">
         <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeIndex * 108}px,0,0)` }}>
-          {(displayedWins.length ? displayedWins.map((win, index) => ({ ...win, id: `${win.id}-${index}` })) : originals.map((box, index) => ({ id: box.id, title: box.name, image: box.image, rarity: (index === 0 ? 'rare' : index === 1 ? 'uncommon' : 'epic') as MobileLiveWin['rarity'], timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: box.id }))).map((win) => <MobileLiveWinCard key={win.id} win={win} onOpenBox={onOpenBox} />)}
-          {!displayedWins.length && !originals.length ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+          {displayedWins.map((win, index) => <MobileLiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />)}
+          {!displayedWins.length && isLoading ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+          {!displayedWins.length && !isLoading ? <p className="py-8 text-sm font-semibold text-slate-400">Live wins will appear here soon.</p> : null}
         </div>
       </div>
     </section>
@@ -175,8 +193,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   const [submitReviewCaption, setSubmitReviewCaption] = useState('');
   const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const cards = boxes.slice(0, 6);
-  const originals = cards.length ? cards.slice(0, 3) : [];
+  const [liveWinBoxes, setLiveWinBoxes] = useState<MysteryBox[]>([]);
+  const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(true);
   const trendingBoxes = useMemo(() => {
     const selected = trendingBoxIds
       .map((id) => boxes.find((box) => box.id === id))
@@ -184,7 +202,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
     return (selected.length ? selected : boxes).slice(0, 6);
   }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
-    const itemPool = boxes
+    const itemPool = liveWinBoxes
       .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
       .filter(({ item }) => item.image && item.name);
 
@@ -233,6 +251,24 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
       timeAgo: index === 0 ? 'now' : `${index + 1}m`,
       boxId
     }));
+  }, [liveWinBoxes]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLiveWinsLoading(true);
+
+    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
+      .then((details) => {
+        if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
+      })
+      .catch(() => {
+        if (!cancelled) setLiveWinBoxes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLiveWinsLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, [boxes]);
   const customerReviewCards = customerReviews.length
     ? customerReviews
@@ -543,7 +579,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
         </div>
       </section>
 
-      <MobileLiveWins wins={mobileLiveWins} originals={originals} onOpenBox={onOpenBox} />
+      <MobileLiveWins wins={mobileLiveWins} isLoading={isLiveWinsLoading} onOpenBox={onOpenBox} />
 
       <HowItWorksSection boxes={boxes} />
       <HomepageFaqSection />
