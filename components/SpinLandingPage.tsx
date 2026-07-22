@@ -5,6 +5,7 @@ import { trackEvent } from '../utils/trackEvent';
 import { subscribeHomepageConfig } from '../utils/homepageShowcase';
 import { CoinAmount } from './CoinAmount';
 import { HomepageFaqSection } from './HomepageFaqSection';
+import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 
 const ASSET = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2F';
 const media = (name: string, token: string) => `${ASSET}${encodeURIComponent(name)}?alt=media&token=${token}`;
@@ -30,9 +31,14 @@ export const SpinLandingPage: React.FC = () => {
   const claim = () => {
     if (!freeBox || claimed) return;
     if (isAuthenticated) { setView({ type: 'CASE_OPENING', boxId: freeBox.id, isFree: true }); return; }
+    setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
     trackEvent('signup_cta_clicked', { placement: 'spin_landing' });
     openAuthModal('register');
   };
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    setView({ type: 'HOME' });
+  }, [isAuthenticated, setView]);
   useEffect(() => { trackEvent('free_box_page_viewed', { page: '/spin' }); }, []);
   useEffect(() => subscribeHomepageConfig((config) => setFeaturedBoxIds(config?.trendingBoxIds ?? []), () => setFeaturedBoxIds([])), []);
   useEffect(() => {
@@ -40,6 +46,7 @@ export const SpinLandingPage: React.FC = () => {
     document.addEventListener('keydown', close);
     return () => document.removeEventListener('keydown', close);
   }, []);
+  if (isAuthenticated) return null;
   return <div className="pullz-landing">
     <style>{styles}</style>
     <main><div className="pl-shell">
