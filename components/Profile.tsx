@@ -239,7 +239,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
-    avatar: user.avatar
+    avatar: user.avatar || user.photoURL || ''
   });
 
   const [addressForm, setAddressForm] = useState<ShippingAddress>(
@@ -258,9 +258,9 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       ...prev,
       username: user.name ?? '',
       email: user.email ?? auth.currentUser?.email ?? '',
-      avatar: user.avatar
+      avatar: user.avatar || user.photoURL || ''
     }));
-  }, [user.name, user.email]);
+  }, [user.name, user.email, user.avatar, user.photoURL]);
 
   const displayUsername = getProfileUsername(user);
   const dailyFreeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
@@ -564,14 +564,23 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
 
   const handleSaveUsername = async () => {
     const nextUsername = securityForm.username.trim();
-    if (!nextUsername || nextUsername === user.name) {
-      toast.info('Enter a new username to update.');
+    const nextAvatar = securityForm.avatar.trim();
+    const currentAvatar = user.avatar || user.photoURL || '';
+    const usernameChanged = nextUsername !== user.name;
+    const avatarChanged = nextAvatar !== currentAvatar;
+
+    if (!nextUsername) {
+      toast.error('Enter a username to save your profile.');
+      return;
+    }
+    if (!usernameChanged && !avatarChanged) {
+      toast.info('Choose a new profile picture or update your username.');
       return;
     }
     setIsSavingUsername(true);
     try {
-      await updateUserInfo(nextUsername, securityForm.avatar || user.avatar);
-      toast.success('Username updated.');
+      await updateUserInfo(nextUsername, nextAvatar || currentAvatar);
+      toast.success(usernameChanged ? 'Profile updated.' : 'Profile picture updated.');
     } catch (error) {
       console.error('Failed to update username', error);
       toast.error('Could not update username.');

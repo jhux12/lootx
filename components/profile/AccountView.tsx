@@ -1,5 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
+import { profileAvatars } from '../../assets/profileAvatars';
 import { ShippingAddress, User } from '../../types';
 
 type AccountPanel = 'overview' | 'security' | 'settings';
@@ -46,7 +47,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   const updateSecurity = (key: keyof SecurityForm, value: string) => setSecurityForm({ ...securityForm, [key]: value });
   const updateAddress = (key: keyof ShippingAddress, value: string) => setAddressForm({ ...addressForm, [key]: value });
   const saveProfile = () => {
-    if (securityForm.username.trim() && securityForm.username.trim() !== (user.name ?? '').trim()) onSaveUsername();
+    if (securityForm.username.trim() && (securityForm.username.trim() !== (user.name ?? '').trim() || securityForm.avatar !== (user.avatar || user.photoURL || ''))) onSaveUsername();
     if (securityForm.email.trim() && securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.currentPassword.trim()) onSaveEmail();
     if (securityForm.currentPassword && securityForm.newPassword && securityForm.confirmPassword) onSavePassword();
     onSaveAddress();
@@ -67,6 +68,30 @@ export const AccountView: React.FC<AccountViewProps> = ({
             <div className="space-y-2">
               <input aria-label="Username" value={securityForm.username} onChange={(event) => updateSecurity('username', event.target.value)} placeholder="Username" className={inputClassName} />
               <input aria-label="Email address" type="email" value={securityForm.email} onChange={(event) => updateSecurity('email', event.target.value)} placeholder="Email address" className={inputClassName} />
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="mb-1 text-xs font-black uppercase tracking-wider text-gray-500">Profile Picture</legend>
+            <p className="mb-3 text-xs text-gray-400">Choose an avatar for your public profile.</p>
+            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5" role="radiogroup" aria-label="Profile picture">
+              {profileAvatars.map((avatar) => {
+                const isSelected = securityForm.avatar === avatar.src;
+                return (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`Select profile picture ${avatar.id}`}
+                    onClick={() => updateSecurity('avatar', avatar.src)}
+                    className={`relative aspect-square min-w-0 overflow-hidden rounded-full border-2 bg-[#0d0d11] transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:ring-offset-[#15151b] ${isSelected ? 'border-violet-400 shadow-[0_0_0_2px_rgba(167,139,250,0.25)]' : 'border-transparent hover:border-white/40'}`}
+                  >
+                    <img src={avatar.src} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                    {isSelected ? <span className="absolute inset-0 grid place-items-center bg-black/35 text-white"><Check className="h-5 w-5" strokeWidth={3} /></span> : null}
+                  </button>
+                );
+              })}
             </div>
           </fieldset>
 

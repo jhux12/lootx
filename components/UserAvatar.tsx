@@ -9,7 +9,7 @@ type UserAvatarProps = {
 };
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = '', initialsClassName = '' }) => {
-  const photoUrl = String(user.photoURL ?? '').trim();
+  const photoUrl = String(user.photoURL || user.avatar || '').trim();
   const initials = getUserInitials(user);
   if (photoUrl) {
     return <img src={photoUrl} alt={String(user.name ?? 'User')} className={className} width={40} height={40} decoding="async" style={{ aspectRatio: '1 / 1' }} />;
