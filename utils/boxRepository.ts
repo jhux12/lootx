@@ -7,16 +7,34 @@ const detailCache = new Map<string, MysteryBox>();
 const detailInFlight = new Map<string, Promise<MysteryBox | null>>();
 const summaryCache = new Map<string, BoxSummary>();
 const summaryInFlight = new Map<string, Promise<BoxSummary | null>>();
+const legacyCursorIds = new Set<string>();
+const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
 
 const asSummary = (snapshot: DocumentSnapshot<DocumentData>): BoxSummary => {
  const value = snapshot.data() ?? {}; return { id: snapshot.id, name: String(value.name ?? 'Mystery Box'), price: Number(value.price ?? 0), priceXP: value.priceXP == null ? undefined : Number(value.priceXP), currencyType: value.currencyType === 'XP' ? 'XP' : 'COIN', image: typeof value.image === 'string' ? value.image : '', accentColor: typeof value.accentColor === 'string' ? value.accentColor : '#3b82f6', tag: value.tag, tags: Array.isArray(value.tags) ? value.tags : undefined, isDaily: value.isDaily === true, isPullPassBox: value.isPullPassBox === true, pullPassBoxType: value.pullPassBoxType, isUserCreated: false, items: [], sortOrder: Number(value.sortOrder ?? 0), published: value.published !== false } as BoxSummary;
 };
 export const getBoxSummaryPage = async (pageSize: number, cursor?: QueryDocumentSnapshot<DocumentData> | null) => {
- let q = query(collection(db, 'boxSummaries'), orderBy('sortOrder', 'asc'), orderBy(documentId(), 'asc'), limit(pageSize));
- if (cursor) q = query(collection(db, 'boxSummaries'), orderBy('sortOrder', 'asc'), orderBy(documentId(), 'asc'), startAfter(cursor), limit(pageSize));
- const snapshot = await getDocs(q); const boxes = snapshot.docs.map(asSummary).filter((box) => box.published);
+ const useLegacy = Boolean(cursor && legacyCursorIds.has(cursor.id));
+ let snapshot;
+ if (useLegacy) {
+   snapshot = await getDocs(query(collection(db, 'boxes'), startAfter(cursor!), limit(pageSize)));
+ } else {
+   const summaryQuery = cursor
+     ? query(collection(db, 'boxSummaries'), orderBy('sortOrder', 'asc'), orderBy(documentId(), 'asc'), startAfter(cursor), limit(pageSize))
+     : query(collection(db, 'boxSummaries'), orderBy('sortOrder', 'asc'), orderBy(documentId(), 'asc'), limit(pageSize));
+   snapshot = await getDocs(summaryQuery);
+   // Compatibility only: successful empty summaries during migration. Never fall
+   // back after a thrown network, permission, or index error.
+   if (snapshot.empty && !cursor && legacyFallbackEnabled) {
+     snapshot = await getDocs(query(collection(db, 'boxes'), limit(pageSize)));
+     snapshot.docs.forEach((entry) => legacyCursorIds.add(entry.id));
+   }
+ }
+ const boxes = snapshot.docs.map(asSummary).filter((box) => box.published);
  boxes.forEach((box) => summaryCache.set(box.id, box));
- return { boxes, cursor: snapshot.docs.at(-1) ?? null, hasMore: snapshot.size === pageSize };
+ const nextCursor = snapshot.docs.at(-1) ?? null;
+ if (useLegacy && nextCursor) legacyCursorIds.add(nextCursor.id);
+ return { boxes, cursor: nextCursor, hasMore: snapshot.size === pageSize };
 };
 
 const homepageCache = new Map<number, BoxSummary[]>();
