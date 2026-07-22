@@ -410,23 +410,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   // not carry the explicit `isFree` route flag.
   const isFreeOpening = Boolean(isFree || box?.isDaily);
   const hideDropTableOdds = isFreeOpening;
-  const cheapestPaidBox = useMemo(() => {
-    const paidBoxes = boxes.filter((entry) => {
-      const coinPrice = toCoins(Number(entry.price ?? 0), PRICE_UNIT_MODE);
-      return entry.isDaily !== true && (entry.currencyType ?? 'COIN') !== 'XP' && coinPrice > 0;
-    });
-    if (!paidBoxes.length) return null;
-    return paidBoxes.reduce((lowest, next) => {
-      const lowestPrice = toCoins(Number(lowest.price ?? 0), PRICE_UNIT_MODE);
-      const nextPrice = toCoins(Number(next.price ?? 0), PRICE_UNIT_MODE);
-      return nextPrice < lowestPrice ? next : lowest;
-    });
-  }, [boxes]);
-  const cheapestPaidBoxPrice = useMemo(
-    () => (cheapestPaidBox ? toCoins(Number(cheapestPaidBox.price ?? 0), PRICE_UNIT_MODE) : 0),
-    [cheapestPaidBox]
-  );
-
   // Sort items high to low for display purposes
   const displayItems = useMemo(() => [...items].sort(
     (a, b) => toCoins(b.price, PRICE_UNIT_MODE) - toCoins(a.price, PRICE_UNIT_MODE)
@@ -468,8 +451,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
-  const [postFreeBoxCoinsWon, setPostFreeBoxCoinsWon] = useState(0);
-  const [postFreeBoxCoinsShort, setPostFreeBoxCoinsShort] = useState(0);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
 
@@ -501,8 +482,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const releaseItemModalScrollLockRef = useRef<(() => void) | null>(null);
   const topUpTriggerLockRef = useRef(false);
-  const preFreeSpinBalanceRef = useRef<number | null>(null);
-  const pendingPostFreeBoxFlowRef = useRef<{ coinsWon: number } | null>(null);
+  const pendingPostFreeBoxFlowRef = useRef(false);
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
@@ -1549,7 +1529,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         toast.info("Free signup box already claimed.");
         return;
       }
-      preFreeSpinBalanceRef.current = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
     }
 
     setIsSpinning(true);
@@ -1665,9 +1644,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
           syncBalance(updatedCoinBalance);
           if (isFree) {
-            const baselineBalance = Number(preFreeSpinBalanceRef.current ?? balance ?? user.balance ?? 0);
-            const coinsWon = Math.max(0, Math.floor(updatedCoinBalance - baselineBalance));
-            pendingPostFreeBoxFlowRef.current = { coinsWon };
+            pendingPostFreeBoxFlowRef.current = true;
           }
           if (!isFree) {
             const spentAmount = toCoins(Number(data.price ?? box?.price ?? 0), PRICE_UNIT_MODE);
@@ -1918,7 +1895,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
 
-  const closeWinModal = ({ redirectToBoxesCatalog = false }: { redirectToBoxesCatalog?: boolean } = {}) => {
+  const redirectToBoxesCatalog = () => {
+    setShowPostFreeBoxModal(false);
+    pendingPostFreeBoxFlowRef.current = false;
+    setView({ type: 'BOXES' });
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', '/boxes');
+    }
+  };
+
+  const closeWinModal = () => {
     setIsSellingItem(false);
     setIsWinImageZoomed(false);
     if (!rewardResolved) {
@@ -1928,46 +1914,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     resetReelTrackPosition();
     setWonInventoryItem(null);
 
-    const shouldRedirectToCatalog = redirectToBoxesCatalog && isFree;
-    if (shouldRedirectToCatalog) {
-      setShowPostFreeBoxModal(false);
-      pendingPostFreeBoxFlowRef.current = null;
-      setView({ type: 'BOXES' });
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/boxes');
-      }
-      return;
-    }
-
-    const pendingPostFreeBoxFlow = pendingPostFreeBoxFlowRef.current;
-    if (pendingPostFreeBoxFlow) {
-      const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-      setPostFreeBoxCoinsWon(pendingPostFreeBoxFlow.coinsWon);
-      setPostFreeBoxCoinsShort(Math.max(0, Math.ceil(cheapestPaidBoxPrice - availableCoins)));
+    if (pendingPostFreeBoxFlowRef.current) {
       setShowPostFreeBoxModal(true);
-      pendingPostFreeBoxFlowRef.current = null;
+      pendingPostFreeBoxFlowRef.current = false;
     }
   };
 
   const handlePostFreePrimaryAction = () => {
     playSound('click');
     setShowPostFreeBoxModal(false);
-    const availableCoins = Number.isFinite(balance) ? balance : Number(user.balance ?? 0);
-    if (cheapestPaidBox && availableCoins >= cheapestPaidBoxPrice) {
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem(AUTO_OPEN_BOX_STORAGE_KEY, cheapestPaidBox.id);
-      }
-      setView({ type: 'CASE_OPENING', boxId: cheapestPaidBox.id });
-      return;
-    }
-
     setTopUpModalIntent({
       reason: 'insufficient_balance',
-      requiredCoins: cheapestPaidBoxPrice,
-      currentBalance: availableCoins,
-      missingCoins: Math.max(0, cheapestPaidBoxPrice - availableCoins),
+      requiredCoins: 3000,
+      currentBalance: Number(balance ?? user.balance ?? 0),
+      missingCoins: 3000,
       source: 'post_free_box',
-      preferredPackageUsd: 50
+      preferredPackageUsd: 20
     });
     setShowTopUpModal(true);
   };
@@ -2010,7 +1972,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           setIsSellingItem(false);
         }
     }
-    closeWinModal({ redirectToBoxesCatalog: true });
+    closeWinModal();
     setIsSellingItem(false);
   };
 
@@ -2070,7 +2032,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         }
       }
       setIsSellingItem(false);
-      closeWinModal({ redirectToBoxesCatalog: true });
+      closeWinModal();
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -2595,36 +2557,81 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         </div>
 
         {showPostFreeBoxModal && (
-          <div className="fixed inset-0 z-[125] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-            <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-[#111725] p-5 shadow-2xl sm:p-6">
-              <h3 className="text-xl font-black text-white sm:text-2xl">
-                You got {postFreeBoxCoinsWon.toLocaleString()} coins 🎉
-              </h3>
-              <p className="mt-2 text-sm text-slate-300">
-                {postFreeBoxCoinsShort > 0
-                  ? `You’re only ${postFreeBoxCoinsShort.toLocaleString()} coins away from your first box`
-                  : 'You have enough to open your first box'}
-              </p>
-              <div className="mt-5 flex flex-col gap-3">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#070611]/75 p-3 backdrop-blur-sm sm:p-5">
+            <div
+              className="relative w-full max-w-[28rem] overflow-hidden rounded-[1.35rem] border border-violet-300/20 bg-[radial-gradient(circle_at_50%_-15%,rgba(117,82,255,0.22),transparent_39%),linear-gradient(145deg,#151225_0%,#0c0b17_64%,#11101d_100%)] px-4 pb-5 pt-3 shadow-[0_26px_80px_rgba(0,0,0,0.6)] sm:px-7 sm:pb-7 sm:pt-5"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="first-deposit-offer-title"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  redirectToBoxesCatalog();
+                }}
+                className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-slate-300 transition hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 sm:right-4 sm:top-4"
+                aria-label="Maybe later, return to boxes"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <div className="relative mx-auto flex h-[166px] w-[220px] items-center justify-center sm:h-[178px] sm:w-[240px]" aria-hidden="true">
+                <span className="absolute left-6 top-8 h-2 w-2 rounded-sm bg-violet-400 shadow-[0_0_12px_3px_rgba(167,139,250,0.6)]" />
+                <span className="absolute right-7 top-6 h-1.5 w-1.5 rounded-full bg-fuchsia-300 shadow-[0_0_12px_3px_rgba(232,121,249,0.5)]" />
+                <span className="absolute bottom-7 right-5 h-2 w-2 rounded-sm bg-indigo-300 shadow-[0_0_12px_3px_rgba(129,140,248,0.55)]" />
+                <img
+                  src={wonItem?.image || pullzLogo}
+                  alt=""
+                  className="h-[142px] w-[142px] object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.6)] sm:h-[154px] sm:w-[154px]"
+                />
+              </div>
+
+              <div className="text-center">
+                <h3 id="first-deposit-offer-title" className="text-[22px] font-black uppercase leading-tight tracking-[-0.035em] text-white sm:text-[26px]">
+                  Your first pull was on us
+                </h3>
+                <p className="mt-1 text-sm font-bold text-[#9ea5ff] sm:text-base">Keep the collection going</p>
+                <p className="mt-5 text-sm text-slate-300 sm:text-base">Get a <span className="font-extrabold text-fuchsia-300">50%</span> bonus on your first deposit.</p>
+              </div>
+
+              <div className="mt-5 grid grid-cols-[0.85fr_auto_0.8fr_auto_1.2fr] items-center rounded-xl border border-white/10 bg-black/20 px-2 py-3 text-center sm:px-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You deposit</p>
+                  <p className="mt-1 text-base font-black text-white sm:text-lg">$20</p>
+                </div>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Bonus</p>
+                  <p className="mt-1 text-base font-black text-fuchsia-300 sm:text-lg">+$10</p>
+                </div>
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You receive</p>
+                  <CoinAmount amount={3000} animated={false} className="mt-1 whitespace-nowrap text-sm font-black text-white sm:text-base" iconClassName="h-4 w-4" />
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-2.5">
                 <button
                   type="button"
                   onClick={handlePostFreePrimaryAction}
-                  className="min-h-12 w-full rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#03131a] transition hover:brightness-110 active:scale-[0.99]"
+                  className="min-h-[52px] w-full rounded-xl bg-gradient-to-r from-[#4d70ff] via-[#7b55ff] to-[#d63ee9] px-4 py-3 text-sm font-black text-white shadow-[0_10px_26px_rgba(125,71,255,0.38)] transition hover:brightness-110 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200"
                 >
-                  Unlock your first box
+                  Deposit $20 + Get 1,000 Bonus Coins&nbsp; ›
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     playSound('click');
-                    setShowPostFreeBoxModal(false);
+                    redirectToBoxesCatalog();
                   }}
-                  className="mx-auto text-xs font-semibold text-slate-400 transition hover:text-slate-200"
+                  className="min-h-10 w-full rounded-xl px-4 py-2 text-sm font-bold text-slate-300 transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300"
                 >
-                  Maybe later
+                  Maybe Later
                 </button>
               </div>
+              <p className="mt-2 text-center text-[10px] text-slate-500">Offer applies to your first deposit only. Bonus terms apply.</p>
             </div>
           </div>
         )}
