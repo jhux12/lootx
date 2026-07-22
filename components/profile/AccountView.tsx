@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import { profileAvatars } from '../../assets/profileAvatars';
 import { ShippingAddress, User } from '../../types';
 
@@ -44,6 +44,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
   onSaveUsername, onSaveEmail, onSavePassword, isSavingUsername, isSavingEmail, isSavingPassword,
   onClose
 }) => {
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = React.useState(false);
   const updateSecurity = (key: keyof SecurityForm, value: string) => setSecurityForm({ ...securityForm, [key]: value });
   const updateAddress = (key: keyof ShippingAddress, value: string) => setAddressForm({ ...addressForm, [key]: value });
   const saveProfile = () => {
@@ -74,7 +75,18 @@ export const AccountView: React.FC<AccountViewProps> = ({
           <fieldset>
             <legend className="mb-1 text-xs font-black uppercase tracking-wider text-gray-500">Profile Picture</legend>
             <p className="mb-3 text-xs text-gray-400">Choose an avatar for your public profile.</p>
-            <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5" role="radiogroup" aria-label="Profile picture">
+            <button
+              type="button"
+              aria-expanded={isAvatarPickerOpen}
+              aria-controls="profile-picture-options"
+              onClick={() => setIsAvatarPickerOpen((isOpen) => !isOpen)}
+              className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d11] p-2.5 text-left transition hover:border-white/25 focus:outline-none focus:ring-2 focus:ring-violet-400"
+            >
+              {securityForm.avatar ? <img src={securityForm.avatar} alt="Current profile picture" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-black text-white">?</span>}
+              <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">{isAvatarPickerOpen ? 'Hide profile pictures' : 'Choose profile picture'}</span><span className="block truncate text-xs text-gray-400">{profileAvatars.length} available pictures</span></span>
+              <ChevronDown className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${isAvatarPickerOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isAvatarPickerOpen ? <div id="profile-picture-options" className="mt-3 grid grid-cols-4 gap-2.5 sm:grid-cols-5" role="radiogroup" aria-label="Profile picture">
               {profileAvatars.map((avatar) => {
                 const isSelected = securityForm.avatar === avatar.src;
                 return (
@@ -92,7 +104,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
                   </button>
                 );
               })}
-            </div>
+            </div> : null}
           </fieldset>
 
           <fieldset>
