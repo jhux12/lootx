@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
@@ -215,7 +215,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState<SortOption>('featured');
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [isHowItWorksAnimatingIn, setIsHowItWorksAnimatingIn] = useState(false);
@@ -244,7 +244,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const hasActiveFilters =
     activeCategory !== 'all' ||
-    searchQuery.trim().length > 0;
+    searchQuery.trim().length > 0 ||
+    showAffordableOnly;
 
   const catalogModels = useMemo(
     () => boxes
@@ -404,10 +405,21 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return () => window.cancelAnimationFrame(frameId);
   }, [showHowItWorksModal]);
 
+  useEffect(() => {
+    if (!isSortOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsSortOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isSortOpen]);
+
   const clearFilters = useCallback(() => {
     setActiveCategory('all');
     setSearchQuery('');
     setSortOption('featured');
+    setShowAffordableOnly(false);
   }, []);
 
   const openBox = useCallback((boxId: string) => {
@@ -517,42 +529,27 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </section>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-white/10 bg-[#05060a]/95 backdrop-blur">
-        <div className="mx-auto max-w-[1320px] px-3 py-3 sm:px-5">
-          <div className="mb-3 flex w-full items-center gap-2 sm:mb-2 sm:max-w-[680px]">
-              <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-[#20262b] px-3 py-3">
-                <Search className="h-4 w-4 shrink-0 text-[#5f6f95]" />
-                <input type="text" placeholder="Search boxes..." className="w-full bg-transparent pl-2 text-sm text-white placeholder-slate-500 outline-none" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
-              </div>
-              <label className="relative hidden sm:block">
-                <select value={sortOption} onChange={(event) => setSortOption(event.target.value as SortOption)} className="h-full w-full appearance-none rounded-xl border border-white/10 bg-[#20262b] px-4 py-3 pr-9 text-sm font-semibold text-white outline-none">
-                  {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
-              </label>
-              <div className="relative sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setIsMobileFilterOpen((prev) => !prev)}
-                  className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-[#20262b] text-slate-200"
-                  aria-label="Filter and sort options"
-                >
-                  <SlidersHorizontal className="h-4.5 w-4.5" />
-                </button>
-                {isMobileFilterOpen && (
-                  <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-white/10 bg-[#1b2432] p-2 shadow-xl">
-                    <label className="relative block">
-                      <select value={sortOption} onChange={(event) => { setSortOption(event.target.value as SortOption); setIsMobileFilterOpen(false); }} className="h-10 w-full appearance-none rounded-lg border border-white/10 bg-[#20262b] px-3 pr-8 text-sm font-semibold text-white outline-none">
-                        {SORT_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7a87a8]" />
-                    </label>
-                  </div>
-                )}
-              </div>
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#24242c] bg-[#0a0a0d]/95 backdrop-blur">
+        <div className="mx-auto max-w-[1320px] px-4 py-4 sm:px-5">
+          <div className="relative mb-3">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7a7a88]" />
+            <input
+              type="search"
+              placeholder="Search Charizard, Base Set, ETB..."
+              className="h-[50px] w-full rounded-[14px] border border-[#24242c] bg-[#131318] py-3 pl-11 pr-11 text-base text-[#f2f2f5] placeholder:text-[#7a7a88] outline-none transition focus:border-[#5b6bf5] focus:ring-1 focus:ring-[#5b6bf5]"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              aria-label="Search boxes"
+            />
+            {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
+          <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
+            <button type="button" onClick={() => setIsSortOpen(true)} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#24242c] bg-[#131318] px-3.5 py-2.5 text-[13.5px] font-bold text-[#e6e6ea] transition hover:border-[#3a3a44]" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+              <ListFilter className="h-[15px] w-[15px] text-[#9a9aa8]" />
+              {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
+            </button>
+            <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
+            <div className="flex shrink-0 items-center gap-2">
             {CATEGORY_ORDER.map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -561,10 +558,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center justify-center whitespace-nowrap rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-wide transition ${
+                  className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-[18px] py-2.5 text-[13.5px] font-bold tracking-[0.2px] transition ${
                     isActive
-                      ? 'border-transparent bg-gradient-to-r from-[#1f6cff] to-[#5d39ff] text-white'
-                      : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20 hover:text-white'
+                      ? 'border-[#5b6bf5] bg-[#5b6bf5] text-[#f5f6ff]'
+                      : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44] hover:text-[#f2f2f5]'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -583,18 +580,30 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               );
             })}
             </div>
-            <label className="inline-flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-slate-200 sm:w-auto sm:justify-start">
-              <input
-                type="checkbox"
-                checked={showAffordableOnly}
-                onChange={(event) => setShowAffordableOnly(event.target.checked)}
-                className="h-3.5 w-3.5 rounded border-white/30 bg-transparent text-[#3f7cff] focus:ring-[#3f7cff]"
-              />
+            <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
+            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[13.5px] font-bold transition ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]/15 text-[#f2f2f5]' : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44]'}`}>
+              <span className={`flex h-4 w-4 items-center justify-center rounded-[5px] border-[1.5px] ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]' : 'border-[#3a3a44]'}`}>{showAffordableOnly && <Check className="h-3 w-3 stroke-[3] text-[#0a0a0d]" />}</span>
               Enough coins
-            </label>
+            </button>
           </div>
         </div>
       </div>
+
+      {isSortOpen && (
+        <div className="fixed inset-0 z-[110] flex items-end bg-black/55" role="presentation" onMouseDown={() => setIsSortOpen(false)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="sort-options-title" className="w-full rounded-t-[20px] border border-[#24242c] bg-[#131318] px-2 pb-6 pt-2 shadow-2xl sm:mx-auto sm:max-w-[480px]" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#2c2c34]" />
+            <h2 id="sort-options-title" className="px-3 pb-3 text-[15px] font-bold text-[#f2f2f5]">Sort by</h2>
+            {SORT_OPTIONS.map((option) => {
+              const active = option.id === sortOption;
+              return <button key={option.id} type="button" onClick={() => { setSortOption(option.id); setIsSortOpen(false); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3.5 text-left text-[15px] ${active ? 'bg-white/[0.06] font-bold text-[#5b6bf5]' : 'font-medium text-[#c8c8d2] hover:bg-white/[0.04]'}`}>
+                {option.label}
+                {active && <Check className="h-4 w-4 stroke-[3]" />}
+              </button>;
+            })}
+          </section>
+        </div>
+      )}
 
       <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-3 py-4 sm:px-5 sm:py-5">
         <div className="flex flex-col gap-6">
