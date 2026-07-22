@@ -65,7 +65,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       {items.length === 0 ? (
         <div className="rounded-3xl border border-white/10 bg-[#111114] p-10 text-center text-gray-400">No items found.</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => {
             const action = getAction(item);
             return (
