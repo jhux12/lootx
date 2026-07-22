@@ -112,6 +112,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'shipped'>('all');
   const [orderSearch, setOrderSearch] = useState('');
   const [activeItemIndexes, setActiveItemIndexes] = useState<Record<string, number>>({});
+  const [expandedOrderIds, setExpandedOrderIds] = useState<Set<string>>(new Set());
 
   const filteredOrders = useMemo(() => {
     const term = orderSearch.trim().toLowerCase();
@@ -166,9 +167,20 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
           {orderGroups.map((orderGroup) => {
             const activeIndex = Math.min(activeItemIndexes[orderGroup.id] ?? 0, orderGroup.items.length - 1);
             const order = orderGroup.items[activeIndex] ?? orderGroup.items[0];
-            return <article key={orderGroup.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.07] bg-[#111116] p-3 transition hover:border-white/15">
-              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#09090c] p-1.5"><img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" />{orderGroup.items.length > 1 ? <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[9px] font-bold">+{orderGroup.items.length - 1}</span> : null}</div>
-              <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold text-white">{order.name}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${orderGroup.status === 'shipped' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-amber-300/10 text-amber-200'}`}>{orderGroup.status === 'shipped' ? 'Shipped' : 'Pending'}</span></div><p className="mt-1 text-xs text-[#6c6c74]">{formatOrderDate(orderGroup.createdAt)}</p><div className="mt-2 flex items-center justify-between gap-2"><CoinAmount amount={order.value} formatOptions={{ maximumFractionDigits: 0 }} className="text-xs font-bold text-white" iconClassName="h-3.5 w-3.5" />{orderGroup.trackingNumber ? <button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, orderGroup.trackingNumber as string); }} className="text-[10px] font-bold text-[#b8b8bf] hover:text-white">{copiedTrackingId === orderGroup.id ? 'Copied' : 'Tracking'}</button> : null}</div></div>
+            const isExpanded = expandedOrderIds.has(orderGroup.id);
+            const trackingNumber = orderGroup.trackingNumber;
+            const toggleExpanded = () => setExpandedOrderIds((current) => {
+              const next = new Set(current);
+              if (next.has(orderGroup.id)) next.delete(orderGroup.id); else next.add(orderGroup.id);
+              return next;
+            });
+            return <article key={orderGroup.id} className="min-w-0 overflow-hidden rounded-xl border border-white/[0.07] bg-[#111116] transition hover:border-white/15">
+              <div className="flex items-center gap-3 p-3">
+                <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#09090c] p-1.5"><img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" />{orderGroup.items.length > 1 ? <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[9px] font-bold">+{orderGroup.items.length - 1}</span> : null}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold text-white">{order.name}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${orderGroup.status === 'shipped' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-amber-300/10 text-amber-200'}`}>{orderGroup.status === 'shipped' ? 'Shipped' : 'Pending'}</span></div><p className="mt-1 text-xs text-[#6c6c74]">{formatOrderDate(orderGroup.createdAt)}</p><CoinAmount amount={order.value} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 text-xs font-bold text-white" iconClassName="h-3.5 w-3.5" /></div>
+              </div>
+              {trackingNumber ? <div className="mx-3 mb-3 flex min-w-0 items-center gap-2 rounded-lg bg-black/20 px-2.5 py-2"><span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#71717a]">Tracking</span><code className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d2d2d8]">{trackingNumber}</code><button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, trackingNumber); }} className="shrink-0 rounded px-1.5 py-1 text-[10px] font-black text-white transition hover:bg-white/10">{copiedTrackingId === orderGroup.id ? 'Copied' : 'Copy'}</button></div> : null}
+              {orderGroup.items.length > 1 ? <><button type="button" onClick={toggleExpanded} aria-expanded={isExpanded} className="flex w-full items-center justify-between border-t border-white/[0.06] px-3 py-2.5 text-xs font-bold text-[#b6b6be] transition hover:bg-white/[0.03] hover:text-white"><span>{isExpanded ? 'Hide' : 'Show'} all {orderGroup.items.length} items</span><ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></button>{isExpanded ? <div className="space-y-2 border-t border-white/[0.06] bg-black/10 p-3">{orderGroup.items.map((item) => <div key={item.id} className="flex items-center gap-2"><img src={item.image} alt="" className="h-9 w-9 rounded bg-[#09090c] object-contain p-1" loading="lazy" /><p className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d4d4da]">{item.name}</p><CoinAmount amount={item.value} formatOptions={{ maximumFractionDigits: 0 }} className="text-[11px] font-bold text-white" iconClassName="h-3 w-3" /></div>)}</div> : null}</> : null}
             </article>;
           })}
         </div>
