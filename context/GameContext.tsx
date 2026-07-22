@@ -1972,11 +1972,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     void (async () => {
       try {
-        const shipmentsPath = user.isAdmin ? 'shipments?limit=200' : `shipments?uid=${user.id}&limit=100`;
+        // Firestore rules authorize global shipment reads from the auth custom claim,
+        // not the mutable profile flag. Keep the client session scoped to its owner;
+        // privileged shipment management is loaded by admin-only server/admin paths.
+        const shipmentsPath = `shipments?uid=${user.id}&limit=100`;
         console.log('READING FIRESTORE PATH', shipmentsPath);
-        const shipmentsQuery = user.isAdmin
-          ? query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200))
-          : query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
+        const shipmentsQuery = query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
         const snapshot = await getDocs(shipmentsQuery);
         const loaded = snapshot.docs
           .map(mapShipmentDoc)
