@@ -2178,7 +2178,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = true;
-                          const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
                         <div
                             key={`${item.id}-${idx}`}
@@ -2189,9 +2188,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
-                                  : 'none',
                                 opacity: 1,
                                 filter: 'none',
                                 zIndex: isFocusedItem ? 4 : 1
