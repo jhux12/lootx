@@ -121,6 +121,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /boxSummaries/{boxId} {
+      allow read: if true;
+      // Server/Admin SDK synchronization only; public clients cannot write summaries.
+      allow write: if false;
+    }
+
     match /boxes/{boxId} {
       allow read: if true;
       allow write: if isAdmin();

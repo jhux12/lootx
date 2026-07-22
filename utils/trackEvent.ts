@@ -1,3 +1,5 @@
+import { getCookieConsent, hasMarketingConsent } from './cookieConsent';
+
 type TrackEventData = Record<string, unknown>;
 type TrackEventOptions = {
   eventID?: string;
@@ -40,7 +42,7 @@ export const trackMetaEvent = (
   data?: TrackEventData,
   options?: TrackEventOptions
 ) => {
-  if (typeof window === 'undefined' || typeof window.fbq !== 'function' || document.visibilityState === 'hidden') {
+  if (typeof window === 'undefined' || !hasMarketingConsent(getCookieConsent()) || typeof window.fbq !== 'function' || document.visibilityState === 'hidden') {
     return false;
   }
 

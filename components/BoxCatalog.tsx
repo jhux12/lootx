@@ -2,7 +2,9 @@ import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useStat
 import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { useGame } from '../context/GameContext';
+import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
+import { getBoxSummaryPage } from '../utils/boxRepository';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
@@ -198,7 +200,16 @@ const isCategoryIconUrl = (value: string) => {
 };
 
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
-  const { boxes, setView, stripeSettings, balance, user, isAuthenticated } = useGame();
+  const { setView } = useUI();
+  const { stripeSettings } = useBoxes();
+  const { user, isAuthenticated } = useAuth();
+  const { balance } = useWallet();
+  const [boxes, setBoxes] = useState<MysteryBox[]>([]);
+  const [catalogCursor, setCatalogCursor] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogEnd, setCatalogEnd] = useState(false);
+  const catalogRequestRef = React.useRef(0);
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
   const [activeCategory, setActiveCategory] = useState('all');
@@ -210,6 +221,23 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const [isHowItWorksAnimatingIn, setIsHowItWorksAnimatingIn] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [visibleBoxCount, setVisibleBoxCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 30));
+  useEffect(() => {
+    let active = true; const requestId = ++catalogRequestRef.current;
+    setCatalogLoading(true); setCatalogError(null); setCatalogEnd(false); setCatalogCursor(null);
+    void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24).then((page) => {
+      if (!active || requestId !== catalogRequestRef.current) return;
+      setBoxes(page.boxes); setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
+    }).catch(() => { if (active) setCatalogError('Unable to load boxes. Please retry.'); }).finally(() => { if (active) setCatalogLoading(false); });
+    return () => { active = false; };
+  }, [performanceMode.isMobile]);
+  const loadMoreCatalog = () => {
+    if (catalogLoading || catalogEnd || !catalogCursor) return;
+    setCatalogLoading(true); setCatalogError(null);
+    void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24, catalogCursor).then((page) => {
+      setBoxes((current) => Array.from(new Map([...current, ...page.boxes].map((box) => [box.id, box])).values()));
+      setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
+    }).catch(() => setCatalogError('Unable to load more boxes. Please retry.')).finally(() => setCatalogLoading(false));
+  };
   const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
   const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
@@ -225,7 +253,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     [boxes]
   );
 
-  const isLoadingBoxes = boxes.length === 0;
+  const isLoadingBoxes = catalogLoading && boxes.length === 0;
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -589,17 +617,19 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               ))}
             </div>
           )}
-          {!isLoadingBoxes && hasMoreBoxes && groupedBoxes.length > 0 && (
+          {!isLoadingBoxes && !catalogEnd && groupedBoxes.length > 0 && (
             <div className="flex justify-center pt-1">
               <button
                 type="button"
-                onClick={() => setVisibleBoxCount((count) => count + (performanceMode.isMobile ? 10 : 20))}
+                onClick={loadMoreCatalog}
+                disabled={catalogLoading}
                 className="min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
               >
-                Load more boxes
+                {catalogLoading ? 'Loading boxes…' : 'Load more boxes'}
               </button>
             </div>
           )}
+          {catalogError && boxes.length > 0 && <div className="text-center text-sm text-red-300">{catalogError} <button type="button" onClick={loadMoreCatalog} className="underline">Retry</button></div>}
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">

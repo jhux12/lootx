@@ -822,7 +822,7 @@ const isRealFirebaseUid = (uid: string | null | undefined) => Boolean(uid && uid
 const GameContext = createContext<GameContextType | undefined>(undefined);
 const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
-const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
+const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'stripeSettings' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
 const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
 const UIContext = createContext<Pick<GameContextType, 'view' | 'setView' | 'notifications' | 'addNotification' | 'dismissNotification' | 'clearNotifications' | 'showTopUpModal' | 'setShowTopUpModal' | 'topUpModalIntent' | 'setTopUpModalIntent'> | undefined>(undefined);
 
@@ -1972,11 +1972,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     void (async () => {
       try {
-        const shipmentsPath = user.isAdmin ? 'shipments?limit=200' : `shipments?uid=${user.id}&limit=100`;
+        // Firestore rules authorize global shipment reads from the auth custom claim,
+        // not the mutable profile flag. Keep the client session scoped to its owner;
+        // privileged shipment management is loaded by admin-only server/admin paths.
+        const shipmentsPath = `shipments?uid=${user.id}&limit=100`;
         console.log('READING FIRESTORE PATH', shipmentsPath);
-        const shipmentsQuery = user.isAdmin
-          ? query(collection(db, 'shipments'), orderBy('createdAt', 'desc'), limit(200))
-          : query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
+        const shipmentsQuery = query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
         const snapshot = await getDocs(shipmentsQuery);
         const loaded = snapshot.docs
           .map(mapShipmentDoc)
@@ -2008,7 +2009,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users, isAuthenticated, user.id, user.createdAt, user.topPullsPublic]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    // The complete item catalogue includes admin-only pricing and metadata. Public
+    // case pages receive their prize list with the selected box, so do not transfer
+    // up to 500 catalogue documents to every visitor.
+    if (typeof window === 'undefined' || !isAuthenticated || !user.isAdmin) {
+      setItems((current) => current.length === CASE_ITEMS.length ? current : CASE_ITEMS);
+      return;
+    }
     let cancelled = false;
     const loadItems = () => {
       if (cancelled) return;
@@ -2070,20 +2077,32 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, []);
+  }, [isAuthenticated, user.isAdmin]);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    // Home has its own bounded summary repository; do not start the global
+    // catalog/legacy compatibility query on routes with their own summary loader.
+    if (view.type === 'HOME' || view.type === 'BOXES') return;
     if (typeof window === 'undefined') return;
     let cancelled = false;
     const loadBoxes = () => {
       if (cancelled) return;
       void (async () => {
       try {
-        const boxesPath = 'boxes?limit=250';
+        // Legacy fallback until the documented boxSummaries collection is deployed.
+        const boxesPath = 'boxSummaries?limit=48';
         console.log('READING FIRESTORE PATH', boxesPath);
-        const snapshot = await getDocs(query(collection(db, 'boxes'), limit(250)));
+        // Firestore cannot field-project a document. Prefer the deployment-managed
+        // summary collection; use a bounded legacy fallback while it is populated.
+        const summarySnapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
+        // A compatibility read is allowed only after a successful, confirmed-empty
+        // migration collection. Network/permission/query failures stay errors.
+        const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
+        const snapshot = summarySnapshot.empty && legacyFallbackEnabled
+          ? await getDocs(query(collection(db, 'boxes'), limit(48)))
+          : summarySnapshot;
         if (cancelled) return;
       const expiredUserBoxIds: string[] = [];
       const firebaseBoxes = snapshot.docs
@@ -2184,7 +2203,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if ('cancelIdleCallback' in window && typeof idleId === 'number') window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId as number);
     };
-  }, [isAuthenticated, user.isAdmin]);
+  }, [isAuthenticated, user.isAdmin, view.type]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -3931,7 +3950,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal]);
 
   const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
-  const boxesContextValue = useMemo(() => ({ boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, createBox, createUserBox, updateBox, deleteBox, view, setView]);
+  const boxesContextValue = useMemo(() => ({ boxes, items, stripeSettings, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, stripeSettings, createBox, createUserBox, updateBox, deleteBox, view, setView]);
   const inventoryContextValue = useMemo(() => ({ inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem }), [inventory, shipments, addToInventory, addInventoryItemFromServer, sellItem, shipItem]);
   const uiContextValue = useMemo(() => ({ view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, setShowTopUpModal, topUpModalIntent, setTopUpModalIntent }), [view, setView, notifications, addNotification, dismissNotification, clearNotifications, showTopUpModal, topUpModalIntent]);
 
