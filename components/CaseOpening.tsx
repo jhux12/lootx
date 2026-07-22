@@ -75,7 +75,10 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
-  initialBlurDurationMs: 260
+  initialBlurDurationMs: 260,
+  // Keep the idle preview deliberately unhurried; it is ambient anticipation, not a spin.
+  previewCycleDurationMs: 30000,
+  previewCycleDurationMobileMs: 26000
 } as const;
 
 const rarityGlowClass: Record<string, string> = {
@@ -161,6 +164,27 @@ const pickWeightedSpinnerItem = <T extends Pick<CaseItem, 'rarity'>>(pool: T[], 
   }
 
   return weightedItems[weightedItems.length - 1]?.item ?? fallback;
+};
+
+const buildExcitementPreviewReel = (items: CaseItem[]) => {
+  const legendaryItems = items.filter((item) => normalizeRarityKey(item.rarity) === 'legendary');
+  const epicItems = items.filter((item) => normalizeRarityKey(item.rarity) === 'epic');
+  const highRarityItems = [...legendaryItems, ...epicItems];
+
+  if (!highRarityItems.length) return [];
+
+  // Alternate the two premium tiers whenever both are available so the idle reel
+  // advertises the box's most exciting possible outcomes without implying a result.
+  const cycleLength = Math.max(8, (legendaryItems.length + epicItems.length) * 2);
+  const cycle = Array.from({ length: cycleLength }, (_, index) => {
+    const preferredPool = index % 2 === 0 ? legendaryItems : epicItems;
+    const fallbackPool = preferredPool === legendaryItems ? epicItems : legendaryItems;
+    const pool = preferredPool.length ? preferredPool : fallbackPool;
+    return pool[index % pool.length];
+  });
+
+  // Three identical cycles let the animation loop beyond both viewport edges.
+  return [...cycle, ...cycle, ...cycle];
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -379,6 +403,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isSpinning, setIsSpinning] = useState(false);
   const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
+  const [isExcitementPreview, setIsExcitementPreview] = useState(true);
   const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [currentCenterIndex, setCurrentCenterIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
@@ -426,6 +451,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winningCardRef = useRef<HTMLDivElement>(null);
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
+  const previewAnimationRef = useRef<Animation | null>(null);
   const tickTimerRef = useRef<number | null>(null);
   const tickFrameRef = useRef<number | null>(null);
   const lastTickedCenterIndexRef = useRef<number>(-1);
@@ -657,21 +683,69 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [prefersReducedMotion]);
 
   useEffect(() => {
-    // Fill the static view with random items from the specific box
-    if (items.length > 0) {
-        const staticReelLength = reduceMobileEffects ? 9 : 15;
-        const staticItems = Array.from({ length: staticReelLength }, () =>
-          pickWeightedSpinnerItem(items, Math.random)
-        );
-        const previewCenterIndex = Math.floor(staticItems.length / 2);
-        reelItemsRef.current = staticItems;
-        setReelItems(staticItems);
-        setReelWinnerIndex(previewCenterIndex);
-        setCurrentCenterIndex(previewCenterIndex);
-        lastCenterIndexRef.current = previewCenterIndex;
-        setHasSpinSettled(false);
-    }
+    // Before an opening, continuously showcase only the box's epic and legendary
+    // outcomes. If a box has neither tier, retain the standard weighted preview.
+    if (!items.length) return;
+
+    const excitementItems = buildExcitementPreviewReel(items);
+    const staticReelLength = reduceMobileEffects ? 9 : 15;
+    const previewItems = excitementItems.length
+      ? excitementItems
+      : Array.from({ length: staticReelLength }, () => pickWeightedSpinnerItem(items, Math.random));
+    const previewCenterIndex = Math.floor(previewItems.length / 2);
+
+    reelItemsRef.current = previewItems;
+    setReelItems(previewItems);
+    setReelWinnerIndex(previewCenterIndex);
+    setCurrentCenterIndex(previewCenterIndex);
+    lastCenterIndexRef.current = previewCenterIndex;
+    setHasSpinSettled(false);
+    setIsExcitementPreview(excitementItems.length > 0);
   }, [items, reduceMobileEffects]);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !isExcitementPreview || isSpinning || hasSpinSettled || prefersReducedMotion || performanceMode.isHidden) {
+      return undefined;
+    }
+
+    const cycleItemCount = reelItems.length / 3;
+    if (!Number.isInteger(cycleItemCount) || cycleItemCount < 1) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      const reel = scrollContainerRef.current;
+      if (!reel || isSpinningRef.current) return;
+
+      updateSpinnerMeasurements();
+      const { stepWidth } = spinnerMeasurementsRef.current;
+      const startTranslate = -(cycleItemCount * stepWidth);
+      const endTranslate = -(cycleItemCount * 2 * stepWidth);
+      reel.style.transition = 'none';
+      reel.style.transform = `translate3d(${startTranslate}px, 0, 0)`;
+      reel.style.willChange = 'transform';
+
+      previewAnimationRef.current = reel.animate(
+        [
+          { transform: `translate3d(${startTranslate}px, 0, 0)` },
+          { transform: `translate3d(${endTranslate}px, 0, 0)` }
+        ],
+        {
+          duration: reduceMobileEffects ? SPINNER_MOTION.previewCycleDurationMobileMs : SPINNER_MOTION.previewCycleDurationMs,
+          iterations: Infinity,
+          easing: 'linear'
+        }
+      );
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      previewAnimationRef.current?.cancel();
+      previewAnimationRef.current = null;
+      if (container && !isSpinningRef.current) {
+        container.style.willChange = 'auto';
+      }
+    };
+  }, [hasSpinSettled, isExcitementPreview, isSpinning, performanceMode.isHidden, prefersReducedMotion, reduceMobileEffects, reelItems.length, updateSpinnerMeasurements]);
 
   useEffect(() => {
     setVisibleDropItemCount(performanceMode.isMobile ? 12 : 24);
@@ -985,6 +1059,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [getTranslateBounds]);
 
   const resetSpinnerAnimation = useCallback(() => {
+    if (previewAnimationRef.current) {
+      previewAnimationRef.current.cancel();
+      previewAnimationRef.current = null;
+    }
+
     if (spinnerAnimationRef.current) {
       spinnerAnimationRef.current.cancel();
       spinnerAnimationRef.current = null;
@@ -1221,11 +1300,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
   }, [isAuthenticated, openAuthModal]);
 
-  const preloadReelImages = useCallback(async (nextReelItems: CaseItem[], options: { preloadAll?: boolean } = {}) => {
+  const preloadReelImages = useCallback(async (
+    nextReelItems: CaseItem[],
+    options: { preloadAll?: boolean; priorityIndex?: number } = {}
+  ) => {
     setIsSpinnerAssetsLoading(true);
-    const preloadLimit = options.preloadAll ? Number.POSITIVE_INFINITY : (reduceMobileEffects ? 10 : 28);
-    const loadTimeoutMs = options.preloadAll ? (reduceMobileEffects ? 3200 : 5000) : (reduceMobileEffects ? 900 : 1400);
-    const uniqueSources = Array.from(new Set(nextReelItems.map((item) => item.image).filter((src): src is string => Boolean(src)))).slice(0, preloadLimit);
+    // Only warm the images that can be seen first. Rendering the reel starts the
+    // remaining lazy requests, so waiting for every possible drop delays the page
+    // without improving the first visible frame.
+    const preloadLimit = options.preloadAll
+      ? (reduceMobileEffects ? 12 : 18)
+      : (reduceMobileEffects ? 4 : 6);
+    const loadTimeoutMs = options.preloadAll
+      ? (reduceMobileEffects ? 1800 : 2500)
+      : (reduceMobileEffects ? 500 : 750);
+    const priorityItems = typeof options.priorityIndex === 'number'
+      ? nextReelItems.slice(Math.max(0, options.priorityIndex - 2), options.priorityIndex + 3)
+      : [];
+    const uniqueSources = Array.from(new Set(
+      [...priorityItems, ...nextReelItems]
+        .map((item) => item.image)
+        .filter((src): src is string => Boolean(src))
+    )).slice(0, preloadLimit);
 
     const loadSource = (src: string) => {
       const cachedLoad = preloadedSpinnerImagesRef.current.get(src);
@@ -1252,19 +1348,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         if (img.complete && img.naturalWidth > 0) {
           settle();
         }
-      }).then(async () => {
+      }).then(() => {
         if (timedOut) {
           preloadedSpinnerImagesRef.current.delete(src);
-          return;
         }
-
-        const decoder = new Image();
-        decoder.src = src;
-        if (typeof decoder.decode !== 'function') return;
-        await Promise.race([
-          decoder.decode().catch(() => undefined),
-          new Promise<void>((resolve) => window.setTimeout(resolve, reduceMobileEffects ? 450 : 850))
-        ]);
       });
 
       preloadedSpinnerImagesRef.current.set(src, loadPromise);
@@ -1295,6 +1382,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   });
 
   const prepareReelForSpin = useCallback(async (nextReelItems: CaseItem[], winnerIndex: number) => {
+    setIsExcitementPreview(false);
     resetSpinnerAnimation();
     setHasSpinSettled(false);
     setAnimationPhase('idle');
@@ -1305,7 +1393,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.style.transition = 'none';
     }
 
-    await preloadReelImages(nextReelItems, { preloadAll: true });
+    await preloadReelImages(nextReelItems, { preloadAll: true, priorityIndex: winnerIndex });
 
     reelItemsRef.current = nextReelItems;
     setReelItems(nextReelItems);
@@ -2090,7 +2178,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = true;
-                          const allowHeavyHighlight = !isUltraSmoothSpin;
                           return (
                         <div
                             key={`${item.id}-${idx}`}
@@ -2101,9 +2188,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                boxShadow: isFocusedItem && allowHeavyHighlight
-                                  ? (reduceMobileEffects ? `0 0 0 1px ${item.color}44, 0 0 12px ${item.color}30` : `0 0 0 1px ${item.color}66, 0 0 28px ${item.color}55`)
-                                  : 'none',
                                 opacity: 1,
                                 filter: 'none',
                                 zIndex: isFocusedItem ? 4 : 1
