@@ -2570,16 +2570,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 Your first pull was on us. Want another?
               </h3>
               <p className="mt-3 text-sm font-semibold text-slate-100">Get a 50% bonus on your first deposit.</p>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Deposit $10 and receive 1,500 coins—$15 total.
-              </p>
               <div className="mt-5 flex flex-col gap-3">
                 <button
                   type="button"
                   onClick={handlePostFreePrimaryAction}
                   className="min-h-12 w-full rounded-xl bg-gradient-to-r from-emerald-400 to-cyan-400 px-4 py-3 text-sm font-black uppercase tracking-[0.08em] text-[#03131a] transition hover:brightness-110 active:scale-[0.99]"
                 >
-                  Deposit $10 + Get 500 Bonus Coins
+                  Claim Offer
                 </button>
                 <button
                   type="button"
