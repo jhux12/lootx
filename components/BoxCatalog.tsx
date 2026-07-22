@@ -3,7 +3,7 @@ import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
-import { getBoxDetail, getBoxSummaryPage } from '../utils/boxRepository';
+import { getBoxSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -29,14 +29,6 @@ const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
   { id: 'price-desc', label: 'Price: High to Low' }
 ];
 
-const TAG_STYLES: Record<string, string> = {
-  top: 'bg-violet-600/90 text-white',
-  new: 'bg-sky-500/90 text-white',
-  hot: 'bg-rose-500/90 text-white',
-  limited: 'bg-amber-500/90 text-black',
-  popular: 'bg-emerald-500/90 text-black'
-};
-
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
 const normalizeSearchText = (value: string) => value
@@ -54,8 +46,6 @@ type CatalogBoxModel = {
   priceCoins: number;
   createdAt?: number;
   tags: string[];
-  primaryTag: string | null;
-  tagClass: string;
   featuredScore: number;
   trendingScore: number;
   topItemPreviews: CatalogItemPreview[];
@@ -84,7 +74,6 @@ const getCatalogScores = (box: MysteryBox, tags: string[]) => {
 
 const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
   const tags = getBoxTags(box);
-  const primaryTag = tags.find((tag) => TAG_STYLES[tag]) ?? null;
   const scores = getCatalogScores(box, tags);
 
   return {
@@ -97,45 +86,33 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
     priceCoins: getBoxPrice(box),
     createdAt: box.createdAt,
     tags,
-    primaryTag,
-    tagClass: primaryTag ? (TAG_STYLES[primaryTag] ?? 'bg-slate-600 text-white') : '',
     topItemPreviews: getTopItemPreviews(box.items),
     ...scores
   };
 };
 
-const CatalogBoxCard = memo(({ model, index, staticImages, onOpen, filterBadge }: {
+const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   model: CatalogBoxModel;
   index: number;
   staticImages: boolean;
   onOpen: (boxId: string) => void;
-  filterBadge: string;
 }) => {
-  const { box, primaryTag, tagClass, topItemPreviews } = model;
-  const [loadedTopPull, setLoadedTopPull] = useState<CaseItem | null>(null);
-  const topPull = loadedTopPull ?? topItemPreviews[0];
+  const { box } = model;
   const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
-  const loadTopPull = () => {
-    if (topPull) return;
-    void getBoxDetail(box.id, (id, data) => ({ ...box, ...data, id, items: Array.isArray(data.items) ? data.items : [] } as MysteryBox))
-      .then((detail) => setLoadedTopPull(detail?.items.reduce<CaseItem | null>((best, item) => !best || item.price > best.price ? item : best, null) ?? null))
-      .catch(() => setLoadedTopPull(null));
-  };
 
   return (
     <button
       type="button"
       onClick={() => onOpen(box.id)}
-      onMouseEnter={() => { prefetchHandlers.onMouseEnter(); loadTopPull(); }}
-      onTouchStart={() => { prefetchHandlers.onTouchStart(); loadTopPull(); }}
+      onMouseEnter={prefetchHandlers.onMouseEnter}
+      onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
       className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
     >
       <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
-        <span className={`absolute left-2.5 top-2.5 z-20 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wide ${filterBadge === 'All' && primaryTag ? tagClass : 'bg-violet-500 text-white'}`}>{filterBadge === 'All' ? (primaryTag ?? 'Featured') : filterBadge}</span>
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
-        <div className={`absolute inset-0 flex flex-col items-center justify-center px-3 transition-opacity duration-200 ${topPull ? 'group-hover:opacity-0 group-focus-visible:opacity-0' : ''}`}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
           <BlurImage
             src={box.image}
             fallbackSrc="/assets/favicon/android-chrome-512.png"
@@ -151,12 +128,6 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen, filterBadge }
             retryOnError={!staticImages}
           />
         </div>
-        {topPull && <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#090a0e]/98 px-3 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-          <span className="mb-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">Top pull in this box</span>
-          <BlurImage src={topPull.image} fallbackSrc="/assets/favicon/android-chrome-512.png" alt="" ratioClassName="h-[96px] w-full" className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.6)]" loading="lazy" width={96} height={96} staticRender={staticImages} retryOnError={!staticImages} />
-          <span className="mt-1 line-clamp-1 w-full text-[10px] font-bold text-white">{topPull.name}</span>
-          <CoinAmount amount={Math.round(toCoins(loadedTopPull?.price ?? box.items.find((item) => item.id === topPull.id)?.price ?? 0, PRICE_UNIT_MODE))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-0.5 justify-center text-[10px] font-black text-amber-300" iconClassName="h-3 w-3" />
-        </div>}
       </div>
       <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
         <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
@@ -656,7 +627,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   index={index}
                   staticImages={staticCatalogImages}
                   onOpen={openBox}
-                  filterBadge={activeCategory === 'all' ? 'All' : (categories.find((category) => category.id === activeCategory)?.title ?? activeCategory)}
                 />
               ))}
             </div>
