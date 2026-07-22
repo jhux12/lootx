@@ -10,6 +10,7 @@ import { COIN_ICON } from '../constants';
 import { useAuth, useUI } from '../context/GameContext';
 import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
+import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
 type HomeReplicaProps = {
   demoBoxId?: string | null;
@@ -252,6 +253,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
       boxId
     }));
   }, [liveWinBoxes]);
+  const topPullByBoxId = useMemo(() => new Map(
+    liveWinBoxes.map((box) => [box.id, [...box.items].sort((left, right) => right.price - left.price)[0]] as const)
+      .filter((entry): entry is readonly [string, CaseItem] => Boolean(entry[1]))
+  ), [liveWinBoxes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -564,13 +569,14 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[158px] overflow-hidden rounded-xl bg-[#252b3a] p-3 text-left active:scale-[0.98] sm:h-[170px] lg:h-[188px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.12),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
-              <img src={box.image} alt="" width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="relative z-10 h-[106px] w-full object-contain transition-transform duration-200 group-hover:scale-105 sm:h-[116px] lg:h-[128px]" />
-              <span className="absolute left-1.5 top-1.5 z-20 rounded bg-fuchsia-500 px-1.5 py-0.5 text-[5px] font-black uppercase text-white">Trending</span>
-              <div className="absolute inset-x-2 bottom-2 z-20 flex items-center justify-between gap-2 rounded-lg bg-black/22 px-2 py-1.5">
+            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.98] sm:h-[184px] lg:h-[204px]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
+              <div className={`relative z-10 h-[112px] transition-opacity duration-200 sm:h-[122px] lg:h-[138px] ${topPullByBoxId.has(box.id) ? 'group-hover:opacity-0 group-focus-visible:opacity-0' : ''}`}><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
+              {topPullByBoxId.get(box.id) && <div className="pointer-events-none absolute inset-x-2.5 top-2.5 z-10 flex h-[112px] flex-col items-center justify-center bg-[#090a0e]/95 px-2 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 sm:h-[122px] lg:h-[138px]"><span className="text-[7px] font-black uppercase tracking-[0.12em] text-slate-400">Top pull</span><img src={topPullByBoxId.get(box.id)!.image} alt="" width={76} height={76} loading="lazy" decoding="async" className="h-[72px] w-[72px] object-contain" /><CoinAmount amount={toCoins(topPullByBoxId.get(box.id)!.price, PRICE_UNIT_MODE)} className="text-[9px] font-black text-amber-300" iconClassName="h-3 w-3" animated={false} /></div>}
+              <span className="absolute left-2.5 top-2.5 z-20 rounded-full bg-fuchsia-500 px-2 py-1 text-[7px] font-black uppercase text-white">Trending</span>
+              <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={Math.round(box.price)} className="shrink-0 text-[10px] font-black text-[#a78bfa] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+                <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} className="shrink-0 text-[10px] font-black text-[#c4b5fd] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
               </div>
             </button>
           ) : (

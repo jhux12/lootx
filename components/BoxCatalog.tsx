@@ -3,7 +3,7 @@ import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
-import { getBoxSummaryPage } from '../utils/boxRepository';
+import { getBoxDetail, getBoxSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
@@ -104,30 +104,38 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
   };
 };
 
-const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
+const CatalogBoxCard = memo(({ model, index, staticImages, onOpen, filterBadge }: {
   model: CatalogBoxModel;
   index: number;
   staticImages: boolean;
   onOpen: (boxId: string) => void;
+  filterBadge: string;
 }) => {
   const { box, primaryTag, tagClass, topItemPreviews } = model;
+  const [loadedTopPull, setLoadedTopPull] = useState<CaseItem | null>(null);
+  const topPull = loadedTopPull ?? topItemPreviews[0];
   const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
+  const loadTopPull = () => {
+    if (topPull) return;
+    void getBoxDetail(box.id, (id, data) => ({ ...box, ...data, id, items: Array.isArray(data.items) ? data.items : [] } as MysteryBox))
+      .then((detail) => setLoadedTopPull(detail?.items.reduce<CaseItem | null>((best, item) => !best || item.price > best.price ? item : best, null) ?? null))
+      .catch(() => setLoadedTopPull(null));
+  };
 
   return (
     <button
       type="button"
       onClick={() => onOpen(box.id)}
-      onMouseEnter={prefetchHandlers.onMouseEnter}
-      onTouchStart={prefetchHandlers.onTouchStart}
+      onMouseEnter={() => { prefetchHandlers.onMouseEnter(); loadTopPull(); }}
+      onTouchStart={() => { prefetchHandlers.onTouchStart(); loadTopPull(); }}
       onFocus={prefetchHandlers.onFocus}
-      className="group w-full overflow-hidden rounded-xl border border-white/10 bg-[#20262b] text-left shadow-[0_0_0_1px_rgba(53,76,129,0.12)] transition hover:border-slate-400/35 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
     >
-      <div className="relative px-2 pb-2 pt-3">
-        {primaryTag && (
-          <span className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] uppercase tracking-wide ${tagClass}`}>{primaryTag}</span>
-        )}
-        <div className="mx-auto aspect-[1.35] w-full">
+      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
+        <span className={`absolute left-2.5 top-2.5 z-20 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-wide ${filterBadge === 'All' && primaryTag ? tagClass : 'bg-violet-500 text-white'}`}>{filterBadge === 'All' ? (primaryTag ?? 'Featured') : filterBadge}</span>
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
+        <div className={`absolute inset-0 flex flex-col items-center justify-center px-3 transition-opacity duration-200 ${topPull ? 'group-hover:opacity-0 group-focus-visible:opacity-0' : ''}`}>
           <BlurImage
             src={box.image}
             fallbackSrc="/assets/favicon/android-chrome-512.png"
@@ -137,24 +145,22 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
             decoding="async"
             width={360}
             height={230}
-            ratioClassName="h-full w-full"
-            className="h-full w-full object-contain transition duration-300 group-hover:scale-105"
+            ratioClassName="h-[132px] w-full sm:h-[148px]"
+            className="h-full w-full object-contain drop-shadow-[0_16px_20px_rgba(0,0,0,0.55)] transition duration-300 group-hover:scale-105"
             staticRender={staticImages}
             retryOnError={!staticImages}
           />
         </div>
+        {topPull && <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#090a0e]/98 px-3 text-center opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <span className="mb-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-400">Top pull in this box</span>
+          <BlurImage src={topPull.image} fallbackSrc="/assets/favicon/android-chrome-512.png" alt="" ratioClassName="h-[96px] w-full" className="h-full w-full object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.6)]" loading="lazy" width={96} height={96} staticRender={staticImages} retryOnError={!staticImages} />
+          <span className="mt-1 line-clamp-1 w-full text-[10px] font-bold text-white">{topPull.name}</span>
+          <CoinAmount amount={Math.round(toCoins(loadedTopPull?.price ?? box.items.find((item) => item.id === topPull.id)?.price ?? 0, PRICE_UNIT_MODE))} formatOptions={{ maximumFractionDigits: 0 }} className="mt-0.5 justify-center text-[10px] font-black text-amber-300" iconClassName="h-3 w-3" />
+        </div>}
       </div>
-      <div className="border-t border-white/10 px-3 pb-3 pt-2">
-        <div className="line-clamp-1 text-[15px] font-medium text-slate-100 sm:text-base">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[15px] font-medium text-slate-200" iconClassName="h-4 w-4" />
-        <p className="mt-3 text-[10px] uppercase tracking-wide text-slate-400">Best items</p>
-        <div className="mt-1 grid grid-cols-3 gap-1.5">
-          {topItemPreviews.map((item) => (
-            <div key={`${box.id}-${item.id}`} className="flex h-11 items-center justify-center rounded-md border border-white/10 bg-[#1f2730] p-1">
-              <BlurImage src={item.image} fallbackSrc="/assets/favicon/android-chrome-512.png" alt={item.name} className="h-full w-full object-contain" loading="lazy" width={56} height={44} staticRender={staticImages} retryOnError={!staticImages} />
-            </div>
-          ))}
-        </div>
+      <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
+        <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
+        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
       </div>
     </button>
   );
@@ -650,6 +656,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   index={index}
                   staticImages={staticCatalogImages}
                   onOpen={openBox}
+                  filterBadge={activeCategory === 'all' ? 'All' : (categories.find((category) => category.id === activeCategory)?.title ?? activeCategory)}
                 />
               ))}
             </div>
