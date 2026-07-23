@@ -9,6 +9,7 @@ import { DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/po
 
 const ASSET = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2F';
 const media = (name: string, token: string) => `${ASSET}${encodeURIComponent(name)}?alt=media&token=${token}`;
+const LIVE_PULL_VIDEO_URL = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FPullz.mp4?alt=media&token=082e8787-9972-4dbd-beb2-7d12721f9f97';
 
 const trustItems = [
   ['trust-items-shipped-64.png', '7ad0463a-f52a-48cb-89e4-479bc18e9aa0', '2,300+ Items Shipped', 'Thousands of graded collectibles safely delivered to collectors.'],
@@ -58,7 +59,7 @@ export const SpinLandingPage: React.FC = () => {
       <HomepageFaqSection />
       <section className="pl-final"><h2>Your First Pull Is Waiting.</h2><p>Create an account and reveal your first collectible in under 30 seconds.</p><button className="pl-cta" disabled={!freeBox || claimed} onClick={claim}>{claimed ? 'FREE PULL CLAIMED' : 'Claim Your Free Pull'}</button></section>
     </div></main>
-    <div className={`pl-modal ${isVideoOpen ? 'open' : ''}`} aria-hidden={!isVideoOpen} onClick={(e) => e.currentTarget === e.target && setIsVideoOpen(false)}><div className="pl-video-shell"><span>Live Pull</span><button aria-label="Close video" onClick={() => setIsVideoOpen(false)}><X /></button>{isVideoOpen && <video src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FAQN70eIudMFMcX2WPxIBdaOh9f9wUBGbHNk8gl8MlRqD02MyUg0TTErjNGLSmG29zH8WhlklL0HpqCSDCWmz8qM3o4QpdFv9YAZsLTc.mp4?alt=media&token=1d657690-6861-4180-aab3-0cdd071c7dd0" controls autoPlay playsInline />}</div></div>
+    <div className={`pl-modal ${isVideoOpen ? 'open' : ''}`} aria-hidden={!isVideoOpen} onClick={(e) => e.currentTarget === e.target && setIsVideoOpen(false)}><div className="pl-video-shell"><span>Live Pull</span><button aria-label="Close video" onClick={() => setIsVideoOpen(false)}><X /></button>{isVideoOpen && <video src={LIVE_PULL_VIDEO_URL} controls autoPlay playsInline />}</div></div>
   </div>;
 };
 
