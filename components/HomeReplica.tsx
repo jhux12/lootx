@@ -134,13 +134,12 @@ const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(41,217,203,.22),transparent_27%),radial-gradient(circle_at_86%_85%,rgba(255,169,55,.24),transparent_35%),linear-gradient(90deg,rgba(112,39,146,.20),transparent_46%)]" />
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,188,75,.48),transparent)] blur-md" />
     <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
-      <div className="min-w-0">
-        <p className="inline-flex rounded-full border border-amber-200/35 bg-[#2f2114]/75 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-amber-100 shadow-[0_0_20px_rgba(251,191,36,.16)] sm:text-[11px]">Limited drop</p>
-        <h1 className="mt-2 max-w-[245px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
-        <p className="mt-2 max-w-[220px] text-[9px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:max-w-md sm:text-[11px] lg:text-sm">Enter the vault and uncover a special pull.</p>
-        <span className="mt-3 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
+      <div className="min-w-0 -translate-y-1 sm:-translate-y-2">
+        <h1 className="max-w-[245px] text-[24px] font-black uppercase leading-[.9] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
+        <p className="mt-1.5 max-w-[220px] text-[9px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:max-w-md sm:text-[11px] lg:text-sm">Enter the vault and uncover a special pull.</p>
+        <span className="mt-2 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="h-28 w-28 self-center object-contain drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:h-40 sm:w-40 lg:h-52 lg:w-52" /> : null}
+      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="h-24 w-24 -translate-y-1 self-center object-contain drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:h-28 sm:w-28 sm:-translate-y-2 lg:h-36 lg:w-36" /> : null}
     </div>
   </div>
 );
