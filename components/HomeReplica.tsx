@@ -50,6 +50,7 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
+const PROMO_BOX_ID = 'Pix6KvQzz8C9GtQf7F72';
 
 const mapHomepageLiveWinBox = (id: string, data: Record<string, any>): MysteryBox => ({
   id,
@@ -128,6 +129,22 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
   </div>
 );
 
+const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#070d0d_0%,#172420_48%,#17110d_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(41,217,203,.22),transparent_27%),radial-gradient(circle_at_86%_85%,rgba(255,169,55,.24),transparent_35%),linear-gradient(90deg,rgba(112,39,146,.20),transparent_46%)]" />
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,188,75,.48),transparent)] blur-md" />
+    <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
+      <div className="min-w-0">
+        <p className="inline-flex rounded-full border border-amber-200/35 bg-[#2f2114]/75 px-3 py-1 text-[9px] font-black uppercase tracking-[.14em] text-amber-100 shadow-[0_0_20px_rgba(251,191,36,.16)] sm:text-[11px]">Limited drop</p>
+        <h1 className="mt-2 max-w-[245px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
+        <p className="mt-2 max-w-[220px] text-[9px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:max-w-md sm:text-[11px] lg:text-sm">Enter the vault and uncover a special pull.</p>
+        <span className="mt-3 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
+      </div>
+      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="h-28 w-28 self-center object-contain drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:h-40 sm:w-40 lg:h-52 lg:w-52" /> : null}
+    </div>
+  </div>
+);
+
 const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }) => (
   <button
     type="button"
@@ -179,7 +196,7 @@ const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: Mobil
 });
 MobileLiveWins.displayName = 'MobileLiveWins';
 
-const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; promoBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
   const { isAuthenticated, openAuthModal, user } = useAuth();
   const { setShowTopUpModal, setTopUpModalIntent } = useUI();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
@@ -286,8 +303,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   const showFreeBoxSlide = isAuthenticated && Boolean(freeSignupBox) && !user.lastFreeBoxClaim;
 
   useEffect(() => {
-    if (showFreeBoxSlide) setActiveHeroSlide(0);
-  }, [showFreeBoxSlide]);
+    if (showFreeBoxSlide || promoBox) setActiveHeroSlide(0);
+  }, [promoBox, showFreeBoxSlide]);
 
   useEffect(() => {
     if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
@@ -354,9 +371,11 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
     };
   }, []);
 
-  const heroSlides = showFreeBoxSlide ? ['free-box', 'deposit-match', 'hot-picks'] : ['deposit-match', 'hot-picks'];
-  const showFreeBoxHero = showFreeBoxSlide && activeHeroSlide === 0;
-  const showDepositSlide = activeHeroSlide === (showFreeBoxSlide ? 1 : 0);
+  const heroSlides = [...(showFreeBoxSlide ? ['free-box'] : []), ...(promoBox ? ['promo-box'] : []), 'deposit-match', 'hot-picks'];
+  const activeHero = heroSlides[activeHeroSlide];
+  const showFreeBoxHero = activeHero === 'free-box';
+  const showPromoBoxHero = activeHero === 'promo-box';
+  const showDepositSlide = activeHero === 'deposit-match';
 
   const goToHeroSlide = (direction: 1 | -1) => {
     setActiveHeroSlide((current) => (current + direction + heroSlides.length) % heroSlides.length);
@@ -382,6 +401,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
   const handleHeroAction = () => {
     if (showFreeBoxHero && freeSignupBox) {
       onOpenBox(freeSignupBox.id, true);
+      return;
+    }
+    if (showPromoBoxHero && promoBox) {
+      onOpenBox(promoBox.id);
       return;
     }
     if (showDepositSlide) {
@@ -477,6 +500,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
+            {promoBox && <PromoBoxHeroSlide box={promoBox} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
@@ -515,10 +539,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, trendingBoxIds, onOpenBox, on
               </div>
             </div>
           </div>
-          <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
+          <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showPromoBoxHero ? 'Open Promo Box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'promo-box' ? 'Promo Box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
         </div>
       </section>
 
@@ -617,7 +641,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
   useEffect(() => {
     let cancelled = false;
     setConfiguredBoxes([]);
-    void getConfiguredHomepageSummaries(trendingBoxIds, homepageBoxes).then((selected) => {
+    void getConfiguredHomepageSummaries([...trendingBoxIds, PROMO_BOX_ID], homepageBoxes).then((selected) => {
       if (!cancelled) setConfiguredBoxes(selected);
     });
     return () => { cancelled = true; };
@@ -628,11 +652,12 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
     return [...byId.values()];
   }, [homepageBoxes, configuredBoxes]);
   const freeSignupBox = homepageBoxes.find((box) => box.isDaily) ?? null;
+  const promoBox = boxes.find((box) => box.id === PROMO_BOX_ID) ?? null;
   return (
     <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
       {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
       <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
-        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} promoBox={promoBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
   );
