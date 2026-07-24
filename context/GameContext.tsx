@@ -35,7 +35,6 @@ import {
   collection,
   collectionGroup,
   deleteDoc,
-  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -1982,16 +1981,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     void (async () => {
       try {
-        // Firestore rules authorize global shipment reads from the auth custom claim,
-        // not the mutable profile flag. Keep the client session scoped to its owner;
-        // privileged shipment management is loaded by admin-only server/admin paths.
-        const shipmentsPath = `shipments?uid=${user.id}&limit=100`;
-        console.log('READING FIRESTORE PATH', shipmentsPath);
-        const shipmentsQuery = query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
-        const snapshot = await getDocs(shipmentsQuery);
-        const loaded = snapshot.docs
-          .map(mapShipmentDoc)
-          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+        const loaded = user.isAdmin
+          ? (await authedFetch<{ shipments?: Shipment[] }>('/api/admin/shipments')).shipments ?? []
+          : (await getDocs(query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100))))
+            .docs.map(mapShipmentDoc);
         setShipments(loaded);
       } catch (error) {
         console.error('Failed to load shipments', error);
@@ -3766,29 +3759,21 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const shipmentUpdates = sanitizeDeep({
-      status,
-      trackingNumber: sanitizedTrackingNumber,
-      updatedAt: serverTimestamp()
-    });
-
     try {
-      await setDoc(doc(db, 'shipments', shipmentId), shipmentUpdates, { merge: true });
+      await authedFetch('/api/admin/shipments', {
+        method: 'PATCH',
+        body: JSON.stringify({ shipmentId, status, trackingNumber: sanitizedTrackingNumber })
+      });
     } catch (error) {
-      console.error('Failed to update shipment status in Firebase', error);
+      console.error('Failed to update shipment status', error);
       return;
     }
 
-    if (userId && inventoryId) {
-      try {
-        await setDoc(doc(db, 'users', userId, 'inventory', inventoryId), {
-          status,
-          trackingNumber: sanitizedTrackingNumber
-        }, { merge: true });
-      } catch (error) {
-        console.error('Failed to update inventory shipment status in Firebase', error);
-      }
-    }
+    setShipments((prev) => prev.map((shipment) =>
+      shipment.id === shipmentId
+        ? { ...shipment, status, trackingNumber: sanitizedTrackingNumber || shipment.trackingNumber, updatedAt: Date.now() }
+        : shipment
+    ));
 
     setUsers((prev) =>
       prev.map((u) => {
@@ -3816,28 +3801,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      await setDoc(doc(db, 'shipments', shipmentId), {
-        status: 'cancelled',
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+      await authedFetch('/api/admin/shipments', {
+        method: 'PATCH',
+        body: JSON.stringify({ shipmentId, status: 'cancelled' })
+      });
     } catch (error) {
-      console.error('Failed to cancel shipment in Firebase', error);
+      console.error('Failed to cancel shipment', error);
       return;
     }
 
-    if (userId && inventoryId) {
-      try {
-        await setDoc(doc(db, 'users', userId, 'inventory', inventoryId), {
-          status: 'available',
-          shipmentId: deleteField(),
-          shipmentBatchId: deleteField(),
-          trackingNumber: deleteField(),
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-      } catch (error) {
-        console.error('Failed to restore inventory after shipment cancellation', error);
-      }
-    }
+    setShipments((prev) => prev.map((shipment) =>
+      shipment.id === shipmentId
+        ? { ...shipment, status: 'cancelled', updatedAt: Date.now() }
+        : shipment
+    ));
 
     setUsers((prev) =>
       prev.map((u) => {
