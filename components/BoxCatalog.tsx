@@ -554,7 +554,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
             </button>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-start gap-2">
             {[...CATEGORY_ORDER, ...categories.map((category) => category.id).filter((id) => !CATEGORY_ORDER.includes(id))].map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
@@ -563,7 +563,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-[18px] py-2.5 text-[13.5px] font-bold tracking-[0.2px] transition ${
+                  className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
                       ? 'border-[#5b6bf5] bg-[#5b6bf5] text-[#f5f6ff]'
                       : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44] hover:text-[#f2f2f5]'
@@ -574,18 +574,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       <img
                         src={cat.iconClass}
                         alt={cat.title}
-                        className="h-4 w-4 shrink-0 object-contain"
+                        className="h-9 w-9 shrink-0 object-contain sm:h-11 sm:w-11"
                         loading="lazy"
                         decoding="async"
                       />
-                      <span>{cat.title}</span>
+                      <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{cat.title}</span>
                     </>
                   ) : cat.id !== 'all' && cat.iconClass ? (
                     <>
-                      <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(cat.iconClass)} text-sm`} />
-                      <span>{cat.title}</span>
+                      <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(cat.iconClass)} text-2xl sm:text-3xl`} />
+                      <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{cat.title}</span>
                     </>
-                  ) : <span>{cat.title}</span>}
+                  ) : <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">{cat.title}</span>}
                 </button>
               );
             })}
