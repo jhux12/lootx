@@ -6,7 +6,7 @@ import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
 import { getBoxSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
-import { getBoxTags, normalizeBoxTag } from '../utils/boxTags';
+import { getBoxTags, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
@@ -252,7 +252,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     return Array.from(counts.entries())
       .map(([id, count]) => ({
         id,
-        title: id
+        title: stripeSettings.boxTagLabels[id] || id
           .split(/[-_\s]+/)
           .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
           .join(' '),
@@ -260,7 +260,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         count
       }))
       .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
-  }, [catalogModels, stripeSettings.boxTagIcons]);
+  }, [catalogModels, stripeSettings.boxTagIcons, stripeSettings.boxTagLabels]);
 
   // Filter from the controlled input value directly. Deferring this value made
   // the visible catalog lag behind what a visitor had typed.
@@ -555,7 +555,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             </button>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
             <div className="flex shrink-0 items-center gap-2">
-            {CATEGORY_ORDER.map((id) => {
+            {[...CATEGORY_ORDER, ...categories.map((category) => category.id).filter((id) => !CATEGORY_ORDER.includes(id))].map((id) => {
               const cat = id === 'all' ? { id: 'all', title: 'All' } : categories.find((entry) => entry.id === id);
               if (!cat) return null;
               const isActive = activeCategory === cat.id;
@@ -578,6 +578,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                         loading="lazy"
                         decoding="async"
                       />
+                      <span>{cat.title}</span>
+                    </>
+                  ) : cat.id !== 'all' && cat.iconClass ? (
+                    <>
+                      <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(cat.iconClass)} text-sm`} />
                       <span>{cat.title}</span>
                     </>
                   ) : <span>{cat.title}</span>}

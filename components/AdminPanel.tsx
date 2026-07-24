@@ -913,11 +913,14 @@ export const AdminPanel: React.FC = () => {
   const boxTagOptions = useMemo(() => boxTagStats.map((entry) => entry.tag), [boxTagStats]);
 
   const [boxTagIconsDraft, setBoxTagIconsDraft] = useState<Record<string, string>>(stripeSettings.boxTagIcons);
+  const [boxTagLabelsDraft, setBoxTagLabelsDraft] = useState<Record<string, string>>(stripeSettings.boxTagLabels);
+  const [customBoxTag, setCustomBoxTag] = useState('');
   const [boxTagIconsNotice, setBoxTagIconsNotice] = useState(false);
 
   useEffect(() => {
       setBoxTagIconsDraft(stripeSettings.boxTagIcons);
-  }, [stripeSettings.boxTagIcons]);
+      setBoxTagLabelsDraft(stripeSettings.boxTagLabels);
+  }, [stripeSettings.boxTagIcons, stripeSettings.boxTagLabels]);
 
   // --- DELETE CONFIRMATION STATE ---
   const [boxToDelete, setBoxToDelete] = useState<string | null>(null);
@@ -1737,10 +1740,22 @@ export const AdminPanel: React.FC = () => {
 
       updateStripeSettings({
           ...stripeSettings,
-          boxTagIcons: normalized
+          boxTagIcons: normalized,
+          boxTagLabels: Object.fromEntries(
+              Object.entries(boxTagLabelsDraft)
+                  .map(([tag, label]) => [tag.trim().toLowerCase(), String(label).trim()] as const)
+                  .filter(([tag, label]) => tag.length > 0 && label.length > 0)
+          )
       });
       setBoxTagIconsNotice(true);
       window.setTimeout(() => setBoxTagIconsNotice(false), 3000);
+  };
+
+  const addCustomBoxTag = () => {
+      const tag = customBoxTag.trim().toLowerCase().replace(/\s+/g, '-');
+      if (!tag) return;
+      setBoxTagLabelsDraft((previous) => ({ ...previous, [tag]: previous[tag] || tag }));
+      setCustomBoxTag('');
   };
 
   const handleUploadTagSvg = async (tag: string, file: File | null) => {
@@ -4384,23 +4399,40 @@ export const AdminPanel: React.FC = () => {
                                 <div className="mt-5 rounded-xl border border-white/10 bg-[#0b0e14] p-3 sm:p-4">
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
-                                            <h4 className="text-sm font-semibold text-white">Tag Icon Editor</h4>
-                                            <p className="text-[11px] text-gray-400">Assign either a Font Awesome icon class or upload an SVG icon for each category tag.</p>
+                                            <h4 className="text-sm font-semibold text-white">Category tag editor</h4>
+                                            <p className="text-[11px] text-gray-400">Set a custom label and either a Font Awesome class or SVG icon for every box tag.</p>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={handleSaveBoxTagIcons}
                                             className="w-full rounded-lg bg-[#205DD7] px-3 py-2 text-xs font-bold text-white hover:bg-[#1f6bea] sm:w-auto"
                                         >
-                                            Save tag icons
+                                            Save tag settings
                                         </button>
                                     </div>
-                                    {boxTagIconsNotice && <p className="mb-3 text-xs text-green-400">Tag icons saved.</p>}
-                                    {boxTagStats.length === 0 ? (
+                                    {boxTagIconsNotice && <p className="mb-3 text-xs text-green-400">Tag settings saved.</p>}
+                                    <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+                                        <Input
+                                            type="text"
+                                            value={customBoxTag}
+                                            onChange={(event) => setCustomBoxTag(event.target.value)}
+                                            onKeyDown={(event) => {
+                                                if (event.key === 'Enter') {
+                                                    event.preventDefault();
+                                                    addCustomBoxTag();
+                                                }
+                                            }}
+                                            placeholder="Add a custom tag, e.g. apparel"
+                                            className="min-w-0 flex-1 bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                                        />
+                                        <button type="button" onClick={addCustomBoxTag} className="rounded-lg border border-gray-600 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-blue-400 hover:text-white">Add tag</button>
+                                    </div>
+                                    {Array.from(new Set([...boxTagStats.map(({ tag }) => tag), ...Object.keys(boxTagLabelsDraft), ...Object.keys(boxTagIconsDraft)])).length === 0 ? (
                                         <p className="text-xs text-gray-400">No tags found on current site boxes yet.</p>
                                     ) : (
                                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                                            {boxTagStats.map(({ tag, count }) => {
+                                            {Array.from(new Set([...boxTagStats.map(({ tag }) => tag), ...Object.keys(boxTagLabelsDraft), ...Object.keys(boxTagIconsDraft)])).sort().map((tag) => {
+                                                const count = boxTagStats.find((entry) => entry.tag === tag)?.count ?? 0;
                                                 const iconClass = boxTagIconsDraft[tag] ?? '';
                                                 return (
                                                     <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
@@ -4415,6 +4447,14 @@ export const AdminPanel: React.FC = () => {
                                                             className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                                                             value={iconClass}
                                                             onChange={(event) => setBoxTagIconsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
+                                                        />
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="Display label"
+                                                            aria-label={`${tag} display label`}
+                                                            className="mt-2 w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                                                            value={boxTagLabelsDraft[tag] ?? ''}
+                                                            onChange={(event) => setBoxTagLabelsDraft((prev) => ({ ...prev, [tag]: event.target.value }))}
                                                         />
                                                         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                                                             <input
