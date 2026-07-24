@@ -274,7 +274,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabPublishFeeCoins: 0,
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
-  boxTagIcons: {}
+  boxTagIcons: {},
+  boxTagLabels: {}
 };
 
 
@@ -359,6 +360,14 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
             .filter(([tag, iconClass]) => typeof tag === 'string' && typeof iconClass === 'string')
             .map(([tag, iconClass]) => [tag.trim().toLowerCase(), iconClass.trim().replace(/\s+/g, ' ')])
             .filter(([tag, iconClass]) => tag.length > 0 && iconClass.length > 0)
+        )
+      : {},
+    boxTagLabels: settings.boxTagLabels && typeof settings.boxTagLabels === 'object'
+      ? Object.fromEntries(
+          Object.entries(settings.boxTagLabels)
+            .filter(([tag, label]) => typeof tag === 'string' && typeof label === 'string')
+            .map(([tag, label]) => [tag.trim().toLowerCase(), label.trim()])
+            .filter(([tag, label]) => tag.length > 0 && label.length > 0)
         )
       : {}
   };

@@ -209,6 +209,7 @@ export interface StripeSettings {
   caseLabSellBackPercent: number;
   caseLabVisibleBoxIds: string[];
   boxTagIcons: Record<string, string>;
+  boxTagLabels: Record<string, string>;
 }
 
 export interface InventoryItem extends CaseItem {
