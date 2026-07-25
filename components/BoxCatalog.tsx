@@ -549,9 +549,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
           <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button type="button" onClick={() => setIsSortOpen(true)} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[#24242c] bg-[#131318] px-3.5 py-2.5 text-[13.5px] font-bold text-[#e6e6ea] transition hover:border-[#3a3a44]" aria-haspopup="dialog" aria-expanded={isSortOpen}>
-              <ListFilter className="h-[15px] w-[15px] text-[#9a9aa8]" />
-              {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
+            <button type="button" onClick={() => setIsSortOpen(true)} className="flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border border-[#24242c] bg-[#131318] p-1.5 text-center text-[#c8c8d2] transition hover:border-[#3a3a44] hover:text-[#f2f2f5] sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+              <ListFilter className="h-6 w-6 text-[#9a9aa8] sm:h-7 sm:w-7" aria-hidden="true" />
+              <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
+                {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
+              </span>
             </button>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
             <div className="flex shrink-0 items-start gap-2">
