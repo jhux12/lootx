@@ -11,8 +11,15 @@ import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
 import { getAttribution, getGaClientId, trackBeginCheckout, trackEvent as trackGaEvent } from '../services/analytics';
-import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../firebase';
 
+const COMMUNITY_PULL_FALLBACK_IMAGES = [
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/live-community-submissions%2Fhpu7GXqOSdULbP9bzbesU809a4F2-1784085781459-screenshot-2026-07-14-230848.png?alt=media&token=7cc76521-2284-487f-9298-2178db573f49',
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Stories%2FScreenshot%202026-05-29%20at%205.07.00%E2%80%AFPM.png?alt=media&token=8225097c-81b3-40b9-a2e8-8473a14027a9',
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FScreenshot%202026-07-21%20at%204.33.37%E2%80%AFPM.png?alt=media&token=7f5f05c9-8fbb-441f-9016-aa156b7edb95',
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/live-community%2F1779746774126-screenshot-2026-05-25-at-6.04.59-pm.png?alt=media&token=b594ddd1-228a-4c24-86b5-1129c6b1abb9'
+];
 
 const generateCheckoutEventId = () => {
   const random = Math.random().toString(36).slice(2, 10);
@@ -29,8 +36,7 @@ export const TopUpModal: React.FC = () => {
     coinPackagesLoading,
     coinPackagesLoaded,
     coinPackagesError,
-    refreshCoinPackages,
-    boxes
+    refreshCoinPackages
   } = useGame();
   const { playSound } = useSound();
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -40,9 +46,30 @@ export const TopUpModal: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [recommendedPackageId, setRecommendedPackageId] = useState<string | null>(null);
   const [showFirstDepositPackages, setShowFirstDepositPackages] = useState(false);
+  const [communityPullImages, setCommunityPullImages] = useState<string[]>(COMMUNITY_PULL_FALLBACK_IMAGES);
   const autoSelectAppliedRef = React.useRef(false);
   const postFreeOfferAutoShownRef = React.useRef(false);
   const isPostFreeBoxFlow = topUpModalIntent?.source === 'post_free_box';
+
+  React.useEffect(() => {
+    if (!isPostFreeBoxFlow) return undefined;
+
+    const communityQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
+    return onSnapshot(communityQuery, (snapshot) => {
+      const images = snapshot.docs
+        .map((entry) => entry.data() as { hidden?: boolean; mediaType?: string; mediaUrl?: string; featured?: boolean; order?: number })
+        .filter((story) => !story.hidden && story.mediaType !== 'video' && Boolean(story.mediaUrl))
+        .sort((a, b) => {
+          if (a.featured !== b.featured) return a.featured ? -1 : 1;
+          return Number(a.order ?? 9999) - Number(b.order ?? 9999);
+        })
+        .map((story) => story.mediaUrl as string)
+        .slice(0, 4);
+      if (images.length) setCommunityPullImages(images);
+    }, () => {
+      // The curated fallback set keeps this trust proof visible if live stories are unavailable.
+    });
+  }, [isPostFreeBoxFlow]);
   const activePackages = useMemo(() => {
     return coinPackages
       .filter((pkg) => pkg.active)
@@ -86,20 +113,6 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   }, [formattedDepositAmount]);
   const totalCoins = (selectedPackage?.totalCoins ?? ((selectedPackage?.coins ?? 0) + (selectedPackage?.bonusCoins ?? 0)));
-  const postFreeOfferBoxes = useMemo(() => {
-    if (!isPostFreeBoxFlow) return [];
-
-    const availableCoins = Math.max(0, Number(totalCoins) || 0);
-    return boxes
-      .filter((box) => (
-        box.isDaily !== true
-        && (box.currencyType ?? 'COIN') === 'COIN'
-        && toCoins(Number(box.price ?? 0), PRICE_UNIT_MODE) > 0
-        && toCoins(Number(box.price ?? 0), PRICE_UNIT_MODE) <= availableCoins
-      ))
-      .sort((a, b) => toCoins(Number(a.price ?? 0), PRICE_UNIT_MODE) - toCoins(Number(b.price ?? 0), PRICE_UNIT_MODE))
-      .slice(0, 3);
-  }, [boxes, isPostFreeBoxFlow, totalCoins]);
   const effectiveRate = priceValue > 0 ? Math.round(totalCoins / priceValue) : null;
   const missingCoins = useMemo(() => {
     const requiredCoins = Number(topUpModalIntent?.requiredCoins ?? 0);
@@ -383,14 +396,16 @@ export const TopUpModal: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-h-0 px-4 py-3 sm:px-5">
-                    {isPostFreeBoxFlow && postFreeOfferBoxes.length > 0 && (
-                      <div className="mb-3 flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2" aria-label="Boxes available with this offer">
-                        <span className="shrink-0 text-xs font-semibold text-slate-300">Enough to open</span>
-                        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 overflow-hidden">
-                          {postFreeOfferBoxes.map((box) => (
-                            <div key={box.id} className="flex min-w-0 max-w-[72px] items-center gap-1.5">
-                              <img src={box.image} alt="" className="h-7 w-7 shrink-0 object-contain" loading="lazy" decoding="async" />
-                              <span className="truncate text-[10px] font-medium text-slate-400">{box.name}</span>
+                    {isPostFreeBoxFlow && (
+                      <div className="mb-3 rounded-xl border border-white/10 bg-[linear-gradient(135deg,rgba(139,92,246,0.12),rgba(255,255,255,0.025))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" aria-label="Real cards shipped to customers">
+                        <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+                          <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white sm:text-xs">Real cards shipped to customers</span>
+                          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wide text-emerald-300">Community pulls</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                          {communityPullImages.map((image, index) => (
+                            <div key={`${image}-${index}`} className="aspect-[4/3] overflow-hidden rounded-lg border border-white/10 bg-[#0d1118] shadow-sm">
+                              <img src={image} alt={`Customer card pull ${index + 1}`} className="h-full w-full object-cover" loading="lazy" decoding="async" />
                             </div>
                           ))}
                         </div>
