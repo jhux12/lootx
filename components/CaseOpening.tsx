@@ -2598,17 +2598,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               <div className="mt-5 grid grid-cols-[0.85fr_auto_0.8fr_auto_1.2fr] items-center rounded-xl border border-white/10 bg-black/20 px-2 py-3 text-center sm:px-3">
                 <div className="min-w-0">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You deposit</p>
-                  <p className="mt-1 text-base font-black text-white sm:text-lg">$20</p>
+                  <p className="mt-1 text-base font-black text-white sm:text-lg">$10</p>
                 </div>
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
                 <div className="min-w-0">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Bonus</p>
-                  <p className="mt-1 text-base font-black text-fuchsia-300 sm:text-lg">+$10</p>
+                  <p className="mt-1 whitespace-nowrap text-sm font-black text-fuchsia-300 sm:text-base">+500 coins</p>
                 </div>
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-xs text-slate-300">›</span>
                 <div className="min-w-0">
                   <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">You receive</p>
-                  <CoinAmount amount={3000} animated={false} className="mt-1 whitespace-nowrap text-sm font-black text-white sm:text-base" iconClassName="h-4 w-4" />
+                  <CoinAmount amount={1500} animated={false} className="mt-1 whitespace-nowrap text-sm font-black text-white sm:text-base" iconClassName="h-4 w-4" />
                 </div>
               </div>
 
@@ -2618,7 +2618,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   onClick={handlePostFreePrimaryAction}
                   className="min-h-[52px] w-full rounded-xl bg-gradient-to-r from-[#4d70ff] via-[#7b55ff] to-[#d63ee9] px-4 py-3 text-sm font-black text-white shadow-[0_10px_26px_rgba(125,71,255,0.38)] transition hover:brightness-110 active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-200"
                 >
-                  Deposit $20 + Get 1,000 Bonus Coins&nbsp; ›
+                  Deposit $10 + Get 500 Bonus Coins&nbsp; ›
                 </button>
                 <button
                   type="button"
