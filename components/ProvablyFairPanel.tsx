@@ -212,7 +212,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Spin a box or use the upgrader first to generate verifiable proof data for your result.</p>
+                  <p className="text-sm text-gray-500">Open a box first to generate verifiable proof data for your result.</p>
                 )}
               </div>
             </div>

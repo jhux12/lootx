@@ -89,20 +89,6 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
   const [leaderboardSettings, setLeaderboardSettings] = useState<LeaderboardPreviewSettings>(defaultLeaderboardSettings);
   const [leaderboardPreview, setLeaderboardPreview] = useState<LeaderboardPreviewEntry[]>([]);
   const [leaderboardLoaded, setLeaderboardLoaded] = useState(false);
-  const topUpgrades = useMemo(() => {
-    const highValueItems = boxes
-      .flatMap((box) => box.items.map((item) => ({ ...item, boxId: box.id })))
-      .sort((a, b) => b.price - a.price)
-      .slice(0, 24);
-
-    return [...highValueItems]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 6)
-      .map((item) => ({
-        ...item,
-        multiplier: `${(1.2 + Math.random() * 8.8).toFixed(2)}x`
-      }));
-  }, [boxes]);
   const topPullCandidates = useMemo(() => {
     return boxes
       .flatMap((box) =>
@@ -174,22 +160,6 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
   return (
     <div className="grid grid-cols-1 gap-7 lg:grid-cols-[1fr_260px]">
       <div className="space-y-8">
-        <section>
-          <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-200/80">Upgrade items</p><h2 className="mt-1 text-2xl font-black tracking-tight">Top Upgrades</h2></div></div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            {topUpgrades.map((upgrade) => (
-              <div key={upgrade.id} className="group min-h-[156px] rounded-xl border border-white/5 bg-[#22282c] p-3 transition-colors duration-200 ease-out hover:border-slate-400/35">
-                <p className="text-xs font-black text-yellow-300">{upgrade.multiplier}</p>
-                <div className="my-3 flex h-[80px] items-center justify-center">
-                  <img src={upgrade.image} alt={upgrade.name} className="max-h-full max-w-full object-contain transition-transform duration-200 ease-out group-hover:scale-105" loading="lazy" decoding="async" width={160} height={160} />
-                </div>
-                <p className="truncate text-xs text-slate-400">{upgrade.name}</p>
-                <CoinAmount amount={Math.round(upgrade.price)} className="mt-1 text-sm font-black text-white" iconClassName="h-4 w-4" />
-              </div>
-            ))}
-          </div>
-        </section>
-
         <section className="rounded-2xl border border-white/[0.06] bg-[#20262b]/72 p-4 shadow-[0_14px_36px_rgba(5,8,12,0.18)] sm:p-5">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>

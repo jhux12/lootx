@@ -36,15 +36,6 @@ const HOME_BANNERS: HomeBanner[] = [
     accent: 'blue'
   },
   {
-    title: 'Upgrade your items',
-    eyebrow: 'Featured on Pullz',
-    description: 'Use the upgrader to chase higher-value rewards from your inventory.',
-    image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/upgrade.png?alt=media&token=41935126-5d8f-4430-ae63-e6e47713e793',
-    cta: 'Try upgrader',
-    view: { type: 'PLINKO' },
-    accent: 'blue'
-  },
-  {
     title: 'Climb the ranks',
     eyebrow: 'Featured on Pullz',
     description: 'Compete for the top spot and track the biggest Pullz players on the leaderboard.',
@@ -195,7 +186,7 @@ export const HomeBanners: React.FC = () => {
         onTouchEnd={handleTouchEnd}
         role="region"
         aria-roledescription="carousel"
-        aria-label="Deposit offer, open, upgrade, and leaderboard highlights"
+        aria-label="Deposit offer, mystery boxes, and leaderboard highlights"
       >
         <div className="relative min-h-[210px] sm:min-h-[250px] lg:min-h-[280px]">
           {banners.map((banner, index) => {

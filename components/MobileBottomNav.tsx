@@ -1,23 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Flame, Home, Trophy, User, X } from 'lucide-react';
+import { Box, Home, Trophy, User, X } from 'lucide-react';
 import { useAuth, useBoxes, useUI } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
 
 type NavItem = {
-  id: 'HOME' | 'BOXES' | 'PLINKO' | 'LEADERBOARD' | 'PROFILE';
+  id: 'HOME' | 'BOXES' | 'LEADERBOARD' | 'PROFILE';
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   iconClassName?: string;
   requiresAuth?: boolean;
 };
 
-const UpgraderIcon: React.FC<{ className?: string }> = ({ className }) => <Flame className={className} aria-hidden="true" />;
 const NAV_ITEMS: NavItem[] = [
   { id: 'HOME', label: 'Home', icon: Home },
   { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'PLINKO', label: 'Upgrader', icon: UpgraderIcon },
   { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
   { id: 'PROFILE', label: 'Profile', requiresAuth: true }
 ];
@@ -129,7 +127,6 @@ export const MobileBottomNav: React.FC = () => {
     if (view.type === 'CASE_OPENING') return 'BOXES';
     if (view.type === 'INVENTORY' || view.type === 'PROFILE') return 'PROFILE';
     if (view.type === 'LEADERBOARD') return 'LEADERBOARD';
-    if (view.type === 'PLINKO') return 'PLINKO';
     if (view.type === 'BOXES') return 'BOXES';
     return 'HOME';
   }, [view.type]);
@@ -168,7 +165,7 @@ export const MobileBottomNav: React.FC = () => {
       aria-label="Primary navigation"
       aria-hidden={isSuppressed || showTopUpModal}
     >
-      <nav className="grid h-full grid-cols-5 items-center gap-1">
+      <nav className="grid h-full grid-cols-4 items-center gap-1">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activeId === item.id;
