@@ -13,7 +13,6 @@ import { storage } from '../firebaseStorage';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { FooterPagesEditor } from './admin/FooterPagesEditor';
-import { UpgraderAdminSection } from './admin/UpgraderAdminSection';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
@@ -132,7 +131,7 @@ const DEFAULT_REWARDS_SETTINGS = {
     top2CoinReward: 3000,
     top3CoinReward: 2000,
     heroImageUrl: '',
-    questRulesText: '[{"id":"open-3-boxes","title":"Unboxing mission","description":"Open 3 boxes today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"upgrade-3-times","title":"Upgrader mission","description":"Use upgrader 3 times today","type":"upgrader_uses","target":3,"rewardCoins":70,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
+    questRulesText: '[{"id":"open-3-boxes","title":"Unboxing mission","description":"Open 3 boxes today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
 };
 
 
@@ -7101,7 +7100,6 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: SETTINGS */}
             {activeTab === 'settings' && (
                 <div className="space-y-6">
-                    <UpgraderAdminSection />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <h3 className="text-lg font-bold text-white mb-4">General Configuration</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

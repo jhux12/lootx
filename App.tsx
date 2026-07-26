@@ -107,9 +107,6 @@ const PollsPage = lazy(() => import('./components/PollsPage').then((module) => (
 const SpinLandingPage = lazy(() => import('./components/SpinLandingPage').then((module) => ({ default: module.SpinLandingPage })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 const CaseOpening = lazy(() => import('./components/CaseOpening').then((module) => ({ default: module.CaseOpening })));
-const UpgraderPage = lazy(() => import('./src/pages/UpgraderPage'));
-const UpgraderSettingsPage = lazy(() => import('./src/pages/admin/UpgraderSettingsPage'));
-const UpgraderTargetsPage = lazy(() => import('./src/pages/admin/UpgraderTargetsPage'));
 const Profile = lazy(() => import('./components/Profile').then((module) => ({ default: module.Profile })));
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
@@ -377,11 +374,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         break;
       case 'INVENTORY':
         trackClarityEvent('view_inventory');
-        break;
-      case 'PLINKO':
-      case 'ADMIN_UPGRADER_SETTINGS':
-      case 'ADMIN_UPGRADER_TARGETS':
-        trackClarityEvent('view_upgrader');
         break;
       case 'BOXES':
       case 'CUSTOM_CREATOR':
@@ -757,28 +749,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             />
           </ErrorBoundary>
         </div>
-      )}
-
-      {view.type === 'PLINKO' && (
-        <div className="w-full">
-          <UpgraderPage />
-        </div>
-      )}
-
-      {view.type === 'ADMIN_UPGRADER_SETTINGS' && (
-        <AdminGate>
-          <div className="w-full">
-            <UpgraderSettingsPage />
-          </div>
-        </AdminGate>
-      )}
-
-      {view.type === 'ADMIN_UPGRADER_TARGETS' && (
-        <AdminGate>
-          <div className="w-full">
-            <UpgraderTargetsPage />
-          </div>
-        </AdminGate>
       )}
 
       {view.type === 'PROFILE' && (

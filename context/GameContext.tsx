@@ -485,11 +485,11 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
   }
 
   if (primary === 'arcade' && secondary === 'plinko') {
-    return { type: 'PLINKO' };
+    return { type: 'HOME' };
   }
 
   if (primary === 'plinko' || primary === 'upgrader') {
-    return { type: 'PLINKO' };
+    return { type: 'HOME' };
   }
 
   if (primary === 'profile') {
@@ -557,14 +557,6 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
 
   if (primary === 'verify') {
     return { type: 'VERIFY_EMAIL' };
-  }
-
-  if (primary === 'admin' && secondary === 'upgrader' && segments[2] === 'targets') {
-    return { type: 'ADMIN_UPGRADER_TARGETS' };
-  }
-
-  if (primary === 'admin' && secondary === 'upgrader') {
-    return { type: 'ADMIN_UPGRADER_SETTINGS' };
   }
 
   if (primary === 'admin') {
