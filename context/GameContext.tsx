@@ -51,6 +51,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { activityStore } from '../src/lib/activity/activityStore';
+import { getCachedDocument } from '../utils/cachedFirestore';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -1769,7 +1770,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const bonusSettingsPath = `settings/${BONUS_SETTINGS_DOC}`;
     console.log('READING FIRESTORE PATH', bonusSettingsPath);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
-    const unsubscribe = onSnapshot(bonusSettingsRef, (snapshot) => {
+    let active = true;
+    void getCachedDocument(bonusSettingsPath, bonusSettingsRef).then((snapshot) => {
+      if (!active) return;
       console.log('SNAPSHOT OK', {
         path: bonusSettingsPath,
         size: 'size' in snapshot ? snapshot.size : undefined
@@ -1777,7 +1780,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!snapshot.exists()) return;
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
-    }, (error) => {
+    }).catch((error) => {
       console.error('SNAPSHOT FAILED', {
         path: bonusSettingsPath,
         code: error?.code,
@@ -1786,7 +1789,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    return () => unsubscribe();
+    return () => { active = false; };
   }, []);
 
   const [stripeSettings, setStripeSettings] = useState<StripeSettings>(() => DEFAULT_STRIPE_SETTINGS);
@@ -1795,14 +1798,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const stripeSettingsPath = `settings/${STRIPE_SETTINGS_DOC}`;
     console.log('READING FIRESTORE PATH', stripeSettingsPath);
     const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
-    const unsubscribe = onSnapshot(stripeSettingsRef, (snapshot) => {
+    let active = true;
+    void getCachedDocument(stripeSettingsPath, stripeSettingsRef).then((snapshot) => {
+      if (!active) return;
       console.log('SNAPSHOT OK', {
         path: stripeSettingsPath,
         size: 'size' in snapshot ? snapshot.size : undefined
       });
       const data = snapshot.data() ?? {};
       setStripeSettings(normalizeStripeSettings(data));
-    }, (error) => {
+    }).catch((error) => {
       console.error('SNAPSHOT FAILED', {
         path: stripeSettingsPath,
         code: error?.code,
@@ -1811,7 +1816,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     });
 
-    return () => unsubscribe();
+    return () => { active = false; };
   }, []);
 
   // 2. Initialize Boxes

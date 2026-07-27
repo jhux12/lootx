@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
+import { getCachedDocument } from '../utils/cachedFirestore';
 
 const STATIC_IMAGE = 'https://pullz.gg/assets/png/pullz-horizontal-dark-2400.png';
 // Search currently opens in-app rather than on a crawlable public route.
@@ -38,7 +39,13 @@ const privateView = (view: ViewState) => ['PROFILE', 'INVENTORY', 'BONUSES', 'QU
 
 export const SeoHead = ({ view }: { view: ViewState }) => {
   const [settings, setSettings] = useState<SeoSettings>(DEFAULT_SEO_SETTINGS);
-  useEffect(() => onSnapshot(doc(db, 'site', 'seo'), snap => setSettings(normalizeSeoSettings(snap.data() as Partial<SeoSettings>)), () => setSettings(DEFAULT_SEO_SETTINGS)), []);
+  useEffect(() => {
+    let active = true;
+    void getCachedDocument('site/seo', doc(db, 'site', 'seo'), 15 * 60_000)
+      .then((snap) => { if (active) setSettings(normalizeSeoSettings(snap.data() as Partial<SeoSettings>)); })
+      .catch(() => { if (active) setSettings(DEFAULT_SEO_SETTINGS); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     const isPrivate = privateView(view); const base = settings.canonicalUrl || DEFAULT_SEO_SETTINGS.canonicalUrl;
     const canonical = isPrivate ? `${base.replace(/\/$/, '')}${window.location.pathname}` : base;

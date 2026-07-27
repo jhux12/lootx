@@ -570,6 +570,8 @@ export default async function handler(req, res) {
 
       responsePayload = {
         ok: true,
+        boxId,
+        boxName: boxData.name ?? 'Mystery Box',
         price,
         priceXP: paidWithXp ? resolvedXpCost : null,
         currencyType: paidWithXp ? 'XP' : currencyType,
@@ -644,6 +646,22 @@ export default async function handler(req, res) {
         xpAwarded: totalXpAward
       });
     });
+
+    // Homepage activity is decorative and intentionally outside the award
+    // transaction: a write failure can never roll back or delay the customer's item.
+    try {
+      await firestore.collection('homepageWins').doc(responsePayload.openId).set({
+        displayName: 'Pullz player',
+        itemName: String(responsePayload.prize?.name ?? 'Mystery item'),
+        itemImageUrl: String(responsePayload.prize?.image ?? ''),
+        boxId: String(responsePayload.boxId ?? requestBoxId ?? ''),
+        boxName: String(responsePayload.boxName ?? 'Mystery Box'),
+        rarity: String(responsePayload.prize?.rarity ?? 'common'),
+        timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (recentWinError) {
+      console.warn('open-case homepage win write failed', { openId: responsePayload?.openId, message: recentWinError?.message });
+    }
 
 
     try {

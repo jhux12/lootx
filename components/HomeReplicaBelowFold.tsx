@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Trophy } from 'lucide-react';
-import { collection, doc, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { useGame } from '../context/GameContext';
+import { getCachedDocument } from '../utils/cachedFirestore';
 
 type HomeReplicaBelowFoldProps = {
   boxes: MysteryBox[];
@@ -111,11 +112,11 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
   const hasRunningLeaderboard = leaderboardSettings.enabled && (!leaderboardSettings.seasonEndsAt || Date.now() < leaderboardSettings.seasonEndsAt);
 
   useEffect(() => {
-    return onSnapshot(doc(db, 'settings', 'rewards'), (snapshot) => {
-      setLeaderboardSettings(normalizeLeaderboardSettings(snapshot.data() as Record<string, any> | undefined));
-    }, () => {
-      setLeaderboardSettings(defaultLeaderboardSettings);
-    });
+    let active = true;
+    void getCachedDocument('settings/rewards', doc(db, 'settings', 'rewards'))
+      .then((snapshot) => { if (active) setLeaderboardSettings(normalizeLeaderboardSettings(snapshot.data() as Record<string, any> | undefined)); })
+      .catch(() => { if (active) setLeaderboardSettings(defaultLeaderboardSettings); });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -133,7 +134,9 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
       limit(25)
     );
 
-    return onSnapshot(topQuery, (snapshot) => {
+    let active = true;
+    void getDocs(topQuery).then((snapshot) => {
+      if (!active) return;
       const topThree = snapshot.docs
         .map((entry) => ({
           id: entry.id,
@@ -146,10 +149,12 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
         .slice(0, 3);
       setLeaderboardPreview(topThree);
       setLeaderboardLoaded(true);
-    }, () => {
+    }).catch(() => {
+      if (!active) return;
       setLeaderboardPreview([]);
       setLeaderboardLoaded(true);
     });
+    return () => { active = false; };
   }, [hasRunningLeaderboard, leaderboardSettings.seasonId]);
 
   const topPullz = useMemo(() => {
