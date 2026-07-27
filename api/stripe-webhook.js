@@ -8,7 +8,6 @@ import { recordBalanceChange } from './_lib/balanceAudit.js';
 import { sendGa4Event } from './_lib/ga4.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const GA4_DELIVERY_LEASE_MS = 5 * 60 * 1000;
 
 const readRawBody = async (req) => {
   const chunks = [];
@@ -16,44 +15,6 @@ const readRawBody = async (req) => {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return Buffer.concat(chunks);
-};
-
-const sendGa4EventOnce = async ({ eventKey, clientId, name, params }) => {
-  const deliveryRef = firestore.collection('ga4_events').doc(eventKey);
-  const now = Date.now();
-  const claimed = await firestore.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(deliveryRef);
-    const data = snapshot.exists ? snapshot.data() ?? {} : {};
-    if (data.status === 'sent') return false;
-    if (data.status === 'sending' && now - Number(data.claimedAtMs ?? 0) < GA4_DELIVERY_LEASE_MS) {
-      return false;
-    }
-    transaction.set(deliveryRef, {
-      eventName: name,
-      status: 'sending',
-      claimedAtMs: now,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-    return true;
-  });
-
-  if (!claimed) return { skipped: true, reason: 'already_claimed_or_sent' };
-
-  const result = await sendGa4Event({ clientId, name, params });
-  if (result.ok) {
-    await deliveryRef.set({
-      status: 'sent',
-      sentAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  } else {
-    await deliveryRef.set({
-      status: 'failed',
-      lastStatus: result.status ?? null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  }
-  return result;
 };
 
 export default async function handler(req, res) {
@@ -207,12 +168,11 @@ export default async function handler(req, res) {
         const creditSnap = await transaction.get(creditRef);
         if (creditSnap.exists) {
           const existingCredit = creditSnap.data() ?? {};
-          const existingDepositNumber = Math.max(1, Number(existingCredit.depositNumber ?? 1));
           return {
             isFirstDeposit: existingCredit.isFirstDeposit === true,
             newlyCredited: false,
-            signupCreatedAt: Math.max(0, Number(existingCredit.signupCreatedAtMs ?? 0)),
-            previousDepositCount: existingDepositNumber - 1
+            signupCreatedAt: null,
+            previousDepositCount: null
           };
         }
 
@@ -286,8 +246,6 @@ export default async function handler(req, res) {
           currency: sessionCurrency,
           paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null,
           isFirstDeposit,
-          depositNumber: previousDepositCount + 1,
-          signupCreatedAtMs: Number.isFinite(firebaseSignupCreatedAt) ? firebaseSignupCreatedAt : 0,
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
@@ -317,22 +275,27 @@ export default async function handler(req, res) {
     const purchaseValue = Number.isFinite(amountTotal) ? Math.max(0, amountTotal / 100) : 0;
     const eventId = `purchase_${session.id}`;
 
-    // Each verified event has its own retryable delivery record. A failed
-    // Measurement Protocol call can be retried on webhook replay without
-    // resending events that already succeeded.
-    if (gaClientId) {
+    // This record is independent of crediting and makes GA delivery idempotent on webhook replay.
+    if (newlyCredited && gaClientId) {
+      const gaRef = firestore.collection('ga4_events').doc(`purchase_${session.id}`);
       try {
-        const depositNumber = Number(creditedPayment?.previousDepositCount ?? 0) + 1;
-        const params = { transaction_id: session.id, currency: sessionCurrency || 'USD', value: purchaseValue, tax: 0, shipping: 0, payment_type: 'stripe', items: [{ item_id: String(packageId || 'coin_package'), item_name: packageName || 'Coin package', item_category: 'coin_package', price: purchaseValue, quantity: 1 }], coin_amount: baseCoins, bonus_coin_amount: bonusCoins, package_id: packageId || undefined, is_first_purchase: isFirstDeposit, checkout_source: metadata.checkoutSource || 'top_up_modal' };
-        await sendGa4EventOnce({ eventKey: `purchase_${session.id}`, clientId: gaClientId, name: 'purchase', params });
-        await sendGa4EventOnce({ eventKey: `deposit_completed_${session.id}`, clientId: gaClientId, name: 'deposit_completed', params: { ...params, deposit_number: depositNumber } });
-        if (depositNumber > 1) await sendGa4EventOnce({ eventKey: `repeat_deposit_${session.id}`, clientId: gaClientId, name: 'repeat_deposit', params: { ...params, deposit_number: depositNumber } });
-        if (depositNumber === 2) await sendGa4EventOnce({ eventKey: `second_purchase_${session.id}`, clientId: gaClientId, name: 'second_purchase', params });
-        if (depositNumber === 3) await sendGa4EventOnce({ eventKey: `third_purchase_${session.id}`, clientId: gaClientId, name: 'third_purchase', params });
-        if (isFirstDeposit) {
-          const signupMs = Number(creditedPayment?.signupCreatedAt ?? 0);
-          const elapsedSeconds = signupMs > 0 ? Math.max(0, Math.floor((Date.now() - signupMs) / 1000)) : undefined;
-          await sendGa4EventOnce({ eventKey: `first_purchase_${session.id}`, clientId: gaClientId, name: 'first_purchase', params: { ...params, days_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 86400), hours_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 3600), minutes_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 60), signup_to_purchase_seconds: elapsedSeconds, first_touch_source: metadata.firstTouchSource || undefined, first_touch_medium: metadata.firstTouchMedium || undefined, first_touch_campaign: metadata.firstTouchCampaign || undefined, first_touch_content: metadata.firstTouchContent || undefined } });
+        const shouldSend = await firestore.runTransaction(async (transaction) => {
+          if ((await transaction.get(gaRef)).exists) return false;
+          transaction.set(gaRef, { createdAt: admin.firestore.FieldValue.serverTimestamp(), transactionId: session.id }); return true;
+        });
+        if (shouldSend) {
+          const depositNumber = Number(creditedPayment?.previousDepositCount ?? 0) + 1;
+          const params = { transaction_id: session.id, currency: 'USD', value: purchaseValue, tax: 0, shipping: 0, payment_type: 'stripe', items: [{ item_id: String(packageId || 'coin_package'), item_name: packageName || 'Coin package', item_category: 'coin_package', price: purchaseValue, quantity: 1 }], coin_amount: baseCoins, bonus_coin_amount: bonusCoins, package_id: packageId || undefined, is_first_purchase: isFirstDeposit, checkout_source: metadata.checkoutSource || 'top_up_modal' };
+          await sendGa4Event({ clientId: gaClientId, name: 'purchase', params });
+          await sendGa4Event({ clientId: gaClientId, name: 'deposit_completed', params: { ...params, deposit_number: depositNumber } });
+          if (depositNumber > 1) await sendGa4Event({ clientId: gaClientId, name: 'repeat_deposit', params: { ...params, deposit_number: depositNumber } });
+          if (depositNumber === 2) await sendGa4Event({ clientId: gaClientId, name: 'second_purchase', params });
+          if (depositNumber === 3) await sendGa4Event({ clientId: gaClientId, name: 'third_purchase', params });
+          if (isFirstDeposit) {
+            const signupMs = Number(creditedPayment?.signupCreatedAt ?? 0);
+            const elapsedSeconds = signupMs > 0 ? Math.max(0, Math.floor((Date.now() - signupMs) / 1000)) : undefined;
+            await sendGa4Event({ clientId: gaClientId, name: 'first_purchase', params: { ...params, days_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 86400), hours_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 3600), minutes_since_signup: elapsedSeconds === undefined ? undefined : Math.floor(elapsedSeconds / 60), signup_to_purchase_seconds: elapsedSeconds, first_touch_source: metadata.firstTouchSource || undefined, first_touch_medium: metadata.firstTouchMedium || undefined, first_touch_campaign: metadata.firstTouchCampaign || undefined, first_touch_content: metadata.firstTouchContent || undefined } });
+          }
         }
       } catch (gaError) { console.error('stripe-webhook GA4 event error', { eventId, message: gaError?.message }); }
     }

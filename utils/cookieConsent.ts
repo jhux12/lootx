@@ -22,48 +22,5 @@ export const hasAnalyticsConsent = (value?: CookieConsentValue | null) => value 
 export const hasMarketingConsent = (value?: CookieConsentValue | null) => value === 'all';
 
 export const loadMarketingScripts = () => {
-  if (typeof window === 'undefined' || !hasMarketingConsent(getCookieConsent())) return false;
-  const pixelId = import.meta.env.VITE_META_PIXEL_ID?.trim();
-  if (!pixelId) return false;
-
-  type MetaPixelQueue = ((...args: unknown[]) => void) & {
-    callMethod?: (...args: unknown[]) => void;
-    queue: unknown[][];
-    loaded: boolean;
-    version: string;
-    push: MetaPixelQueue;
-  };
-  const pixelWindow = window as Window & typeof globalThis & {
-    fbq?: MetaPixelQueue;
-    _fbq?: MetaPixelQueue;
-  };
-
-  if (pixelWindow.fbq) return false;
-
-  const fbq = function (...args: unknown[]) {
-    if (fbq.callMethod) {
-      fbq.callMethod(...args);
-    } else {
-      fbq.queue.push(args);
-    }
-  } as MetaPixelQueue;
-  fbq.push = fbq;
-  fbq.loaded = true;
-  fbq.version = '2.0';
-  fbq.queue = [];
-  pixelWindow.fbq = fbq;
-  pixelWindow._fbq = fbq;
-
-  fbq('init', pixelId);
-  fbq('consent', 'grant');
-  fbq('track', 'PageView');
-
-  if (!document.querySelector('script[data-pullz-meta-pixel]')) {
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = 'https://connect.facebook.net/en_US/fbevents.js';
-    script.dataset.pullzMetaPixel = 'true';
-    document.head.appendChild(script);
-  }
-  return true;
+  // Ads will be enabled later
 };
