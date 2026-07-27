@@ -274,7 +274,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
     let cancelled = false;
     setIsLiveWinsLoading(true);
 
-    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
+    // Mobile, low-power and data-saver users get a smaller representative set.
+    // This avoids eagerly downloading item metadata and images for eight boxes.
+    const detailLimit = performanceMode.isMobile || performanceMode.isLowPower || performanceMode.isDataSaver ? 4 : 8;
+    void Promise.all(boxes.slice(0, detailLimit).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
       .then((details) => {
         if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
       })
@@ -286,7 +289,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       });
 
     return () => { cancelled = true; };
-  }, [boxes]);
+  }, [boxes, performanceMode.isDataSaver, performanceMode.isLowPower, performanceMode.isMobile]);
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
@@ -319,7 +322,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
     let cancelled = false;
     const loadReviews = () => {
       if (cancelled) return;
-      const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
+      const reviewLimit = performanceMode.isMobile || performanceMode.isLowPower || performanceMode.isDataSaver ? 6 : 12;
+      const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(reviewLimit));
       unsubscribe = onSnapshot(reviewsQuery, (snapshot) => {
       const nextReviews = snapshot.docs
         .map((entry) => ({ id: entry.id, ...(entry.data() as Omit<MobileCustomerReview, 'id'> & { hidden?: boolean; mediaUrl?: string }) }))
@@ -361,7 +365,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         observer.disconnect();
         loadReviews();
       }
-    }, { rootMargin: '450px 0px' });
+    }, { rootMargin: performanceMode.isDataSaver ? '100px 0px' : '450px 0px' });
     observer.observe(reviewsSection);
 
     return () => {
@@ -369,7 +373,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       observer.disconnect();
       unsubscribe?.();
     };
-  }, []);
+  }, [performanceMode.isDataSaver, performanceMode.isLowPower, performanceMode.isMobile]);
 
   const heroSlides = [...(showFreeBoxSlide ? ['free-box'] : []), ...(promoBox ? ['promo-box'] : []), 'deposit-match', 'hot-picks'];
   const activeHero = heroSlides[activeHeroSlide];
