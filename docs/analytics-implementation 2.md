@@ -4,13 +4,12 @@
 
 ```
 Landing → page_view → sign_up_start → sign_up → free_box_claim → free_box_to_checkout
-    → coin_package_view → coin_package_select → begin_checkout → [Stripe hosted Checkout]
-    → checkout_return | checkout_abandoned | checkout_failed → verified webhook → purchase
+    → begin_checkout → [Stripe hosted Checkout] → verified webhook → purchase
     → first_purchase | deposit_completed | repeat_deposit → box_open_start → box_open
     → item_won → item_kept | sell_back → shipping_start → shipping_requested
 ```
 
-`services/analytics.ts` is the only GA4 browser installation. It is consent-gated by the existing `cookieConsent=all` setting, injects `gtag.js` once, manually tracks logical SPA page views, rejects non-allowlisted names, removes PII-keyed fields, and session-deduplicates operation events. Page views use a short duplicate window so React rerenders do not double-fire while legitimate repeat navigation is still measured. Vercel Analytics and Meta Pixel are separate installations.
+`services/analytics.ts` is the only GA4 browser installation. It is consent-gated by the existing `cookieConsent=all` setting, injects `gtag.js` once, manually tracks logical SPA page views, rejects non-allowlisted names, removes PII-keyed fields, and session-deduplicates operation events. Vercel Analytics and Meta Pixel existed before this work and are not GA4 installations.
 
 Client responsibilities are discovery/intent and successful UI actions. Server responsibilities are payment truth: `api/stripe-webhook.js` verifies Stripe signatures, credits the ledger, atomically records a GA idempotency marker, then calls Measurement Protocol. No client path sends GA4 `purchase`.
 
@@ -19,12 +18,8 @@ Client responsibilities are discovery/intent and successful UI actions. Server r
 | Variable | Scope | Purpose |
 | --- | --- | --- |
 | `VITE_GA4_MEASUREMENT_ID` | browser | GA4 tag measurement ID |
-| `VITE_META_PIXEL_ID` | browser | consent-gated Meta Pixel ID |
 | `GA4_MEASUREMENT_ID` | server | Measurement Protocol measurement ID |
 | `GA4_API_SECRET` | server | Measurement Protocol secret; **never** `VITE_` prefixed |
-| `META_PIXEL_ID` | server | Meta CAPI dataset/pixel ID |
-| `META_CAPI_TOKEN` | server | Meta CAPI access token |
-| `META_TEST_EVENT_CODE` | server | optional Meta Test Events code; remove after QA |
 | `VITE_APP_ENV` | browser | set `production` to disable automatic debug mode |
 
 No email, address, phone, username, raw Firebase UID, customer object, or Stripe customer ID is sent. Product `item_name`/`box_name` are permitted ecommerce fields. URLs are reduced to origin/path. `user_id` is intentionally disabled until a consent-approved pseudonymous identity exists. Legal/privacy copy should disclose consented GA4 and local first/last-touch storage; it was not silently changed.
@@ -48,20 +43,18 @@ Coin-to-dollar conversion is centralized in `utils/economy.ts` and uses the same
 | `box_open`, `item_won` | authoritative response/inventory creation | operation ID, box/item/balance values |
 | `sell_back`, `item_kept` | successful sell or keep resolution | item and safe value fields |
 | `free_box_to_checkout` | Checkout Session after post-free-box flow | package/session ID |
-| `coin_package_view`, `coin_package_select` | top-up package impression and deliberate selection | package, USD price, coin/bonus amounts, source |
 | `begin_checkout` | Checkout Session returned, before redirect | USD package ecommerce item, coins, source |
-| `checkout_return` | Stripe return URL only, non-revenue | success/cancel status and session |
-| `checkout_abandoned` | explicit Stripe cancel return | session/package/source and elapsed seconds |
-| `checkout_failed` | session creation, Stripe initialization, or redirect failure | failure stage and safe checkout fields |
+| `checkout_return` | return URL only, non-revenue | status/session |
 | `purchase`, `first_purchase` | verified Stripe webhook only | transaction ID, Stripe USD value, package/coins |
 | `deposit_completed`, `repeat_deposit`, `second_purchase`, `third_purchase` | verified webhook only | trusted deposit number and purchase fields |
 | `shipping_start`, `shipping_requested` | selected items / server shipment success | count, value, cost, safe shipment ID |
+| `checkout_abandoned` | helper reserved for a future durable server timeout workflow; **not currently fired** | must use Checkout Session state, never a timer alone |
 
 First purchase includes `days_since_signup`, `hours_since_signup`, `minutes_since_signup`, and `signup_to_purchase_seconds`, calculated only from Firebase Admin account `creationTime` and server receipt time.
 
 ## Deduplication and validation
 
-Browser IDs are persisted in `sessionStorage`, so box views fire once per box per browser session despite rerenders/Strict Mode and fire again next session. Open, item, resolution, checkout, and shipping events use authoritative operation/session/inventory identifiers. Each webhook GA4 event uses its own retryable `ga4_events` delivery record. A short delivery lease blocks concurrent webhook attempts, success is recorded only after Measurement Protocol responds successfully, and failed calls remain retryable on webhook replay. Purchase events keep the Stripe Session ID as `transaction_id`.
+Browser IDs are persisted in `sessionStorage`, so box views fire once per box per browser session despite rerenders/Strict Mode and fire again next session. Open, item, resolution, checkout, and shipping events use authoritative operation/session/inventory identifiers. Webhook purchase delivery uses `ga4_events/purchase_<Stripe session>` in a Firestore transaction; replayed Stripe webhooks cannot create another GA event.
 
 The analytics abstraction validates event names, strips undefined/PII fields, sets DebugView payloads only in debug mode, and logs event name, ISO timestamp, dedupe key, sanitized payload, and skip reason. Measurement Protocol IDs and API secrets are never logged. Automated checks should assert allowed names, sanitizer behavior, session dedupe, operation dedupe, and webhook replay idempotency before expanding the funnel.
 
@@ -76,9 +69,9 @@ The analytics abstraction validates event names, strips undefined/PII fields, se
 ### Troubleshooting and common mistakes
 
 * **No events:** verify consent and `VITE_GA4_MEASUREMENT_ID`; do not add Firebase Analytics/GTM as a second GA4 path.
-* **No server purchase:** verify server-only `GA4_MEASUREMENT_ID`/`GA4_API_SECRET`, the signed webhook, and the base `_ga` cookie client ID captured before redirect. The `_ga_<measurement-id>` cookie is session state and must not be used as `client_id`. Cookie-blocked users intentionally have no Measurement Protocol client ID.
+* **No server purchase:** verify server-only `GA4_MEASUREMENT_ID`/`GA4_API_SECRET`, the signed webhook, and a GA cookie client ID captured before redirect. Cookie-blocked users intentionally have no Measurement Protocol client ID.
 * **Duplicate revenue:** never send `purchase` from a success page; investigate the Firestore marker before manually replaying a webhook.
 * **Incorrect currency:** do not use coin labels as dollars or a browser package price as confirmed revenue.
-* **Abandonment:** the current event means an explicit return through Stripe's cancel URL. Do not treat modal close, a hidden tab, or a client timer as abandonment. Passive expiry requires a future server-side Checkout Session status check.
+* **Abandonment:** do not emit it on modal close or a client timer. Implement it only after a server-side Checkout Session expiry/state check.
 
 Files: `services/analytics.ts`, `utils/economy.ts`, Checkout/Stripe APIs, funnel components/context, `.env.example`.

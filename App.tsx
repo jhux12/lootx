@@ -20,6 +20,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CookieConsentToast } from './components/CookieConsentToast';
 import { getCookieConsent, hasAnalyticsConsent } from './utils/cookieConsent';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
+import { clearPendingCheckout, getPendingCheckout } from './services/checkoutTracking';
 
 type TawkApi = {
   hideWidget?: () => void;
@@ -367,6 +368,46 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [view.type]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('topup');
+    if (status !== 'success' && status !== 'cancel') return;
+
+    const pending = getPendingCheckout();
+    const sessionId = params.get('session_id') || pending?.sessionId;
+    trackGaEvent('checkout_return', {
+      checkout_status: status,
+      checkout_session_id: sessionId || undefined,
+      package_id: pending?.packageId,
+      checkout_source: pending?.source
+    }, `${status}:${sessionId || 'unknown'}`);
+
+    if (status !== 'cancel') return;
+
+    trackGaEvent('checkout_abandoned', {
+      abandonment_reason: 'stripe_cancel_return',
+      checkout_session_id: sessionId || undefined,
+      package_id: pending?.packageId,
+      currency: pending?.currency,
+      value: pending?.value,
+      checkout_source: pending?.source,
+      elapsed_seconds: pending?.startedAt
+        ? Math.max(0, Math.floor((Date.now() - pending.startedAt) / 1000))
+        : undefined
+    }, sessionId || 'unknown');
+    clearPendingCheckout(sessionId);
+
+    params.delete('topup');
+    params.delete('session_id');
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`
+    );
+  }, []);
+
+  useEffect(() => {
     if (performanceMode.isLowPower) return;
     switch (view.type) {
       case 'CASE_OPENING':
@@ -416,8 +457,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('topup') !== 'success') return;
-
-    trackGaEvent('checkout_return', { checkout_status: 'success' }, params.get('session_id') || undefined);
 
     const sessionId = params.get('session_id');
     if (!sessionId || trackedPurchaseSessionsRef.current.has(sessionId)) return;
@@ -470,13 +509,6 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           content_type: 'product',
           num_items: 1
         };
-        if (user.email) {
-          purchaseEventData.em = user.email;
-        }
-        if (user.id) {
-          purchaseEventData.external_id = user.id;
-        }
-
         let markPurchaseTracked = false;
         let markFirstDepositTracked = false;
 
@@ -536,6 +568,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
           markFirstDepositTracked;
 
         if (purchaseComplete && firstDepositComplete) {
+          clearPendingCheckout(sessionId);
           const nextParams = new URLSearchParams(window.location.search);
           nextParams.delete('topup');
           nextParams.delete('session_id');
