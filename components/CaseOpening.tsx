@@ -50,10 +50,10 @@ interface RevealData {
   rotatedAt: number;
 }
 
-const DESKTOP_CARD_WIDTH = 170;
-const DESKTOP_CARD_HEIGHT = 210;
+const DESKTOP_CARD_WIDTH = 196;
+const DESKTOP_CARD_HEIGHT = 232;
 const DESKTOP_GAP_WIDTH = 6;
-const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 240;
+const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 264;
 
 // Spinner tuning constants (kept centralized so motion can be adjusted safely).
 const SPINNER_MOTION = {
@@ -2124,7 +2124,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     </div>
 
         {/* SPINNER AREA */}
-        <div className="relative mb-8 w-full overflow-visible p-0">
+        <div className="relative mb-3 w-full overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_28%,rgba(111,77,255,0.16),transparent_42%),linear-gradient(180deg,rgba(17,24,39,0.8),rgba(8,12,20,0.35))] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:mb-5">
 
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
@@ -2144,7 +2144,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden"
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {isSpinnerAssetsLoading && (
@@ -2173,6 +2173,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
                 ></i>
+
+                {/* A fixed selection frame makes the winning position unmistakable. */}
+                <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)]" aria-hidden="true">
+                  <span className="absolute -bottom-1 left-1/2 h-2.5 w-10 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
+                </div>
 
                 {/* The Moving Reel */}
                 <div
@@ -2217,7 +2222,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[122px] w-[122px]' : 'h-[132px] w-[132px]'}`}>
+                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[154px] w-[154px] sm:h-[170px] sm:w-[170px]' : 'h-[170px] w-[170px]'}`}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2239,7 +2244,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Action Bar */}
-            <div className="relative z-20 mt-4 flex items-center justify-center gap-3 bg-transparent px-3 pb-4 pt-3 sm:mt-6 sm:px-4">
+            <div className="relative z-20 mt-1 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-4 pt-3 sm:mt-2 sm:gap-3 sm:px-4">
                  <button
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
@@ -2511,22 +2516,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => void handleShareUnboxing()}
-                      className="h-12 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/20 sm:h-14 sm:min-w-[160px] sm:flex-none"
-                    >
-                      <span className="inline-flex items-center justify-center gap-2">
-                        <Share2 className="h-4 w-4" />
-                        Share
-                      </span>
+                  <div className="flex flex-col gap-2.5">
+                    <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
+                      <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
                     </button>
                     {wonItem.redeemable !== false && (
                       <button
                         onClick={handleSell}
                         disabled={isSellingItem}
-                        className="h-16 flex-1 rounded-lg border border-emerald-400/40 bg-emerald-500/20 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30 disabled:opacity-60 sm:h-14 sm:rounded-xl"
+                        className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
                       >
                         <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
                           <Wallet className="h-4 w-4 flex-none" />
@@ -2534,7 +2532,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                             'Selling item...'
                           ) : (
                             <>
-                              <span>Quick Sell</span>
+                              <span>Sell for</span>
                               <CoinAmount
                                 amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
                                 formatOptions={{ maximumFractionDigits: 0 }}
@@ -2546,8 +2544,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         </span>
                       </button>
                     )}
-                    <button onClick={handleKeep} className="h-16 rounded-lg sm:h-14 sm:rounded-xl flex-1 btn-logo-gradient px-4 text-sm font-bold text-white">
-                      <span className="inline-flex items-center gap-2 rounded-md px-3 py-2 sm:px-0 sm:py-0"><Backpack className="h-4 w-4 flex-none" />Add to Inventory</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleShareUnboxing()}
+                      className="mx-auto min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
                     </button>
                   </div>
                 )}
@@ -2644,7 +2646,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
         {/* Box Contents */}
-        <div className="mt-12 border-t border-white/10 bg-transparent py-8 sm:py-10">
+        <div className="mt-6 border-t border-white/10 bg-transparent py-8 sm:mt-8 sm:py-10">
             <div className="mb-6 flex items-center gap-3 sm:gap-4">
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center sm:h-28 sm:w-28" aria-hidden="true">
                   <BlurImage
@@ -2664,10 +2666,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         Drop rate
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[9px] font-black text-amber-100">i</span>
-                      Not redeemable for coins
-                    </span>
                   </div>
                 </div>
             </div>
@@ -2691,7 +2689,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           <div className="flex h-44 items-center justify-center px-1.5 pb-1 pt-3 sm:h-[248px] sm:px-2 sm:pt-4">
                               <BlurImage src={item.image} alt={item.name} className="h-full max-h-none w-[112%] max-w-none object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.48)] transition-transform duration-300 group-hover:scale-[1.06] sm:w-[118%]" loading="lazy" width={240} height={280} staticRender={reduceMobileEffects} retryOnError={!reduceMobileEffects} />
                               {item.redeemable === false && (
-                                <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Not redeemable for coins" title="Not redeemable for coins">
+                                <span className="absolute right-2 top-2 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300/60 bg-amber-500/20 text-[11px] font-black text-amber-100" aria-label="Special item" title="Special item">
                                   i
                                 </span>
                               )}
