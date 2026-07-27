@@ -4,7 +4,6 @@ import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import googleLogo from '../assets/google-logo.svg';
-import appleLogo from '../assets/apple-logo.svg';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
@@ -17,7 +16,7 @@ const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Account ready. We sent a verification email for when you are ready to ship items.';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, loginWithApple, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   const fallbackRegisterBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
@@ -44,7 +43,6 @@ export const LoginModal: React.FC = () => {
   });
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
-  const [oauthLoadingProvider, setOAuthLoadingProvider] = useState<'google' | 'apple' | null>(null);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const [emailConfirmationSentTo, setEmailConfirmationSentTo] = useState<string | null>(null);
@@ -123,7 +121,6 @@ export const LoginModal: React.FC = () => {
     setShowOAuthFallback(false);
     setIsLoading(true);
     setIsOAuthLoading(true);
-    setOAuthLoadingProvider('google');
     setUserError(null);
     setMessage('Opening Google sign-in…');
     playSound('click');
@@ -156,29 +153,6 @@ export const LoginModal: React.FC = () => {
     } finally {
       setIsLoading(false);
       setIsOAuthLoading(false);
-      setOAuthLoadingProvider(null);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    if (isOAuthLoading || isLoading || (mode === 'register' && !signupConsent)) return;
-    setIsLoading(true);
-    setIsOAuthLoading(true);
-    setOAuthLoadingProvider('apple');
-    setUserError(null);
-    setMessage('Opening Apple sign-in…');
-    playSound('click');
-    try {
-      if (mode === 'register') setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
-      const result = await loginWithApple(rememberMe);
-      if (result.status === 'error') {
-        setUserError(getAuthErrorMessage(result.message));
-        setMessage('Having trouble? Please try again or use email sign-up.');
-      }
-    } finally {
-      setIsLoading(false);
-      setIsOAuthLoading(false);
-      setOAuthLoadingProvider(null);
     }
   };
 
@@ -425,18 +399,8 @@ export const LoginModal: React.FC = () => {
                   disabled={isLoading || (mode === 'register' && !signupConsent)}
                   className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {oauthLoadingProvider === 'google' ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
-                  {oauthLoadingProvider === 'google' ? 'Opening Google sign-in…' : 'Continue with Google'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleAppleSignIn}
-                  disabled={isLoading || (mode === 'register' && !signupConsent)}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-semibold text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {oauthLoadingProvider === 'apple' ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={appleLogo} alt="" className="h-5 w-5" width={20} height={20} />}
-                  {oauthLoadingProvider === 'apple' ? 'Opening Apple sign-in…' : 'Continue with Apple'}
+                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
+                  {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
                 </button>
 
                 {mode === 'register' && showGoogleRequirementsTooltip && (
