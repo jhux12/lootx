@@ -2462,13 +2462,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const registrationData: Record<string, unknown> = {
       content_name: 'Account Registration',
-      status: true,
-      external_id: firebaseUser.uid
+      status: true
     };
-
-    if (firebaseUser.email) {
-      registrationData.em = firebaseUser.email;
-    }
 
     console.log('[Meta] fbq available:', typeof window !== 'undefined' ? typeof (window as any).fbq : 'no-window');
     console.log('[Meta] CompleteRegistration payload:', registrationData);

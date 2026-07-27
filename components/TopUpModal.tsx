@@ -10,7 +10,8 @@ import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
-import { getAttribution, getGaClientId, trackBeginCheckout, trackEvent as trackGaEvent } from '../services/analytics';
+import { getAttribution, getGaClientId, trackBeginCheckout, trackCoinPackageSelect, trackCoinPackageView, trackEvent as trackGaEvent } from '../services/analytics';
+import { savePendingCheckout } from '../services/checkoutTracking';
 import { collection, limit, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -49,6 +50,7 @@ export const TopUpModal: React.FC = () => {
   const [communityPullImages, setCommunityPullImages] = useState<string[]>(COMMUNITY_PULL_FALLBACK_IMAGES);
   const autoSelectAppliedRef = React.useRef(false);
   const postFreeOfferAutoShownRef = React.useRef(false);
+  const modalTrackingIdRef = React.useRef(`topup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const isPostFreeBoxFlow = topUpModalIntent?.source === 'post_free_box';
 
   React.useEffect(() => {
@@ -186,6 +188,21 @@ export const TopUpModal: React.FC = () => {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  React.useEffect(() => {
+    if (!coinPackagesLoaded || displayedPackages.length === 0) return;
+    trackCoinPackageView({
+      currency: 'USD',
+      checkout_source: topUpModalIntent?.source ?? 'top_up_modal',
+      is_first_deposit_offer: Boolean(isFirstDepositEligible && showFirstDepositPackages),
+      items: displayedPackages.map((pack) => ({
+        item_id: pack.id,
+        item_name: pack.name || pack.id,
+        item_category: 'coin_package',
+        price: parseDisplayPrice(pack.displayPrice),
+        quantity: 1
+      }))
+    }, `${modalTrackingIdRef.current}:${showFirstDepositPackages ? 'first_deposit' : 'standard'}`);
+  }, [coinPackagesLoaded, displayedPackages, isFirstDepositEligible, showFirstDepositPackages, topUpModalIntent?.source]);
 
   const renderPackageCard = (pack: typeof displayedPackages[number]) => {
     const isSelected = selectedPackage?.id === pack.id;
@@ -199,6 +216,21 @@ export const TopUpModal: React.FC = () => {
         onClick={() => {
           setSelectedPackageId(pack.id);
           setHasUserSelectedPackage(true);
+          trackCoinPackageSelect({
+            currency: 'USD',
+            value: parseDisplayPrice(pack.displayPrice),
+            package_id: pack.id,
+            coin_amount: Number(pack.coins ?? 0),
+            bonus_coin_amount: Number(pack.bonusCoins ?? 0),
+            checkout_source: topUpModalIntent?.source ?? 'top_up_modal',
+            items: [{
+              item_id: pack.id,
+              item_name: pack.name || pack.id,
+              item_category: 'coin_package',
+              price: parseDisplayPrice(pack.displayPrice),
+              quantity: 1
+            }]
+          }, `${modalTrackingIdRef.current}:${pack.id}`);
           playSound('click');
         }}
         className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
@@ -311,8 +343,11 @@ export const TopUpModal: React.FC = () => {
       setIsLoading(true);
       setErrorMessage(null);
 
+      const eventId = generateCheckoutEventId();
+      let checkoutSessionId = '';
+      let failureStage = 'session_creation';
+
       try {
-          const eventId = generateCheckoutEventId();
           const fbp = readCookieValue('_fbp');
           const fbc = readCookieValue('_fbc');
           trackMetaEvent('InitiateCheckout', {
@@ -343,19 +378,41 @@ export const TopUpModal: React.FC = () => {
             throw new Error(message || 'Unable to start checkout.');
           }
           const data = await response.json();
+          checkoutSessionId = typeof data.sessionId === 'string' ? data.sessionId : '';
+          if (!checkoutSessionId) {
+            throw new Error('Checkout session was not returned.');
+          }
+          savePendingCheckout({
+            sessionId: checkoutSessionId,
+            packageId: selectedPackage.id,
+            value: priceValue,
+            currency: 'USD',
+            source: topUpModalIntent?.source ?? 'top_up_modal',
+            startedAt: Date.now()
+          });
           trackBeginCheckout({ currency: 'USD', value: priceValue, payment_type: 'stripe', items: [{ item_id: selectedPackage.id, item_name: selectedPackage.name || selectedPackage.id, item_category: 'coin_package', price: priceValue, quantity: 1 }], coin_amount: Number(selectedPackage.coins ?? 0), bonus_coin_amount: Number(selectedPackage.bonusCoins ?? 0), package_id: selectedPackage.id, checkout_session_id: data.sessionId, is_first_deposit_intent: isFirstDepositEligible, checkout_source: topUpModalIntent?.source ?? 'top_up_modal', missing_coins: isInsufficientBalanceFlow ? missingCoins : undefined }, data.sessionId);
           if (topUpModalIntent?.source === 'post_free_box') {
             trackGaEvent('free_box_to_checkout', { package_id: selectedPackage.id, checkout_session_id: data.sessionId }, data.sessionId);
           }
+          failureStage = 'stripe_initialization';
           const stripe = await getStripe();
           if (!stripe) {
             throw new Error('Stripe failed to initialize.');
           }
+          failureStage = 'stripe_redirect';
           const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
           if (result.error) {
             throw result.error;
           }
       } catch (error: unknown) {
+          trackGaEvent('checkout_failed', {
+            failure_stage: failureStage,
+            package_id: selectedPackage.id,
+            checkout_session_id: checkoutSessionId || undefined,
+            currency: 'USD',
+            value: priceValue,
+            checkout_source: topUpModalIntent?.source ?? 'top_up_modal'
+          }, checkoutSessionId || eventId);
           setErrorMessage(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
           setIsLoading(false);
       }

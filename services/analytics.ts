@@ -7,11 +7,13 @@ export type AnalyticsParams = Record<string, Primitive | EcommerceItem[] | undef
 export type Attribution = { source?: string; medium?: string; campaign?: string; content?: string; term?: string; fbclid?: string; gclid?: string; ttclid?: string; msclkid?: string; facebook_campaign?: string; facebook_adset?: string; facebook_ad?: string; creative_id?: string; placement?: string; device_type: 'mobile' | 'tablet' | 'desktop'; landing_page: string; referring_domain?: string; browser_language?: string; country?: string; captured_at: number };
 declare global { interface Window { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void; } }
 
-export const GA4_EVENT_NAMES = ['sign_up_start', 'sign_up', 'login', 'free_box_claim', 'free_box_to_checkout', 'view_item', 'box_open_start', 'box_open', 'item_won', 'sell_back', 'item_kept', 'begin_checkout', 'checkout_abandoned', 'purchase', 'deposit_completed', 'repeat_deposit', 'second_purchase', 'third_purchase', 'first_purchase', 'shipping_start', 'shipping_requested', 'checkout_return', 'page_view'] as const;
+export const GA4_EVENT_NAMES = ['sign_up_start', 'sign_up', 'login', 'free_box_claim', 'free_box_to_checkout', 'view_item', 'box_open_start', 'box_open', 'item_won', 'sell_back', 'item_kept', 'coin_package_view', 'coin_package_select', 'begin_checkout', 'checkout_return', 'checkout_abandoned', 'checkout_failed', 'purchase', 'deposit_completed', 'repeat_deposit', 'second_purchase', 'third_purchase', 'first_purchase', 'shipping_start', 'shipping_requested', 'page_view'] as const;
 export type Ga4EventName = typeof GA4_EVENT_NAMES[number];
 const EVENTS = new Set<string>(GA4_EVENT_NAMES);
 const PII_KEY = /^(email|mail|full_name|first_name|last_name|address|street|city|zip|postal_code|phone|username|password|customer|uid|user_id|external_id|stripe_customer_id)$/i;
 const SESSION_DEDUP_PREFIX = 'pullz_ga4_sent:';
+const PAGE_VIEW_DEDUP_MS = 1_000;
+let lastPageView: { key: string; sentAt: number } | null = null;
 const measurementId = () => import.meta.env.VITE_GA4_MEASUREMENT_ID?.trim();
 const enabled = () => typeof window !== 'undefined' && Boolean(measurementId()) && hasAnalyticsConsent(getCookieConsent());
 const debugEnabled = () => typeof window !== 'undefined' && (import.meta.env.VITE_APP_ENV !== 'production' || new URLSearchParams(location.search).get('ga_debug') === '1');
@@ -33,7 +35,12 @@ export const captureAttribution = (): Attribution | null => {
   localStorage.setItem('pullz_last_touch', JSON.stringify(touch)); return touch;
 };
 export const getAttribution = (key: 'pullz_first_touch' | 'pullz_last_touch' = 'pullz_first_touch'): Attribution | null => { try { return typeof window === 'undefined' ? null : JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
-export const getGaClientId = () => { if (typeof document === 'undefined') return ''; const id = measurementId()?.replace(/^G-/, ''); const match = id && document.cookie.match(new RegExp(`(?:^|; )_ga_${id}=GS\\d+\\.\\d+\\.(\\d+)\\.(\\d+)`)); return match ? `${match[1]}.${match[2]}` : (document.cookie.match(/(?:^|; )_ga=GA\d+\.\d+\.(\d+\.\d+)/)?.[1] || ''); };
+export const getGaClientId = () => {
+  if (typeof document === 'undefined') return '';
+  // Measurement Protocol client_id comes from the base _ga cookie. The
+  // _ga_<measurement> cookie contains GA4 session state, not the client ID.
+  return document.cookie.match(/(?:^|; )_ga=GA\d+\.\d+\.(\d+\.\d+)/)?.[1] || '';
+};
 export const initializeAnalytics = () => {
   if (!enabled()) { debug('initialize', { skipped: true, reason: 'missing_measurement_id_or_consent' }); return false; }
   if (window.gtag || document.querySelector('script[data-pullz-ga4]')) { debug('initialize', { skipped: true, reason: 'already_initialized' }); return false; }
@@ -54,7 +61,23 @@ export const trackEvent = (name: Ga4EventName, params: AnalyticsParams = {}, ded
   initializeAnalytics(); if (key) markSentThisSession(key);
   const finalPayload = { ...payload, ...(debugEnabled() ? { debug_mode: true } : {}) }; window.gtag?.('event', name, finalPayload); debug(name, { skipped: false, dedupe_key: key, payload: finalPayload }); return true;
 };
-export const trackPageView = (app_view: string) => typeof window !== 'undefined' && trackEvent('page_view', { page_title: document.title, page_location: `${location.origin}${location.pathname}`, page_path: location.pathname, app_view }, `${app_view}:${location.pathname}`);
+export const trackPageView = (app_view: string) => {
+  if (typeof window === 'undefined') return false;
+  const key = `${app_view}:${location.pathname}:${location.search}`;
+  const now = Date.now();
+  if (lastPageView?.key === key && now - lastPageView.sentAt < PAGE_VIEW_DEDUP_MS) {
+    debug('page_view', { skipped: true, reason: 'transient_deduplicated', dedupe_key: key });
+    return false;
+  }
+  const sent = trackEvent('page_view', {
+    page_title: document.title,
+    page_location: `${location.origin}${location.pathname}`,
+    page_path: location.pathname,
+    app_view
+  });
+  if (sent) lastPageView = { key, sentAt: now };
+  return sent;
+};
 export const setAnalyticsUser = (_opaqueId: string) => undefined;
 export const clearAnalyticsUser = () => { if (enabled()) window.gtag?.('config', measurementId(), { user_id: undefined }); };
 export const trackSignUp = (p: { method: string; has_referral: boolean; signup_location: string }) => trackEvent('sign_up', p);
@@ -66,6 +89,8 @@ export const trackBoxOpen = (p: AnalyticsParams, id: string) => trackEvent('box_
 export const trackItemWon = (p: AnalyticsParams, id: string) => trackEvent('item_won', p, id);
 export const trackSellBack = (p: AnalyticsParams, id: string) => trackEvent('sell_back', p, id);
 export const trackItemKept = (p: AnalyticsParams, id: string) => trackEvent('item_kept', p, id);
+export const trackCoinPackageView = (p: AnalyticsParams, id: string) => trackEvent('coin_package_view', p, id);
+export const trackCoinPackageSelect = (p: AnalyticsParams, id: string) => trackEvent('coin_package_select', p, id);
 export const trackBeginCheckout = (p: AnalyticsParams, id: string) => trackEvent('begin_checkout', p, id);
 export const trackShippingStart = (p: AnalyticsParams, id: string) => trackEvent('shipping_start', p, id);
 export const trackShippingRequested = (p: AnalyticsParams, id: string) => trackEvent('shipping_requested', p, id);
