@@ -2,13 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, RefreshCw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
 import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
-import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
+import { Timestamp, addDoc, collection, getDocs, limit, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { CaseItem, MysteryBox } from '../types';
+import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useAuth, useUI } from '../context/GameContext';
-import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
+import { getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
@@ -52,22 +52,18 @@ const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-16137714
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 const PROMO_BOX_ID = 'Pix6KvQzz8C9GtQf7F72';
 
-const mapHomepageLiveWinBox = (id: string, data: Record<string, any>): MysteryBox => ({
-  id,
-  name: String(data.name ?? 'Mystery Box'),
-  price: Number(data.price ?? 0),
-  image: typeof data.image === 'string' ? data.image : '',
-  accentColor: typeof data.accentColor === 'string' ? data.accentColor : '#3b82f6',
-  items: Array.isArray(data.items) ? data.items.map((item: Partial<CaseItem>, index: number): CaseItem => ({
-    id: String(item.id ?? `${id}-item-${index}`),
-    name: String(item.name ?? 'Mystery Item'),
-    price: Number(item.price ?? 0),
-    image: typeof item.image === 'string' ? item.image : '',
-    rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(String(item.rarity)) ? item.rarity as CaseItem['rarity'] : 'common',
-    chance: Number(item.chance ?? 0),
-    color: typeof item.color === 'string' ? item.color : '#64748b'
-  })) : []
-});
+let homepageWinsRequest: Promise<MobileLiveWin[]> | null = null;
+const loadHomepageWins = () => {
+  if (homepageWinsRequest) return homepageWinsRequest;
+  homepageWinsRequest = getDocs(query(collection(db, 'homepageWins'), orderBy('timestamp', 'desc'), limit(10)))
+    .then((snapshot) => snapshot.docs.map((entry, index) => {
+      const value = entry.data();
+      const rarity = ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(String(value.rarity)) ? value.rarity as MobileLiveWin['rarity'] : 'common';
+      return { id: entry.id, title: String(value.itemName ?? 'Mystery item'), image: String(value.itemImageUrl ?? ''), rarity, timeAgo: index === 0 ? 'now' : `${index + 1}m`, boxId: String(value.boxId ?? '') };
+    }))
+    .catch((error) => { homepageWinsRequest = null; throw error; });
+  return homepageWinsRequest;
+};
 
 const MobileLiveWinCard: React.FC<{ win: MobileLiveWin; onOpenBox: (boxId: string) => void }> = ({ win, onOpenBox }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -158,37 +154,17 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
 );
 
 const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: MobileLiveWin[]; isLoading: boolean; onOpenBox: (boxId: string) => void }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-  const sectionRef = useRef<HTMLElement>(null);
-  const performanceMode = usePerformanceMode();
-  const displayedWins = useMemo(() => wins.length ? [...wins, ...wins] : [], [wins]);
-
-  useEffect(() => {
-    const element = sectionRef.current;
-    if (!element || !('IntersectionObserver' in window)) return undefined;
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry?.isIntersecting ?? false), { threshold: 0.05 });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
-    const rotateTimer = window.setInterval(() => setActiveIndex((current) => (current + 1) % wins.length), 2400);
-    return () => window.clearInterval(rotateTimer);
-  }, [isVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, wins.length]);
-
   return (
-    <section ref={sectionRef} id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <section id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in duration-500">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
         <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
       </div>
-      <div className="overflow-hidden">
-        <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeIndex * 108}px,0,0)` }}>
-          {displayedWins.map((win, index) => <MobileLiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />)}
-          {!displayedWins.length && isLoading ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
-          {!displayedWins.length && !isLoading ? <p className="py-8 text-sm font-semibold text-slate-400">Live wins will appear here soon.</p> : null}
+      <div className="overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-h-[128px] gap-2 snap-x snap-mandatory">
+          {wins.slice(0, 6).map((win) => <div key={win.id} className="snap-start"><MobileLiveWinCard win={win} onOpenBox={onOpenBox} /></div>)}
+          {!wins.length && isLoading ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
+          {!wins.length && !isLoading ? <p className="min-h-[128px] py-8 text-sm font-semibold text-slate-400">Live wins will appear here soon.</p> : null}
         </div>
       </div>
     </section>
@@ -211,82 +187,28 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   const [submitReviewCaption, setSubmitReviewCaption] = useState('');
   const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [liveWinBoxes, setLiveWinBoxes] = useState<MysteryBox[]>([]);
+  const [mobileLiveWins, setMobileLiveWins] = useState<MobileLiveWin[]>([]);
   const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(true);
   const trendingBoxes = useMemo(() => {
     return trendingBoxIds
       .map((id) => boxes.find((box) => box.id === id))
       .filter(Boolean) as MysteryBox[];
   }, [boxes, trendingBoxIds]);
-  const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
-    const itemPool = liveWinBoxes
-      .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
-      .filter(({ item }) => item.image && item.name);
-
-    if (!itemPool.length) return [];
-
-    const rarityTargets: Array<{ rarity: MobileLiveWin['rarity']; count: number }> = [
-      { rarity: 'common', count: 4 },
-      { rarity: 'uncommon', count: 2 },
-      { rarity: 'rare', count: 2 },
-      { rarity: 'epic', count: 1 },
-      { rarity: 'legendary', count: 1 }
-    ];
-    const selected: typeof itemPool = [];
-    const usedKeys = new Set<string>();
-    const shuffledPool = [...itemPool].sort(() => Math.random() - 0.5);
-
-    rarityTargets.forEach(({ rarity, count }) => {
-      shuffledPool
-        .filter(({ item }) => item.rarity === rarity)
-        .slice(0, count)
-        .forEach((entry) => {
-          const key = `${entry.boxId}-${entry.item.id}`;
-          if (!usedKeys.has(key)) {
-            usedKeys.add(key);
-            selected.push(entry);
-          }
-        });
-    });
-
-    if (selected.length < 10) {
-      shuffledPool.forEach((entry) => {
-        if (selected.length >= 10) return;
-        const key = `${entry.boxId}-${entry.item.id}`;
-        if (!usedKeys.has(key)) {
-          usedKeys.add(key);
-          selected.push(entry);
-        }
-      });
-    }
-
-    return selected.slice(0, 10).sort(() => Math.random() - 0.5).map(({ item, boxId }, index) => ({
-      id: `${boxId}-${item.id}-${index}`,
-      title: item.name,
-      image: item.image,
-      rarity: item.rarity,
-      timeAgo: index === 0 ? 'now' : `${index + 1}m`,
-      boxId
-    }));
-  }, [liveWinBoxes]);
-
   useEffect(() => {
     let cancelled = false;
     setIsLiveWinsLoading(true);
 
-    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
-      .then((details) => {
-        if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
-      })
+    void loadHomepageWins()
+      .then((wins) => { if (!cancelled) setMobileLiveWins(wins); })
       .catch(() => {
-        if (!cancelled) setLiveWinBoxes([]);
+        if (!cancelled) setMobileLiveWins([]);
       })
       .finally(() => {
         if (!cancelled) setIsLiveWinsLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [boxes]);
+  }, []);
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
@@ -315,12 +237,13 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
     let cancelled = false;
-    const loadReviews = () => {
+    const loadReviews = async () => {
       if (cancelled) return;
       const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
-      unsubscribe = onSnapshot(reviewsQuery, (snapshot) => {
+      try {
+      const snapshot = await getDocs(reviewsQuery);
+      if (cancelled) return;
       const nextReviews = snapshot.docs
         .map((entry) => ({ id: entry.id, ...(entry.data() as Omit<MobileCustomerReview, 'id'> & { hidden?: boolean; mediaUrl?: string }) }))
         .filter((story) => !story.hidden && Boolean(story.mediaUrl))
@@ -340,10 +263,11 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         }));
       setCustomerReviews(nextReviews);
       setIsReviewsLoading(false);
-      }, () => {
+      } catch {
+        if (cancelled) return;
         setCustomerReviews([]);
         setIsReviewsLoading(false);
-      });
+      }
     };
 
     const reviewsSection = document.getElementById('mobile-customer-reviews');
@@ -352,7 +276,6 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       return () => {
         cancelled = true;
         window.clearTimeout(timer);
-        unsubscribe?.();
       };
     }
 
@@ -367,7 +290,6 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
     return () => {
       cancelled = true;
       observer.disconnect();
-      unsubscribe?.();
     };
   }, []);
 
