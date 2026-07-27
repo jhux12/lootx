@@ -604,7 +604,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
 
       <MobileLiveWins wins={mobileLiveWins} isLoading={isLiveWinsLoading} onOpenBox={onOpenBox} />
 
-      <HowItWorksSection boxes={boxes} />
+      <HowItWorksSection />
       <HomepageFaqSection />
 
       {isSubmitReviewOpen && (
