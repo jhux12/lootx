@@ -44,7 +44,7 @@ test('Measurement Protocol uses the base GA cookie client id', () => {
 });
 
 test('Meta Pixel is consent-gated and loads the browser library', () => {
-  assert.match(consent, /hasMarketingConsent\(getCookieConsent\(\)\)/);
+  assert.match(consent, /hasMarketingConsent\(\)/);
   assert.match(consent, /VITE_META_PIXEL_ID/);
   assert.match(consent, /connect\.facebook\.net\/en_US\/fbevents\.js/);
   assert.match(consent, /fbq\('track', 'PageView'\)/);

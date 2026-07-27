@@ -96,7 +96,7 @@ export const SiteFooter: React.FC = () => {
             }}
             type="button"
           >
-            Cookie Settings
+            Cookie settings
           </button>
           <button
             className="transition hover:text-white"
