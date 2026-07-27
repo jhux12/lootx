@@ -18,6 +18,12 @@ const measurementId = () => import.meta.env.VITE_GA4_MEASUREMENT_ID?.trim();
 const enabled = () => typeof window !== 'undefined' && Boolean(measurementId()) && hasAnalyticsConsent(getCookieConsent());
 const debugEnabled = () => typeof window !== 'undefined' && (import.meta.env.VITE_APP_ENV !== 'production' || new URLSearchParams(location.search).get('ga_debug') === '1');
 const debug = (name: string, details: Record<string, unknown>) => { if (debugEnabled()) console.info('[GA4]', { event: name, timestamp: new Date().toISOString(), ...details }); };
+export const updateAnalyticsConsent = (granted: boolean) => {
+  if (typeof window === 'undefined') return;
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function gtag(..._args: unknown[]) { window.dataLayer!.push(arguments); };
+  window.gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
+};
 export const sanitizeAnalyticsParams = (params: AnalyticsParams = {}) => Object.fromEntries(Object.entries(params).filter(([key, value]) => value !== undefined && value !== null && !PII_KEY.test(key)));
 const wasSentThisSession = (key: string) => { try { return sessionStorage.getItem(`${SESSION_DEDUP_PREFIX}${key}`) === '1'; } catch { return false; } };
 const markSentThisSession = (key: string) => { try { sessionStorage.setItem(`${SESSION_DEDUP_PREFIX}${key}`, '1'); } catch { /* private browsing may deny storage */ } };
@@ -49,6 +55,7 @@ export const initializeAnalytics = () => {
   window.gtag = function gtag(..._args: unknown[]) {
     window.dataLayer!.push(arguments);
   };
+  window.gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' });
   window.gtag('js', new Date());
   window.gtag('config', id, { send_page_view: false, debug_mode: debugEnabled() });
   const script = document.createElement('script'); script.async = true; script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`; script.dataset.pullzGa4 = 'true'; document.head.appendChild(script); captureAttribution(); debug('initialize', { skipped: false }); return true;
