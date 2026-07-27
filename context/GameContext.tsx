@@ -15,6 +15,7 @@ import {
   AuthCredential,
   EmailAuthProvider,
   GoogleAuthProvider,
+  OAuthProvider,
   browserLocalPersistence,
   browserSessionPersistence,
   applyActionCode,
@@ -25,6 +26,7 @@ import {
   createUserWithEmailAndPassword,
   fetchSignInMethodsForEmail,
   linkWithCredential,
+  signInWithPopup,
   sendPasswordResetEmail,
   signOut,
   getIdTokenResult,
@@ -679,6 +681,10 @@ type GoogleAuthOptions = {
   useRedirect?: boolean;
 };
 
+type AppleAuthResult =
+  | { status: 'success' }
+  | { status: 'error'; message: string };
+
 type AuthModalMode = 'login' | 'register';
 
 type EmailVerificationStatus = 'idle' | 'pending' | 'checking' | 'verified-no-session';
@@ -731,6 +737,7 @@ interface GameContextType {
   // Actions
   login: (email: string, pass: string, remember?: boolean) => Promise<EmailPasswordAuthResult>;
   loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
+  loginWithApple: (remember?: boolean) => Promise<AppleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
   register: (name: string, email: string, pass: string) => Promise<EmailPasswordAuthResult>;
   resetPassword: (email: string) => Promise<void>;
@@ -821,7 +828,7 @@ const AUTH_LOADING_USER: User = {
 const isRealFirebaseUid = (uid: string | null | undefined) => Boolean(uid && uid.trim() && uid !== 'loading' && uid !== 'guest');
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
-const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
+const AuthContext = createContext<Pick<GameContextType, 'user' | 'isAuthenticated' | 'authInitialized' | 'openAuthModal' | 'login' | 'loginWithGoogle' | 'loginWithApple' | 'linkGoogleAccount' | 'register' | 'resetPassword' | 'logout' | 'authModalMode' | 'setAuthModalMode' | 'showLoginModal' | 'setShowLoginModal' | 'showEmailVerificationModal' | 'setShowEmailVerificationModal' | 'showEmailVerifiedModal' | 'setShowEmailVerifiedModal' | 'emailVerificationStatus' | 'resendEmailVerification' | 'refreshEmailVerification' | 'dismissEmailVerificationModal'> | undefined>(undefined);
 const WalletContext = createContext<Pick<GameContextType, 'balance' | 'user' | 'syncBalance' | 'syncXpBalance' | 'addBalance' | 'deductBalance' | 'registerSpend' | 'awardCaseOpenXp'> | undefined>(undefined);
 const BoxesContext = createContext<Pick<GameContextType, 'boxes' | 'items' | 'stripeSettings' | 'createBox' | 'createUserBox' | 'updateBox' | 'deleteBox' | 'view' | 'setView'> | undefined>(undefined);
 const InventoryContext = createContext<Pick<GameContextType, 'inventory' | 'shipments' | 'addToInventory' | 'addInventoryItemFromServer' | 'sellItem' | 'shipItem'> | undefined>(undefined);
@@ -2472,7 +2479,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const ensureGoogleUserProfile = async (firebaseUser: FirebaseUser) => {
+  const ensureOAuthUserProfile = async (firebaseUser: FirebaseUser, provider: 'google' | 'apple' = 'google') => {
     const userRef = getUserRef(firebaseUser.uid);
     const userSnapshot = await getDoc(userRef);
     const email = firebaseUser.email ?? '';
@@ -2493,7 +2500,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email,
         avatar,
         photoURL,
-        provider: 'google',
+        provider,
         level: 1,
         xp: 0,
         xpBalance: 0,
@@ -2658,6 +2665,39 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const appleAuthInProgressRef = useRef(false);
+
+  const loginWithApple = async (remember: boolean = true): Promise<AppleAuthResult> => {
+    if (appleAuthInProgressRef.current) {
+      return { status: 'error', message: 'Apple sign-in is already in progress.' };
+    }
+    appleAuthInProgressRef.current = true;
+
+    try {
+      await setPersistence(auth, remember ? browserLocalPersistence : browserSessionPersistence);
+      const provider = new OAuthProvider('apple.com');
+      provider.addScope('email');
+      provider.addScope('name');
+      trackEvent('apple_oauth_started');
+      const result = await signInWithPopup(auth, provider);
+      await ensureOAuthUserProfile(result.user, 'apple');
+      trackLogin('apple');
+      setShowLoginModal(false);
+      return { status: 'success' };
+    } catch (error: any) {
+      const errorCode = error?.code || 'unknown';
+      trackEvent('apple_oauth_error', { code: errorCode });
+      return {
+        status: 'error',
+        message: errorCode === 'auth/popup-blocked'
+          ? 'Your browser blocked Apple sign-in. Allow popups and try again.'
+          : error?.message || 'Apple sign-in failed.'
+      };
+    } finally {
+      appleAuthInProgressRef.current = false;
+    }
+  };
+
   const linkGoogleAccount = async (
     email: string,
     password: string,
@@ -2668,7 +2708,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const signInResult = await signInWithCredential(auth, emailCredential);
       // Account linking happens here after password authentication succeeds.
       await linkWithCredential(signInResult.user, credential);
-      await ensureGoogleUserProfile(signInResult.user);
+      await ensureOAuthUserProfile(signInResult.user);
       setShowLoginModal(false);
       return { status: 'success' };
     } catch (error: any) {
@@ -3851,6 +3891,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       stripeSettings,
       login,
       loginWithGoogle,
+      loginWithApple,
       linkGoogleAccount,
       register,
       resetPassword,
@@ -3912,7 +3953,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }), [
       user, isAuthenticated, users, notifications, showLoginModal, showTopUpModal, topUpModalIntent, authModalMode,
       showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, balance, inventory, shipments,
-      view, battles, boxes, items, coinPackages, coinPackagesLoading, coinPackagesLoaded, coinPackagesError, refreshCoinPackages, bonusSettings, stripeSettings, login, loginWithGoogle,
+      view, battles, boxes, items, coinPackages, coinPackagesLoading, coinPackagesLoaded, coinPackagesError, refreshCoinPackages, bonusSettings, stripeSettings, login, loginWithGoogle, loginWithApple,
       linkGoogleAccount, register, resetPassword, logout, setShowLoginModal, setShowTopUpModal, setTopUpModalIntent,
       setAuthModalMode, openAuthModal, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal, setShowEmailVerifiedModal,
       setShowEmailVerificationModal, setView, addBalance, syncBalance, syncXpBalance, deductBalance, addToInventory,
@@ -3925,11 +3966,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ]);
 
   const authContextValue = useMemo(() => ({
-    user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register,
+    user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, loginWithApple, linkGoogleAccount, register,
     resetPassword, logout, authModalMode, setAuthModalMode, showLoginModal, setShowLoginModal,
     showEmailVerificationModal, setShowEmailVerificationModal, showEmailVerifiedModal, setShowEmailVerifiedModal,
     emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal
-  }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal]);
+  }), [user, isAuthenticated, authInitialized, openAuthModal, login, loginWithGoogle, loginWithApple, linkGoogleAccount, register, resetPassword, logout, authModalMode, showLoginModal, showEmailVerificationModal, showEmailVerifiedModal, emailVerificationStatus, resendEmailVerification, refreshEmailVerification, dismissEmailVerificationModal]);
 
   const walletContextValue = useMemo(() => ({ user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp }), [user, balance, syncBalance, syncXpBalance, addBalance, deductBalance, registerSpend, awardCaseOpenXp]);
   const boxesContextValue = useMemo(() => ({ boxes, items, stripeSettings, createBox, createUserBox, updateBox, deleteBox, view, setView }), [boxes, items, stripeSettings, createBox, createUserBox, updateBox, deleteBox, view, setView]);

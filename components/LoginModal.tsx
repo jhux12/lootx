@@ -4,6 +4,7 @@ import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import googleLogo from '../assets/google-logo.svg';
+import appleLogo from '../assets/apple-logo.svg';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
 import { getAuthErrorMessage } from '../utils/authErrors';
@@ -16,7 +17,7 @@ const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Account ready. We sent a verification email for when you are ready to ship items.';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
+  const { login, loginWithGoogle, loginWithApple, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
   const fallbackRegisterBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
@@ -29,8 +30,7 @@ export const LoginModal: React.FC = () => {
   const [googleLinkEmail, setGoogleLinkEmail] = useState('');
   const [googleLinkPassword, setGoogleLinkPassword] = useState('');
   const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
-  const [emailSignupConsent, setEmailSignupConsent] = useState(false);
-  const [googleSignupConsent, setGoogleSignupConsent] = useState(false);
+  const [signupConsent, setSignupConsent] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export const LoginModal: React.FC = () => {
   });
   const [showGoogleRequirementsTooltip, setShowGoogleRequirementsTooltip] = useState(false);
   const [isOAuthLoading, setIsOAuthLoading] = useState(false);
+  const [oauthLoadingProvider, setOAuthLoadingProvider] = useState<'google' | 'apple' | null>(null);
   const [showOAuthFallback, setShowOAuthFallback] = useState(false);
   const [showEmailFields, setShowEmailFields] = useState(false);
   const [emailConfirmationSentTo, setEmailConfirmationSentTo] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export const LoginModal: React.FC = () => {
       if (mode === 'register') {
         trackGaEvent('sign_up_start', { method: 'email', location: 'auth_modal' }, 'email_auth_modal');
         setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
-        if (!emailSignupConsent) {
+        if (!signupConsent) {
           setUserError('Please confirm the checkbox to continue with email registration.');
           setIsLoading(false);
           return;
@@ -114,7 +115,7 @@ export const LoginModal: React.FC = () => {
       return;
     }
 
-    if (mode === 'register' && !googleSignupConsent) {
+    if (mode === 'register' && !signupConsent) {
       setShowGoogleRequirementsTooltip(true);
       return;
     }
@@ -122,6 +123,7 @@ export const LoginModal: React.FC = () => {
     setShowOAuthFallback(false);
     setIsLoading(true);
     setIsOAuthLoading(true);
+    setOAuthLoadingProvider('google');
     setUserError(null);
     setMessage('Opening Google sign-in…');
     playSound('click');
@@ -154,6 +156,29 @@ export const LoginModal: React.FC = () => {
     } finally {
       setIsLoading(false);
       setIsOAuthLoading(false);
+      setOAuthLoadingProvider(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    if (isOAuthLoading || isLoading || (mode === 'register' && !signupConsent)) return;
+    setIsLoading(true);
+    setIsOAuthLoading(true);
+    setOAuthLoadingProvider('apple');
+    setUserError(null);
+    setMessage('Opening Apple sign-in…');
+    playSound('click');
+    try {
+      if (mode === 'register') setPostSignupRedirect(DEFAULT_POST_SIGNUP_REDIRECT);
+      const result = await loginWithApple(rememberMe);
+      if (result.status === 'error') {
+        setUserError(getAuthErrorMessage(result.message));
+        setMessage('Having trouble? Please try again or use email sign-up.');
+      }
+    } finally {
+      setIsLoading(false);
+      setIsOAuthLoading(false);
+      setOAuthLoadingProvider(null);
     }
   };
 
@@ -262,10 +287,10 @@ export const LoginModal: React.FC = () => {
   }, [showGoogleRequirementsTooltip]);
 
   useEffect(() => {
-    if (mode === 'register' && googleSignupConsent) {
+    if (mode === 'register' && signupConsent) {
       setShowGoogleRequirementsTooltip(false);
     }
-  }, [mode, googleSignupConsent]);
+  }, [mode, signupConsent]);
 
   useEffect(() => {
     if (!isOAuthLoading) {
@@ -359,9 +384,9 @@ export const LoginModal: React.FC = () => {
             )}
           </div>
 
-          {mode === 'register' && !isLinkingGoogle && (
-            <div className="relative mb-4 mt-10 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-4 pb-4 pt-16 text-center sm:mt-12 sm:pt-20">
-              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-36 w-[min(84vw,260px)] -translate-x-1/2 -translate-y-1/2 sm:h-44 sm:w-[320px]">
+          {mode === 'register' && !isLinkingGoogle && !showEmailFields && (
+            <div className="relative mb-3 mt-6 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-4 pb-3 pt-10 text-center sm:mt-8 sm:pt-12">
+              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-[min(70vw,210px)] -translate-x-1/2 -translate-y-1/2 sm:h-28 sm:w-[240px]">
                 <img
                   src={registerBonusImage}
                   alt="Free signup box"
@@ -373,40 +398,51 @@ export const LoginModal: React.FC = () => {
                   style={{ aspectRatio: '20 / 11' }}
                 />
               </div>
-              <p className="text-sm text-neutral-300">Register to claim your free box.</p>
+              <p className="text-sm text-neutral-300">Create your account to open your free box.</p>
             </div>
           )}
 
           {!isLinkingGoogle && (
             <>
+              {mode === 'register' && (
+                <label className="group mb-3 flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-[#141417] p-3 text-xs leading-5">
+                  <Checkbox
+                    required
+                    checked={signupConsent}
+                    onChange={(e) => setSignupConsent(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="select-none text-neutral-400 group-hover:text-neutral-300">
+                    I agree to the <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Terms of Service</a> and <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Privacy Policy</a>, and confirm I am 18+.
+                  </span>
+                </label>
+              )}
+              {!showEmailFields && <>
               <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={isLoading}
+                  disabled={isLoading || (mode === 'register' && !signupConsent)}
                   className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
-                  {isOAuthLoading ? 'Opening Google sign-in…' : 'Continue with Google'}
+                  {oauthLoadingProvider === 'google' ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
+                  {oauthLoadingProvider === 'google' ? 'Opening Google sign-in…' : 'Continue with Google'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleAppleSignIn}
+                  disabled={isLoading || (mode === 'register' && !signupConsent)}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white py-3 text-sm font-semibold text-black transition-colors hover:bg-neutral-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {oauthLoadingProvider === 'apple' ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={appleLogo} alt="" className="h-5 w-5" width={20} height={20} />}
+                  {oauthLoadingProvider === 'apple' ? 'Opening Apple sign-in…' : 'Continue with Apple'}
                 </button>
 
                 {mode === 'register' && showGoogleRequirementsTooltip && (
                   <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-200">
-                    Check the Google consent box to continue.
+                    Check the consent box to continue.
                   </div>
-                )}
-                {mode === 'register' && (
-                  <label className="group flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
-                    <Checkbox
-                      required
-                      checked={googleSignupConsent}
-                      onChange={(e) => setGoogleSignupConsent(e.target.checked)}
-                      className="mt-0.5"
-                    />
-                    <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                      I agree to the <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Terms of Service</a>, <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with Google.
-                    </span>
-                  </label>
                 )}
 
                 {showOAuthFallback && (
@@ -417,14 +453,15 @@ export const LoginModal: React.FC = () => {
                 )}
               </div>
 
-              <div className="relative py-4">
+              <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/10" />
                 </div>
                 <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-                  <span className="bg-[#18181b] px-3 text-neutral-300">Or continue with email</span>
+                  <span className="bg-[#18181b] px-3 text-neutral-400">Or</span>
                 </div>
               </div>
+              </>}
             </>
           )}
 
@@ -543,20 +580,6 @@ export const LoginModal: React.FC = () => {
                 </div>
               )}
 
-              {mode === 'register' && (
-                <label className="group mt-1 flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-[#141417] p-3 text-xs">
-                  <Checkbox
-                    required
-                    checked={emailSignupConsent}
-                    onChange={(e) => setEmailSignupConsent(e.target.checked)}
-                    className="mt-0.5"
-                  />
-                  <span className="select-none text-neutral-400 group-hover:text-neutral-300">
-                    I agree to the <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Terms of Service</a>, <a href="#" className="text-blue-400 hover:text-blue-300 hover:underline">Privacy Policy</a>, and confirm I am 18+ to register with email.
-                  </span>
-                </label>
-              )}
-
               {showEmailConfirmationNotice && (
                 <div
                   key={emailConfirmationReminderCount}
@@ -587,7 +610,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type={showEmailConfirmationNotice ? 'button' : 'submit'}
                 onClick={showEmailConfirmationNotice ? remindEmailConfirmation : undefined}
-                disabled={isLoading}
+                disabled={isLoading || (mode === 'register' && !signupConsent)}
                 className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Please wait...' : showEmailConfirmationNotice ? 'Please check your email to confirm' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
@@ -602,7 +625,8 @@ export const LoginModal: React.FC = () => {
                 setMessage(null);
                 playSound('click');
               }}
-              className="w-full rounded-xl border border-white/10 bg-[#27272a] px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#323237] active:scale-[0.99]"
+              disabled={mode === 'register' && !signupConsent}
+              className="w-full rounded-xl border border-white/10 bg-[#27272a] px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#323237] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mode === 'login' ? 'Sign in with Email' : 'Continue with Email'}
             </button>
