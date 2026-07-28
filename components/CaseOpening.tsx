@@ -715,49 +715,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setIsExcitementPreview(excitementItems.length > 0);
   }, [items, reduceMobileEffects]);
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container || !isExcitementPreview || isSpinning || hasSpinSettled || prefersReducedMotion || performanceMode.isHidden) {
-      return undefined;
-    }
-
-    const cycleItemCount = reelItems.length / 3;
-    if (!Number.isInteger(cycleItemCount) || cycleItemCount < 1) return undefined;
-
-    const frame = window.requestAnimationFrame(() => {
-      const reel = scrollContainerRef.current;
-      if (!reel || isSpinningRef.current) return;
-
-      updateSpinnerMeasurements();
-      const { stepWidth } = spinnerMeasurementsRef.current;
-      const startTranslate = -(cycleItemCount * stepWidth);
-      const endTranslate = -(cycleItemCount * 2 * stepWidth);
-      reel.style.transition = 'none';
-      reel.style.transform = `translate3d(${startTranslate}px, 0, 0)`;
-      reel.style.willChange = 'transform';
-
-      previewAnimationRef.current = reel.animate(
-        [
-          { transform: `translate3d(${startTranslate}px, 0, 0)` },
-          { transform: `translate3d(${endTranslate}px, 0, 0)` }
-        ],
-        {
-          duration: reduceMobileEffects ? SPINNER_MOTION.previewCycleDurationMobileMs : SPINNER_MOTION.previewCycleDurationMs,
-          iterations: Infinity,
-          easing: 'linear'
-        }
-      );
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      previewAnimationRef.current?.cancel();
-      previewAnimationRef.current = null;
-      if (container && !isSpinningRef.current) {
-        container.style.willChange = 'auto';
-      }
-    };
-  }, [hasSpinSettled, isExcitementPreview, isSpinning, performanceMode.isHidden, prefersReducedMotion, reduceMobileEffects, reelItems.length, updateSpinnerMeasurements]);
+  // The unopened preview reel remains static. The authoritative reel only animates
+  // after a deliberate open request succeeds and prepareReelForSpin runs.
 
   useEffect(() => {
     setVisibleDropItemCount(performanceMode.isMobile ? 12 : 24);
@@ -1085,6 +1044,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
       scrollContainerRef.current.style.transition = 'none';
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+      scrollContainerRef.current.style.willChange = 'auto';
+      scrollContainerRef.current.style.backfaceVisibility = '';
     }
 
     if (tickTimerRef.current !== null) {

@@ -127,6 +127,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /homepageWins/{winId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /boxes/{boxId} {
       allow read: if true;
       allow write: if isAdmin();
