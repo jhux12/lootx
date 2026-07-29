@@ -271,8 +271,6 @@
           box-shadow: 0 0 12px rgba(32, 93, 215, 0.16) !important;
         }
         html.pullz-mobile-optimized .pullz-spinner-track {
-          will-change: transform;
-          transform: translateZ(0);
           contain: style;
         }
         html.pullz-mobile-optimized .pullz-spinner-track img,
@@ -295,6 +293,24 @@
           opacity: 0 !important;
           filter: none !important;
           box-shadow: none !important;
+        }
+        /* Mobile must not keep the compositor or paint pipeline awake while the
+           homepage/case page is idle or while a result modal is left open. */
+        html.pullz-mobile-optimized .animate-pulse,
+        html.pullz-mobile-optimized .ambient-pulse,
+        html.pullz-mobile-optimized .pullz-box-preview,
+        html.pullz-mobile-optimized .pullz-box-preview__shimmer,
+        html.pullz-mobile-optimized .pullz-box-spark,
+        html.pullz-mobile-optimized .item-modal-rarity-bg--legendary,
+        html.pullz-mobile-optimized .win-rarity-card::before,
+        html.pullz-mobile-optimized .legendary-badge {
+          animation: none !important;
+        }
+        html.pullz-mobile-optimized .pullz-box-preview__image,
+        html.pullz-mobile-optimized .item-modal-sheet,
+        html.pullz-mobile-optimized .item-modal-image,
+        html.pullz-mobile-optimized .win-rarity-card::before {
+          will-change: auto !important;
         }
       }
 

@@ -8,6 +8,12 @@ Static inspection of a logged-out homepage found the box-summary query plus eigh
 
 The continuously active animations were the case preview WAAPI reel, mobile Live Wins interval/transform carousel, homepage hero rotation, and first-pull hero CSS orbit/slabs. The hero timer already pauses out of view/hidden/reduced-motion; the case preview and Live Wins mobile autoplay are now removed, and first-pull decoration is static below 768px and under Reduced Motion.
 
+## Follow-up root-cause investigation (2026-07-29)
+
+The first pass missed two persistent mobile costs. Entering a case route created and resumed a Web Audio `AudioContext`, warmed it with an oscillator, and eagerly loaded a three-element tick-sound pool before any user gesture. The sound effects are ordinary `HTMLAudioElement`s and never used that graph, so it could keep the device audio path active for no benefit. The case route now creates neither an audio graph nor audio elements until the deliberate Open gesture. In addition, global mobile CSS permanently promoted the spinner track with `will-change: transform` and `translateZ(0)`, undoing the component cleanup and retaining a full-width composited layer while idle. That promotion is removed.
+
+The case page also retained continuous button pulse, animated result border/gradient, and other decorative paint animations on mobile after the reel was fixed. Mobile CSS now makes those static and removes their persistent `will-change`; the actual finite opening animation and loading spinner remain intact. On home, the main hero (distinct from the first-pull landing hero) still ran a ten-second interval on phones and its off-screen slides mounted image sources, allowing multiple hero images to download/decode at initial load. Mobile hero autoplay is now off, and only the selected hero slide receives image sources. Mobile skeleton pulses are static so a slow or failed request cannot become an indefinite paint loop.
+
 ## Firestore data path and deployment
 
 Deploy `firestore.rules` before or with the web build. No composite index is required: the only homepage query orders `homepageWins` by `timestamp` descending and limits to 10. The Admin SDK open-case endpoint writes only item name/image, box ID/name, rarity, timestamp, and the stable open ID. It writes after the award transaction and catches failures, so inventory delivery never depends on this decoration. Existing wins are not backfilled; the empty fixed-height state is expected until new opens arrive.

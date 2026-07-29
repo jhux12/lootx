@@ -367,12 +367,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     claimFreeBox,
     registerSpend
   } = useGame();
-  const { muted, toggleMute, unlockAudio, playSound, prepareCaseAudio } = useSound();
+  const { muted, toggleMute, unlockAudio, playSound } = useSound();
   const performanceMode = usePerformanceMode();
-
-  useEffect(() => {
-    prepareCaseAudio();
-  }, [prepareCaseAudio]);
 
   const matchedBox = boxes.find(b => b.id === boxId);
   const [loadedBox, setLoadedBox] = useState<MysteryBox | null>(null);

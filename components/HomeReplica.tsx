@@ -99,7 +99,7 @@ const MobileCustomerReviewSkeleton: React.FC = () => (
   </div>
 );
 
-const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+const FreeBoxHeroSlide: React.FC<{ box: MysteryBox; loadImage: boolean }> = ({ box, loadImage }) => (
   <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(120deg,#5525cf_0%,#5146dd_52%,#4275e8_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(255,255,255,.14),transparent_28%),radial-gradient(circle_at_88%_75%,rgba(152,90,255,.40),transparent_46%)]" />
     <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
@@ -108,23 +108,23 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
         <h1 className="mt-2 max-w-[285px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-white sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]">Your Free Box Is Ready</h1>
         <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#5428c9] shadow-[0_8px_20px_rgba(0,0,0,.16)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt={box.name} width={192} height={192} decoding="async" fetchPriority="high" className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
     </div>
   </div>
 );
 
-const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+const PromoBoxHeroSlide: React.FC<{ box: MysteryBox; loadImage: boolean }> = ({ box, loadImage }) => (
   <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#070d0d_0%,#172420_48%,#17110d_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(41,217,203,.22),transparent_27%),radial-gradient(circle_at_86%_85%,rgba(255,169,55,.24),transparent_35%),linear-gradient(90deg,rgba(112,39,146,.20),transparent_46%)]" />
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,188,75,.48),transparent)] blur-md" />
     <div className="relative z-10 flex h-full items-center justify-center text-center">
-      {box.image ? <img src={box.image} alt="" aria-hidden="true" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-left-1 sm:h-28 sm:w-28 lg:left-3 lg:h-36 lg:w-36" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt="" aria-hidden="true" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-left-1 sm:h-28 sm:w-28 lg:left-3 lg:h-36 lg:w-36" /> : null}
       <div className="relative z-10 flex min-w-0 max-w-[180px] flex-col items-center sm:max-w-[420px] lg:max-w-[590px]">
         <h1 className="text-[21px] font-black uppercase leading-[.9] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:text-[30px] lg:text-[48px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
         <p className="mt-1.5 hidden text-[11px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:block lg:text-sm">Enter the vault and uncover a special pull.</p>
         <span className="mt-2 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-right-1 sm:h-28 sm:w-28 lg:right-3 lg:h-36 lg:w-36" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-right-1 sm:h-28 sm:w-28 lg:right-3 lg:h-36 lg:w-36" /> : null}
     </div>
   </div>
 );
@@ -225,12 +225,12 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, [promoBox, showFreeBoxSlide]);
 
   useEffect(() => {
-    if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
+    if (showFreeBoxSlide || performanceMode.isMobile || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
     }, 10000);
     return () => window.clearInterval(heroTimer);
-  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
+  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
 
   useEffect(() => {
     let cancelled = false;
@@ -417,8 +417,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
-            {promoBox && <PromoBoxHeroSlide box={promoBox} />}
+            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} loadImage={showFreeBoxHero} />}
+            {promoBox && <PromoBoxHeroSlide box={promoBox} loadImage={showPromoBoxHero} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
@@ -451,7 +451,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
               <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
                 {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
                   <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
+                    {box.image && activeHero === 'hot-picks' ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
                   </div>
                 ))}
               </div>
