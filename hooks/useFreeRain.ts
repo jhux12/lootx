@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useGame } from '../context/GameContext';
+import { useVisibleInterval } from './useVisibleInterval';
 
 const RAIN_DURATION_MS = 60 * 60 * 1000;
 const RAIN_JOIN_BONUS = 10;
@@ -100,29 +101,15 @@ export const useFreeRain = () => {
   const [now, setNow] = useState(Date.now());
   const finalizingRef = useRef(false);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, []);
+  useVisibleInterval(() => setNow(Date.now()), 1000);
 
   useEffect(() => {
-    const pathLabel = 'site/freeRain/current';
-    console.log('READING FIRESTORE PATH', pathLabel);
     const unsubscribe = onSnapshot(rainRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: pathLabel,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
       const currentNow = Date.now();
       const normalized = normalizeRainState(snapshot.data(), currentNow);
       setRainState(normalized);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: pathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Free rain snapshot failed', error);
     });
 
     return () => unsubscribe();
@@ -207,15 +194,11 @@ export const useFreeRain = () => {
     void finalizeCycle();
   }, [finalizeCycle]);
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      if (Date.now() >= rainState.cycleEndsAt) {
-        void finalizeCycle();
-      }
-    }, 5000);
-
-    return () => window.clearInterval(interval);
-  }, [finalizeCycle, rainState.cycleEndsAt]);
+  useVisibleInterval(() => {
+    if (Date.now() >= rainState.cycleEndsAt) {
+      void finalizeCycle();
+    }
+  }, 5000);
 
   const eligibility = useMemo<JoinEligibility>(() => {
     if (!isAuthenticated) {

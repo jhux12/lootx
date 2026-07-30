@@ -18,8 +18,8 @@ const resolveInitialMode = (): PerformanceMode => {
   }
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches;
   const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
-  const constrainedDevice = (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2)
-    || (navigatorWithMemory.deviceMemory !== undefined && navigatorWithMemory.deviceMemory <= 2);
+  const constrainedDevice = (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4)
+    || (navigatorWithMemory.deviceMemory !== undefined && navigatorWithMemory.deviceMemory <= 4);
   return {
     isMobile: window.matchMedia(MOBILE_QUERY).matches,
     prefersReducedMotion: reducedMotion,

@@ -139,15 +139,9 @@ export const LegalEditor: React.FC = () => {
 
   useEffect(() => {
     const legalRef = doc(db, 'site', 'legal');
-    const pathLabel = 'site/legal';
-    console.log('READING FIRESTORE PATH', pathLabel);
     const unsubscribe = onSnapshot(
       legalRef,
       (snapshot) => {
-        console.log('SNAPSHOT OK', {
-          path: pathLabel,
-          size: 'size' in snapshot ? snapshot.size : undefined
-        });
         if (!snapshot.exists()) {
           if (!isInitializingRef.current) {
             isInitializingRef.current = true;
@@ -184,12 +178,7 @@ export const LegalEditor: React.FC = () => {
         setIsLoading(false);
       },
       (error) => {
-        console.error('SNAPSHOT FAILED', {
-          path: pathLabel,
-          code: error?.code,
-          message: error?.message,
-          error
-        });
+        console.error('Legal doc snapshot failed', error);
         setToast({ tone: 'error', message: 'Unable to load legal content.' });
         setIsLoading(false);
       }

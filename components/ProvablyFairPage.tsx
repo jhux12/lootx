@@ -44,10 +44,6 @@ export const ProvablyFairPage: React.FC = () => {
   useEffect(() => {
     if (!battleId) return;
     void (async () => {
-      const battlePathLabel = `battles/${battleId}`;
-      const roundsPathLabel = `battles/${battleId}/rounds`;
-      console.log('READING FIRESTORE PATH', battlePathLabel);
-      console.log('READING FIRESTORE PATH', roundsPathLabel);
       const [battleSnap, roundsSnap] = await Promise.all([
         getDoc(doc(db, 'battles', battleId)),
         getDocs(query(collection(db, 'battles', battleId, 'rounds'), orderBy('index', 'asc')))

@@ -3,6 +3,7 @@ import { useGame } from "../context/GameContext";
 import { useSound } from "../context/SoundContext";
 import { DailySpinPage } from "./DailySpinPage";
 import { authedFetch } from "../utils/authedFetch";
+import { useVisibleInterval } from "../hooks/useVisibleInterval";
 
 const DAILY_SPIN_BALANCE_SUPPRESSION_KEY = "pullzDailySpinSuppressBalanceFeedbackUntil";
 const DAILY_SPIN_ANIMATION_MS = 5000;
@@ -14,10 +15,7 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
   const { playSound } = useSound();
   const [currentTime, setCurrentTime] = useState(Date.now());
 
-  useEffect(() => {
-    const interval = window.setInterval(() => setCurrentTime(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, []);
+  useVisibleInterval(() => setCurrentTime(Date.now()), 1000);
 
   const lastDailyClaim = Number.isFinite(user.lastDailyClaim ?? NaN)
     ? Number(user.lastDailyClaim)

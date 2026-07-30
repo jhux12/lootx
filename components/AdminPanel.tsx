@@ -502,14 +502,8 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'dashboard') return;
-      const pathLabel = 'adminNotifications';
-      console.log('READING FIRESTORE PATH', pathLabel);
       const noticesQuery = query(collection(db, 'adminNotifications'), orderBy('createdAt', 'desc'), limit(30));
       const unsubscribe = onSnapshot(noticesQuery, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: pathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const next = snapshot.docs.map((docSnap) => {
               const data = docSnap.data() as Record<string, any>;
               return {
@@ -523,12 +517,7 @@ export const AdminPanel: React.FC = () => {
           });
           setAdminSentNotifications(next);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: pathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Admin notifications snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -719,18 +708,12 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'support') return;
-      const supportPathLabel = 'supportCases';
-      console.log('READING FIRESTORE PATH', supportPathLabel);
       const supportQuery = query(
           collection(db, 'supportCases'),
           orderBy('lastUpdatedAt', 'desc'),
           limit(50)
       );
       const unsubscribe = onSnapshot(supportQuery, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: supportPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const nextCases = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Omit<SupportCase, 'id'>;
               return {
@@ -740,12 +723,7 @@ export const AdminPanel: React.FC = () => {
           });
           setSupportCases(nextCases);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: supportPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Support cases snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -753,14 +731,8 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'bonuses') return;
-      const itemsPathLabel = 'xpShopItems';
-      console.log('READING FIRESTORE PATH', itemsPathLabel);
       const itemsQuery = query(collection(db, 'xpShopItems'), orderBy('sortOrder', 'asc'), limit(100));
       const unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: itemsPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const nextItems = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Record<string, any>;
               return {
@@ -786,12 +758,7 @@ export const AdminPanel: React.FC = () => {
           });
           setXpShopItems(nextItems);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: itemsPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('XP shop items snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -799,14 +766,8 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'bonuses') return;
-      const redemptionsPathLabel = 'xpRedemptions';
-      console.log('READING FIRESTORE PATH', redemptionsPathLabel);
       const redemptionsQuery = query(collection(db, 'xpRedemptions'), orderBy('createdAt', 'desc'), limit(100));
       const unsubscribe = onSnapshot(redemptionsQuery, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: redemptionsPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const nextRedemptions = snapshot.docs.map((docSnapshot) => {
               const data = docSnapshot.data() as Record<string, any>;
               return {
@@ -821,12 +782,7 @@ export const AdminPanel: React.FC = () => {
           });
           setXpRedemptions(nextRedemptions);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: redemptionsPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('XP redemptions snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -1090,8 +1046,6 @@ export const AdminPanel: React.FC = () => {
       return true;
   });
   useEffect(() => {
-      const usersPath = 'users (dashboard live stats)';
-      console.log('READING FIRESTORE PATH', usersPath);
       const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(250));
       const unsubscribe = onSnapshot(usersQuery, (snapshot) => {
           const nextTransactions: DashboardTransaction[] = [];
@@ -1135,12 +1089,7 @@ export const AdminPanel: React.FC = () => {
           setDashboardTransactions(nextTransactions.slice(0, 12));
           setDashboardUsers(nextUsers);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: usersPath,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Dashboard users snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -1241,14 +1190,8 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'bonuses') return;
-      const rewardsPathLabel = 'settings/rewards';
-      console.log('READING FIRESTORE PATH', rewardsPathLabel);
       const rewardsRef = doc(db, 'settings', 'rewards');
       const unsubscribe = onSnapshot(rewardsRef, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: rewardsPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const data = snapshot.data() as Record<string, any> | undefined;
           const rankRules = Array.isArray(data?.rewardRules?.payoutsByRank) ? data.rewardRules.payoutsByRank : [];
           const getTopReward = (rank: number, fallback: number) => {
@@ -1270,12 +1213,7 @@ export const AdminPanel: React.FC = () => {
               ,questRulesText: JSON.stringify(data?.questRules ?? JSON.parse(DEFAULT_REWARDS_SETTINGS.questRulesText), null, 2)
           });
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: rewardsPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Rewards settings snapshot failed', error);
       });
       return () => unsubscribe();
   }, [activeTab]);
@@ -1283,8 +1221,6 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'bonuses') return;
-      const pullPassPathLabel = 'settings/pullPass';
-      console.log('READING FIRESTORE PATH', pullPassPathLabel);
       const pullPassRef = doc(db, 'settings', 'pullPass');
       const unsubscribe = onSnapshot(pullPassRef, (snapshot) => {
           if (!snapshot.exists()) return;
@@ -1540,14 +1476,8 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
       if (activeTab !== 'settings' && activeTab !== 'bonuses') return;
-      const economyPathLabel = 'settings/economy';
-      console.log('READING FIRESTORE PATH', economyPathLabel);
       const economyRef = doc(db, 'settings', 'economy');
       const unsubscribe = onSnapshot(economyRef, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: economyPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const data = snapshot.exists() ? snapshot.data() ?? {} : {};
           const nextDraft: EconomySettingsDraft = {
               xpPerDollar: Math.max(1, Number(data.xpPerDollar ?? DEFAULT_ECONOMY_SETTINGS.xpPerDollar) || DEFAULT_ECONOMY_SETTINGS.xpPerDollar),
@@ -1556,12 +1486,7 @@ export const AdminPanel: React.FC = () => {
           };
           setEconomyDraft(nextDraft);
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: economyPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Economy settings snapshot failed', error);
           setEconomyDraft(DEFAULT_ECONOMY_SETTINGS);
       });
 
@@ -1569,27 +1494,15 @@ export const AdminPanel: React.FC = () => {
   }, [activeTab]);
 
   useEffect(() => {
-      console.log('SELECTED USER', selectedUserId);
       if (!isRealSelectedUserId(selectedUserId)) return;
-      const inventoryPathLabel = `users/${selectedUserId}/inventory`;
-      console.log('READING FIRESTORE PATH', inventoryPathLabel);
       const inventoryRef = collection(db, 'users', selectedUserId, 'inventory');
       const unsubscribe = onSnapshot(inventoryRef, (snapshot) => {
-          console.log('SNAPSHOT OK', {
-              path: inventoryPathLabel,
-              size: 'size' in snapshot ? snapshot.size : undefined
-          });
           const loaded = snapshot.docs
               .map((docSnap) => mapAdminInventoryDoc(docSnap.id, docSnap.data()))
               .sort((a, b) => b.obtainedAt - a.obtainedAt);
           setInventoryState((prev) => ({ ...prev, [selectedUserId]: loaded }));
       }, (error) => {
-          console.error('SNAPSHOT FAILED', {
-              path: inventoryPathLabel,
-              code: error?.code,
-              message: error?.message,
-              error
-          });
+          console.error('Admin inventory snapshot failed', error);
       });
 
       return () => unsubscribe();

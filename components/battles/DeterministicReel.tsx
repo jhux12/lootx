@@ -178,7 +178,7 @@ export const DeterministicReel: React.FC<DeterministicReelProps> = memo(({ spinK
                 <div className="pointer-events-none absolute inset-2 rounded-full opacity-65" style={{ background: `radial-gradient(circle, ${accent}66 0%, ${accent}24 45%, transparent 80%)` }} />
                 <div className="relative z-10 flex h-full items-center gap-2">
                   <div className="h-14 w-14 shrink-0 overflow-hidden rounded bg-[#101726]">
-                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} width={56} height={56} loading="eager" className="h-14 w-14 object-contain" /> : <div className="flex h-14 w-14 items-center justify-center text-[10px] text-gray-500">N/A</div>}
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} width={56} height={56} loading="lazy" decoding="async" className="h-14 w-14 object-contain" /> : <div className="flex h-14 w-14 items-center justify-center text-[10px] text-gray-500">N/A</div>}
                   </div>
                   <div className="min-w-0">
                     <div className="truncate text-[12px] font-semibold text-gray-100">{item.name}</div>
