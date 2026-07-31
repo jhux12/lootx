@@ -71,10 +71,11 @@ const SPINNER_MOTION = {
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
   overshootPx: 56,
-  bounce1OffsetPx: 24,
-  bounce2OffsetPx: 9,
-  bounce1OffsetDelta: 0.13,
-  bounce2OffsetDelta: 0.22,
+  bounce1OffsetPx: 28,
+  // How much of the remaining post-overshoot window goes to the swing-back
+  // leg vs. the final settle. Front-loaded so the last, smaller correction
+  // stays quick and readable as motion instead of crawling.
+  bounceSettleFraction: 0.8,
   landedFlourishMs: 420,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
@@ -519,8 +520,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const confettiTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
   const landedFlourishTimerRef = useRef<number | null>(null);
-  const bounce1FlourishTimerRef = useRef<number | null>(null);
-  const bounce2FlourishTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
@@ -1127,14 +1126,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       window.clearTimeout(landedFlourishTimerRef.current);
       landedFlourishTimerRef.current = null;
     }
-    if (bounce1FlourishTimerRef.current !== null) {
-      window.clearTimeout(bounce1FlourishTimerRef.current);
-      bounce1FlourishTimerRef.current = null;
-    }
-    if (bounce2FlourishTimerRef.current !== null) {
-      window.clearTimeout(bounce2FlourishTimerRef.current);
-      bounce2FlourishTimerRef.current = null;
-    }
     setJustLanded(false);
     setAnimationPhase('idle');
   }, []);
@@ -1162,8 +1153,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
     const overshootOffset = clamp((1 - settlePortion) - 0.16, 0.54, 0.7);
-    const bounce1Offset = overshootOffset + SPINNER_MOTION.bounce1OffsetDelta;
-    const bounce2Offset = overshootOffset + SPINNER_MOTION.bounce2OffsetDelta;
+    // Front-load the swing-back leg so the final correction (a smaller distance)
+    // still moves at a readable speed instead of crawling for a second-plus.
+    const bounce1Offset = overshootOffset + ((1 - overshootOffset) * SPINNER_MOTION.bounceSettleFraction);
 
     resetSpinnerAnimation();
 
@@ -1194,20 +1186,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
-    // Pendulum: after the big overshoot, swing past center the other way, then
-    // swing back a smaller amount on the overshoot's side, decaying like a
-    // damped spring before finally coming to rest on the winner.
+    // Pendulum: after the big overshoot, swing back past center the other way,
+    // then settle to dead-center with a quick, decisive final correction.
     const bounceSide = Math.sign(overshootTarget - centeredTranslate) || overshootDirection;
     const bounce1Translate = clampTranslate(centeredTranslate - (bounceSide * SPINNER_MOTION.bounce1OffsetPx));
-    const bounce2Translate = clampTranslate(centeredTranslate + (bounceSide * SPINNER_MOTION.bounce2OffsetPx));
     setAnimationPhase('spinning');
 
     const spinKeyframes: SpinKeyframe[] = [
       { offset: 0, translate: 0, easing: [0.24, 0.62, 0.18, 1] },
       { offset: overshootOffset, translate: overshootTarget, easing: [0.12, 0.82, 0.2, 1] },
-      { offset: bounce1Offset, translate: bounce1Translate, easing: [0.32, 0.74, 0.34, 1] },
-      { offset: bounce2Offset, translate: bounce2Translate, easing: [0.4, 0.7, 0.4, 1] },
-      { offset: 1, translate: centeredTranslate, easing: [0.22, 1, 0.36, 1] }
+      { offset: bounce1Offset, translate: bounce1Translate, easing: [0.3, 0.7, 0.34, 1] },
+      { offset: 1, translate: centeredTranslate, easing: [0.16, 1, 0.3, 1] }
     ];
 
     const animation = container.animate(
@@ -1257,17 +1246,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       () => setAnimationPhase('settling'),
       Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
     );
-
-    if (!prefersReducedMotion) {
-      bounce1FlourishTimerRef.current = window.setTimeout(() => {
-        setLandingPulseSeq((seq) => seq + 1);
-        bounce1FlourishTimerRef.current = null;
-      }, Math.max(0, bounce1Offset * resolvedDuration));
-      bounce2FlourishTimerRef.current = window.setTimeout(() => {
-        setLandingPulseSeq((seq) => seq + 1);
-        bounce2FlourishTimerRef.current = null;
-      }, Math.max(0, bounce2Offset * resolvedDuration));
-    }
 
     animation.onfinish = () => {
       window.clearTimeout(decelerationTimer);
