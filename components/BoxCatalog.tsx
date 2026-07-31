@@ -520,9 +520,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
           <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
             <div className="pullz-boxes-hero-orbit" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="eager" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="lazy" decoding="async" />
             <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="eager" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="lazy" decoding="async" />
             <div className="pullz-boxes-hero-platform" />
             <span className="pullz-boxes-particle pullz-boxes-particle-1" />
             <span className="pullz-boxes-particle pullz-boxes-particle-2" />

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, RefreshCw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
 import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
@@ -157,7 +157,7 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
   </button>
 );
 
-const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: MobileLiveWin[]; isLoading: boolean; onOpenBox: (boxId: string) => void }) => {
+const MobileLiveWins = React.memo(({ wins, isLoading, onApproach, onOpenBox }: { wins: MobileLiveWin[]; isLoading: boolean; onApproach: () => void; onOpenBox: (boxId: string) => void }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
@@ -166,11 +166,18 @@ const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: Mobil
 
   useEffect(() => {
     const element = sectionRef.current;
-    if (!element || !('IntersectionObserver' in window)) return undefined;
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry?.isIntersecting ?? false), { threshold: 0.05 });
+    if (!element || !('IntersectionObserver' in window)) {
+      onApproach();
+      return undefined;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      const visible = entry?.isIntersecting ?? false;
+      setIsVisible(visible);
+      if (visible) onApproach();
+    }, { rootMargin: '600px 0px', threshold: 0.05 });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [onApproach]);
 
   useEffect(() => {
     if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
@@ -212,7 +219,9 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [liveWinBoxes, setLiveWinBoxes] = useState<MysteryBox[]>([]);
-  const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(true);
+  const [shouldLoadLiveWins, setShouldLoadLiveWins] = useState(false);
+  const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(false);
+  const requestLiveWins = useCallback(() => setShouldLoadLiveWins(true), []);
   const trendingBoxes = useMemo(() => {
     return trendingBoxIds
       .map((id) => boxes.find((box) => box.id === id))
@@ -271,10 +280,14 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, [liveWinBoxes]);
 
   useEffect(() => {
+    if (!shouldLoadLiveWins || !boxes.length) return;
     let cancelled = false;
     setIsLiveWinsLoading(true);
 
-    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
+    // Item data is intentionally deferred until this below-the-fold rail is
+    // approached. Summary documents keep the initial home response small.
+    const detailCount = performanceMode.isMobile ? 4 : 6;
+    void Promise.all(boxes.slice(0, detailCount).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
       .then((details) => {
         if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
       })
@@ -286,7 +299,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       });
 
     return () => { cancelled = true; };
-  }, [boxes]);
+  }, [boxes, performanceMode.isMobile, shouldLoadLiveWins]);
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
@@ -602,7 +615,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         </div>
       </section>
 
-      <MobileLiveWins wins={mobileLiveWins} isLoading={isLiveWinsLoading} onOpenBox={onOpenBox} />
+      <MobileLiveWins wins={mobileLiveWins} isLoading={isLiveWinsLoading} onApproach={requestLiveWins} onOpenBox={onOpenBox} />
 
       <HowItWorksSection />
       <HomepageFaqSection />
