@@ -12,7 +12,6 @@ interface SoundContextType {
   muted: boolean;
   toggleMute: () => void;
   unlockAudio: () => void;
-  prepareCaseAudio: () => void;
   playSound: (type: SoundType) => void;
 }
 
@@ -42,43 +41,8 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [muted, setMuted] = useState(false);
   const audioRefs = useRef<Partial<Record<SoundType, HTMLAudioElement[]>>>({});
   const roundRobinIndexRef = useRef<Partial<Record<SoundType, number>>>({});
-  const audioContextRef = useRef<AudioContext | null>(null);
   const lastTickAtRef = useRef(0);
-  const didWarmupRef = useRef(false);
   const hasUserInteractedRef = useRef(false);
-
-  const ensureAudioContextReady = useCallback(() => {
-    if (typeof window === 'undefined') return null;
-    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextCtor) return null;
-
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContextCtor();
-    }
-
-    const audioContext = audioContextRef.current;
-    if (audioContext.state === 'suspended') {
-      void audioContext.resume().catch(() => undefined);
-    }
-
-    if (!didWarmupRef.current) {
-      didWarmupRef.current = true;
-      try {
-        // Prime audio graph on the first allowed gesture so mobile playback starts reliably.
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        gainNode.gain.setValueAtTime(0.00001, audioContext.currentTime);
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.01);
-      } catch {
-        // ignore warm-up failures
-      }
-    }
-
-    return audioContext;
-  }, []);
 
   const ensureSoundPool = useCallback((key: SoundType, preload: HTMLAudioElement['preload'] = 'metadata') => {
     if (typeof window === 'undefined' || audioRefs.current[key]) return;
@@ -102,25 +66,16 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  const prepareCaseAudio = useCallback(() => {
-    ensureAudioContextReady();
-    ensureSoundPool('spin-tick', 'auto');
-    ensureSoundPool('win-common', 'metadata');
-  }, [ensureAudioContextReady, ensureSoundPool]);
-
   const unlockAudio = useCallback(() => {
     if (hasUserInteractedRef.current) return;
     hasUserInteractedRef.current = true;
-    ensureAudioContextReady();
     ensureSoundPool('spin-tick', 'metadata');
-  }, [ensureAudioContextReady, ensureSoundPool]);
+  }, [ensureSoundPool]);
 
   const toggleMute = useCallback(() => setMuted((prev) => !prev), []);
 
   const playSound = useCallback((type: SoundType) => {
     if (muted || !hasUserInteractedRef.current) return;
-    ensureAudioContextReady();
-
     if (type === 'spin-tick') {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       if (now - lastTickAtRef.current < 42) return;
@@ -153,9 +108,9 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch {
       // ignore playback errors
     }
-  }, [ensureAudioContextReady, ensureSoundPool, muted]);
+  }, [ensureSoundPool, muted]);
 
-  return <SoundContext.Provider value={{ muted, toggleMute, unlockAudio, prepareCaseAudio, playSound }}>{children}</SoundContext.Provider>;
+  return <SoundContext.Provider value={{ muted, toggleMute, unlockAudio, playSound }}>{children}</SoundContext.Provider>;
 };
 
 export const useSound = () => {

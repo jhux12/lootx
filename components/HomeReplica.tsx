@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, RefreshCw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
 import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
-import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
+import { Timestamp, addDoc, collection, getDocs, limit, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { CaseItem, MysteryBox } from '../types';
+import { MysteryBox } from '../types';
 import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useAuth, useUI } from '../context/GameContext';
-import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
+import { getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
+import { getHomepageWins, HomepageWin } from '../utils/recentWinsRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 
@@ -51,23 +52,6 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 const PROMO_BOX_ID = 'Pix6KvQzz8C9GtQf7F72';
-
-const mapHomepageLiveWinBox = (id: string, data: Record<string, any>): MysteryBox => ({
-  id,
-  name: String(data.name ?? 'Mystery Box'),
-  price: Number(data.price ?? 0),
-  image: typeof data.image === 'string' ? data.image : '',
-  accentColor: typeof data.accentColor === 'string' ? data.accentColor : '#3b82f6',
-  items: Array.isArray(data.items) ? data.items.map((item: Partial<CaseItem>, index: number): CaseItem => ({
-    id: String(item.id ?? `${id}-item-${index}`),
-    name: String(item.name ?? 'Mystery Item'),
-    price: Number(item.price ?? 0),
-    image: typeof item.image === 'string' ? item.image : '',
-    rarity: ['common', 'uncommon', 'rare', 'epic', 'legendary'].includes(String(item.rarity)) ? item.rarity as CaseItem['rarity'] : 'common',
-    chance: Number(item.chance ?? 0),
-    color: typeof item.color === 'string' ? item.color : '#64748b'
-  })) : []
-});
 
 const MobileLiveWinCard: React.FC<{ win: MobileLiveWin; onOpenBox: (boxId: string) => void }> = ({ win, onOpenBox }) => (
   <button type="button" onClick={() => onOpenBox(win.boxId)} className={`relative h-[128px] min-w-[100px] overflow-hidden rounded-md bg-gradient-to-br ${MOBILE_LIVE_WIN_ACCENT[win.rarity]} p-2 text-left shadow-[0_14px_28px_rgba(0,0,0,0.30)] active:scale-[0.98]`} aria-label={`Open box for ${win.rarity} live win`}>
@@ -115,7 +99,7 @@ const MobileCustomerReviewSkeleton: React.FC = () => (
   </div>
 );
 
-const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+const FreeBoxHeroSlide: React.FC<{ box: MysteryBox; loadImage: boolean }> = ({ box, loadImage }) => (
   <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(120deg,#5525cf_0%,#5146dd_52%,#4275e8_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(255,255,255,.14),transparent_28%),radial-gradient(circle_at_88%_75%,rgba(152,90,255,.40),transparent_46%)]" />
     <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
@@ -124,23 +108,23 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
         <h1 className="mt-2 max-w-[285px] text-[24px] font-black uppercase leading-[.92] tracking-[-.04em] text-white sm:max-w-[440px] sm:text-[38px] lg:max-w-[590px] lg:text-[58px]">Your Free Box Is Ready</h1>
         <span className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#5428c9] shadow-[0_8px_20px_rgba(0,0,0,.16)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt={box.name} width={192} height={192} decoding="async" fetchPriority="high" className="h-24 w-24 self-center object-contain drop-shadow-[0_18px_25px_rgba(0,0,0,.42)] sm:h-36 sm:w-36 lg:h-48 lg:w-48" /> : null}
     </div>
   </div>
 );
 
-const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
+const PromoBoxHeroSlide: React.FC<{ box: MysteryBox; loadImage: boolean }> = ({ box, loadImage }) => (
   <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#070d0d_0%,#172420_48%,#17110d_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(41,217,203,.22),transparent_27%),radial-gradient(circle_at_86%_85%,rgba(255,169,55,.24),transparent_35%),linear-gradient(90deg,rgba(112,39,146,.20),transparent_46%)]" />
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,188,75,.48),transparent)] blur-md" />
     <div className="relative z-10 flex h-full items-center justify-center text-center">
-      {box.image ? <img src={box.image} alt="" aria-hidden="true" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-left-1 sm:h-28 sm:w-28 lg:left-3 lg:h-36 lg:w-36" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt="" aria-hidden="true" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-left-1 sm:h-28 sm:w-28 lg:left-3 lg:h-36 lg:w-36" /> : null}
       <div className="relative z-10 flex min-w-0 max-w-[180px] flex-col items-center sm:max-w-[420px] lg:max-w-[590px]">
         <h1 className="text-[21px] font-black uppercase leading-[.9] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:text-[30px] lg:text-[48px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
         <p className="mt-1.5 hidden text-[11px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:block lg:text-sm">Enter the vault and uncover a special pull.</p>
         <span className="mt-2 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-right-1 sm:h-28 sm:w-28 lg:right-3 lg:h-36 lg:w-36" /> : null}
+      {box.image && loadImage ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-right-1 sm:h-28 sm:w-28 lg:right-3 lg:h-36 lg:w-36" /> : null}
     </div>
   </div>
 );
@@ -158,25 +142,8 @@ const MobileSubmitReviewCard: React.FC<{ onSubmit: () => void }> = ({ onSubmit }
 );
 
 const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: MobileLiveWin[]; isLoading: boolean; onOpenBox: (boxId: string) => void }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
-  const performanceMode = usePerformanceMode();
-  const displayedWins = useMemo(() => wins.length ? [...wins, ...wins] : [], [wins]);
-
-  useEffect(() => {
-    const element = sectionRef.current;
-    if (!element || !('IntersectionObserver' in window)) return undefined;
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry?.isIntersecting ?? false), { threshold: 0.05 });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
-    const rotateTimer = window.setInterval(() => setActiveIndex((current) => (current + 1) % wins.length), 2400);
-    return () => window.clearInterval(rotateTimer);
-  }, [isVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, wins.length]);
+  const displayedWins = wins.slice(0, 6);
 
   return (
     <section ref={sectionRef} id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -184,9 +151,9 @@ const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: Mobil
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
         <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
       </div>
-      <div className="overflow-hidden">
-        <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeIndex * 108}px,0,0)` }}>
-          {displayedWins.map((win, index) => <MobileLiveWinCard key={`${win.id}-${index}`} win={win} onOpenBox={onOpenBox} />)}
+      <div className="overflow-x-auto overscroll-x-contain scroll-smooth snap-x snap-mandatory [scrollbar-width:none]">
+        <div className="flex w-max gap-2 pb-1">
+          {displayedWins.map((win) => <div className="snap-start" key={win.id}><MobileLiveWinCard win={win} onOpenBox={onOpenBox} /></div>)}
           {!displayedWins.length && isLoading ? Array.from({ length: 6 }).map((_, index) => <div key={`live-win-loading-${index}`} className="h-[128px] min-w-[100px] animate-pulse rounded-md bg-[#242b31]" aria-hidden="true" />) : null}
           {!displayedWins.length && !isLoading ? <p className="py-8 text-sm font-semibold text-slate-400">Live wins will appear here soon.</p> : null}
         </div>
@@ -211,7 +178,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   const [submitReviewCaption, setSubmitReviewCaption] = useState('');
   const [submitReviewNotice, setSubmitReviewNotice] = useState<string | null>(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [liveWinBoxes, setLiveWinBoxes] = useState<MysteryBox[]>([]);
+  const [homepageWins, setHomepageWins] = useState<HomepageWin[]>([]);
   const [isLiveWinsLoading, setIsLiveWinsLoading] = useState(true);
   const trendingBoxes = useMemo(() => {
     return trendingBoxIds
@@ -219,74 +186,25 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       .filter(Boolean) as MysteryBox[];
   }, [boxes, trendingBoxIds]);
   const mobileLiveWins = useMemo<MobileLiveWin[]>(() => {
-    const itemPool = liveWinBoxes
-      .flatMap((box) => box.items.map((item) => ({ item, boxId: box.id })))
-      .filter(({ item }) => item.image && item.name);
-
-    if (!itemPool.length) return [];
-
-    const rarityTargets: Array<{ rarity: MobileLiveWin['rarity']; count: number }> = [
-      { rarity: 'common', count: 4 },
-      { rarity: 'uncommon', count: 2 },
-      { rarity: 'rare', count: 2 },
-      { rarity: 'epic', count: 1 },
-      { rarity: 'legendary', count: 1 }
-    ];
-    const selected: typeof itemPool = [];
-    const usedKeys = new Set<string>();
-    const shuffledPool = [...itemPool].sort(() => Math.random() - 0.5);
-
-    rarityTargets.forEach(({ rarity, count }) => {
-      shuffledPool
-        .filter(({ item }) => item.rarity === rarity)
-        .slice(0, count)
-        .forEach((entry) => {
-          const key = `${entry.boxId}-${entry.item.id}`;
-          if (!usedKeys.has(key)) {
-            usedKeys.add(key);
-            selected.push(entry);
-          }
-        });
-    });
-
-    if (selected.length < 10) {
-      shuffledPool.forEach((entry) => {
-        if (selected.length >= 10) return;
-        const key = `${entry.boxId}-${entry.item.id}`;
-        if (!usedKeys.has(key)) {
-          usedKeys.add(key);
-          selected.push(entry);
-        }
-      });
-    }
-
-    return selected.slice(0, 10).sort(() => Math.random() - 0.5).map(({ item, boxId }, index) => ({
-      id: `${boxId}-${item.id}-${index}`,
-      title: item.name,
-      image: item.image,
-      rarity: item.rarity,
-      timeAgo: index === 0 ? 'now' : `${index + 1}m`,
-      boxId
-    }));
-  }, [liveWinBoxes]);
+    const now = Date.now();
+    return homepageWins.map((win) => ({ id: win.id, title: win.itemName, image: win.itemImage, rarity: win.rarity, timeAgo: win.timestamp ? `${Math.max(1, Math.floor((now - win.timestamp.getTime()) / 60000))}m` : 'recent', boxId: win.boxId }));
+  }, [homepageWins]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLiveWinsLoading(true);
 
-    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
-      .then((details) => {
-        if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
-      })
+    void getHomepageWins()
+      .then((wins) => { if (!cancelled) setHomepageWins(wins); })
       .catch(() => {
-        if (!cancelled) setLiveWinBoxes([]);
+        if (!cancelled) setHomepageWins([]);
       })
       .finally(() => {
         if (!cancelled) setIsLiveWinsLoading(false);
       });
 
     return () => { cancelled = true; };
-  }, [boxes]);
+  }, []);
   const customerReviewCards = customerReviews.length
     ? customerReviews
     : [{ id: 'fallback-review', username: 'edb87', caption: '', mediaUrl: MOBILE_REVIEW_FALLBACK_IMAGE, timestampLabel: '11/20/2025' }];
@@ -307,20 +225,21 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, [promoBox, showFreeBoxSlide]);
 
   useEffect(() => {
-    if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
+    if (showFreeBoxSlide || performanceMode.isMobile || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
     }, 10000);
     return () => window.clearInterval(heroTimer);
-  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
+  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
     let cancelled = false;
-    const loadReviews = () => {
+    const loadReviews = async () => {
       if (cancelled) return;
       const reviewsQuery = query(collection(db, 'liveCommunityStories'), where('approved', '==', true), limit(12));
-      unsubscribe = onSnapshot(reviewsQuery, (snapshot) => {
+      try {
+      const snapshot = await getDocs(reviewsQuery);
+      if (cancelled) return;
       const nextReviews = snapshot.docs
         .map((entry) => ({ id: entry.id, ...(entry.data() as Omit<MobileCustomerReview, 'id'> & { hidden?: boolean; mediaUrl?: string }) }))
         .filter((story) => !story.hidden && Boolean(story.mediaUrl))
@@ -340,10 +259,11 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         }));
       setCustomerReviews(nextReviews);
       setIsReviewsLoading(false);
-      }, () => {
+      } catch {
+        if (cancelled) return;
         setCustomerReviews([]);
         setIsReviewsLoading(false);
-      });
+      }
     };
 
     const reviewsSection = document.getElementById('mobile-customer-reviews');
@@ -352,7 +272,6 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       return () => {
         cancelled = true;
         window.clearTimeout(timer);
-        unsubscribe?.();
       };
     }
 
@@ -367,7 +286,6 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
     return () => {
       cancelled = true;
       observer.disconnect();
-      unsubscribe?.();
     };
   }, []);
 
@@ -499,8 +417,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
-            {promoBox && <PromoBoxHeroSlide box={promoBox} />}
+            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} loadImage={showFreeBoxHero} />}
+            {promoBox && <PromoBoxHeroSlide box={promoBox} loadImage={showPromoBoxHero} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
@@ -533,7 +451,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
               <div className="absolute -right-8 top-1/2 flex -translate-y-1/2 gap-1.5 sm:right-3 sm:gap-2 lg:right-8 lg:gap-3">
                 {(trendingBoxes.length ? trendingBoxes.slice(0, 4) : [{ id: 'a', name: 'Starter Box', image: '' }, { id: 'b', name: 'Premium Box', image: '' }] as any).map((box: MysteryBox, index: number) => (
                   <div key={box.id ?? index} className="grid h-[116px] w-[70px] place-items-center overflow-visible rounded-xl p-0 sm:h-[150px] sm:w-[96px] lg:h-[200px] lg:w-[132px]">
-                    {box.image ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
+                    {box.image && activeHero === 'hot-picks' ? <img src={box.image} alt="" width={160} height={160} loading={index === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={index === 0 ? 'high' : 'auto'} className="h-full w-full object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.38)]" /> : <span className="text-center text-sm font-black uppercase text-white drop-shadow-lg">{box.name}</span>}
                   </div>
                 ))}
               </div>

@@ -78,30 +78,34 @@ export const MobileBottomNav: React.FC = () => {
   // a visualViewport scroll/resize event (e.g. after the login modal closes on Safari).
   useEffect(() => {
     const vv = typeof window !== 'undefined' ? window.visualViewport : null;
-    if (!vv) return undefined;
-
-    let rafId: number;
+    let rafId: number | null = null;
+    let lastOffset = Number.NaN;
     const update = () => {
-      const offset = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
-      document.documentElement.style.setProperty('--pullz-viewport-bottom-offset', `${offset}px`);
+      rafId = null;
+      const innerHeight = window.innerHeight;
+      const offset = Math.max(0, innerHeight - (vv?.offsetTop ?? 0) - (vv?.height ?? innerHeight));
+      if (!Number.isFinite(lastOffset) || Math.abs(offset - lastOffset) >= 0.5) {
+        lastOffset = offset;
+        document.documentElement.style.setProperty('--pullz-viewport-bottom-offset', `${offset}px`);
+      }
     };
     // Deferred update via rAF so that DOM layout has settled after programmatic scrolls
     const deferredUpdate = () => {
-      cancelAnimationFrame(rafId);
+      if (rafId !== null) return;
       rafId = requestAnimationFrame(update);
     };
 
-    update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
+    deferredUpdate();
+    vv?.addEventListener('resize', deferredUpdate);
+    vv?.addEventListener('scroll', deferredUpdate, { passive: true });
     // window scroll fires after window.scrollTo() from scroll-lock release
     window.addEventListener('scroll', deferredUpdate, { passive: true });
     // pageshow fires when the page is restored from bfcache
     window.addEventListener('pageshow', deferredUpdate);
     return () => {
-      cancelAnimationFrame(rafId);
-      vv.removeEventListener('resize', update);
-      vv.removeEventListener('scroll', update);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      vv?.removeEventListener('resize', deferredUpdate);
+      vv?.removeEventListener('scroll', deferredUpdate);
       window.removeEventListener('scroll', deferredUpdate);
       window.removeEventListener('pageshow', deferredUpdate);
       document.documentElement.style.removeProperty('--pullz-viewport-bottom-offset');

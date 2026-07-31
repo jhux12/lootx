@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { getCachedDocument } from '../utils/firestoreCache';
 import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
 
@@ -38,7 +37,7 @@ const privateView = (view: ViewState) => ['PROFILE', 'INVENTORY', 'BONUSES', 'QU
 
 export const SeoHead = ({ view }: { view: ViewState }) => {
   const [settings, setSettings] = useState<SeoSettings>(DEFAULT_SEO_SETTINGS);
-  useEffect(() => onSnapshot(doc(db, 'site', 'seo'), snap => setSettings(normalizeSeoSettings(snap.data() as Partial<SeoSettings>)), () => setSettings(DEFAULT_SEO_SETTINGS)), []);
+  useEffect(() => { let active = true; void getCachedDocument('site/seo', 30 * 60_000).then((data) => { if (active) setSettings(normalizeSeoSettings(data as Partial<SeoSettings>)); }).catch(() => { if (active) setSettings(DEFAULT_SEO_SETTINGS); }); return () => { active = false; }; }, []);
   useEffect(() => {
     const isPrivate = privateView(view); const base = settings.canonicalUrl || DEFAULT_SEO_SETTINGS.canonicalUrl;
     const canonical = isPrivate ? `${base.replace(/\/$/, '')}${window.location.pathname}` : base;

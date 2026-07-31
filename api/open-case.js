@@ -570,6 +570,7 @@ export default async function handler(req, res) {
 
       responsePayload = {
         ok: true,
+        boxName: String(boxData.name ?? 'Mystery Box'),
         price,
         priceXP: paidWithXp ? resolvedXpCost : null,
         currencyType: paidWithXp ? 'XP' : currencyType,
@@ -645,6 +646,22 @@ export default async function handler(req, res) {
       });
     });
 
+
+    // Decorative and intentionally outside the award transaction.
+    try {
+      if (responsePayload?.openId && responsePayload?.prize) {
+        await firestore.collection('homepageWins').doc(responsePayload.openId).set({
+          itemName: String(responsePayload.prize.name ?? 'Mystery Item'),
+          itemImage: typeof responsePayload.prize.image === 'string' ? responsePayload.prize.image : '',
+          boxId: String(requestBoxId ?? ''),
+          boxName: String(responsePayload.boxName ?? 'Mystery Box'),
+          rarity: String(responsePayload.prize.rarity ?? 'common'),
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    } catch (recentWinError) {
+      console.warn('open-case recent win decoration failed', { openId: responsePayload?.openId, message: recentWinError?.message });
+    }
 
     try {
       if (responsePayload && responsePayload.isFree !== true) {
