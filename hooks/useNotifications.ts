@@ -62,25 +62,14 @@ export const useNotifications = (uid?: string | null) => {
     const notificationsRef = collection(db, 'users', uid, 'notifications');
     const listQuery = query(notificationsRef, orderBy('createdAt', 'desc'), limit(NOTIFICATION_LIST_LIMIT));
 
-    const listPathLabel = `users/${uid}/notifications`;
-    console.log('READING FIRESTORE PATH', listPathLabel);
     const unsubscribe = onSnapshot(listQuery, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: listPathLabel,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
       const next = snapshot.docs
         .map((docSnap) => toNotification(docSnap.id, docSnap.data()))
         .sort((a, b) => (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0));
       setNotifications(next);
       setUnreadCount(next.filter((entry) => !entry.readAt).length);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: listPathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Notifications snapshot failed', error);
     });
 
     return () => {

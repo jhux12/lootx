@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { BrandLockup } from './BrandLockup';
 import { auth } from '../firebase';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 
 export const EmailVerificationModal: React.FC = () => {
   const {
@@ -40,11 +41,7 @@ export const EmailVerificationModal: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  useEffect(() => {
-    if (!isResendCoolingDown) return;
-    const interval = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(interval);
-  }, [isResendCoolingDown]);
+  useVisibleInterval(() => setNow(Date.now()), 1000, isResendCoolingDown);
 
   const handleResend = async () => {
     if (isResendCoolingDown) return;

@@ -5,6 +5,7 @@ import { useSound } from '../context/SoundContext';
 import { CoinAmount } from './CoinAmount';
 import { authedFetch } from '../utils/authedFetch';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 
 const formatStatus = (battle: any, now: number) => {
   const state = String(battle.state || '').toUpperCase();
@@ -35,10 +36,7 @@ export const BattlesList: React.FC = () => {
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
   const inFlightRef = useRef<Record<string, boolean>>({});
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+  useVisibleInterval(() => setNow(Date.now()), 1000);
 
   const rows = useMemo(() => battles.slice(0, 10).map((battle) => ({
     id: battle.id,
@@ -71,16 +69,13 @@ export const BattlesList: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      rows.forEach((battle) => {
-        const state = String(battle.state || '').toUpperCase();
-        if (state === 'LOBBY' || state === 'COUNTDOWN') void perform(battle.id, 'tick');
-        if (state === 'RUNNING') void perform(battle.id, 'progress');
-      });
-    }, 2400);
-    return () => window.clearInterval(interval);
-  }, [rows]);
+  useVisibleInterval(() => {
+    rows.forEach((battle) => {
+      const state = String(battle.state || '').toUpperCase();
+      if (state === 'LOBBY' || state === 'COUNTDOWN') void perform(battle.id, 'tick');
+      if (state === 'RUNNING') void perform(battle.id, 'progress');
+    });
+  }, 2400, rows.length > 0);
 
   const onCreate = async () => {
     if (!selectedBoxIds.length || isCreatingBattle) return;

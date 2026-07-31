@@ -4,6 +4,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useGame } from "../context/GameContext";
 import { authedFetch } from "../utils/authedFetch";
+import { useVisibleInterval } from "../hooks/useVisibleInterval";
 import {
   getQuestProgressValue,
   normalizeQuestRules,
@@ -36,34 +37,20 @@ export const Quests: React.FC<{ embedded?: boolean }> = ({
   const [nowTs, setNowTs] = useState(() => Date.now());
 
   useEffect(() => {
-    const pathLabel = "settings/rewards";
-    console.log("READING FIRESTORE PATH", pathLabel);
     const unsub = onSnapshot(
       doc(db, "settings", "rewards"),
       (snap) => {
-        console.log("SNAPSHOT OK", {
-          path: pathLabel,
-          size: "size" in snap ? snap.size : undefined,
-        });
         const data = snap.data() as Record<string, unknown> | undefined;
         setRules(normalizeQuestRules(data?.questRules));
       },
       (error) => {
-        console.error("SNAPSHOT FAILED", {
-          path: pathLabel,
-          code: error?.code,
-          message: error?.message,
-          error,
-        });
+        console.error("Quest rules snapshot failed", error);
       },
     );
     return () => unsub();
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowTs(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+  useVisibleInterval(() => setNowTs(Date.now()), 1000);
 
   const today = dayKey();
   const rawStats = (user as any).challengeStats as

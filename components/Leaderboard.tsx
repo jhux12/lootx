@@ -5,6 +5,7 @@ import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { COIN_ICON } from '../constants';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 
 interface RewardsSettings {
   enabled: boolean;
@@ -111,22 +112,11 @@ export const Leaderboard: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
-    const pathLabel = 'settings/rewards';
-    console.log('READING FIRESTORE PATH', pathLabel);
     const unsub = onSnapshot(doc(db, 'settings', 'rewards'), (snap) => {
-      console.log('SNAPSHOT OK', {
-        path: pathLabel,
-        size: 'size' in snap ? snap.size : undefined
-      });
       setSettings(normalizeSettings(snap.data() as Record<string, any>));
       setSettingsLoaded(true);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: pathLabel,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Rewards settings snapshot failed', error);
       setSettings(DEFAULT_SETTINGS);
       setSettingsLoaded(true);
     });
@@ -135,10 +125,9 @@ export const Leaderboard: React.FC = () => {
 
   useEffect(() => {
     setTimeLeft(getTimeLeft(settings.seasonEndsAt));
-    if (!settings.seasonEndsAt) return;
-    const id = window.setInterval(() => setTimeLeft(getTimeLeft(settings.seasonEndsAt)), 1000);
-    return () => window.clearInterval(id);
   }, [settings.seasonEndsAt]);
+
+  useVisibleInterval(() => setTimeLeft(getTimeLeft(settings.seasonEndsAt)), 1000, Boolean(settings.seasonEndsAt));
 
 
 

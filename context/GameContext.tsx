@@ -1465,15 +1465,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    const inventoryPath = `users/${uid}/inventory?limit=200`;
-    console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(200));
     inventoryUnsubscribeRef.current = onSnapshot(inventoryRef, (snapshot) => {
       if (activeUserIdRef.current !== uid) return;
-      console.log('SNAPSHOT OK', {
-        path: inventoryPath,
-        size: snapshot.size
-      });
       hasInventorySubcollectionRef.current = snapshot.size > 0;
       const pendingIds = pendingSoldIdsRef.current;
       const loaded = snapshot.docs
@@ -1483,27 +1477,16 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setInventory(loaded);
       setUser((prev) => ({ ...prev, topPulls: rankTopPullsByValue(loaded) }));
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: inventoryPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Inventory snapshot failed', error);
     });
   }, []);
 
   const subscribeToNotifications = useCallback((uid: string) => {
     if (notificationsUnsubscribeRef.current) return;
 
-    const notificationsPath = `users/${uid}/notifications?limit=50`;
-    console.log('READING FIRESTORE PATH', notificationsPath);
     const notificationsRef = query(collection(db, 'users', uid, 'notifications'), orderBy('createdAt', 'desc'), limit(50));
     notificationsUnsubscribeRef.current = onSnapshot(notificationsRef, (snapshot) => {
       if (activeUserIdRef.current !== uid) return;
-      console.log('SNAPSHOT OK', {
-        path: notificationsPath,
-        size: snapshot.size
-      });
       const loaded = snapshot.docs.map((docSnap) => {
         const data = docSnap.data() as Record<string, any>;
         const type = data.type === 'shipping' ? 'shipping' : 'admin';
@@ -1516,12 +1499,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       setNotifications(loaded);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: notificationsPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Notifications snapshot failed', error);
     });
   }, []);
 
@@ -1533,8 +1511,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     const cappedLimit = Math.max(10, Math.min(200, Number(options?.limitCount ?? 120)));
-    const inventoryPath = `users/${uid}/inventory?limit=${cappedLimit}`;
-    console.log('READING FIRESTORE PATH', inventoryPath);
     const inventoryRef = query(collection(db, 'users', uid, 'inventory'), orderBy('obtainedAt', 'desc'), limit(cappedLimit));
     const snapshot = await getDocs(inventoryRef);
     if (activeUserIdRef.current !== uid) return;
@@ -1571,15 +1547,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsAuthenticated(true);
     void syncAdminClaim(firebaseUser);
 
-    const userPath = `users/${uid}`;
-    console.log('READING FIRESTORE PATH', userPath);
     const userRef = getUserRef(uid);
     userUnsubscribeRef.current = onSnapshot(userRef, (snapshot) => {
       if (activeUserIdRef.current !== uid) return;
-      console.log('SNAPSHOT OK', {
-        path: userPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
       if (!snapshot.exists()) {
         const profile = buildUserProfile(firebaseUser);
         setUser((prev) => ({ ...prev, ...profile, isAdmin: prev.isAdmin }));
@@ -1629,12 +1599,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser((prev) => ({ ...prev, topPulls: nextTopPulls }));
       }
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: userPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('User snapshot failed', error);
     });
 
     subscribeToInventory(uid);
@@ -1766,24 +1731,13 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const bonusSettingsPath = `settings/${BONUS_SETTINGS_DOC}`;
-    console.log('READING FIRESTORE PATH', bonusSettingsPath);
     const bonusSettingsRef = doc(db, 'settings', BONUS_SETTINGS_DOC);
     const unsubscribe = onSnapshot(bonusSettingsRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: bonusSettingsPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
       if (!snapshot.exists()) return;
       const normalized = normalizeBonusSettings(snapshot.data() as Partial<BonusSettings>);
       setBonusSettings(normalized);
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: bonusSettingsPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Bonus settings snapshot failed', error);
     });
 
     return () => unsubscribe();
@@ -1792,23 +1746,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [stripeSettings, setStripeSettings] = useState<StripeSettings>(() => DEFAULT_STRIPE_SETTINGS);
 
   useEffect(() => {
-    const stripeSettingsPath = `settings/${STRIPE_SETTINGS_DOC}`;
-    console.log('READING FIRESTORE PATH', stripeSettingsPath);
     const stripeSettingsRef = doc(db, 'settings', STRIPE_SETTINGS_DOC);
     const unsubscribe = onSnapshot(stripeSettingsRef, (snapshot) => {
-      console.log('SNAPSHOT OK', {
-        path: stripeSettingsPath,
-        size: 'size' in snapshot ? snapshot.size : undefined
-      });
       const data = snapshot.data() ?? {};
       setStripeSettings(normalizeStripeSettings(data));
     }, (error) => {
-      console.error('SNAPSHOT FAILED', {
-        path: stripeSettingsPath,
-        code: error?.code,
-        message: error?.message,
-        error
-      });
+      console.error('Stripe settings snapshot failed', error);
     });
 
     return () => unsubscribe();
@@ -1913,8 +1856,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     void (async () => {
       try {
-        const usersPath = 'users?limit=250';
-        console.log('READING FIRESTORE PATH', usersPath);
         const snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc'), limit(250)));
         const loaded = snapshot.docs.map((docSnap) => buildUserProfileFromDoc(docSnap.id, docSnap.data()));
         setUsers(mergeAdminUsers(loaded, adminDirectoryUsers, user));
@@ -2016,8 +1957,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (cancelled) return;
       void (async () => {
       try {
-        const itemsPath = 'items?limit=500';
-        console.log('READING FIRESTORE PATH', itemsPath);
         const snapshot = await getDocs(query(collection(db, 'items'), limit(500)));
         const loaded: CaseItem[] = snapshot.docs
         .map((docSnap, index) => {
@@ -2091,8 +2030,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       void (async () => {
       try {
         // Legacy fallback until the documented boxSummaries collection is deployed.
-        const boxesPath = 'boxSummaries?limit=48';
-        console.log('READING FIRESTORE PATH', boxesPath);
         // Firestore cannot field-project a document. Prefer the deployment-managed
         // summary collection; use a bounded legacy fallback while it is populated.
         const summarySnapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
@@ -2350,8 +2287,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (view.type !== 'BATTLES' && view.type !== 'BATTLE_ARENA') return;
     void (async () => {
       try {
-        const battlesPath = 'battles?limit=50';
-        console.log('READING FIRESTORE PATH', battlesPath);
         const snapshot = await getDocs(query(collection(db, 'battles'), orderBy('createdAt', 'desc'), limit(50)));
         const firebaseBattles = snapshot.docs
         .map((docSnap) => {
