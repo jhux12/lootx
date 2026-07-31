@@ -1176,6 +1176,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const bounceSide = Math.sign(approachTranslate - centeredTranslate) || (approachOffset >= 0 ? 1 : -1);
     const bounceTranslate = clampTranslate(centeredTranslate - (bounceSide * SPINNER_MOTION.landingBounceOffsetPx));
 
+    // A measurement glitch producing a non-finite target would otherwise
+    // animate to `translate3d(NaNpx, ...)`, which the browser silently drops -
+    // leaving the reel stuck wherever it started. Bail out to an instant,
+    // correct placement instead of animating with a bad value.
+    if (![centeredTranslate, approachTranslate, bounceTranslate].every(Number.isFinite)) {
+      console.error('Spinner animation aborted: non-finite translate target', {
+        centeredTranslate,
+        approachTranslate,
+        bounceTranslate
+      });
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.willChange = 'auto';
+      setCurrentCenterIndex(winnerIndex);
+      lastCenterIndexRef.current = winnerIndex;
+      setHasSpinSettled(true);
+      setAnimationPhase('idle');
+      spinnerAnimationRef.current = null;
+      spinRequestLockRef.current = false;
+      onComplete();
+      return;
+    }
+
     const landingWindowMs = clamp(
       resolvedDuration * SPINNER_MOTION.landingWindowFraction,
       SPINNER_MOTION.landingWindowMinMs,
@@ -1203,7 +1226,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           { transform: `translate3d(${from}px, 0, 0)` },
           { transform: `translate3d(${to}px, 0, 0)` }
         ],
-        { duration: stepDurationMs, easing, fill: 'forwards' }
+        { duration: stepDurationMs, easing, fill: 'forwards', composite: 'replace' }
       );
       spinnerAnimationRef.current = stepAnimation;
       await stepAnimation.finished;
@@ -1217,7 +1240,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           { transform: 'translate3d(0px, 0, 0)' },
           { transform: `translate3d(${approachTranslate}px, 0, 0)` }
         ],
-        { duration: mainSpinMs, easing: `cubic-bezier(${mainSpinEasing.join(',')})`, fill: 'forwards' }
+        { duration: mainSpinMs, easing: `cubic-bezier(${mainSpinEasing.join(',')})`, fill: 'forwards', composite: 'replace' }
       );
       spinnerAnimationRef.current = mainSpinAnimation;
 
@@ -1279,16 +1302,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
-    } catch {
-      // A new spin (or unmount) canceled the in-flight animation via
-      // resetSpinnerAnimation(), which rejects `.finished`. Stop quietly -
-      // the next spin (or cleanup) owns resetting the shared refs/state.
+    } catch (error) {
       cancelled = true;
       stopTicking();
-      setAnimationPhase('idle');
+      if (!container.isConnected) {
+        // Component unmounted mid-spin (e.g. navigated away) - nothing left to
+        // finish into, and resetSpinnerAnimation()'s own cleanup already ran.
+        return;
+      }
+      // Anything else that gets here - a new spin/unmount canceling the
+      // in-flight animation, or a genuinely unexpected failure - must still
+      // resolve the flow. Silently stopping here is what left spins stuck
+      // forever with the reel visually frozen partway through.
+      console.error('Spin animation failed; completing with an instant snap to the winner', error);
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
+      setCurrentCenterIndex(winnerIndex);
+      lastCenterIndexRef.current = winnerIndex;
+      setHasSpinSettled(true);
+      setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
+      onComplete();
     }
   }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, prefersReducedMotion, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
