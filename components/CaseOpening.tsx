@@ -70,7 +70,11 @@ const SPINNER_MOTION = {
   settleDurationMs: 2200,
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
-  overshootPx: 10,
+  overshootPx: 30,
+  creepHoldOffsetPx: 40,
+  creepArriveOffset: 0.92,
+  creepDwellOffset: 0.97,
+  landedFlourishMs: 420,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
   approachOffsetNearMissMaxPx: 34,
@@ -210,6 +214,26 @@ const cubicBezierProgress = (progress: number, x1: number, y1: number, x2: numbe
   }
   return sample((low + high) / 2, y1, y2);
 };
+
+// A translate-over-time timeline shared by the WAAPI keyframes and the JS
+// position sampler, so the tick sound / centered-item highlight can never
+// drift from what's actually on screen.
+type SpinKeyframe = { offset: number; translate: number; easing: [number, number, number, number] };
+
+const buildSpinTranslateAt = (keyframes: SpinKeyframe[], resolvedDuration: number) => (elapsed: number) => {
+  const progress = clamp(elapsed / resolvedDuration, 0, 1);
+  for (let i = 0; i < keyframes.length - 1; i += 1) {
+    const from = keyframes[i];
+    const to = keyframes[i + 1];
+    if (progress <= to.offset || i === keyframes.length - 2) {
+      const span = Math.max(0.0001, to.offset - from.offset);
+      const local = clamp((progress - from.offset) / span, 0, 1);
+      return from.translate + (to.translate - from.translate) * cubicBezierProgress(local, ...from.easing);
+    }
+  }
+  return keyframes[keyframes.length - 1].translate;
+};
+
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -450,6 +474,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
+  const [justLanded, setJustLanded] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
@@ -491,6 +516,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
+  const landedFlourishTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
@@ -1093,6 +1119,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       window.clearTimeout(topUpLockTimerRef.current);
       topUpLockTimerRef.current = null;
     }
+    if (landedFlourishTimerRef.current !== null) {
+      window.clearTimeout(landedFlourishTimerRef.current);
+      landedFlourishTimerRef.current = null;
+    }
+    setJustLanded(false);
     setAnimationPhase('idle');
   }, []);
 
@@ -1114,13 +1145,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
+    const overshootOffset = clamp((1 - settlePortion) - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
 
@@ -1142,9 +1171,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
     const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
@@ -1152,15 +1180,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
     const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
+    // Suspense creep: decelerate hard into a hold just short of dead-center (on
+    // whichever side the overshoot landed), linger there, then let a fast decisive
+    // snap close the last bit of the gap right at the very end of the timeline.
+    const holdSide = Math.sign(overshootTarget - centeredTranslate) || overshootDirection;
+    const creepHoldTranslate = clampTranslate(centeredTranslate + (holdSide * SPINNER_MOTION.creepHoldOffsetPx));
     setAnimationPhase('spinning');
 
+    const spinKeyframes: SpinKeyframe[] = [
+      { offset: 0, translate: 0, easing: [0.24, 0.62, 0.18, 1] },
+      { offset: overshootOffset, translate: overshootTarget, easing: [0.05, 0.85, 0.15, 1] },
+      { offset: SPINNER_MOTION.creepArriveOffset, translate: creepHoldTranslate, easing: [0.4, 0, 0.6, 1] },
+      { offset: SPINNER_MOTION.creepDwellOffset, translate: creepHoldTranslate, easing: [0.16, 1, 0.3, 1] },
+      { offset: 1, translate: centeredTranslate, easing: [0.18, 0, 0.2, 1] }
+    ];
+
     const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-      ],
+      spinKeyframes.map((kf) => ({
+        transform: `translate3d(${kf.translate}px, 0, 0)`,
+        offset: kf.offset,
+        easing: `cubic-bezier(${kf.easing.join(',')})`
+      })),
       {
         duration: resolvedDuration,
         fill: 'forwards',
@@ -1175,16 +1215,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     let frameId: number | null = null;
     let lastSampleAt = -Infinity;
     const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
-    const translateAt = (elapsed: number) => {
-      const progress = clamp(elapsed / resolvedDuration, 0, 1);
-      if (progress <= overshootOffset) return overshootTarget * cubicBezierProgress(progress / overshootOffset, 0.24, 0.62, 0.18, 1);
-      if (progress <= preSettleOffset) {
-        const local = (progress - overshootOffset) / Math.max(0.001, preSettleOffset - overshootOffset);
-        return overshootTarget + (jitterLandingTranslate - overshootTarget) * cubicBezierProgress(local, 0.12, 0.82, 0.2, 1);
-      }
-      const local = (progress - preSettleOffset) / Math.max(0.001, 1 - preSettleOffset);
-      return jitterLandingTranslate + (centeredTranslate - jitterLandingTranslate) * cubicBezierProgress(local, 0.16, 0.72, 0.28, 1);
-    };
+    const translateAt = buildSpinTranslateAt(spinKeyframes, resolvedDuration);
     const syncCenterItem = (now: number) => {
       if (document.visibilityState !== 'hidden' && now - lastSampleAt >= sampleIntervalMs) {
         lastSampleAt = now;
@@ -1232,6 +1263,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       tickFrameRef.current = null;
 
+      if (!prefersReducedMotion) {
+        setJustLanded(true);
+        if (landedFlourishTimerRef.current !== null) window.clearTimeout(landedFlourishTimerRef.current);
+        landedFlourishTimerRef.current = window.setTimeout(() => {
+          setJustLanded(false);
+          landedFlourishTimerRef.current = null;
+        }, SPINNER_MOTION.landedFlourishMs);
+      }
+
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
@@ -1251,7 +1291,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, prefersReducedMotion, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2164,8 +2204,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 ></i>
 
                 {/* A fixed selection frame makes the winning position unmistakable. */}
-                <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)]" aria-hidden="true">
+                <div className={`pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)] ${justLanded ? 'pullz-landing-impact' : ''}`} aria-hidden="true">
                   <span className="absolute -bottom-1 left-1/2 h-2.5 w-10 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
+                  {justLanded && (
+                    <span className="pullz-landing-impact-ring pointer-events-none absolute inset-0 rounded-2xl border-2 border-cyan-300/70" />
+                  )}
                 </div>
 
                 {/* The Moving Reel */}
@@ -2194,7 +2237,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${justLanded && idx === reelWinnerIndex ? 'pullz-landing-impact' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
