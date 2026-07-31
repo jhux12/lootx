@@ -1,5 +1,6 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
+import { profileAvatars } from '../../assets/profileAvatars';
 import { ShippingAddress, User } from '../../types';
 
 type AccountPanel = 'overview' | 'security' | 'settings';
@@ -43,10 +44,11 @@ export const AccountView: React.FC<AccountViewProps> = ({
   onSaveUsername, onSaveEmail, onSavePassword, isSavingUsername, isSavingEmail, isSavingPassword,
   onClose
 }) => {
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = React.useState(false);
   const updateSecurity = (key: keyof SecurityForm, value: string) => setSecurityForm({ ...securityForm, [key]: value });
   const updateAddress = (key: keyof ShippingAddress, value: string) => setAddressForm({ ...addressForm, [key]: value });
   const saveProfile = () => {
-    if (securityForm.username.trim() && securityForm.username.trim() !== (user.name ?? '').trim()) onSaveUsername();
+    if (securityForm.username.trim() && (securityForm.username.trim() !== (user.name ?? '').trim() || securityForm.avatar !== (user.avatar || user.photoURL || ''))) onSaveUsername();
     if (securityForm.email.trim() && securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.currentPassword.trim()) onSaveEmail();
     if (securityForm.currentPassword && securityForm.newPassword && securityForm.confirmPassword) onSavePassword();
     onSaveAddress();
@@ -68,6 +70,41 @@ export const AccountView: React.FC<AccountViewProps> = ({
               <input aria-label="Username" value={securityForm.username} onChange={(event) => updateSecurity('username', event.target.value)} placeholder="Username" className={inputClassName} />
               <input aria-label="Email address" type="email" value={securityForm.email} onChange={(event) => updateSecurity('email', event.target.value)} placeholder="Email address" className={inputClassName} />
             </div>
+          </fieldset>
+
+          <fieldset>
+            <legend className="mb-1 text-xs font-black uppercase tracking-wider text-gray-500">Profile Picture</legend>
+            <p className="mb-3 text-xs text-gray-400">Choose an avatar for your public profile.</p>
+            <button
+              type="button"
+              aria-expanded={isAvatarPickerOpen}
+              aria-controls="profile-picture-options"
+              onClick={() => setIsAvatarPickerOpen((isOpen) => !isOpen)}
+              className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#0d0d11] p-2.5 text-left transition hover:border-white/25 focus:outline-none focus:ring-2 focus:ring-violet-400"
+            >
+              {securityForm.avatar ? <img src={securityForm.avatar} alt="Current profile picture" className="h-10 w-10 shrink-0 rounded-full object-cover" /> : <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-black text-white">?</span>}
+              <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">{isAvatarPickerOpen ? 'Hide profile pictures' : 'Choose profile picture'}</span><span className="block truncate text-xs text-gray-400">{profileAvatars.length} available pictures</span></span>
+              <ChevronDown className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${isAvatarPickerOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isAvatarPickerOpen ? <div id="profile-picture-options" className="mt-3 grid grid-cols-4 gap-2.5 sm:grid-cols-5" role="radiogroup" aria-label="Profile picture">
+              {profileAvatars.map((avatar) => {
+                const isSelected = securityForm.avatar === avatar.src;
+                return (
+                  <button
+                    key={avatar.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`Select profile picture ${avatar.id}`}
+                    onClick={() => updateSecurity('avatar', avatar.src)}
+                    className={`relative aspect-square min-w-0 overflow-hidden rounded-full border-2 bg-[#0d0d11] transition focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:ring-offset-[#15151b] ${isSelected ? 'border-violet-400 shadow-[0_0_0_2px_rgba(167,139,250,0.25)]' : 'border-transparent hover:border-white/40'}`}
+                  >
+                    <img src={avatar.src} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                    {isSelected ? <span className="absolute inset-0 grid place-items-center bg-black/35 text-white"><Check className="h-5 w-5" strokeWidth={3} /></span> : null}
+                  </button>
+                );
+              })}
+            </div> : null}
           </fieldset>
 
           <fieldset>
