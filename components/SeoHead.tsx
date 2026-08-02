@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
+import { DEFAULT_SEO_SETTINGS, SeoPageKey, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
 
 const STATIC_IMAGE = 'https://pullz.gg/assets/png/pullz-horizontal-dark-2400.png';
-// Search currently opens in-app rather than on a crawlable public route.
 const HAS_PUBLIC_SEARCH_PAGE = false;
+const PUBLIC_PAGE_BY_VIEW: Partial<Record<ViewState['type'], SeoPageKey>> = {
+  HOME: 'home', BOXES: 'boxes', FAQ: 'faq', ABOUT: 'about', PROVABLY_FAIR: 'provablyFair'
+};
 const meta = (selector: string, attrs: Record<string, string>, enabled = true) => {
   let el = document.head.querySelector<HTMLMetaElement>(selector);
   if (!enabled) { el?.remove(); return; }
@@ -20,7 +22,6 @@ const link = (rel: string, href: string, enabled = true) => {
   el.href = href;
 };
 const jsonLd = (id: string, value?: object) => { let el = document.getElementById(id) as HTMLScriptElement | null; if (!value) { el?.remove(); return; } if (!el) { el = document.createElement('script'); el.id = id; el.type = 'application/ld+json'; document.head.appendChild(el); } el.textContent = JSON.stringify(value); };
-// Additional markup is intentionally limited to harmless metadata and links; executable code is never injected.
 const applyAdditionalHeadMarkup = (markup: string) => {
   document.head.querySelectorAll('[data-pullz-seo-additional]').forEach((node) => node.remove());
   if (!markup.trim()) return;
@@ -40,15 +41,24 @@ export const SeoHead = ({ view }: { view: ViewState }) => {
   const [settings, setSettings] = useState<SeoSettings>(DEFAULT_SEO_SETTINGS);
   useEffect(() => onSnapshot(doc(db, 'site', 'seo'), snap => setSettings(normalizeSeoSettings(snap.data() as Partial<SeoSettings>)), () => setSettings(DEFAULT_SEO_SETTINGS)), []);
   useEffect(() => {
-    const isPrivate = privateView(view); const base = settings.canonicalUrl || DEFAULT_SEO_SETTINGS.canonicalUrl;
-    const canonical = isPrivate ? `${base.replace(/\/$/, '')}${window.location.pathname}` : base;
-    const robots = isPrivate ? 'noindex,nofollow' : `${settings.indexPage ? 'index' : 'noindex'},${settings.followLinks ? 'follow' : 'nofollow'}`;
-    const ogTitle = settings.openGraphTitle || settings.seoTitle; const ogDescription = settings.openGraphDescription || settings.metaDescription;
-    const ogImage = settings.openGraphImage || settings.fallbackOpenGraphImage || settings.homepageShareImage || STATIC_IMAGE;
+    const isPrivate = privateView(view);
+    const base = (settings.canonicalUrl || DEFAULT_SEO_SETTINGS.canonicalUrl).replace(/\/$/, '');
+    const pageKey = PUBLIC_PAGE_BY_VIEW[view.type];
+    const page = pageKey ? settings.pages[pageKey] : undefined;
+    const canonical = isPrivate ? `${base}${window.location.pathname}` : page ? `${base}${page.path === '/' ? '' : page.path}` : base;
+    const canIndex = settings.indexPage && (page?.index ?? true);
+    const robots = isPrivate ? 'noindex,nofollow' : `${canIndex ? 'index' : 'noindex'},${settings.followLinks ? 'follow' : 'nofollow'}`;
+    const title = page?.title || settings.seoTitle;
+    const description = page?.description || settings.metaDescription;
+    const ogTitle = page?.title || settings.openGraphTitle || title;
+    const ogDescription = page?.description || settings.openGraphDescription || description;
+    const ogImage = page?.shareImage || settings.openGraphImage || settings.fallbackOpenGraphImage || settings.homepageShareImage || STATIC_IMAGE;
     const twitterImage = settings.twitterImage || settings.fallbackTwitterImage || ogImage;
-    document.title = isPrivate ? settings.siteName : settings.seoTitle;
+    document.title = isPrivate ? settings.siteName : title;
     link('canonical', canonical); link('icon', settings.faviconUrl, !!settings.faviconUrl); link('apple-touch-icon', settings.appleTouchIcon, !!settings.appleTouchIcon);
-    meta('meta[name="description"]', { name: 'description', content: isPrivate ? 'Private Pullz.gg area.' : settings.metaDescription }); meta('meta[name="robots"]', { name: 'robots', content: robots });
+    meta('meta[name="description"]', { name: 'description', content: isPrivate ? 'Private Pullz.gg area.' : description });
+    meta('meta[name="keywords"]', { name: 'keywords', content: settings.keywords.join(', ') }, settings.keywords.length > 0);
+    meta('meta[name="robots"]', { name: 'robots', content: robots });
     meta('meta[property="og:type"]', { property: 'og:type', content: 'website' }); meta('meta[property="og:site_name"]', { property: 'og:site_name', content: settings.siteName }); meta('meta[property="og:title"]', { property: 'og:title', content: ogTitle }); meta('meta[property="og:description"]', { property: 'og:description', content: ogDescription }); meta('meta[property="og:image"]', { property: 'og:image', content: ogImage }); meta('meta[property="og:url"]', { property: 'og:url', content: canonical });
     meta('meta[name="twitter:card"]', { name: 'twitter:card', content: settings.twitterCard }); meta('meta[name="twitter:title"]', { name: 'twitter:title', content: settings.twitterTitle || ogTitle }); meta('meta[name="twitter:description"]', { name: 'twitter:description', content: settings.twitterDescription || ogDescription }); meta('meta[name="twitter:image"]', { name: 'twitter:image', content: twitterImage });
     meta('meta[name="google-site-verification"]', { name: 'google-site-verification', content: settings.googleVerification }, !!settings.googleVerification); meta('meta[name="msvalidate.01"]', { name: 'msvalidate.01', content: settings.bingVerification }, !!settings.bingVerification); meta('meta[name="p:domain_verify"]', { name: 'p:domain_verify', content: settings.pinterestVerification }, !!settings.pinterestVerification); meta('meta[name="yandex-verification"]', { name: 'yandex-verification', content: settings.yandexVerification }, !!settings.yandexVerification);
