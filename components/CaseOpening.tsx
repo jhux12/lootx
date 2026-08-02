@@ -218,6 +218,16 @@ const cubicBezierProgress = (progress: number, x1: number, y1: number, x2: numbe
   return sample((low + high) / 2, y1, y2);
 };
 
+// A handful of distinct deceleration personalities for the main spin, picked
+// per-spin from the seeded RNG (below) so the reel doesn't visibly ease off
+// at the same relative point in the distance/time every single time.
+const MAIN_SPIN_EASING_PRESETS: [number, number, number, number][] = [
+  [0.22, 0.68, 0.2, 1],    // classic - long cruise, smooth glide into the tease
+  [0.14, 0.86, 0.22, 1],   // decelerates earlier, gentle taper for most of the tail
+  [0.32, 0.5, 0.14, 1],    // holds speed longer, brakes hard right at the end
+  [0.1, 0.92, 0.32, 1]     // very gradual, gently slowing the whole second half
+];
+
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -495,6 +505,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
+  const hasSpinSettledRef = useRef(false);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
@@ -1069,6 +1080,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
   }, [getTranslateBounds]);
 
+  // A layout shift after the reel has already settled (win modal opening,
+  // action bar changing, orientation change, window resize, etc.) would
+  // otherwise leave the winner's fixed pixel offset centered under the *old*
+  // layout - keep it locked under the selection indicator whenever that
+  // happens. Reads settled/spinning state via refs so this effect doesn't
+  // need to re-subscribe on every render.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const recenterSettledWinner = () => {
+      updateSpinnerMeasurements();
+      if (!hasSpinSettledRef.current || isSpinningRef.current) return;
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const next = getCenteredTranslate(lastCenterIndexRef.current, 0);
+      if (next === null) return;
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${clampTranslate(next)}px, 0, 0)`;
+    };
+
+    const viewport = scrollViewportRef.current;
+    const observer = viewport ? new ResizeObserver(() => window.requestAnimationFrame(recenterSettledWinner)) : null;
+    if (viewport && observer) observer.observe(viewport);
+    window.addEventListener('resize', recenterSettledWinner);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', recenterSettledWinner);
+    };
+  }, [getCenteredTranslate, clampTranslate, updateSpinnerMeasurements]);
+
   const resetSpinnerAnimation = useCallback(() => {
     if (previewAnimationRef.current) {
       previewAnimationRef.current.cancel();
@@ -1114,6 +1156,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   useEffect(() => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
+
+  useEffect(() => {
+    hasSpinSettledRef.current = hasSpinSettled;
+  }, [hasSpinSettled]);
 
   // The reel's motion is three independent, sequential WAAPI animations rather
   // than one long timeline with hand-computed fractional keyframe offsets:
@@ -1207,7 +1253,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const bounceMs = Math.round(landingWindowMs * 0.55);
     const snapMs = Math.max(1, Math.round(landingWindowMs - bounceMs));
     const mainSpinMs = Math.max(200, resolvedDuration - bounceMs - snapMs);
-    const mainSpinEasing: [number, number, number, number] = [0.22, 0.68, 0.2, 1];
+    const mainSpinEasing = MAIN_SPIN_EASING_PRESETS[Math.floor(rng() * MAIN_SPIN_EASING_PRESETS.length) % MAIN_SPIN_EASING_PRESETS.length];
 
     setAnimationPhase('spinning');
 
