@@ -1,4 +1,12 @@
-import { adminAuth } from '../_lib/firebaseAdmin.js';
+import { adminAuth, db } from '../_lib/firebaseAdmin.js';
+
+export const requireActiveAccount = async (uid) => {
+  const snapshot = await db.collection('users').doc(uid).get();
+  const status = snapshot.data()?.status;
+  if (status === 'banned' || status === 'suspended') {
+    throw { status: 403, error: 'ACCOUNT_RESTRICTED' };
+  }
+};
 
 export const getBearerToken = (req) => {
   const header = req?.headers?.authorization;
@@ -22,11 +30,14 @@ export const requireUser = async (req) => {
     throw { status: 401, error: 'AUTH_REQUIRED' };
   }
 
+  let decoded;
   try {
-    return await adminAuth.verifyIdToken(token);
+    decoded = await adminAuth.verifyIdToken(token);
   } catch {
     throw { status: 401, error: 'INVALID_AUTH_TOKEN' };
   }
+  await requireActiveAccount(decoded.uid);
+  return decoded;
 };
 
 export const requireAdmin = async (req) => {

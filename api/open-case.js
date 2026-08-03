@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { requireActiveAccount } from './_utils/auth.js';
 import { computeRoll, pickPrizeByWeight, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { normalizeEconomySettings, getXpCost } from './_lib/economy.js';
@@ -63,6 +64,7 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    await requireActiveAccount(decoded.uid);
     uid = decoded.uid;
     const rateLimit = consumeRateLimit({
       key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'open-case' }),

@@ -11,12 +11,27 @@ const listAllAuthUsers = async (nextPageToken, acc = []) => {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
+  if (req.method !== 'GET' && req.method !== 'PATCH') {
     return deny(res, 405, 'METHOD_NOT_ALLOWED');
   }
 
   try {
     await requireAdmin(req);
+
+    if (req.method === 'PATCH') {
+      const { userId, status } = req.body ?? {};
+      if (typeof userId !== 'string' || !['active', 'suspended', 'banned'].includes(status)) {
+        return deny(res, 400, 'INVALID_USER_STATUS');
+      }
+      // Account restrictions live in Firestore so Firebase Auth must remain
+      // enabled: banned users still need to sign in to see the restriction and
+      // reach customer support.
+      await Promise.all([
+        adminAuth.updateUser(userId, { disabled: false }),
+        db.collection('users').doc(userId).set({ status, updatedAt: new Date() }, { merge: true })
+      ]);
+      return ok(res, { userId, status, disabled: false });
+    }
 
     const [authUsers, firestoreSnapshot] = await Promise.all([
       listAllAuthUsers(),

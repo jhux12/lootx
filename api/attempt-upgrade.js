@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { requireActiveAccount } from './_utils/auth.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { computeUpgradeRoll, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
@@ -60,6 +61,7 @@ export default async function handler(req, res) {
   } catch {
     return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Invalid authentication token.' });
   }
+  await requireActiveAccount(decoded.uid);
 
   const rateLimit = consumeRateLimit({
     key: getRateLimitKey({ req, uid: decoded.uid, prefix: 'attempt-upgrade' }),

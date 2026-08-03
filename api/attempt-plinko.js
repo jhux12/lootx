@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { requireActiveAccount } from './_utils/auth.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { randomSeed, sha256 } from './_lib/provablyFair.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
@@ -60,6 +61,7 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    await requireActiveAccount(decoded.uid);
     const body = await readJsonBody(req);
     const bet = Math.floor(toNumber(body?.bet, 0));
     const clientSeed = toSafeString(body?.clientSeed, `${Date.now()}`);

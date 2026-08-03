@@ -3,7 +3,7 @@ import { Header } from './components/Header';
 import { GameProvider, useGame } from './context/GameContext';
 import { SoundProvider, useSound } from './context/SoundContext';
 import { PreviewProvider } from './context/PreviewContext';
-import { ShieldAlert } from 'lucide-react';
+import { Ban, CreditCard, PackageX, ShieldAlert } from 'lucide-react';
 import { ResetPasswordModal } from './components/ResetPasswordModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { HomeReplica } from './components/HomeReplica';
@@ -848,8 +848,9 @@ const getNavigationScrollKey = (view: ReturnType<typeof useGame>['view']) => {
 };
 
 const AppShell = () => {
-  const { view } = useGame();
+  const { view, user, isAuthenticated, setView } = useGame();
   const shouldUseStickyHeader = true;
+  const isAccountBanned = isAuthenticated && user.status === 'banned';
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
 
@@ -870,8 +871,30 @@ const AppShell = () => {
     <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white font-sans selection:bg-violet-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
       <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
-      <AppLayout hasStickyHeader={shouldUseStickyHeader} />
-      <MobileBottomNav />
+      {isAccountBanned && (
+        <div className="fixed inset-x-0 top-[var(--pullz-header-height,72px)] z-[90] border-y border-red-400/40 bg-red-950 px-3 py-2.5 text-center text-xs font-semibold text-red-50 shadow-lg sm:text-sm" role="alert">
+          Your account is banned for violating our Terms of Service. Think this is an error?{' '}
+          <button className="font-bold underline decoration-red-300 underline-offset-2 hover:text-white" onClick={() => setView({ type: 'CONTACT' })}>Contact customer support</button>.
+        </div>
+      )}
+      {isAccountBanned && view.type !== 'CONTACT' ? (
+        <div className="flex flex-1 pt-[calc(var(--pullz-header-height,72px)+48px)]">
+          <section className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-10 text-center sm:py-16">
+            <Ban className="mb-4 h-12 w-12 text-red-400" aria-hidden="true" />
+            <h1 className="text-2xl font-black text-white sm:text-3xl">Account features are disabled</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-400 sm:text-base">Top ups, box openings, rewards, shipments, selling, games, and other account actions are unavailable while this ban is active.</p>
+            <div className="mt-7 grid w-full grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Disabled account features">
+              {[['Top ups', CreditCard], ['Box openings', PackageX], ['Shipments & rewards', ShieldAlert]].map(([label, Icon]) => (
+                <div key={label as string} aria-disabled="true" className="flex min-h-24 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 text-gray-500 grayscale opacity-60">
+                  <Icon className="h-5 w-5" /><span className="font-bold">{label as string}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setView({ type: 'CONTACT' })} className="mt-8 min-h-11 w-full rounded-xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-500 sm:w-auto">Submit a support ticket</button>
+          </section>
+        </div>
+      ) : <AppLayout hasStickyHeader={shouldUseStickyHeader} hasBanBanner={isAccountBanned} />}
+      <div className={isAccountBanned ? 'pointer-events-none grayscale opacity-40' : ''} aria-disabled={isAccountBanned || undefined}><MobileBottomNav /></div>
       <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
       <ResetPasswordModal />
     </div>
@@ -880,9 +903,10 @@ const AppShell = () => {
 
 const AppLayout: React.FC<{
   hasStickyHeader: boolean;
-}> = ({ hasStickyHeader }) => {
+  hasBanBanner?: boolean;
+}> = ({ hasStickyHeader, hasBanBanner = false }) => {
   return (
-    <div className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''}`}>
+    <div className={`flex flex-1 ${hasStickyHeader ? 'pt-[var(--pullz-header-height,72px)]' : ''} ${hasBanBanner ? 'pt-[calc(var(--pullz-header-height,72px)+48px)]' : ''}`}>
       <MainContent isChatCollapsed />
     </div>
   );

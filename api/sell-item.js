@@ -1,4 +1,5 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
+import { requireActiveAccount } from './_utils/auth.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { appendLedgerEntry } from './_lib/ledger.js';
 import { computeXpAward, getXpSettings } from './_lib/xp.js';
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
     } catch (verifyError) {
       return sendJson(res, 401, { error: 'UNAUTHENTICATED', message: 'Invalid authentication token.' });
     }
+    await requireActiveAccount(decoded.uid);
     const body = await readJsonBody(req);
     const inventoryId = body?.inventoryId;
 

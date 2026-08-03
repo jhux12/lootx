@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { requireActiveAccount } from './_utils/auth.js';
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
@@ -18,6 +19,7 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    await requireActiveAccount(decoded.uid);
     const body = await readJsonBody(req);
     const packageId = body?.packageId;
     const eventId = typeof body?.eventId === 'string' ? body.eventId.trim() : '';

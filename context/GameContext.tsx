@@ -2530,6 +2530,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         auth,
         remember ? browserLocalPersistence : browserSessionPersistence
       );
+      // Older bans disabled Firebase Auth. Repair only accounts whose server-side
+      // status is still restricted, then authenticate normally with the user's
+      // password. The endpoint intentionally returns no account information.
+      await fetch('/api/auth/restore-restricted-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      }).catch(() => undefined);
       const credential = await signInWithEmailAndPassword(auth, email, pass);
       trackLogin('email');
       if (!credential.user.emailVerified) {

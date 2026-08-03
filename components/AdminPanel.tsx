@@ -22,6 +22,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { getBoxTags, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { authedFetch } from '../utils/authedFetch';
 
 const rarityColorMap: Record<CaseItem['rarity'], string> = {
     common: '#9ca3af',
@@ -2550,10 +2551,20 @@ export const AdminPanel: React.FC = () => {
       });
   };
 
-  const handleStatusChange = (targetUserId: string, nextStatus: UserStatus) => {
+  const handleStatusChange = async (targetUserId: string, nextStatus: UserStatus) => {
       const previousStatus = userStatuses[targetUserId] ?? 'active';
       setUserStatuses((prev) => ({ ...prev, [targetUserId]: nextStatus }));
-      void updateUserAdminData(targetUserId, { status: nextStatus });
+      try {
+          await authedFetch('/api/admin/users', {
+              method: 'PATCH',
+              body: JSON.stringify({ userId: targetUserId, status: nextStatus })
+          });
+      } catch (error) {
+          setUserStatuses((prev) => ({ ...prev, [targetUserId]: previousStatus }));
+          console.error('Failed to update account status', error);
+          window.alert('Unable to update account status. Please try again.');
+          return;
+      }
       logAdminAction(
           targetUserId,
           'status_update',
