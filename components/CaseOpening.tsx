@@ -67,10 +67,17 @@ const SPINNER_MOTION = {
   quickGoldFinalDurationMs: 800,
   goldStageDelayMs: 700,
   quickGoldStageDelayMs: 120,
-  settleDurationMs: 2200,
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
-  overshootPx: 10,
+  // The landing (swing past the winner, then settle) always gets a small,
+  // fixed real-time budget, clamped between these two bounds, regardless of
+  // how long the overall spin is - so it always reads as a quick, punchy
+  // finish instead of a tiny motion stretched across a long window.
+  landingWindowMinMs: 120,
+  landingWindowMaxMs: 260,
+  landingWindowFraction: 0.05,
+  landingBounceOffsetPx: 34,
+  landedFlourishMs: 380,
   approachOffsetSoftMaxPx: 10,
   approachOffsetNearMissMinPx: 20,
   approachOffsetNearMissMaxPx: 34,
@@ -210,6 +217,17 @@ const cubicBezierProgress = (progress: number, x1: number, y1: number, x2: numbe
   }
   return sample((low + high) / 2, y1, y2);
 };
+
+// A handful of distinct deceleration personalities for the main spin, picked
+// per-spin from the seeded RNG (below) so the reel doesn't visibly ease off
+// at the same relative point in the distance/time every single time.
+const MAIN_SPIN_EASING_PRESETS: [number, number, number, number][] = [
+  [0.22, 0.68, 0.2, 1],    // classic - long cruise, smooth glide into the tease
+  [0.14, 0.86, 0.22, 1],   // decelerates earlier, gentle taper for most of the tail
+  [0.32, 0.5, 0.14, 1],    // holds speed longer, brakes hard right at the end
+  [0.1, 0.92, 0.32, 1]     // very gradual, gently slowing the whole second half
+];
+
 const toHex = (buffer: ArrayBuffer) =>
   Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -450,6 +468,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
+  const [justLanded, setJustLanded] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
@@ -486,11 +505,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
+  const hasSpinSettledRef = useRef(false);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
+  const landedFlourishTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
@@ -1059,6 +1080,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return clamp(translateX, bounds.minTranslate, bounds.maxTranslate);
   }, [getTranslateBounds]);
 
+  // A layout shift after the reel has already settled (win modal opening,
+  // action bar changing, orientation change, window resize, etc.) would
+  // otherwise leave the winner's fixed pixel offset centered under the *old*
+  // layout - keep it locked under the selection indicator whenever that
+  // happens. Reads settled/spinning state via refs so this effect doesn't
+  // need to re-subscribe on every render.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const recenterSettledWinner = () => {
+      updateSpinnerMeasurements();
+      if (!hasSpinSettledRef.current || isSpinningRef.current) return;
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const next = getCenteredTranslate(lastCenterIndexRef.current, 0);
+      if (next === null) return;
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${clampTranslate(next)}px, 0, 0)`;
+    };
+
+    const viewport = scrollViewportRef.current;
+    const observer = viewport ? new ResizeObserver(() => window.requestAnimationFrame(recenterSettledWinner)) : null;
+    if (viewport && observer) observer.observe(viewport);
+    window.addEventListener('resize', recenterSettledWinner);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', recenterSettledWinner);
+    };
+  }, [getCenteredTranslate, clampTranslate, updateSpinnerMeasurements]);
+
   const resetSpinnerAnimation = useCallback(() => {
     if (previewAnimationRef.current) {
       previewAnimationRef.current.cancel();
@@ -1093,6 +1145,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       window.clearTimeout(topUpLockTimerRef.current);
       topUpLockTimerRef.current = null;
     }
+    if (landedFlourishTimerRef.current !== null) {
+      window.clearTimeout(landedFlourishTimerRef.current);
+      landedFlourishTimerRef.current = null;
+    }
+    setJustLanded(false);
     setAnimationPhase('idle');
   }, []);
 
@@ -1100,6 +1157,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
 
+  useEffect(() => {
+    hasSpinSettledRef.current = hasSpinSettled;
+  }, [hasSpinSettled]);
+
+  // The reel's motion is three independent, sequential WAAPI animations rather
+  // than one long timeline with hand-computed fractional keyframe offsets:
+  //   1. main spin   - the bulk of `duration`, decelerating into a near-miss
+  //                     tease position just off the winner.
+  //   2. bounce      - a short, fixed-length swing past the winner the other way.
+  //   3. snap        - a short, fixed-length settle onto the exact winner.
+  // Each step is created, awaited, and cleaned up before the next one starts,
+  // so there's never more than one animation touching the reel's transform at
+  // a time, and no segment's on-screen distance can end up mismatched with
+  // the real time it's given (that mismatch is what caused the earlier
+  // "stall then jump" bug). None of this touches which item wins - the winner
+  // is resolved by the caller (server round trip / RNG) before this runs.
   const animateSpin = useCallback(async (
     winnerIndex: number,
     duration: number,
@@ -1114,13 +1187,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
 
@@ -1132,7 +1201,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
     await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
     const startingCenterIndex = getCenteredIndexFromTranslate(0);
@@ -1142,116 +1210,169 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
     const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null || approachTranslate === null) {
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
-    setAnimationPhase('spinning');
+    // Swing past the winner once, on the opposite side from wherever the
+    // near-miss tease (approachTranslate) landed, before settling.
+    const bounceSide = Math.sign(approachTranslate - centeredTranslate) || (approachOffset >= 0 ? 1 : -1);
+    const bounceTranslate = clampTranslate(centeredTranslate - (bounceSide * SPINNER_MOTION.landingBounceOffsetPx));
 
-    const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-      ],
-      {
-        duration: resolvedDuration,
-        fill: 'forwards',
-        composite: 'replace'
-      }
-    );
-
-    spinnerAnimationRef.current = animation;
-    // The reel itself is animated by WAAPI.  Never read its computed transform here:
-    // style reads force a composited animation back onto the main thread.  The known
-    // timeline and keyframes let us calculate the approximate centre position instead.
-    let frameId: number | null = null;
-    let lastSampleAt = -Infinity;
-    const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
-    const translateAt = (elapsed: number) => {
-      const progress = clamp(elapsed / resolvedDuration, 0, 1);
-      if (progress <= overshootOffset) return overshootTarget * cubicBezierProgress(progress / overshootOffset, 0.24, 0.62, 0.18, 1);
-      if (progress <= preSettleOffset) {
-        const local = (progress - overshootOffset) / Math.max(0.001, preSettleOffset - overshootOffset);
-        return overshootTarget + (jitterLandingTranslate - overshootTarget) * cubicBezierProgress(local, 0.12, 0.82, 0.2, 1);
-      }
-      const local = (progress - preSettleOffset) / Math.max(0.001, 1 - preSettleOffset);
-      return jitterLandingTranslate + (centeredTranslate - jitterLandingTranslate) * cubicBezierProgress(local, 0.16, 0.72, 0.28, 1);
-    };
-    const syncCenterItem = (now: number) => {
-      if (document.visibilityState !== 'hidden' && now - lastSampleAt >= sampleIntervalMs) {
-        lastSampleAt = now;
-        const elapsed = Number(animation.currentTime ?? Math.max(0, now - (animation.startTime ?? now)));
-        const index = getCenteredIndexFromTranslate(translateAt(elapsed));
-        const previousIndex = lastCenterIndexRef.current;
-        if (index !== previousIndex) {
-          lastCenterIndexRef.current = index;
-          if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-            playSound('spin-tick');
-            lastTickedCenterIndexRef.current = index;
-          }
-          if (!reduceSpinnerRerenders) setCurrentCenterIndex(index);
-        }
-      }
-      if (isSpinningRef.current) {
-        tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-        frameId = tickFrameRef.current;
-      }
-    };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
-    const decelerationTimer = window.setTimeout(
-      () => setAnimationPhase('settling'),
-      Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
-    );
-
-    animation.onfinish = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
-      }
-      animation.cancel();
+    // A measurement glitch producing a non-finite target would otherwise
+    // animate to `translate3d(NaNpx, ...)`, which the browser silently drops -
+    // leaving the reel stuck wherever it started. Bail out to an instant,
+    // correct placement instead of animating with a bad value.
+    if (![centeredTranslate, approachTranslate, bounceTranslate].every(Number.isFinite)) {
+      console.error('Spinner animation aborted: non-finite translate target', {
+        centeredTranslate,
+        approachTranslate,
+        bounceTranslate
+      });
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
+      setAnimationPhase('idle');
+      spinnerAnimationRef.current = null;
+      spinRequestLockRef.current = false;
+      onComplete();
+      return;
+    }
+
+    const landingWindowMs = clamp(
+      resolvedDuration * SPINNER_MOTION.landingWindowFraction,
+      SPINNER_MOTION.landingWindowMinMs,
+      SPINNER_MOTION.landingWindowMaxMs
+    );
+    const bounceMs = Math.round(landingWindowMs * 0.55);
+    const snapMs = Math.max(1, Math.round(landingWindowMs - bounceMs));
+    const mainSpinMs = Math.max(200, resolvedDuration - bounceMs - snapMs);
+    const mainSpinEasing = MAIN_SPIN_EASING_PRESETS[Math.floor(rng() * MAIN_SPIN_EASING_PRESETS.length) % MAIN_SPIN_EASING_PRESETS.length];
+
+    setAnimationPhase('spinning');
+
+    let cancelled = false;
+    let frameId: number | null = null;
+
+    const stopTicking = () => {
       if (frameId !== null) window.cancelAnimationFrame(frameId);
+      frameId = null;
       tickFrameRef.current = null;
+    };
+
+    const playStep = async (from: number, to: number, stepDurationMs: number, easing: string) => {
+      const stepAnimation = container.animate(
+        [
+          { transform: `translate3d(${from}px, 0, 0)` },
+          { transform: `translate3d(${to}px, 0, 0)` }
+        ],
+        { duration: stepDurationMs, easing, fill: 'forwards', composite: 'replace' }
+      );
+      spinnerAnimationRef.current = stepAnimation;
+      await stepAnimation.finished;
+      if (typeof stepAnimation.commitStyles === 'function') stepAnimation.commitStyles();
+      stepAnimation.cancel();
+    };
+
+    try {
+      const mainSpinAnimation = container.animate(
+        [
+          { transform: 'translate3d(0px, 0, 0)' },
+          { transform: `translate3d(${approachTranslate}px, 0, 0)` }
+        ],
+        { duration: mainSpinMs, easing: `cubic-bezier(${mainSpinEasing.join(',')})`, fill: 'forwards', composite: 'replace' }
+      );
+      spinnerAnimationRef.current = mainSpinAnimation;
+
+      // Sample this single, simple curve to keep the tick sound and the
+      // "currently passing" glow in sync with what's actually on screen.
+      let lastSampleAt = -Infinity;
+      const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
+      const syncCenterItem = (now: number) => {
+        if (!cancelled && document.visibilityState !== 'hidden' && now - lastSampleAt >= sampleIntervalMs) {
+          lastSampleAt = now;
+          const elapsed = Number(mainSpinAnimation.currentTime ?? Math.max(0, now - (mainSpinAnimation.startTime ?? now)));
+          const progress = clamp(elapsed / mainSpinMs, 0, 1);
+          const position = approachTranslate * cubicBezierProgress(progress, ...mainSpinEasing);
+          const index = getCenteredIndexFromTranslate(position);
+          const previousIndex = lastCenterIndexRef.current;
+          if (index !== previousIndex) {
+            lastCenterIndexRef.current = index;
+            if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
+              playSound('spin-tick');
+              lastTickedCenterIndexRef.current = index;
+            }
+            if (!reduceSpinnerRerenders) setCurrentCenterIndex(index);
+          }
+        }
+        if (isSpinningRef.current && !cancelled) {
+          tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+          frameId = tickFrameRef.current;
+        }
+      };
+      tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
+      frameId = tickFrameRef.current;
+
+      await mainSpinAnimation.finished;
+      if (typeof mainSpinAnimation.commitStyles === 'function') mainSpinAnimation.commitStyles();
+      mainSpinAnimation.cancel();
+      stopTicking();
+      setAnimationPhase('settling');
+
+      await playStep(approachTranslate, bounceTranslate, bounceMs, 'ease-out');
+      await playStep(bounceTranslate, centeredTranslate, snapMs, 'cubic-bezier(0.3, 1.4, 0.4, 1)');
+
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.willChange = 'auto';
+      setCurrentCenterIndex(winnerIndex);
+      lastCenterIndexRef.current = winnerIndex;
+      setHasSpinSettled(true);
+
+      if (!prefersReducedMotion) {
+        setJustLanded(true);
+        if (landedFlourishTimerRef.current !== null) window.clearTimeout(landedFlourishTimerRef.current);
+        landedFlourishTimerRef.current = window.setTimeout(() => {
+          setJustLanded(false);
+          landedFlourishTimerRef.current = null;
+        }, SPINNER_MOTION.landedFlourishMs);
+      }
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
-    };
-
-    animation.oncancel = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
+    } catch (error) {
+      cancelled = true;
+      stopTicking();
+      if (!container.isConnected) {
+        // Component unmounted mid-spin (e.g. navigated away) - nothing left to
+        // finish into, and resetSpinnerAnimation()'s own cleanup already ran.
+        return;
       }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      tickFrameRef.current = null;
-      setAnimationPhase('idle');
+      // Anything else that gets here - a new spin/unmount canceling the
+      // in-flight animation, or a genuinely unexpected failure - must still
+      // resolve the flow. Silently stopping here is what left spins stuck
+      // forever with the reel visually frozen partway through.
+      console.error('Spin animation failed; completing with an instant snap to the winner', error);
+      container.style.transition = 'none';
+      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
+      setCurrentCenterIndex(winnerIndex);
+      lastCenterIndexRef.current = winnerIndex;
+      setHasSpinSettled(true);
+      setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
-    };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+      onComplete();
+    }
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, prefersReducedMotion, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2164,8 +2285,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 ></i>
 
                 {/* A fixed selection frame makes the winning position unmistakable. */}
-                <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)]" aria-hidden="true">
+                <div className={`pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)] ${justLanded ? 'pullz-landing-impact' : ''}`} aria-hidden="true">
                   <span className="absolute -bottom-1 left-1/2 h-2.5 w-10 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
+                  {justLanded && (
+                    <span className="pullz-landing-impact-ring pointer-events-none absolute inset-0 rounded-2xl border-2 border-cyan-300/70" />
+                  )}
                 </div>
 
                 {/* The Moving Reel */}
@@ -2194,7 +2318,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1 ${justLanded && idx === reelWinnerIndex ? 'pullz-landing-impact' : ''}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
