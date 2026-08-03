@@ -22,13 +22,14 @@ export const parseAuth = async (req) => {
     throw { status: 401, error: 'AUTH_REQUIRED', message: 'Authorization bearer token is required.' };
   }
 
+  let decoded;
   try {
-    const decoded = await adminAuth.verifyIdToken(token);
-    await requireActiveAccount(decoded.uid);
-    return decoded;
+    decoded = await adminAuth.verifyIdToken(token);
   } catch {
     throw { status: 401, error: 'AUTH_INVALID', message: 'Invalid authentication token.' };
   }
+  await requireActiveAccount(decoded.uid);
+  return decoded;
 };
 
 export const nowTs = () => admin.firestore.FieldValue.serverTimestamp();

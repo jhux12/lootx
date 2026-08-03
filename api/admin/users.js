@@ -23,13 +23,14 @@ export default async function handler(req, res) {
       if (typeof userId !== 'string' || !['active', 'suspended', 'banned'].includes(status)) {
         return deny(res, 400, 'INVALID_USER_STATUS');
       }
-      const disabled = status !== 'active';
+      // Account restrictions live in Firestore so Firebase Auth must remain
+      // enabled: banned users still need to sign in to see the restriction and
+      // reach customer support.
       await Promise.all([
-        adminAuth.updateUser(userId, { disabled }),
+        adminAuth.updateUser(userId, { disabled: false }),
         db.collection('users').doc(userId).set({ status, updatedAt: new Date() }, { merge: true })
       ]);
-      if (disabled) await adminAuth.revokeRefreshTokens(userId);
-      return ok(res, { userId, status, disabled });
+      return ok(res, { userId, status, disabled: false });
     }
 
     const [authUsers, firestoreSnapshot] = await Promise.all([
