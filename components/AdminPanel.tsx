@@ -586,6 +586,7 @@ export const AdminPanel: React.FC = () => {
       };
   }, [filteredAdminItems.length]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedSignupIp, setSelectedSignupIp] = useState<string | null>(null);
   const [userStatuses, setUserStatuses] = useState<Record<string, UserStatus>>({});
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -2767,6 +2768,15 @@ export const AdminPanel: React.FC = () => {
   };
 
   const selectedUser = useMemo(() => isRealSelectedUserId(selectedUserId) ? users.find((profile) => profile.id === selectedUserId) : undefined, [users, selectedUserId]);
+  const signupIpAccounts = useMemo(() => {
+      const grouped = new Map<string, typeof users>();
+      users.forEach((profile) => {
+          if (!profile.signupIp) return;
+          grouped.set(profile.signupIp, [...(grouped.get(profile.signupIp) ?? []), profile]);
+      });
+      return grouped;
+  }, [users]);
+  const selectedIpAccounts = selectedSignupIp ? signupIpAccounts.get(selectedSignupIp) ?? [] : [];
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const getUserLabels = (profile: (typeof users)[number]) => {
       const profileLabels = (profile as unknown as { internalLabels?: string[] }).internalLabels ?? [];
@@ -2825,6 +2835,7 @@ export const AdminPanel: React.FC = () => {
                   profile.displayName,
                   profile.email,
                   profile.id,
+                  profile.signupIp,
                   String(profile.balance ?? 0),
                   String(metrics.inventory.length),
                   String(metrics.riskScore),
@@ -4988,7 +4999,7 @@ export const AdminPanel: React.FC = () => {
                                     type="text"
                                     value={userSearchQuery}
                                     onChange={(event) => setUserSearchQuery(event.target.value)}
-                                    placeholder="Search users, UID, email, labels, risk, balances"
+                                    placeholder="Search users, UID, email, signup IP, labels, risk, balances"
                                     className="w-full md:w-96 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                 />
                                 <button type="button" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs font-semibold text-gray-300">Export</button>
@@ -5015,13 +5026,35 @@ export const AdminPanel: React.FC = () => {
                         </div>
                     </div>
 
+                    {selectedSignupIp && (
+                        <section aria-label={`Accounts created from ${selectedSignupIp}`} className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 sm:p-5">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold uppercase tracking-wide text-red-300">Flagged signup IP</div>
+                                    <h3 className="mt-1 break-all font-mono text-base font-semibold text-white">{selectedSignupIp}</h3>
+                                    <p className="mt-1 text-xs text-gray-400">{selectedIpAccounts.length} accounts were created from this address.</p>
+                                </div>
+                                <button type="button" onClick={() => setSelectedSignupIp(null)} className="shrink-0 rounded-lg border border-gray-700 p-2 text-gray-400 hover:text-white" aria-label="Close signup IP account list"><X className="h-4 w-4" /></button>
+                            </div>
+                            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                {selectedIpAccounts.map((profile) => (
+                                    <button key={profile.id} type="button" onClick={() => setSelectedUserId(profile.id)} className="min-w-0 rounded-xl border border-gray-800 bg-[#0b0e14] p-3 text-left hover:border-red-500/40">
+                                        <div className="truncate text-sm font-semibold text-white">{profile.displayName || profile.name}</div>
+                                        <div className="truncate text-xs text-gray-400">{profile.email || 'No email'}</div>
+                                        <div className="mt-1 truncate font-mono text-[10px] text-gray-600">{profile.id}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
                     <div className="overflow-hidden rounded-2xl border border-gray-800 bg-[#131720]">
                         <div className="max-h-[420px] overflow-auto">
                             <table className="hidden min-w-[1400px] w-full text-left text-xs md:table">
                                 <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#0b0e14] text-gray-400">
                                     <tr>
                                         {[
-                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
+                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Signup IP', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
                                         ].map(([label, key]) => (
                                             <th key={label} className="px-3 py-3 font-semibold">
                                                 <button type="button" onClick={() => toggleUsersSort(key as typeof usersSort.key)} className="inline-flex items-center gap-1 text-left hover:text-white">
@@ -5035,7 +5068,7 @@ export const AdminPanel: React.FC = () => {
                                 <tbody className="divide-y divide-gray-800">
                                     {filteredUsers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={14} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
+                                            <td colSpan={15} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
                                         </tr>
                                     ) : (
                                         filteredUsers.map((profile) => {
@@ -5061,6 +5094,12 @@ export const AdminPanel: React.FC = () => {
                                                     </td>
                                                     <td className="px-3 py-3 text-gray-300">{profile.email || '—'}</td>
                                                     <td className="px-3 py-3 text-gray-500">{profile.id.slice(0, 10)}...</td>
+                                                    <td className="px-3 py-3">
+                                                        {profile.signupIp ? (() => {
+                                                            const accountCount = signupIpAccounts.get(profile.signupIp)?.length ?? 0;
+                                                            return <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedSignupIp(profile.signupIp!); }} className={`rounded px-2 py-1 font-mono text-[11px] ${accountCount > 1 ? 'border border-red-500/40 bg-red-500/10 text-red-300' : 'text-gray-400 hover:bg-white/5'}`}>{profile.signupIp}{accountCount > 1 ? ` • ${accountCount}` : ''}</button>;
+                                                        })() : <span className="text-gray-600">—</span>}
+                                                    </td>
                                                     <td className="px-3 py-3 text-gray-300">{profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : '—'}</td>
                                                     <td className="px-3 py-3 text-gray-300">{new Date(metrics.lastActive).toLocaleDateString()}</td>
                                                     <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span></td>
@@ -5097,6 +5136,7 @@ export const AdminPanel: React.FC = () => {
                                                 </div>
                                                 <span className="rounded-full bg-[#131720] px-2 py-1 text-xs text-gray-300">Risk {metrics.riskScore}</span>
                                             </div>
+                                            {profile.signupIp && (signupIpAccounts.get(profile.signupIp)?.length ?? 0) > 1 && <span role="button" tabIndex={0} onClick={(event) => { event.stopPropagation(); setSelectedSignupIp(profile.signupIp!); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); setSelectedSignupIp(profile.signupIp!); } }} className="mt-3 inline-flex max-w-full rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] text-red-300">{profile.signupIp} • {signupIpAccounts.get(profile.signupIp)?.length} accounts</span>}
                                         </button>
                                     );
                                 })}
@@ -5151,6 +5191,7 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mt-2 text-xs text-gray-500">UID: {selectedUser.id}</div>
                                                         <div className="text-xs text-gray-500">Created: {selectedUser.createdAt ? new Date(selectedUser.createdAt).toLocaleString() : 'Unknown'} • Last active: {new Date(metrics.lastActive).toLocaleString()}</div>
                                                         <div className="text-xs text-gray-500">Provider: {selectedUser.provider || 'Unknown'}</div>
+                                                        <div className="mt-2 text-xs text-gray-500">Signup IP: {selectedUser.signupIp ? <button type="button" onClick={() => setSelectedSignupIp(selectedUser.signupIp!)} className={`break-all font-mono ${(signupIpAccounts.get(selectedUser.signupIp)?.length ?? 0) > 1 ? 'text-red-300 underline decoration-dotted underline-offset-2' : 'text-gray-300'}`}>{selectedUser.signupIp}{(signupIpAccounts.get(selectedUser.signupIp)?.length ?? 0) > 1 ? ` (${signupIpAccounts.get(selectedUser.signupIp)?.length} accounts)` : ''}</button> : 'Not recorded'}</div>
                                                         <div className="mt-2 flex flex-wrap gap-2">
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span>
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>Risk {metrics.riskScore}</span>

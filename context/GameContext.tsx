@@ -1148,7 +1148,9 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     challengeStatsDay: typeof data.challengeStatsDay === 'string' ? data.challengeStatsDay : undefined,
     challengeStats: data.challengeStats ?? undefined,
     questClaims: data.questClaims ?? undefined,
-    inventory: normalizeInventoryItems(data.inventory)
+    inventory: normalizeInventoryItems(data.inventory),
+    signupIp: typeof data.signupIp === 'string' ? data.signupIp : undefined,
+    signupIpRecordedAt: data.signupIpRecordedAt
   } as User;
 };
 
@@ -2673,6 +2675,12 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
 
       await setDoc(doc(db, 'users', newUser.id), buildUserDocument(newUser), { merge: true });
+
+      // The server derives the address from trusted proxy headers and only records
+      // the first signup address. Tracking failure must never block registration.
+      await authedFetch('/api/auth/track-signup', { method: 'POST', body: '{}' }).catch((error) => {
+        console.warn('Unable to record signup IP address', error);
+      });
 
       await tryApplyPendingReferralAttribution();
 
