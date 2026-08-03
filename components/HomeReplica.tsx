@@ -51,6 +51,10 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
 const PROMO_BOX_ID = 'Pix6KvQzz8C9GtQf7F72';
+const EEVEE_PROMO_IMAGES = [
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/151%2FEevee%20Evolution%20Vault%2Feevee%20(11).png?alt=media&token=054bb556-f6ac-44e1-82e1-59e06a578fe5',
+  'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/151%2FEevee%20Evolution%20Vault%2Feevee%20(19).png?alt=media&token=52e47f40-0d5c-456b-b3b3-83c8bc05a815'
+] as const;
 
 const mapHomepageLiveWinBox = (id: string, data: Record<string, any>): MysteryBox => ({
   id,
@@ -130,17 +134,17 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
 );
 
 const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
-  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#070d0d_0%,#172420_48%,#17110d_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
-    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(41,217,203,.22),transparent_27%),radial-gradient(circle_at_86%_85%,rgba(255,169,55,.24),transparent_35%),linear-gradient(90deg,rgba(112,39,146,.20),transparent_46%)]" />
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,188,75,.48),transparent)] blur-md" />
+  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#5f2f28_0%,#c97962_48%,#f3c5a1_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(255,241,211,.72),transparent_29%),radial-gradient(circle_at_88%_82%,rgba(255,187,154,.62),transparent_38%),linear-gradient(90deg,rgba(123,55,45,.32),transparent_48%)]" />
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,226,181,.72),transparent)] blur-md" />
     <div className="relative z-10 flex h-full items-center justify-center text-center">
-      {box.image ? <img src={box.image} alt="" aria-hidden="true" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-left-1 sm:h-28 sm:w-28 lg:left-3 lg:h-36 lg:w-36" /> : null}
+      <img src={EEVEE_PROMO_IMAGES[0]} alt="Eevee evolution graded slab" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute left-0 top-1/2 h-24 w-24 -translate-y-1/2 object-contain drop-shadow-[0_0_18px_rgba(255,225,185,.42)] drop-shadow-[0_18px_25px_rgba(76,35,26,.48)] sm:-left-1 sm:h-32 sm:w-32 lg:left-3 lg:h-40 lg:w-40" />
       <div className="relative z-10 flex min-w-0 max-w-[180px] flex-col items-center sm:max-w-[420px] lg:max-w-[590px]">
-        <h1 className="text-[21px] font-black uppercase leading-[.9] tracking-[-.04em] text-[#fff6dc] drop-shadow-[0_3px_0_rgba(76,35,15,.7)] sm:text-[30px] lg:text-[48px]"><span className="text-amber-300">Promo Box</span> just dropped</h1>
-        <p className="mt-1.5 hidden text-[11px] font-bold uppercase leading-tight tracking-[.08em] text-teal-100/80 sm:block lg:text-sm">Enter the vault and uncover a special pull.</p>
-        <span className="mt-2 inline-flex rounded-xl border border-amber-100/60 bg-[linear-gradient(135deg,#ffdb77,#c87920)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#241108] shadow-[0_8px_20px_rgba(0,0,0,.35)] sm:px-4 sm:text-xs">Open now</span>
+        <h1 className="text-[20px] font-black uppercase leading-[.9] tracking-[-.04em] text-[#fff8e9] drop-shadow-[0_3px_0_rgba(98,42,31,.58)] sm:text-[30px] lg:text-[48px]">Eevee <span className="text-[#ffd7ae]">evolution slabs</span></h1>
+        <p className="mt-1.5 text-[9px] font-bold uppercase leading-tight tracking-[.12em] text-[#fff1d9] sm:text-[11px] lg:text-sm">What will you pull</p>
+        <span className="mt-2 inline-flex rounded-xl border border-[#fff0d0]/70 bg-[linear-gradient(135deg,#ffe2b7,#df8c6d)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#54271f] shadow-[0_8px_20px_rgba(82,34,25,.32)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      {box.image ? <img src={box.image} alt={box.name} width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-20 w-20 -translate-y-1/2 object-contain opacity-95 drop-shadow-[0_0_20px_rgba(45,234,217,.25)] drop-shadow-[0_18px_25px_rgba(0,0,0,.62)] sm:-right-1 sm:h-28 sm:w-28 lg:right-3 lg:h-36 lg:w-36" /> : null}
+      <img src={EEVEE_PROMO_IMAGES[1]} alt="Eevee evolution graded slab" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-24 w-24 -translate-y-1/2 object-contain drop-shadow-[0_0_18px_rgba(255,225,185,.42)] drop-shadow-[0_18px_25px_rgba(76,35,26,.48)] sm:-right-1 sm:h-32 sm:w-32 lg:right-3 lg:h-40 lg:w-40" />
     </div>
   </div>
 );
