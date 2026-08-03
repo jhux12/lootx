@@ -1,6 +1,7 @@
 import { admin, adminAuth, firestore } from './firebaseAdmin.js';
 import { getBearerToken } from './http.js';
 import { hmacSha256Hex, randomSeed, sha256 } from './provablyFair.js';
+import { requireActiveAccount } from '../_utils/auth.js';
 
 const BATTLE_ENGINE_VERSION = '1.2.0';
 
@@ -22,7 +23,9 @@ export const parseAuth = async (req) => {
   }
 
   try {
-    return await adminAuth.verifyIdToken(token);
+    const decoded = await adminAuth.verifyIdToken(token);
+    await requireActiveAccount(decoded.uid);
+    return decoded;
   } catch {
     throw { status: 401, error: 'AUTH_INVALID', message: 'Invalid authentication token.' };
   }

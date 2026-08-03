@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { requireActiveAccount } from './_utils/auth.js';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
@@ -37,6 +38,7 @@ export default async function handler(req, res) {
     }
 
     const decoded = await adminAuth.verifyIdToken(token);
+    await requireActiveAccount(decoded.uid);
     const userRef = firestore.collection('users').doc(decoded.uid);
     const userSnap = await userRef.get();
     const userData = userSnap.data() ?? {};
