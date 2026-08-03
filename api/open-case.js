@@ -406,7 +406,9 @@ export default async function handler(req, res) {
             createdAt: Date.now(),
             balanceAfter: newCoins,
             sourceId: openRef.id,
-            memo: `Opened ${boxData.name ?? 'Mystery Box'}`
+            memo: `Opened ${boxData.name ?? 'Mystery Box'}`,
+            prizeName: prize.name ?? 'Mystery Item',
+            prizeImage: prize.image ?? ''
           }
         });
         await applySpendAndRewards({

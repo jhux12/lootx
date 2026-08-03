@@ -2931,7 +2931,7 @@ export const AdminPanel: React.FC = () => {
               id: entry.id,
               createdAt: entry.createdAt,
               title: `Ledger • ${entry.type.replace('_', ' ')}`,
-              description: `${formatCoinText(entry.amount)} ${entry.memo ?? ''}`.trim(),
+              description: `${formatCoinText(entry.amount)} ${entry.memo ?? ''}${entry.type === 'case_open' && entry.prizeName ? ` • Won ${entry.prizeName}` : ''}`.trim(),
               meta: entry.sourceId ? `Source: ${entry.sourceId}` : '',
               category: 'ledger' as const
           })),
@@ -2978,6 +2978,7 @@ export const AdminPanel: React.FC = () => {
       if (!ledgerSearchValue) return true;
       return [
           entry.memo,
+          entry.prizeName,
           entry.sourceId,
           entry.type
       ]
@@ -5344,7 +5345,7 @@ export const AdminPanel: React.FC = () => {
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
                                                 <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
                                                 <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
-                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
+                                                <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div>{entry.type === 'case_open' && entry.prizeName && <div className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 p-2">{entry.prizeImage && <img src={entry.prizeImage} alt="" className="h-10 w-10 shrink-0 rounded-md bg-black/20 object-contain" />}<div className="min-w-0"><div className="text-[10px] font-semibold uppercase tracking-wide text-blue-300">Item won</div><div className="break-words text-xs font-semibold text-white">{entry.prizeName}</div></div></div>}<div className="mt-1 break-all text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
                                             </div>
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-5 space-y-3">
