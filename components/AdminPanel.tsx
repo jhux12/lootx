@@ -591,7 +591,7 @@ export const AdminPanel: React.FC = () => {
   const [userLocks, setUserLocks] = useState<Record<string, UserLocks>>({});
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
-  const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
+  const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'shared_ip' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
   const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
       key: 'created',
       direction: 'desc'
@@ -2777,6 +2777,15 @@ export const AdminPanel: React.FC = () => {
       return grouped;
   }, [users]);
   const selectedIpAccounts = selectedSignupIp ? signupIpAccounts.get(selectedSignupIp) ?? [] : [];
+  const flaggedSignupIps = useMemo(
+      () => Array.from(signupIpAccounts.entries()).filter(([, accounts]) => accounts.length > 1),
+      [signupIpAccounts]
+  );
+  const flaggedAccountCount = flaggedSignupIps.reduce((total, [, accounts]) => total + accounts.length, 0);
+  const reviewFlaggedAccounts = () => {
+      setUsersQuickFilter('shared_ip');
+      setSelectedSignupIp(flaggedSignupIps[0]?.[0] ?? null);
+  };
   const normalizedUserSearch = userSearchQuery.trim().toLowerCase();
   const getUserLabels = (profile: (typeof users)[number]) => {
       const profileLabels = (profile as unknown as { internalLabels?: string[] }).internalLabels ?? [];
@@ -2851,6 +2860,7 @@ export const AdminPanel: React.FC = () => {
       const quickFiltered = searched.filter((profile) => {
           const metrics = getUserMetrics(profile);
           const locked = Object.values(userLocks[profile.id] ?? DEFAULT_LOCKS).some(Boolean);
+          if (usersQuickFilter === 'shared_ip') return Boolean(profile.signupIp && (signupIpAccounts.get(profile.signupIp)?.length ?? 0) > 1);
           if (usersQuickFilter === 'locked') return locked;
           if (usersQuickFilter === 'high_risk') return metrics.riskScore >= 60;
           if (usersQuickFilter === 'empty_inventory') return metrics.inventory.length === 0;
@@ -2878,7 +2888,7 @@ export const AdminPanel: React.FC = () => {
           };
           return comparisons[usersSort.key] * direction;
       });
-  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses]);
+  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses, signupIpAccounts]);
   const selectedLedgerEntries = useMemo(() => {
       if (!isRealSelectedUserId(selectedUserId)) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
@@ -5002,12 +5012,23 @@ export const AdminPanel: React.FC = () => {
                                     placeholder="Search users, UID, email, signup IP, labels, risk, balances"
                                     className="w-full md:w-96 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={reviewFlaggedAccounts}
+                                    disabled={flaggedAccountCount === 0}
+                                    className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:border-gray-700 disabled:bg-[#0b0e14] disabled:text-gray-500 md:w-auto"
+                                >
+                                    <ShieldAlert className="h-4 w-4 shrink-0" />
+                                    <span>Review flagged accounts</span>
+                                    <span className="rounded-full bg-black/30 px-2 py-0.5" aria-label={`${flaggedAccountCount} flagged accounts`}>{flaggedAccountCount}</span>
+                                </button>
                                 <button type="button" className="rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-xs font-semibold text-gray-300">Export</button>
                             </div>
                         </div>
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                             {[
                                 { key: 'all', label: 'All Users' },
+                                { key: 'shared_ip', label: 'Shared Signup IP' },
                                 { key: 'high_risk', label: 'High Risk' },
                                 { key: 'locked', label: 'Any Lock' },
                                 { key: 'empty_inventory', label: 'Empty Inventory' },
