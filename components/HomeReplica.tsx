@@ -50,7 +50,7 @@ const MOBILE_LIVE_WIN_ACCENT: Record<MobileLiveWin['rarity'], string> = {
 
 const MOBILE_REVIEW_FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1613771404721-1f92d799e49f?auto=format&fit=crop&w=700&q=75';
 const MOBILE_DEPOSIT_MATCH_IMAGE = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/svg%2FUntitled%20(500%20x%20333%20px).png?alt=media&token=a0cdd2c8-d68c-4ed4-9a82-c5b5338b3a8f';
-const PROMO_BOX_ID = 'Pix6KvQzz8C9GtQf7F72';
+const PROMO_BOX_ID = 'Aj4VhmO9gQo5Pj6GHdoY';
 const EEVEE_PROMO_IMAGES = [
   'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/151%2FEevee%20Evolution%20Vault%2Feevee%20(11).png?alt=media&token=054bb556-f6ac-44e1-82e1-59e06a578fe5',
   'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/151%2FEevee%20Evolution%20Vault%2Feevee%20(19).png?alt=media&token=52e47f40-0d5c-456b-b3b3-83c8bc05a815'
