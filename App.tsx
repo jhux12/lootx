@@ -178,9 +178,11 @@ const PullzSupportChat: React.FC<{
     pullzWindow.Tawk_LoadStart = pullzWindow.Tawk_LoadStart || new Date();
     pullzWindow.Tawk_API.onLoad = () => {
       setHasLoadFailed(false);
-      if (visitor) pullzWindow.Tawk_API?.setAttributes?.(visitor);
       pullzWindow.Tawk_API?.showWidget?.();
       pullzWindow.Tawk_API?.maximize?.();
+      // Tawk requires a callback for setAttributes. Open the widget first so a
+      // visitor-sync error can never prevent the support chat from appearing.
+      if (visitor) pullzWindow.Tawk_API?.setAttributes?.(visitor, () => undefined);
     };
     pullzWindow.Tawk_API.onChatMinimized = () => { hideDefaultWidget(); showTab(); };
     pullzWindow.Tawk_API.onChatHidden = showTab;
