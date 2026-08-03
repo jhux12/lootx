@@ -1,4 +1,4 @@
-import { adminAuth } from '../../_lib/firebaseAdmin.js';
+import { adminAuth, db } from '../../_lib/firebaseAdmin.js';
 
 const OAUTH_STATE_COOKIE = 'pullz_google_oauth_state';
 
@@ -97,6 +97,14 @@ export default async function handler(req: any, res: any) {
         });
       } else {
         throw error;
+      }
+    }
+
+    if (userRecord.disabled) {
+      const profile = await db.collection('users').doc(userRecord.uid).get();
+      const status = profile.data()?.status;
+      if (status === 'banned' || status === 'suspended') {
+        userRecord = await adminAuth.updateUser(userRecord.uid, { disabled: false });
       }
     }
 
