@@ -26,6 +26,14 @@ type TawkApi = {
   hideWidget?: () => void;
   showWidget?: () => void;
   maximize?: () => void;
+  visitor?: {
+    name: string;
+    email?: string;
+  };
+  setAttributes?: (
+    attributes: { name: string; email?: string },
+    callback?: (error?: unknown) => void
+  ) => void;
   onLoad?: () => void;
   onChatMinimized?: () => void;
   onChatHidden?: () => void;
@@ -144,7 +152,11 @@ const TAWK_SCRIPT_ID = 'pullz-tawk-script';
 
 const isAdminViewType = (viewType: string) => viewType === 'ADMIN' || viewType.startsWith('ADMIN_');
 
-const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) => {
+const PullzSupportChat: React.FC<{
+  isAdminPage: boolean;
+  username?: string;
+  email?: string;
+}> = ({ isAdminPage, username, email }) => {
   const [isTabVisible, setIsTabVisible] = useState(!isAdminPage);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [hasLoadFailed, setHasLoadFailed] = useState(false);
@@ -157,8 +169,19 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
     const showTab = () => { setIsChatOpen(false); setIsTabVisible(!isAdminPage); };
     const hideDefaultWidget = () => pullzWindow.Tawk_API?.hideWidget?.();
     pullzWindow.Tawk_API = pullzWindow.Tawk_API || {};
+    const visitorName = username?.trim();
+    const visitorEmail = email?.trim();
+    const visitor = visitorName
+      ? { name: visitorName, ...(visitorEmail ? { email: visitorEmail } : {}) }
+      : undefined;
+    if (visitor) pullzWindow.Tawk_API.visitor = visitor;
     pullzWindow.Tawk_LoadStart = pullzWindow.Tawk_LoadStart || new Date();
-    pullzWindow.Tawk_API.onLoad = () => { setHasLoadFailed(false); pullzWindow.Tawk_API?.showWidget?.(); pullzWindow.Tawk_API?.maximize?.(); };
+    pullzWindow.Tawk_API.onLoad = () => {
+      setHasLoadFailed(false);
+      if (visitor) pullzWindow.Tawk_API?.setAttributes?.(visitor);
+      pullzWindow.Tawk_API?.showWidget?.();
+      pullzWindow.Tawk_API?.maximize?.();
+    };
     pullzWindow.Tawk_API.onChatMinimized = () => { hideDefaultWidget(); showTab(); };
     pullzWindow.Tawk_API.onChatHidden = showTab;
     let script = document.getElementById(TAWK_SCRIPT_ID) as HTMLScriptElement | null;
@@ -172,7 +195,7 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
     return () => {
       if (pullzWindow.Tawk_API) { pullzWindow.Tawk_API.onLoad = undefined; pullzWindow.Tawk_API.onChatMinimized = undefined; pullzWindow.Tawk_API.onChatHidden = undefined; }
     };
-  }, [isAdminPage, isChatOpen]);
+  }, [email, isAdminPage, isChatOpen, username]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -848,7 +871,7 @@ const getNavigationScrollKey = (view: ReturnType<typeof useGame>['view']) => {
 };
 
 const AppShell = () => {
-  const { view } = useGame();
+  const { view, isAuthenticated, user } = useGame();
   const shouldUseStickyHeader = true;
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
@@ -872,7 +895,11 @@ const AppShell = () => {
       <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
       <AppLayout hasStickyHeader={shouldUseStickyHeader} />
       <MobileBottomNav />
-      <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
+      <PullzSupportChat
+        isAdminPage={isAdminViewType(view.type)}
+        username={isAuthenticated ? (user.username || user.name) : undefined}
+        email={isAuthenticated ? user.email : undefined}
+      />
       <ResetPasswordModal />
     </div>
   );
