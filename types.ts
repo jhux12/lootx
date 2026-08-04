@@ -56,6 +56,11 @@ export interface User {
   hiddenFromPublicDisplay?: boolean;
   topPulls?: InventoryItem[];
   createdAt?: number;
+  signupIp?: string;
+  signupIpRecordedAt?: any;
+  signupIpAccountNumber?: number;
+  autoBannedAt?: any;
+  autoBanReason?: string;
   challengeStatsDay?: string;
   challengeStats?: {
     boxesOpened?: number;

@@ -1,4 +1,6 @@
 import { adminAuth, db } from '../../_lib/firebaseAdmin.js';
+import { getClientIp } from '../../_utils/clientIp.js';
+import { recordSignupIp } from '../../_lib/signupIp.js';
 
 const OAUTH_STATE_COOKIE = 'pullz_google_oauth_state';
 
@@ -84,6 +86,7 @@ export default async function handler(req: any, res: any) {
     if (!payload.email || !payload.email_verified || !payload.sub) throw new Error('Google account email must be verified');
 
     let userRecord;
+    let isNewUser = false;
     try {
       userRecord = await adminAuth.getUserByEmail(payload.email);
     } catch (error: any) {
@@ -95,9 +98,15 @@ export default async function handler(req: any, res: any) {
           displayName: payload.name || undefined,
           photoURL: payload.picture || undefined
         });
+        isNewUser = true;
       } else {
         throw error;
       }
+    }
+
+    if (isNewUser) {
+      const signupIp = getClientIp(req);
+      if (signupIp) await recordSignupIp(userRecord.uid, signupIp);
     }
 
     if (userRecord.disabled) {
