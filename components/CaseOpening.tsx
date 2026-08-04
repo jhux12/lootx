@@ -2223,11 +2223,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           </div>
         )}
 
-        {/* Slide Up Win Sheet */}
-        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
-        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
+        {/* Pull Reveal Modal: zooms up centred, matching the reel-spin mockup. */}
+        <div
+          className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-opacity duration-300 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          onClick={closeWinModal}
+        >
           {wonItem && (
-            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`relative mx-auto flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#1b2028]/95 shadow-[0_30px_90px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all duration-300 ${showWinModal && wonItem ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
+            >
               {confetti.map((piece) => (
                 <span
                   key={piece.id}
@@ -2323,33 +2328,35 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5">
-                    <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
-                      <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
-                    </button>
-                    {wonItem.redeemable !== false && (
-                      <button
-                        onClick={handleSell}
-                        disabled={isSellingItem}
-                        className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
-                      >
-                        <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
-                          <Wallet className="h-4 w-4 flex-none" />
-                          {isSellingItem ? (
-                            'Selling item...'
-                          ) : (
-                            <>
-                              <span>Sell for</span>
-                              <CoinAmount
-                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-emerald-50"
-                                iconClassName="h-4 w-4"
-                              />
-                            </>
-                          )}
-                        </span>
+                    <div className="flex flex-wrap gap-2.5">
+                      <button onClick={handleKeep} className="h-14 min-w-[150px] flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
+                        <span className="inline-flex items-center justify-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
                       </button>
-                    )}
+                      {wonItem.redeemable !== false && (
+                        <button
+                          onClick={handleSell}
+                          disabled={isSellingItem}
+                          className="h-14 min-w-[150px] flex-1 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
+                        >
+                          <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4 flex-none" />
+                            {isSellingItem ? (
+                              'Selling item...'
+                            ) : (
+                              <>
+                                <span>Sell for</span>
+                                <CoinAmount
+                                  amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-emerald-50"
+                                  iconClassName="h-4 w-4"
+                                />
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => void handleShareUnboxing()}
