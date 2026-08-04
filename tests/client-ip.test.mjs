@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { getClientIp, normalizeIp } from '../api/_utils/clientIp.js';
+import { MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP, shouldAutoBanSignupIpAccount } from '../api/_lib/signupIpPolicy.js';
 
 test('getClientIp uses the originating forwarded address', () => {
   const request = {
@@ -23,4 +24,12 @@ test('normalizeIp handles bracketed IPv6 and rejects empty values', () => {
   assert.equal(normalizeIp('[2001:db8::1]:443'), '2001:db8::1');
   assert.equal(normalizeIp(' unknown '), null);
   assert.equal(normalizeIp(''), null);
+});
+
+test('the first five accounts from an IP are allowed and later accounts are banned', () => {
+  for (let accountsBeforeSignup = 0; accountsBeforeSignup < MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP; accountsBeforeSignup += 1) {
+    assert.equal(shouldAutoBanSignupIpAccount(accountsBeforeSignup), false);
+  }
+  assert.equal(shouldAutoBanSignupIpAccount(5), true);
+  assert.equal(shouldAutoBanSignupIpAccount(6), true);
 });

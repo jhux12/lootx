@@ -1,4 +1,4 @@
-import { db } from '../_lib/firebaseAdmin.js';
+import { recordSignupIp } from '../_lib/signupIp.js';
 import { deny, ok, requireUser } from '../_utils/auth.js';
 import { getClientIp } from '../_utils/clientIp.js';
 
@@ -10,20 +10,8 @@ export default async function handler(req, res) {
     const signupIp = getClientIp(req);
     if (!signupIp) return deny(res, 400, 'SIGNUP_IP_UNAVAILABLE');
 
-    const userRef = db.collection('users').doc(decoded.uid);
-    let recorded = false;
-    await db.runTransaction(async (transaction) => {
-      const snapshot = await transaction.get(userRef);
-      if (snapshot.data()?.signupIp) return;
-      transaction.set(userRef, {
-        signupIp,
-        signupIpRecordedAt: new Date(),
-        updatedAt: new Date()
-      }, { merge: true });
-      recorded = true;
-    });
-
-    return ok(res, { recorded });
+    const result = await recordSignupIp(decoded.uid, signupIp);
+    return ok(res, result);
   } catch (error) {
     return deny(res, error?.status ?? 500, error?.error ?? error?.message ?? 'SIGNUP_IP_TRACKING_FAILED');
   }

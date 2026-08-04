@@ -1,5 +1,6 @@
 import { adminAuth, db } from '../../_lib/firebaseAdmin.js';
 import { getClientIp } from '../../_utils/clientIp.js';
+import { recordSignupIp } from '../../_lib/signupIp.js';
 
 const OAUTH_STATE_COOKIE = 'pullz_google_oauth_state';
 
@@ -105,10 +106,7 @@ export default async function handler(req: any, res: any) {
 
     if (isNewUser) {
       const signupIp = getClientIp(req);
-      await db.collection('users').doc(userRecord.uid).set({
-        ...(signupIp ? { signupIp, signupIpRecordedAt: new Date() } : {}),
-        updatedAt: new Date()
-      }, { merge: true });
+      if (signupIp) await recordSignupIp(userRecord.uid, signupIp);
     }
 
     if (userRecord.disabled) {

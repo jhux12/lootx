@@ -1150,7 +1150,10 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     questClaims: data.questClaims ?? undefined,
     inventory: normalizeInventoryItems(data.inventory),
     signupIp: typeof data.signupIp === 'string' ? data.signupIp : undefined,
-    signupIpRecordedAt: data.signupIpRecordedAt
+    signupIpRecordedAt: data.signupIpRecordedAt,
+    signupIpAccountNumber: Number.isFinite(Number(data.signupIpAccountNumber)) ? Number(data.signupIpAccountNumber) : undefined,
+    autoBannedAt: data.autoBannedAt,
+    autoBanReason: typeof data.autoBanReason === 'string' ? data.autoBanReason : undefined
   } as User;
 };
 

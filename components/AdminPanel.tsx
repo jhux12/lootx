@@ -2845,6 +2845,7 @@ export const AdminPanel: React.FC = () => {
                   profile.email,
                   profile.id,
                   profile.signupIp,
+                  profile.autoBanReason,
                   String(profile.balance ?? 0),
                   String(metrics.inventory.length),
                   String(metrics.riskScore),
@@ -5215,6 +5216,7 @@ export const AdminPanel: React.FC = () => {
                                                         <div className="mt-2 text-xs text-gray-500">Signup IP: {selectedUser.signupIp ? <button type="button" onClick={() => setSelectedSignupIp(selectedUser.signupIp!)} className={`break-all font-mono ${(signupIpAccounts.get(selectedUser.signupIp)?.length ?? 0) > 1 ? 'text-red-300 underline decoration-dotted underline-offset-2' : 'text-gray-300'}`}>{selectedUser.signupIp}{(signupIpAccounts.get(selectedUser.signupIp)?.length ?? 0) > 1 ? ` (${signupIpAccounts.get(selectedUser.signupIp)?.length} accounts)` : ''}</button> : 'Not recorded'}</div>
                                                         <div className="mt-2 flex flex-wrap gap-2">
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${status === 'active' ? 'bg-emerald-500/10 text-emerald-300' : status === 'suspended' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-red-500/10 text-red-300'}`}>{status}</span>
+                                                            {selectedUser.autoBanReason === 'signup_ip_account_limit' && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-bold text-red-300">Auto-banned • IP account limit</span>}
                                                             <span className={`rounded-full px-2 py-1 text-xs font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>Risk {metrics.riskScore}</span>
                                                             {labels.map((label) => <span key={label} className="rounded-full bg-blue-500/15 px-2 py-1 text-xs text-blue-300">{label}</span>)}
                                                         </div>
