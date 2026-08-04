@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { getClientIp, normalizeIp } from '../api/_utils/clientIp.js';
 import { MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP, shouldAutoBanSignupIpAccount } from '../api/_lib/signupIpPolicy.js';
+import { evaluateSignupFraud } from '../api/_lib/fraudPolicy.js';
 
 test('getClientIp uses the originating forwarded address', () => {
   const request = {
@@ -14,6 +15,17 @@ test('getClientIp uses the originating forwarded address', () => {
   };
 
   assert.equal(getClientIp(request), '203.0.113.9');
+});
+
+test('fraud scoring applies device, IP, welcome bonus, and automatic-ban rules', () => {
+  assert.deepEqual(evaluateSignupFraud({ accountsBeforeDevice: 1 }), {
+    score: 6, reasons: ['shared_device'], autoBanned: false, autoBanReason: null
+  });
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 1, accountsBeforeIp: 1 }).autoBanned, true);
+  assert.equal(evaluateSignupFraud({ deviceWelcomeBonusClaimed: true }).score, 8);
+  assert.equal(evaluateSignupFraud({ ipWelcomeBonusClaimed: true }).score, 4);
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 2 }).autoBanReason, 'device_account_limit');
+  assert.equal(evaluateSignupFraud({ accountsBeforeIp: 3 }).autoBanReason, 'signup_ip_account_limit');
 });
 
 test('getClientIp falls back to the socket and normalizes mapped IPv4', () => {

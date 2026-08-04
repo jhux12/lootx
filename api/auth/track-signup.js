@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     const signupIp = getClientIp(req);
     if (!signupIp) return deny(res, 400, 'SIGNUP_IP_UNAVAILABLE');
 
-    const result = await recordSignupIp(decoded.uid, signupIp);
+    const result = await recordSignupIp(decoded.uid, signupIp, req.body?.deviceId);
     return ok(res, result);
   } catch (error) {
     return deny(res, error?.status ?? 500, error?.error ?? error?.message ?? 'SIGNUP_IP_TRACKING_FAILED');

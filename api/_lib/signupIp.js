@@ -1,55 +1,78 @@
 import { createHash } from 'node:crypto';
 
 import { db } from './firebaseAdmin.js';
-import { shouldAutoBanSignupIpAccount } from './signupIpPolicy.js';
+import { evaluateSignupFraud } from './fraudPolicy.js';
 
 const getCounterId = (signupIp) => createHash('sha256').update(signupIp).digest('hex');
 
-export const recordSignupIp = async (uid, signupIp) => {
+const normalizeDeviceId = (deviceId) => (
+  typeof deviceId === 'string' && /^[a-zA-Z0-9-]{16,128}$/.test(deviceId) ? deviceId : null
+);
+
+export const recordSignupIp = async (uid, signupIp, rawDeviceId = null) => {
+  const deviceId = normalizeDeviceId(rawDeviceId);
   const userRef = db.collection('users').doc(uid);
   const counterRef = db.collection('signupIpCounters').doc(getCounterId(signupIp));
+  const deviceCounterRef = deviceId
+    ? db.collection('deviceCounters').doc(getCounterId(deviceId))
+    : null;
 
   return db.runTransaction(async (transaction) => {
-    // A user can retry the endpoint, so never count or reassess an address twice.
     const userSnapshot = await transaction.get(userRef);
-    if (userSnapshot.data()?.signupIp) {
+    const currentUser = userSnapshot.data() ?? {};
+    const needsIp = !currentUser.signupIp;
+    const needsDevice = Boolean(deviceId && !currentUser.deviceId);
+    if (!needsIp && !needsDevice) {
       return { recorded: false, autoBanned: false, accountNumber: null };
     }
 
     const counterSnapshot = await transaction.get(counterRef);
-    let accountsBeforeSignup;
-    if (counterSnapshot.exists) {
-      accountsBeforeSignup = Math.max(0, Number(counterSnapshot.data()?.accountCount ?? 0));
-    } else {
-      // Seed the counter from addresses recorded before counters were introduced.
-      // Reading it in this transaction also makes concurrent initialization safe.
-      const existingAccounts = await transaction.get(
-        db.collection('users').where('signupIp', '==', signupIp)
-      );
-      accountsBeforeSignup = existingAccounts.size;
-    }
+    const deviceCounterSnapshot = deviceCounterRef ? await transaction.get(deviceCounterRef) : null;
+    const existingIpAccounts = await transaction.get(db.collection('users').where('signupIp', '==', signupIp));
+    const existingDeviceAccounts = deviceId
+      ? await transaction.get(db.collection('users').where('deviceId', '==', deviceId))
+      : null;
+    const storedIpCount = counterSnapshot.exists ? Math.max(0, Number(counterSnapshot.data()?.accountCount ?? 0)) : existingIpAccounts.size;
+    const accountsBeforeSignup = needsIp ? storedIpCount : Math.max(0, storedIpCount - 1);
 
     const accountNumber = accountsBeforeSignup + 1;
-    const autoBanned = shouldAutoBanSignupIpAccount(accountsBeforeSignup);
+    const storedDeviceCount = deviceId
+      ? (deviceCounterSnapshot?.exists ? Math.max(0, Number(deviceCounterSnapshot.data()?.accountCount ?? 0)) : existingDeviceAccounts.size)
+      : 0;
+    const accountsBeforeDevice = needsDevice ? storedDeviceCount : Math.max(0, storedDeviceCount - 1);
+    const relatedUsers = [...existingIpAccounts.docs, ...(existingDeviceAccounts?.docs ?? [])]
+      .filter((snapshot) => snapshot.id !== uid);
+    const ipWelcomeBonusClaimed = relatedUsers.some((snapshot) => snapshot.data()?.signupIp === signupIp && snapshot.data()?.welcomeBonusClaimedAt);
+    const deviceWelcomeBonusClaimed = Boolean(deviceId && relatedUsers.some((snapshot) => snapshot.data()?.deviceId === deviceId && snapshot.data()?.welcomeBonusClaimedAt));
+    const assessment = evaluateSignupFraud({ accountsBeforeDevice, accountsBeforeIp: accountsBeforeSignup, deviceWelcomeBonusClaimed, ipWelcomeBonusClaimed });
     const now = new Date();
 
-    transaction.set(counterRef, {
+    if (needsIp) transaction.set(counterRef, {
       signupIp,
       accountCount: accountNumber,
+      updatedAt: now
+    }, { merge: true });
+    if (deviceCounterRef && needsDevice) transaction.set(deviceCounterRef, {
+      deviceIdHash: getCounterId(deviceId),
+      accountCount: accountsBeforeDevice + 1,
       updatedAt: now
     }, { merge: true });
     transaction.set(userRef, {
       signupIp,
       signupIpRecordedAt: now,
-      signupIpAccountNumber: accountNumber,
-      ...(autoBanned ? {
+      signupIpAccountNumber: needsIp ? accountNumber : currentUser.signupIpAccountNumber,
+      ...(deviceId ? { deviceId, deviceAccountNumber: accountsBeforeDevice + 1 } : {}),
+      fraudScore: assessment.score,
+      fraudSignals: assessment.reasons,
+      fraudAssessedAt: now,
+      ...(assessment.autoBanned ? {
         status: 'banned',
         autoBannedAt: now,
-        autoBanReason: 'signup_ip_account_limit'
+        autoBanReason: assessment.autoBanReason
       } : {}),
       updatedAt: now
     }, { merge: true });
 
-    return { recorded: true, autoBanned, accountNumber };
+    return { recorded: true, autoBanned: assessment.autoBanned, accountNumber, deviceAccountNumber: deviceId ? accountsBeforeDevice + 1 : null, fraudScore: assessment.score };
   });
 };

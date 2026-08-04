@@ -271,7 +271,10 @@ export default async function handler(req, res) {
         transaction.set(userRef, {
           totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
           depositCount: admin.firestore.FieldValue.increment(1),
-          lastDepositAt: admin.firestore.FieldValue.serverTimestamp()
+          lastDepositAt: admin.firestore.FieldValue.serverTimestamp(),
+          ...(isFirstDeposit && bonusCoins > 0 ? {
+            welcomeBonusClaimedAt: admin.firestore.FieldValue.serverTimestamp()
+          } : {})
         }, { merge: true });
 
         transaction.set(creditRef, {
