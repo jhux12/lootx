@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -64,4 +65,14 @@ test('a reel cannot be locked if its target differs from the server winner', () 
     reelGap: 6,
     viewportWidth: 390
   }), /does not contain the server winner/);
+});
+
+test('device rotation finishes the active animation through its locked-winner completion path', async () => {
+  const source = await readFile(new URL('../components/CaseOpening.tsx', import.meta.url), 'utf8');
+
+  assert.match(source, /addEventListener\('orientationchange', snapAfterRotation\)/);
+  assert.match(source, /screen\.orientation\?\.addEventListener\?\.\('change', snapAfterRotation\)/);
+  assert.match(source, /rotationSnapRequestedRef\.current = true/);
+  assert.match(source, /animation\.finish\(\)/);
+  assert.match(source, /calculateCardCenteredTranslate/);
 });

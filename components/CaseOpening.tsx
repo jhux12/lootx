@@ -491,6 +491,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const pendingSpinnerLayoutRef = useRef(false);
   const lockedWinnerRef = useRef<{ item: CaseItem; resultId: string; nonce: number } | null>(null);
   const lockedSpinStateRef = useRef<ReturnType<typeof createLockedSpinState> | null>(null);
+  const snapActiveSpinRef = useRef<(() => void) | null>(null);
+  const rotationSnapRequestedRef = useRef(false);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
@@ -1105,6 +1107,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [getTranslateBounds]);
 
   const resetSpinnerAnimation = useCallback(() => {
+    snapActiveSpinRef.current = null;
     if (previewAnimationRef.current) {
       previewAnimationRef.current.cancel();
       previewAnimationRef.current = null;
@@ -1144,6 +1147,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   useEffect(() => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const snapAfterRotation = () => {
+      if (!isSpinSequenceLockedRef.current) return;
+      rotationSnapRequestedRef.current = true;
+      snapActiveSpinRef.current?.();
+    };
+    window.addEventListener('orientationchange', snapAfterRotation);
+    window.screen.orientation?.addEventListener?.('change', snapAfterRotation);
+
+    return () => {
+      window.removeEventListener('orientationchange', snapAfterRotation);
+      window.screen.orientation?.removeEventListener?.('change', snapAfterRotation);
+    };
+  }, []);
 
   const animateSpin = useCallback(async (
     winnerIndex: number,
@@ -1237,6 +1257,23 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     );
 
     spinnerAnimationRef.current = animation;
+    let rotationSnapPending = false;
+    snapActiveSpinRef.current = () => {
+      if (rotationSnapPending || animation.playState === 'finished' || animation.playState === 'idle') return;
+      rotationSnapPending = true;
+
+      // Orientation events can fire before the new visual viewport dimensions
+      // are committed. Wait for two paints, then finish the existing immutable
+      // animation. Its normal completion path centers the same locked winner.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (animation.playState !== 'finished' && animation.playState !== 'idle') {
+            animation.finish();
+          }
+        });
+      });
+    };
+    if (rotationSnapRequestedRef.current) snapActiveSpinRef.current();
     // The reel itself is animated by WAAPI.  Never read its computed transform here:
     // style reads force a composited animation back onto the main thread.  The known
     // timeline and keyframes let us calculate the approximate centre position instead.
@@ -1316,6 +1353,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
+      snapActiveSpinRef.current = null;
       spinRequestLockRef.current = false;
       onComplete();
     };
@@ -1331,6 +1369,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
       spinnerAnimationRef.current = null;
+      snapActiveSpinRef.current = null;
       spinRequestLockRef.current = false;
     };
   }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
@@ -1604,6 +1643,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     isSpinningRef.current = true;
     isSpinSequenceLockedRef.current = true;
+    rotationSnapRequestedRef.current = false;
     setIsSpinning(true);
     if (!isDemo && isFree) {
       trackEvent('free_spin_started', { box_id: box.id });
@@ -1950,6 +1990,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const displayedWinner = lockedResult?.item ?? item;
     spinRequestLockRef.current = false;
     isSpinningRef.current = false;
+    rotationSnapRequestedRef.current = false;
     setIsSpinning(false);
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
