@@ -93,7 +93,10 @@ export const PerformanceModeProvider: React.FC<React.PropsWithChildren> = ({ chi
       });
     };
     const scheduleSample = () => {
-      if (!sampled && !document.hidden && !motionMedia.matches) {
+      // A continuous RAF sample is itself expensive during the critical mobile
+      // loading window. Mobile/coarse-pointer sessions already receive the
+      // constrained animation path, so only benchmark desktop-class devices.
+      if (!sampled && !document.hidden && !motionMedia.matches && !mobileMedia.matches) {
         sampleTimer = window.setTimeout(sampleOnce, 1_000);
       }
     };
