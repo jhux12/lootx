@@ -1010,10 +1010,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
 
     updateSpinnerMeasurements();
+    const winnerCard = container.children.item(winnerIndex) as HTMLElement | null;
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
     const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
+    // Use the rendered card position when it is available. This avoids accumulating
+    // rounding differences from responsive card widths/gaps, which can otherwise
+    // leave the adjacent item beneath the selector on narrow mobile viewports.
+    const winnerCenterX = winnerCard
+      ? winnerCard.offsetLeft + (winnerCard.offsetWidth / 2)
+      : (winnerIndex * stepWidth) + (cardWidth / 2);
     return viewportCenterX - winnerCenterX + landingOffset;
   }, [updateSpinnerMeasurements]);
 
@@ -1219,12 +1225,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         tickTimerRef.current = null;
       }
 
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
-      }
       animation.cancel();
+      // Layout can change while a spin is running (notably when a mobile browser's
+      // address bar collapses or the device rotates). Re-measure at the finish so
+      // the authoritative winner, rather than a neighbouring card, is snapped
+      // exactly beneath the fixed selector.
+      const finalCenteredTranslate = getCenteredTranslate(winnerIndex, 0);
+      const finalTranslate = finalCenteredTranslate === null
+        ? centeredTranslate
+        : clampTranslate(finalCenteredTranslate);
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1251,7 +1262,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, getCenteredTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1590,7 +1601,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           is_free: Boolean(isFree)
         });
 
-        const matchedPrize = items.find((item) => item.id === data.prize.id || item.name === data.prize.name);
+        // Prefer the server-awarded prize ID. A name-only match is retained for
+        // legacy prize data, but must not win over an exact ID when two variants
+        // share a display name (for example, different values or images).
+        const matchedPrize = items.find((item) => item.id === data.prize.id)
+          ?? items.find((item) => item.name === data.prize.name);
         const fallbackPrice = Number(
           (data.prize as { value?: number }).value ?? data.prize.price ?? 0
         );
