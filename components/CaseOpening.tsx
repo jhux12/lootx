@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { InfernoReactor, ReactorPhase } from './InfernoReactor';
@@ -1537,8 +1537,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {wonItem ? (
-              /* Result Panel — shown in place of the Action Bar once the reactor reveals an item. */
-              <div className="relative z-20 mt-3 px-3 pb-5 sm:mt-4 sm:px-4">
+              /* Result Panel — the reveal continues straight into the item name, value, and
+                 the keep/sell decision, in place of the Action Bar. No separate modal/sheet. */
+              <div className="relative z-20 -mt-1 px-4 pb-6 pt-1 text-center sm:pb-8">
                 {confetti.map((piece) => (
                   <span
                     key={piece.id}
@@ -1546,54 +1547,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
                   />
                 ))}
-                <div className="mx-auto flex w-full max-w-md flex-col gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
-                      <Check className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-bold text-white sm:text-base">{isDemoSpin ? 'Demo Open Result' : 'Item Unboxed'}</h3>
-                      <p className="text-xs text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setVerifyModalOpen(true)}
-                      className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
-                      aria-label="View fairness proof"
-                      title="View fairness proof"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                    </button>
-                  </div>
+                <p
+                  className="text-[11px] font-bold uppercase tracking-[0.14em]"
+                  style={{ color: wonItem.color, textShadow: `0 0 14px ${wonItem.color}55` }}
+                >
+                  {(rarityIndicatorStyle[normalizeRarityKey(wonItem.rarity)] ?? rarityIndicatorStyle.common).label}
+                </p>
+                <h2 className="mx-auto mt-1 max-w-sm truncate text-xl font-black text-white sm:text-2xl">{wonItem.name}</h2>
+                <div className="mt-2 flex items-center justify-center">
+                  <CoinAmount
+                    amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                    formatOptions={{ maximumFractionDigits: 0 }}
+                    className="text-lg font-bold text-gray-100"
+                    iconClassName="h-5 w-5"
+                  />
+                </div>
+                {isDemoSpin && <p className="mt-1 text-xs text-gray-500">Demo mode — this pull isn&apos;t saved to your account.</p>}
 
-                  <div
-                    className="win-rarity-card relative flex w-full flex-col items-center rounded-2xl p-[2px]"
-                    style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
-                  >
-                    <div className="win-rarity-card__inner relative flex w-full items-center gap-4 overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-3 sm:p-4">
-                      <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                      <img
-                        src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
-                        alt={wonItem.name}
-                        className="relative z-10 h-20 w-20 flex-none object-contain sm:h-24 sm:w-24"
-                        loading="eager"
-                        decoding="async"
-                        draggable={false}
-                      />
-                      <div className="relative z-10 min-w-0 flex-1 text-left">
-                        <h4 className="truncate text-base font-bold text-white sm:text-lg">{wonItem.name}</h4>
-                        <CoinAmount
-                          amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="mt-2 font-semibold text-gray-200"
-                          iconClassName="w-4 h-4"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="mx-auto mt-5 flex w-full max-w-sm flex-col gap-3">
                   {isDemoSpin ? (
-                    <div className="flex flex-col gap-2.5 sm:flex-row">
+                    <>
                       <button
                         type="button"
                         onClick={() => {
@@ -1601,49 +1574,63 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           void handleSpin({ isDemo: true, isQuick: isQuickSpinEnabled });
                         }}
                         disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isRevealAssetsLoading}
-                        className="h-12 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="h-14 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        Demo Open Again
+                        Open Again
                       </button>
-                      <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10 sm:w-auto sm:px-6">Done</button>
-                    </div>
+                      <button type="button" onClick={closeWinModal} className="mx-auto min-h-10 px-4 text-xs font-semibold text-gray-400 underline decoration-white/20 underline-offset-4 transition hover:text-white">
+                        Done
+                      </button>
+                    </>
                   ) : (
-                    <div className="flex flex-col gap-2.5">
-                      <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
-                        <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
-                      </button>
-                      {wonItem.redeemable !== false && (
-                        <button
-                          onClick={handleSell}
-                          disabled={isSellingItem}
-                          className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
-                        >
-                          <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
-                            <Wallet className="h-4 w-4 flex-none" />
-                            {isSellingItem ? (
-                              'Selling item...'
-                            ) : (
-                              <>
-                                <span>Sell for</span>
-                                <CoinAmount
-                                  amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                                  formatOptions={{ maximumFractionDigits: 0 }}
-                                  className="text-emerald-50"
-                                  iconClassName="h-4 w-4"
-                                />
-                              </>
-                            )}
-                          </span>
+                    <>
+                      <div className="flex gap-3">
+                        <button onClick={handleKeep} className="h-14 flex-1 rounded-xl btn-logo-gradient px-3 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
+                          <span className="inline-flex items-center justify-center gap-1.5"><Backpack className="h-4 w-4 flex-none" />Keep</span>
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => void handleShareUnboxing()}
-                        className="mx-auto min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
-                      >
-                        <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
-                      </button>
-                    </div>
+                        {wonItem.redeemable !== false && (
+                          <button
+                            onClick={handleSell}
+                            disabled={isSellingItem}
+                            className="h-14 flex-1 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
+                          >
+                            <span className="inline-flex items-center justify-center gap-1.5 text-center">
+                              <Wallet className="h-4 w-4 flex-none" />
+                              {isSellingItem ? (
+                                'Selling…'
+                              ) : (
+                                <>
+                                  Sell for{' '}
+                                  <CoinAmount
+                                    amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-emerald-50"
+                                    iconClassName="h-4 w-4"
+                                  />
+                                </>
+                              )}
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setVerifyModalOpen(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-300 transition hover:text-emerald-200"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" />Verify fairness
+                        </button>
+                        <span className="text-white/15">•</span>
+                        <button
+                          type="button"
+                          onClick={() => void handleShareUnboxing()}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-200 transition hover:text-cyan-100"
+                        >
+                          <Share2 className="h-3.5 w-3.5" />Share pull
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1660,7 +1647,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           {isSyncingFair ? (
                             'Syncing server...'
                           ) : isSpinning ? (
-                            <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
+                            <Loader2 className="h-5 w-5 animate-spin" />
                           ) : isBalanceLoading ? (
                             'Loading balance...'
                           ) : isRewardOpen ? (
@@ -2137,37 +2124,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           .item-modal-rarity-glow.is-active {
             animation: raritySinglePulse 600ms ease-out 1;
           }
-          .win-rarity-card {
-            --rarity-color: #38bdf8;
-            background: rgba(255,255,255,0.08);
-            isolation: isolate;
-            overflow: hidden;
-            box-shadow: 0 0 0 1px var(--rarity-color), 0 14px 38px rgba(0,0,0,0.34);
-          }
-          .win-rarity-card::before {
-            content: '';
-            position: absolute;
-            inset: -45%;
-            z-index: 0;
-            background: conic-gradient(
-              from 0deg,
-              transparent 0deg,
-              var(--rarity-color) 58deg,
-              rgba(255,255,255,0.95) 82deg,
-              var(--rarity-color) 116deg,
-              transparent 152deg,
-              transparent 360deg
-            );
-            animation: winRarityBorderSpin 4.8s linear infinite;
-            opacity: 0.82;
-            will-change: transform;
-          }
-          .win-rarity-card__inner {
-            z-index: 1;
-          }
-          @keyframes winRarityBorderSpin {
-            to { transform: rotate(1turn); }
-          }
           .rarity-badge {
             display: inline-flex;
             align-items: center;
@@ -2222,8 +2178,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             .item-modal-image,
             .item-modal-rarity-bg--legendary,
             .item-modal-rarity-glow,
-            .legendary-badge,
-            .win-rarity-card::before {
+            .legendary-badge {
               animation: none !important;
               transition: none !important;
             }
