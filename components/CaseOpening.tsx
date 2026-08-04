@@ -59,37 +59,15 @@ const DESKTOP_SPINNER_VIEWPORT_HEIGHT = 264;
 const SPINNER_MOTION = {
   preWinnerItems: 64,
   postWinnerItems: 14,
-  spinDurationMs: 11200,
+  spinDurationMs: 5600,
   quickSpinDurationMs: 900,
-  goldTicketDurationMs: 10400,
-  quickGoldTicketDurationMs: 650,
-  goldFinalDurationMs: 9600,
-  quickGoldFinalDurationMs: 800,
-  goldStageDelayMs: 700,
-  quickGoldStageDelayMs: 120,
-  settleDurationMs: 2200,
-  minSpinDurationMs: 6200,
+  minSpinDurationMs: 3200,
   quickMinSpinDurationMs: 550,
-  overshootPx: 10,
-  approachOffsetSoftMaxPx: 10,
-  approachOffsetNearMissMinPx: 20,
-  approachOffsetNearMissMaxPx: 34,
-  nearMissChance: 0.42,
   durationVarianceMs: 180,
-  initialBlurDurationMs: 260,
   // Keep the idle preview deliberately unhurried; it is ambient anticipation, not a spin.
   previewCycleDurationMs: 30000,
   previewCycleDurationMobileMs: 26000
 } as const;
-
-const rarityGlowClass: Record<string, string> = {
-  legendary: 'bg-amber-300/35',
-  epic: 'bg-purple-400/30',
-  rare: 'bg-blue-300/28',
-  uncommon: 'bg-green-300/24',
-  common: 'bg-gray-300/18'
-};
-
 
 const dropTableRarityAccent: Record<string, string> = {
   common: 'from-slate-700/95 via-slate-800/95 to-slate-950/95',
@@ -198,41 +176,6 @@ const buildExcitementPreviewReel = (items: CaseItem[]) => {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-
-// Invert the x curve then evaluate y. This is the same CSS cubic-bezier timing
-// function WAAPI uses, without reading composited styles back from the browser.
-const cubicBezierProgress = (progress: number, x1: number, y1: number, x2: number, y2: number) => {
-  const sample = (t: number, a: number, b: number) => 3 * a * (1 - t) * (1 - t) * t + 3 * b * (1 - t) * t * t + t * t * t;
-  let low = 0; let high = 1;
-  for (let i = 0; i < 16; i += 1) {
-    const mid = (low + high) / 2;
-    if (sample(mid, x1, x2) < progress) low = mid; else high = mid;
-  }
-  return sample((low + high) / 2, y1, y2);
-};
-const toHex = (buffer: ArrayBuffer) =>
-  Array.from(new Uint8Array(buffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-
-const hashString = async (value: string) => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(value);
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
-    const fallback = data.reduce((acc, byte, idx) => acc + byte * (idx + 1), 0);
-    return fallback.toString(16).padStart(64, '0').slice(0, 64);
-  }
-
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return toHex(hashBuffer);
-};
-
-const deriveRollValue = (hash: string) => {
-  const significantPart = hash.slice(0, 13); // 52 bits
-  const intValue = parseInt(significantPart, 16);
-  return intValue / 0x10000000000000; // 2^52
-};
-
 const LAST_ROLL_STORAGE_KEY = 'pullz:last-provably-fair-roll';
 const LAST_REVEAL_STORAGE_KEY = 'pullz:last-provably-fair-reveal';
 const AUTO_OPEN_BOX_STORAGE_KEY = 'pullz:auto-open-box-id';
@@ -420,7 +363,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [reelItems, setReelItems] = useState<CaseItem[]>([]);
   const [isExcitementPreview, setIsExcitementPreview] = useState(true);
   const [reelWinnerIndex, setReelWinnerIndex] = useState(SPINNER_MOTION.preWinnerItems);
-  const [currentCenterIndex, setCurrentCenterIndex] = useState(SPINNER_MOTION.preWinnerItems);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -448,14 +390,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isWinImageZoomed, setIsWinImageZoomed] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
+  const [reelBurst, setReelBurst] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
   const [isQuickSpinEnabled, setIsQuickSpinEnabled] = useState(false);
   const [visibleDropItemCount, setVisibleDropItemCount] = useState(() => (typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 12 : 24));
 
-  // Gold Spin State
-  const [isGoldMode, setIsGoldMode] = useState(false);
   const [isBoxPreviewVisible, setIsBoxPreviewVisible] = useState(false);
   const [isBoxPreviewFading, setIsBoxPreviewFading] = useState(false);
 
@@ -465,10 +406,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const reelItemsRef = useRef<CaseItem[]>([]);
   const spinnerAnimationRef = useRef<Animation | null>(null);
   const previewAnimationRef = useRef<Animation | null>(null);
-  const tickTimerRef = useRef<number | null>(null);
-  const tickFrameRef = useRef<number | null>(null);
-  const lastTickedCenterIndexRef = useRef<number>(-1);
-  const lastCenterIndexRef = useRef<number>(SPINNER_MOTION.preWinnerItems);
+  const spinEndTimerRef = useRef<number | null>(null);
   const spinnerMeasurementsRef = useRef({
     cardWidth: DESKTOP_CARD_WIDTH,
     reelGap: DESKTOP_GAP_WIDTH,
@@ -490,7 +428,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
-  const goldStageTimerRef = useRef<number | null>(null);
+  const reelBurstTimerRef = useRef<number | null>(null);
+  const autoZoomTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
@@ -538,10 +477,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const spinnerViewportHeight = DESKTOP_SPINNER_VIEWPORT_HEIGHT;
   // Keep desktop spinner behavior aligned with the mobile reel for smoother, sound-free spins.
   const useMobileSpinnerBehavior = true;
-  const reduceSpinnerRerenders = reduceMobileEffects || prefersReducedMotion;
-  const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
-  const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
-  const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -698,8 +633,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     reelItemsRef.current = previewItems;
     setReelItems(previewItems);
     setReelWinnerIndex(previewCenterIndex);
-    setCurrentCenterIndex(previewCenterIndex);
-    lastCenterIndexRef.current = previewCenterIndex;
     setHasSpinSettled(false);
     setIsExcitementPreview(excitementItems.length > 0);
   }, [items, reduceMobileEffects]);
@@ -944,20 +877,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
-    }
-
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -1017,22 +936,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return viewportCenterX - winnerCenterX + landingOffset;
   }, [updateSpinnerMeasurements]);
 
-  const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
-    const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
-    const viewportCenter = viewportWidth / 2;
-    const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
-    const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
-    if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
-      return 0;
-    }
-    return Math.max(
-      0,
-      Math.min(
-        reelLength - 1,
-        Math.round((viewportCenter - translateX - (cardWidth / 2)) / stepWidth)
-      )
-    );
-  }, [reelItems.length]);
 
   const resolveCenteredTranslate = useCallback(async (winnerIndex: number, landingOffset = 0) => {
     for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -1074,20 +977,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
       scrollContainerRef.current.style.transition = 'none';
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+      scrollContainerRef.current.classList.remove('is-spinning');
     }
 
-    if (tickTimerRef.current !== null) {
-      window.clearTimeout(tickTimerRef.current);
-      tickTimerRef.current = null;
-    }
-    if (tickFrameRef.current !== null) {
-      window.cancelAnimationFrame(tickFrameRef.current);
-      tickFrameRef.current = null;
-    }
-    lastTickedCenterIndexRef.current = -1;
-    if (goldStageTimerRef.current !== null) {
-      window.clearTimeout(goldStageTimerRef.current);
-      goldStageTimerRef.current = null;
+    // Cancel any pending completion from a spin this reset is interrupting, so its
+    // onComplete/burst can't fire late against whatever spin (or reset) comes next.
+    if (spinEndTimerRef.current !== null) {
+      window.clearTimeout(spinEndTimerRef.current);
+      spinEndTimerRef.current = null;
     }
     if (topUpLockTimerRef.current !== null) {
       window.clearTimeout(topUpLockTimerRef.current);
@@ -1096,10 +993,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setAnimationPhase('idle');
   }, []);
 
+  const fireReelLandingBurst = useCallback(() => {
+    if (prefersReducedMotion) return;
+    const base = createMicroConfetti(reduceMobileEffects ? 10 : 16);
+    // Recentre the shared confetti helper's spawn point (tuned for the win modal)
+    // onto the reel marker, which sits at the dead centre of the spinner viewport.
+    const particles = base.map((piece) => ({ ...piece, x: 46 + Math.random() * 8, y: 42 + Math.random() * 12 }));
+    setReelBurst(particles);
+    if (reelBurstTimerRef.current !== null) window.clearTimeout(reelBurstTimerRef.current);
+    reelBurstTimerRef.current = window.setTimeout(() => {
+      setReelBurst([]);
+      reelBurstTimerRef.current = null;
+    }, reduceMobileEffects ? 520 : 720);
+  }, [prefersReducedMotion, reduceMobileEffects]);
+
   useEffect(() => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
 
+  // A single fast-start/hard-decelerate CSS transition, matching the reel-spin concept:
+  // one continuous spin straight to the winner, always resting exactly under the marker.
   const animateSpin = useCallback(async (
     winnerIndex: number,
     duration: number,
@@ -1112,146 +1025,72 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       return;
     }
 
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
-    const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}:${Date.now()}`);
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
-    const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
 
     resetSpinnerAnimation();
+    setHasSpinSettled(false);
 
     container.style.transition = 'none';
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
 
-    // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
+    // Motion-blur ramp is a pure CSS keyframe animation (see the <style> block below).
+    // Skipped on reduced-motion/low-power. Remove-then-reflow-then-add forces the
+    // keyframe animation to restart on every call.
+    const allowBlur = !reduceMobileEffects && !prefersReducedMotion;
+    container.classList.remove('is-spinning');
+    if (allowBlur) {
+      void container.offsetWidth;
+      container.style.setProperty('--pullz-spin-duration', `${resolvedDuration}ms`);
+      container.classList.add('is-spinning');
+    }
+
+    // Two paint frames + layout read prevents mobile browsers from skipping the transition.
     await waitForNextPaint();
     await waitForNextPaint();
-    // Force style/layout flush before starting WAAPI timeline.
     void container.getBoundingClientRect();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    lastTickedCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
 
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
-    const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null) {
+      container.classList.remove('is-spinning');
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
+    container.style.transition = `transform ${resolvedDuration}ms cubic-bezier(0.11, 0.62, 0.18, 1)`;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+        // Keeps the existing tab-visibility pause/resume behaviour working with a CSS
+        // transition instead of a WAAPI animation.
+        spinnerAnimationRef.current = container.getAnimations()[0] ?? null;
+      });
+    });
 
-    const animation = container.animate(
-      [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
-        { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
-        { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
-      ],
-      {
-        duration: resolvedDuration,
-        fill: 'forwards',
-        composite: 'replace'
-      }
-    );
-
-    spinnerAnimationRef.current = animation;
-    // The reel itself is animated by WAAPI.  Never read its computed transform here:
-    // style reads force a composited animation back onto the main thread.  The known
-    // timeline and keyframes let us calculate the approximate centre position instead.
-    let frameId: number | null = null;
-    let lastSampleAt = -Infinity;
-    const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
-    const translateAt = (elapsed: number) => {
-      const progress = clamp(elapsed / resolvedDuration, 0, 1);
-      if (progress <= overshootOffset) return overshootTarget * cubicBezierProgress(progress / overshootOffset, 0.24, 0.62, 0.18, 1);
-      if (progress <= preSettleOffset) {
-        const local = (progress - overshootOffset) / Math.max(0.001, preSettleOffset - overshootOffset);
-        return overshootTarget + (jitterLandingTranslate - overshootTarget) * cubicBezierProgress(local, 0.12, 0.82, 0.2, 1);
-      }
-      const local = (progress - preSettleOffset) / Math.max(0.001, 1 - preSettleOffset);
-      return jitterLandingTranslate + (centeredTranslate - jitterLandingTranslate) * cubicBezierProgress(local, 0.16, 0.72, 0.28, 1);
-    };
-    const syncCenterItem = (now: number) => {
-      if (document.visibilityState !== 'hidden' && now - lastSampleAt >= sampleIntervalMs) {
-        lastSampleAt = now;
-        const elapsed = Number(animation.currentTime ?? Math.max(0, now - (animation.startTime ?? now)));
-        const index = getCenteredIndexFromTranslate(translateAt(elapsed));
-        const previousIndex = lastCenterIndexRef.current;
-        if (index !== previousIndex) {
-          lastCenterIndexRef.current = index;
-          if (isSpinningRef.current && index !== lastTickedCenterIndexRef.current) {
-            playSound('spin-tick');
-            lastTickedCenterIndexRef.current = index;
-          }
-          if (!reduceSpinnerRerenders) setCurrentCenterIndex(index);
-        }
-      }
-      if (isSpinningRef.current) {
-        tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-        frameId = tickFrameRef.current;
-      }
-    };
-    tickFrameRef.current = window.requestAnimationFrame(syncCenterItem);
-    frameId = tickFrameRef.current;
-    const decelerationTimer = window.setTimeout(
-      () => setAnimationPhase('settling'),
-      Math.max(0, resolvedDuration - SPINNER_MOTION.settleDurationMs)
-    );
-
-    animation.onfinish = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
-      }
-      animation.cancel();
+    spinEndTimerRef.current = window.setTimeout(() => {
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
-      setCurrentCenterIndex(winnerIndex);
-      lastCenterIndexRef.current = winnerIndex;
+      container.classList.remove('is-spinning');
       setHasSpinSettled(true);
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      tickFrameRef.current = null;
+
+      fireReelLandingBurst();
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
+      spinEndTimerRef.current = null;
       onComplete();
-    };
-
-    animation.oncancel = () => {
-      window.clearTimeout(decelerationTimer);
-      if (tickTimerRef.current !== null) {
-        window.clearTimeout(tickTimerRef.current);
-        tickTimerRef.current = null;
-      }
-      if (frameId !== null) window.cancelAnimationFrame(frameId);
-      tickFrameRef.current = null;
-      setAnimationPhase('idle');
-      container.style.willChange = 'auto';
-      spinnerAnimationRef.current = null;
-      spinRequestLockRef.current = false;
-    };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+    }, resolvedDuration + 60);
+  }, [clampTranslate, fireReelLandingBurst, prefersReducedMotion, reduceMobileEffects, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1417,10 +1256,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     await waitForNextPaint();
     await waitForNextPaint();
     updateSpinnerMeasurements();
-    const startingCenterIndex = getCenteredIndexFromTranslate(0);
-    lastCenterIndexRef.current = startingCenterIndex;
-    setCurrentCenterIndex(startingCenterIndex);
-  }, [getCenteredIndexFromTranslate, preloadReelImages, resetSpinnerAnimation, updateSpinnerMeasurements]);
+  }, [preloadReelImages, resetSpinnerAnimation, updateSpinnerMeasurements]);
 
 
 
@@ -1525,7 +1361,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       trackEvent('free_spin_started', { box_id: box.id });
     }
     setShowWinModal(false);
-    setIsGoldMode(false);
     setWonItem(null);
     setWonInventoryItem(null);
     setRewardResolved(false);
@@ -1723,56 +1558,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       setLastRoll(null);
     }
 
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
+    const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
+    const reelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
+    await prepareReelForSpin(reelResult.items, reelResult.winnerIndex);
 
-    if (triggerGold) {
-        // --- GOLD SPIN FLOW ---
-
-        // Stage 1: Spin to Golden Ticket
-        // Note: We use global items pool for buffer if box items are too few, or just box items.
-        // Ideally Golden Ticket should come from box items if possible, but Golden Ticket is special.
-        const ticketSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-ticket');
-        const ticketReelResult = generateReel(GOLDEN_TICKET_ITEM, items, { sprinkleGold: true, seed: ticketSeed });
-        await prepareReelForSpin(ticketReelResult.items, ticketReelResult.winnerIndex);
-
-        const goldTicketDuration = isQuick ? SPINNER_MOTION.quickGoldTicketDurationMs : SPINNER_MOTION.goldTicketDurationMs;
-        const goldFinalDuration = isQuick ? SPINNER_MOTION.quickGoldFinalDurationMs : SPINNER_MOTION.goldFinalDurationMs;
-        const goldStageDelay = isQuick ? SPINNER_MOTION.quickGoldStageDelayMs : SPINNER_MOTION.goldStageDelayMs;
-        animateSpin(ticketReelResult.winnerIndex, goldTicketDuration, () => {
-            // Stage 1 Complete: Activate Gold Mode
-            playSound('gold-mode');
-            setIsGoldMode(true);
-
-            // Wait a moment to see the ticket
-            goldStageTimerRef.current = window.setTimeout(() => {
-                // Stage 2: Spin to Actual Winner (using only legendary items in reel)
-                const pool = legendaryPool.length > 0 ? legendaryPool : items;
-                const goldSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'gold-final');
-                const goldReelResult = generateReel(winner, pool, { sprinkleGold: true, seed: goldSeed });
-                void prepareReelForSpin(goldReelResult.items, goldReelResult.winnerIndex).then(() => {
-                  animateSpin(goldReelResult.winnerIndex, goldFinalDuration, () => {
-                    // Stage 2 Complete
-                    finishSpin(winner);
-                  });
-                });
-              goldStageTimerRef.current = null;
-            }, goldStageDelay);
-        });
-
-    } else {
-        // --- NORMAL SPIN FLOW ---
-        const mainSeed = getSpinSeedBase({ rollHash, rollValue, nonce: rollNonce }, 'main');
-        const normalReelResult = generateReel(winner, items, { sprinkleGold: true, seed: mainSeed });
-        await prepareReelForSpin(normalReelResult.items, normalReelResult.winnerIndex);
-
-        animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
-            finishSpin(winner);
-        });
-    }
+    animateSpin(reelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
+        finishSpin(winner);
+    }, { seed: mainSeed });
   };
 
   const handleTryFree = () => {
@@ -1829,6 +1621,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(confettiTimerRef.current);
         confettiTimerRef.current = null;
       }
+      if (reelBurstTimerRef.current !== null) {
+        window.clearTimeout(reelBurstTimerRef.current);
+        reelBurstTimerRef.current = null;
+      }
+      if (autoZoomTimerRef.current !== null) {
+        window.clearTimeout(autoZoomTimerRef.current);
+        autoZoomTimerRef.current = null;
+      }
       if (topUpLockTimerRef.current !== null) {
         window.clearTimeout(topUpLockTimerRef.current);
         topUpLockTimerRef.current = null;
@@ -1871,6 +1671,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
     setWonItem(item);
     setRewardResolved(false);
+
+    // Auto-zoom the pull right after the reveal sheet slides up, instead of requiring a tap.
+    if (autoZoomTimerRef.current !== null) window.clearTimeout(autoZoomTimerRef.current);
+    autoZoomTimerRef.current = window.setTimeout(() => {
+      setIsWinImageZoomed(true);
+      autoZoomTimerRef.current = null;
+    }, prefersReducedMotion ? 0 : 320);
   };
 
   const resetReelTrackPosition = useCallback(() => {
@@ -1894,6 +1701,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   };
 
   const closeWinModal = () => {
+    if (autoZoomTimerRef.current !== null) {
+      window.clearTimeout(autoZoomTimerRef.current);
+      autoZoomTimerRef.current = null;
+    }
     setIsSellingItem(false);
     setIsWinImageZoomed(false);
     if (!rewardResolved) {
@@ -2115,9 +1926,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {/* SPINNER AREA */}
         <div className="relative mb-3 w-full overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_28%,rgba(111,77,255,0.16),transparent_42%),linear-gradient(180deg,rgba(17,24,39,0.8),rgba(8,12,20,0.35))] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:mb-5">
 
-            {/* Gold Mode Overlay Effect */}
-            {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
-
             <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
               <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
                 {box?.name ?? 'Mystery Box'}
@@ -2133,8 +1941,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
-              style={{ height: `${spinnerViewportHeight}px` }}
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
+              style={{
+                height: `${spinnerViewportHeight}px`,
+                backgroundImage: 'linear-gradient(rgba(56,189,248,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.055) 1px, transparent 1px), linear-gradient(180deg, rgba(5,9,17,0.92), rgba(20,27,40,0.82) 50%, rgba(5,9,17,0.92))',
+                backgroundSize: '28px 28px, 28px 28px, auto'
+              }}
             >
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
@@ -2148,25 +1960,35 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
                 {/* Fade Gradients */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#1b2024] via-[#1b2024]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-20 w-10 bg-gradient-to-r from-[#05070f] via-[#05070f]/75 to-transparent sm:w-14"></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-20 w-10 bg-gradient-to-l from-[#05070f] via-[#05070f]/75 to-transparent sm:w-14"></div>
 
-                {/* Center Indicator */}
+                {/* Marker: a fixed cyan line + triangle pointer that always marks the winning slot. */}
                 <i
-                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none transition-[color,filter,text-shadow] duration-150 ease-out motion-reduce:transition-none sm:top-0 sm:text-lg"
+                  className="fa-solid fa-caret-down pointer-events-none absolute left-1/2 top-1 z-30 -translate-x-1/2 text-base leading-none text-cyan-300 sm:top-0 sm:text-lg"
                   style={{
-                    color: centeredRarityIndicator.color,
-                    filter: reduceMobileEffects || isSpinning ? 'none' : `drop-shadow(0 0 8px ${centeredRarityIndicator.glow})`,
-                    textShadow: reduceMobileEffects || isSpinning ? `0 0 8px ${centeredRarityIndicator.glow}` : `0 0 10px ${centeredRarityIndicator.glow}, 0 0 20px ${centeredRarityIndicator.glow}`
+                    filter: reduceMobileEffects ? 'none' : 'drop-shadow(0 0 8px rgba(34,211,238,0.85))',
+                    textShadow: reduceMobileEffects ? '0 0 8px rgba(34,211,238,0.85)' : '0 0 10px rgba(34,211,238,0.85), 0 0 20px rgba(34,211,238,0.55)'
                   }}
-                  title={`${centeredRarityIndicator.label} item passing the spinner`}
                   aria-hidden="true"
                 ></i>
-
-                {/* A fixed selection frame makes the winning position unmistakable. */}
                 <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)]" aria-hidden="true">
                   <span className="absolute -bottom-1 left-1/2 h-2.5 w-10 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
                 </div>
+                <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-200/70 to-transparent" aria-hidden="true" />
+
+                {/* Landing burst: a small particle pop at the marker when the reel settles. */}
+                {reelBurst.length > 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-[35] overflow-hidden" aria-hidden="true">
+                    {reelBurst.map((piece) => (
+                      <span
+                        key={piece.id}
+                        className="pointer-events-none absolute rounded-full"
+                        style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* The Moving Reel */}
                 <div
@@ -2184,34 +2006,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     {reelItems.map((item, idx) => (
                         (() => {
                           const rarityValue = normalizeRarityKey(item.rarity);
-                          const rarityGlow = rarityGlowClass[rarityValue] ?? rarityGlowClass.common;
+                          const tierColor = rarityIndicatorStyle[rarityValue]?.color ?? rarityIndicatorStyle.common.color;
                           const isSettledWinner = hasSpinSettled && animationPhase === 'idle' && idx === reelWinnerIndex;
-                          const isCenteredItem = idx === currentCenterIndex;
-                          const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
-                          const isUltraSmoothSpin = isSpinning;
-                          const showItemGlow = true;
                           return (
                         <div
                             key={`${item.id}-${idx}`}
                             ref={idx === reelWinnerIndex ? winningCardRef : null}
-                            className="pullz-spinner-card group relative flex flex-shrink-0 items-center justify-center overflow-visible px-1"
+                            className={`pullz-spinner-card group relative flex flex-shrink-0 flex-col items-center justify-center overflow-hidden rounded-lg border p-2 transition-[border-color,box-shadow,background-color] duration-300 ${isSettledWinner ? 'border-cyan-300/80 bg-cyan-400/[0.07] shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_0_28px_-4px_rgba(34,211,238,0.9),0_0_50px_-10px_rgba(32,93,215,0.85)]' : 'border-white/10 bg-[#111827]'}`}
                             style={{
                                 width: `${spinnerCardWidth}px`,
                                 height: `${spinnerCardHeight}px`,
                                 backfaceVisibility: 'hidden',
                                 WebkitBackfaceVisibility: 'hidden',
-                                opacity: 1,
-                                filter: 'none',
-                                zIndex: isFocusedItem ? 4 : 1
+                                zIndex: isSettledWinner ? 4 : 1
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
-                            <div
-                              className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-60 blur-2xl sm:blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
-                            />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[154px] w-[154px] sm:h-[170px] sm:w-[170px]' : 'h-[170px] w-[170px]'}`}>
+                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[140px] w-[140px] sm:h-[156px] sm:w-[156px]' : 'h-[156px] w-[156px]'}`}>
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2224,6 +2036,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                               />
                               </div>
                             </div>
+                            <span
+                              className="absolute inset-x-3 bottom-2 z-10 h-[3px] rounded-full transition-opacity duration-300"
+                              style={{ background: isSettledWinner ? 'linear-gradient(90deg, #38bdf8, #205DD7)' : tierColor, opacity: isSettledWinner ? 1 : 0.55 }}
+                              aria-hidden="true"
+                            />
                         </div>
                           );
                         })()
@@ -2237,7 +2054,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                  <button
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold uppercase tracking-wide shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight [clip-path:polygon(14px_0,100%_0,100%_calc(100%-14px),calc(100%-14px)_100%,0_100%,0_14px)] ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#205DD7] to-[#38bdf8] hover:brightness-110 shadow-[#205DD7]/25'}`}
                 >
                     <span>
                       {isSyncingFair ? (
@@ -2406,11 +2223,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           </div>
         )}
 
-        {/* Slide Up Win Sheet */}
-        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
-        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
+        {/* Pull Reveal Modal: zooms up centred, matching the reel-spin mockup. */}
+        <div
+          className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md transition-opacity duration-300 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+          onClick={closeWinModal}
+        >
           {wonItem && (
-            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className={`relative mx-auto flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#1b2028]/95 shadow-[0_30px_90px_rgba(0,0,0,0.65)] backdrop-blur-xl transition-all duration-300 ${showWinModal && wonItem ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}
+            >
               {confetti.map((piece) => (
                 <span
                   key={piece.id}
@@ -2459,13 +2281,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       <img
                         src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
                         alt={wonItem.name}
-                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-56 w-56 sm:h-72 sm:w-72' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
+                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-64 w-64 sm:h-80 sm:w-80' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
                         loading="eager"
                         decoding="async"
                         draggable={false}
                       />
                     </button>
-                    <div className={`relative z-10 grid transition-all duration-300 ease-out ${isWinImageZoomed ? 'mt-0 grid-rows-[0fr] opacity-0' : 'mt-1 grid-rows-[1fr] opacity-100'}`} aria-hidden={isWinImageZoomed}>
+                    <div className="relative z-10 mt-2 grid grid-rows-[1fr] opacity-100 transition-all duration-300 ease-out">
                       <div className="min-h-0 overflow-hidden">
                         <h4 className="text-lg font-bold text-white">{wonItem.name}</h4>
                         <CoinAmount
@@ -2506,33 +2328,35 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2.5">
-                    <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
-                      <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
-                    </button>
-                    {wonItem.redeemable !== false && (
-                      <button
-                        onClick={handleSell}
-                        disabled={isSellingItem}
-                        className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
-                      >
-                        <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
-                          <Wallet className="h-4 w-4 flex-none" />
-                          {isSellingItem ? (
-                            'Selling item...'
-                          ) : (
-                            <>
-                              <span>Sell for</span>
-                              <CoinAmount
-                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-emerald-50"
-                                iconClassName="h-4 w-4"
-                              />
-                            </>
-                          )}
-                        </span>
+                    <div className="flex flex-wrap gap-2.5">
+                      <button onClick={handleKeep} className="h-14 min-w-[150px] flex-1 rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
+                        <span className="inline-flex items-center justify-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
                       </button>
-                    )}
+                      {wonItem.redeemable !== false && (
+                        <button
+                          onClick={handleSell}
+                          disabled={isSellingItem}
+                          className="h-14 min-w-[150px] flex-1 rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
+                        >
+                          <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4 flex-none" />
+                            {isSellingItem ? (
+                              'Selling item...'
+                            ) : (
+                              <>
+                                <span>Sell for</span>
+                                <CoinAmount
+                                  amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-emerald-50"
+                                  iconClassName="h-4 w-4"
+                                />
+                              </>
+                            )}
+                          </span>
+                        </button>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => void handleShareUnboxing()}
@@ -2631,6 +2455,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
           @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+          @keyframes pullzReelBlur {
+            0% { filter: blur(0px); }
+            8% { filter: blur(7px); }
+            62% { filter: blur(2.5px); }
+            100% { filter: blur(0px); }
+          }
+          .pullz-spinner-track.is-spinning {
+            animation: pullzReelBlur var(--pullz-spin-duration, 6000ms) cubic-bezier(0.11, 0.62, 0.18, 1) 1;
+          }
+          @media (prefers-reduced-motion: reduce){ .pullz-spinner-track.is-spinning { animation: none; } }
         `}</style>
 
 
