@@ -73,13 +73,6 @@
         height: auto;
         vertical-align: middle;
       }
-      .pullz-spinner-track img,
-      .pullz-spinner-track .pullz-blur-full,
-      .pullz-spinner-card img {
-        content-visibility: visible !important;
-        opacity: 1;
-        visibility: visible;
-      }
       .pullz-cls-hero {
         min-height: clamp(560px, 72svh, 760px);
         contain: layout paint;
@@ -269,32 +262,6 @@
         html.pullz-low-performance [class*="shadow-emerald"] {
           filter: none !important;
           box-shadow: 0 0 12px rgba(32, 93, 215, 0.16) !important;
-        }
-        html.pullz-mobile-optimized .pullz-spinner-track {
-          will-change: transform;
-          transform: translateZ(0);
-          contain: style;
-        }
-        html.pullz-mobile-optimized .pullz-spinner-track img,
-        html.pullz-mobile-optimized .pullz-spinner-track .pullz-blur-full {
-          content-visibility: visible !important;
-          opacity: 1 !important;
-          visibility: visible !important;
-        }
-        html.pullz-mobile-optimized .pullz-spinner-rarity-glow,
-        html.pullz-low-performance .pullz-spinner-rarity-glow {
-          filter: blur(24px) !important;
-          opacity: 0.6 !important;
-        }
-        html.pullz-low-performance .pullz-spinner-card.is-spinning {
-          filter: none !important;
-          box-shadow: none !important;
-        }
-        html.pullz-mobile-optimized .pullz-spinner-glow,
-        html.pullz-low-performance .pullz-spinner-glow {
-          opacity: 0 !important;
-          filter: none !important;
-          box-shadow: none !important;
         }
       }
 
