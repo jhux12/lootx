@@ -59,6 +59,12 @@ export interface User {
   signupIp?: string;
   signupIpRecordedAt?: any;
   signupIpAccountNumber?: number;
+  deviceId?: string;
+  deviceAccountNumber?: number;
+  fraudScore?: number;
+  fraudSignals?: string[];
+  fraudAssessedAt?: any;
+  welcomeBonusClaimedAt?: any;
   autoBannedAt?: any;
   autoBanReason?: string;
   challengeStatsDay?: string;

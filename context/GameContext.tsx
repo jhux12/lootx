@@ -9,6 +9,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { consumePostSignupRedirect, DEFAULT_POST_SIGNUP_REDIRECT, setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { resolveUserDisplayName } from '../utils/userIdentity';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
+import { getDeviceId } from '../utils/deviceId';
 import { trackLogin, trackSignUp } from '../services/analytics';
 import {
   User as FirebaseUser,
@@ -1152,6 +1153,12 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     signupIp: typeof data.signupIp === 'string' ? data.signupIp : undefined,
     signupIpRecordedAt: data.signupIpRecordedAt,
     signupIpAccountNumber: Number.isFinite(Number(data.signupIpAccountNumber)) ? Number(data.signupIpAccountNumber) : undefined,
+    deviceId: typeof data.deviceId === 'string' ? data.deviceId : undefined,
+    deviceAccountNumber: Number.isFinite(Number(data.deviceAccountNumber)) ? Number(data.deviceAccountNumber) : undefined,
+    fraudScore: Number.isFinite(Number(data.fraudScore)) ? Number(data.fraudScore) : undefined,
+    fraudSignals: Array.isArray(data.fraudSignals) ? data.fraudSignals.filter((signal: unknown) => typeof signal === 'string') : undefined,
+    fraudAssessedAt: data.fraudAssessedAt,
+    welcomeBonusClaimedAt: data.welcomeBonusClaimedAt,
     autoBannedAt: data.autoBannedAt,
     autoBanReason: typeof data.autoBanReason === 'string' ? data.autoBanReason : undefined
   } as User;
@@ -1723,6 +1730,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     void (async () => {
       try {
         await signInWithCustomToken(auth, customToken);
+        await authedFetch('/api/auth/track-signup', {
+          method: 'POST',
+          body: JSON.stringify({ deviceId: getDeviceId() })
+        }).catch((error) => console.warn('Unable to record Google signup device', error));
         console.log('Custom token sign-in success');
         url.searchParams.delete('customToken');
         window.history.replaceState({}, '', `${url.pathname}${url.search}`);
@@ -2681,7 +2692,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // The server derives the address from trusted proxy headers and only records
       // the first signup address. Tracking failure must never block registration.
-      await authedFetch('/api/auth/track-signup', { method: 'POST', body: '{}' }).catch((error) => {
+      await authedFetch('/api/auth/track-signup', {
+        method: 'POST',
+        body: JSON.stringify({ deviceId: getDeviceId() })
+      }).catch((error) => {
         console.warn('Unable to record signup IP address', error);
       });
 
