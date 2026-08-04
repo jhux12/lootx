@@ -25,6 +25,7 @@ import pullzLogo from '../assets/png/pullz-icon-color-2048.png';
 import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
+import { calculateCardCenteredTranslate, createLockedSpinState, getLockedWinningItem } from '../utils/spinnerSpinLock';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -486,6 +487,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
+  const isSpinSequenceLockedRef = useRef(false);
+  const pendingSpinnerLayoutRef = useRef(false);
+  const lockedWinnerRef = useRef<{ item: CaseItem; resultId: string; nonce: number } | null>(null);
+  const lockedSpinStateRef = useRef<ReturnType<typeof createLockedSpinState> | null>(null);
   const settleSoundPlayedRef = useRef(false);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
@@ -570,6 +575,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     updateSpinnerMeasurements();
 
     const observer = new ResizeObserver(() => {
+      if (isSpinSequenceLockedRef.current) {
+        pendingSpinnerLayoutRef.current = true;
+        return;
+      }
       window.requestAnimationFrame(updateSpinnerMeasurements);
     });
     observer.observe(viewport);
@@ -687,6 +696,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     // Before an opening, continuously showcase only the box's epic and legendary
     // outcomes. If a box has neither tier, retain the standard weighted preview.
     if (!items.length) return;
+    // Responsive mode can change during phone rotation. Never let that rebuild an
+    // active or revealed result reel; defer preview layout until the reveal closes.
+    if (isSpinSequenceLockedRef.current) {
+      pendingSpinnerLayoutRef.current = true;
+      return;
+    }
 
     const excitementItems = buildExcitementPreviewReel(items);
     const staticReelLength = reduceMobileEffects ? 9 : 15;
@@ -1013,18 +1028,48 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
     const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
+    const winnerElement = container.children.item(winnerIndex) as HTMLElement | null;
+
+    // Use the card's real laid-out position whenever possible. Calculating from a
+    // nominal card width drifts when a mobile browser rounds card widths or flex
+    // gaps differently, which can leave the marker over an adjacent filler item.
+    // This only controls presentation: the server-provided winner is still the
+    // target inserted into the reel and no outcome/odds logic is involved here.
+    const winnerCenterX = winnerElement
+      ? winnerElement.offsetLeft + (winnerElement.offsetWidth / 2)
+      : (winnerIndex * stepWidth) + (cardWidth / 2);
     return viewportCenterX - winnerCenterX + landingOffset;
   }, [updateSpinnerMeasurements]);
 
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const viewportCenter = viewportWidth / 2;
-    const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
+    const renderedChildren = scrollContainerRef.current?.children;
+    const renderedItemCount = renderedChildren?.length ?? 0;
     const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
     if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
       return 0;
     }
+
+    if (renderedChildren?.length) {
+      const markerPositionInTrack = viewportCenter - translateX;
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      for (let index = 0; index < renderedChildren.length; index += 1) {
+        const item = renderedChildren.item(index) as HTMLElement | null;
+        if (!item) continue;
+        const itemCenter = item.offsetLeft + (item.offsetWidth / 2);
+        const distance = Math.abs(itemCenter - markerPositionInTrack);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      }
+
+      return nearestIndex;
+    }
+
     return Math.max(
       0,
       Math.min(
@@ -1104,7 +1149,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     winnerIndex: number,
     duration: number,
     onComplete: () => void,
-    options?: { seed?: string }
+    options?: { seed?: string; locksAward?: boolean }
   ) => {
     const container = scrollContainerRef.current;
     if (!container) {
@@ -1148,6 +1193,29 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
+    }
+
+    const locksAward = options?.locksAward !== false;
+    if (locksAward) {
+      const lockedWinner = lockedWinnerRef.current;
+      if (!lockedWinner || reelItemsRef.current[winnerIndex]?.id !== lockedWinner.item.id) {
+        spinRequestLockRef.current = false;
+        setIsSpinning(false);
+        throw new Error('Spinner reel no longer matches the locked box-opening result.');
+      }
+      const frozenMeasurements = spinnerMeasurementsRef.current;
+      lockedSpinStateRef.current = createLockedSpinState({
+        resultId: lockedWinner.resultId,
+        nonce: lockedWinner.nonce,
+        winningItemId: lockedWinner.item.id,
+        winningIndex: winnerIndex,
+        reelItems: reelItemsRef.current,
+        startTranslateX: 0,
+        finalTranslateX: centeredTranslate,
+        cardWidth: frozenMeasurements.cardWidth,
+        reelGap: frozenMeasurements.reelGap,
+        viewportWidth: frozenMeasurements.viewportWidth
+      });
     }
 
     const overshootDirection = approachOffset >= 0 ? -1 : 1;
@@ -1224,10 +1292,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      const lockedSpin = lockedSpinStateRef.current;
+      const lockedCard = lockedSpin
+        ? container.children.item(lockedSpin.targetReelIndex) as HTMLElement | null
+        : null;
+      // The animation target remains frozen during rotation. Once it finishes,
+      // align that same locked card to the current viewport without changing it.
+      const settledTranslate = lockedCard
+        ? calculateCardCenteredTranslate({
+            viewportWidth: scrollViewportRef.current?.clientWidth ?? lockedSpin?.geometry.viewportWidth ?? 0,
+            cardOffsetLeft: lockedCard.offsetLeft,
+            cardWidth: lockedCard.offsetWidth
+          })
+        : centeredTranslate;
+      container.style.transform = `translate3d(${settledTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
-      setCurrentCenterIndex(winnerIndex);
-      lastCenterIndexRef.current = winnerIndex;
+      const settledWinnerIndex = lockedSpin?.winningIndex ?? winnerIndex;
+      setCurrentCenterIndex(settledWinnerIndex);
+      lastCenterIndexRef.current = settledWinnerIndex;
       setHasSpinSettled(true);
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       tickFrameRef.current = null;
@@ -1520,6 +1602,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
     }
 
+    isSpinningRef.current = true;
+    isSpinSequenceLockedRef.current = true;
     setIsSpinning(true);
     if (!isDemo && isFree) {
       trackEvent('free_spin_started', { box_id: box.id });
@@ -1538,6 +1622,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     let rollNonce = nonce;
     let rollServerHash = serverSeedHash;
     let rollClientSeed = clientSeed;
+    let spinResultId = `demo:${box.id}:${rollNonce}:${Date.now()}`;
 
     if (isDemo) {
       winner = getDemoWinningItem(rollValue);
@@ -1596,7 +1681,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         );
         const resolvedRedeemable = data.prize.redeemable ?? matchedPrize?.redeemable ?? true;
         winner = matchedPrize
-          ? { ...matchedPrize, redeemable: resolvedRedeemable, price: matchedPrize.price ?? fallbackPrice, size: data.prize.size }
+          ? {
+              ...matchedPrize,
+              ...data.prize,
+              price: fallbackPrice,
+              redeemable: resolvedRedeemable,
+              size: data.prize.size
+            }
           : {
               ...data.prize,
               price: fallbackPrice,
@@ -1650,6 +1741,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           });
         }
         setWonInventoryItem(inventoryItem);
+        spinResultId = data.openId;
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;
         rollMessage = data.provablyFair.message;
@@ -1676,6 +1768,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           boxId: box.id
         });
         setIsSpinning(false);
+        isSpinningRef.current = false;
+        isSpinSequenceLockedRef.current = false;
         setIsBoxPreviewVisible(false);
         setIsBoxPreviewFading(false);
         setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
@@ -1689,6 +1783,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (forceGold && legendaryPool.length > 0) {
       winner = legendaryPool[Math.floor(rollValue * legendaryPool.length)];
     }
+
+    // From this point through reveal dismissal, the authoritative result cannot
+    // be replaced by viewport changes, rerenders, or visually centered cards.
+    lockedWinnerRef.current = Object.freeze({
+      item: Object.freeze({ ...winner }),
+      resultId: spinResultId,
+      nonce: rollNonce
+    });
 
     if (!isDemo) {
       const latestRoll = {
@@ -1761,7 +1863,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 });
               goldStageTimerRef.current = null;
             }, goldStageDelay);
-        });
+        }, { locksAward: false });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1842,14 +1944,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [resetSpinnerAnimation]);
 
   const finishSpin = (item: CaseItem) => {
+    const lockedSpin = lockedSpinStateRef.current;
+    const lockedResult = lockedWinnerRef.current;
+    if (lockedSpin) getLockedWinningItem(lockedSpin); // Throws rather than revealing a mismatched reel.
+    const displayedWinner = lockedResult?.item ?? item;
     spinRequestLockRef.current = false;
+    isSpinningRef.current = false;
     setIsSpinning(false);
     setIsBoxPreviewVisible(false);
     setIsBoxPreviewFading(false);
 
     setShowWinModal(true);
     if (!winSoundPlayedRef.current) {
-      const rarity = String(item.rarity ?? 'common').toLowerCase();
+      const rarity = String(displayedWinner.rarity ?? 'common').toLowerCase();
       winSoundTimerRef.current = window.setTimeout(() => {
         if (winSoundPlayedRef.current) return;
         if (rarity.includes('legend') || rarity.includes('mythic')) playSound('win-gold');
@@ -1860,7 +1967,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         winSoundTimerRef.current = null;
       }, 120);
     }
-    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(item.rarity).toLowerCase())) {
+    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(displayedWinner.rarity).toLowerCase())) {
       const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
@@ -1869,7 +1976,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         confettiTimerRef.current = null;
       }, reduceMobileEffects ? 520 : 720);
     }
-    setWonItem(item);
+    setWonItem(displayedWinner);
     setRewardResolved(false);
   };
 
@@ -1902,6 +2009,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setShowWinModal(false);
     resetReelTrackPosition();
     setWonInventoryItem(null);
+    isSpinSequenceLockedRef.current = false;
+    lockedSpinStateRef.current = null;
+    lockedWinnerRef.current = null;
+    if (pendingSpinnerLayoutRef.current) {
+      pendingSpinnerLayoutRef.current = false;
+      window.requestAnimationFrame(updateSpinnerMeasurements);
+    }
 
     if (pendingPostFreeBoxFlowRef.current) {
       setShowPostFreeBoxModal(true);
