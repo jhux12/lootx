@@ -569,16 +569,37 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     updateSpinnerMeasurements();
 
+    let resizeFrame: number | null = null;
     const observer = new ResizeObserver(() => {
-      window.requestAnimationFrame(updateSpinnerMeasurements);
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        updateSpinnerMeasurements();
+
+        // Keep a completed spin locked to its awarded card if the viewport is
+        // resized after (or at the very end of) a device rotation.
+        if (!hasSpinSettled || spinnerAnimationRef.current) return;
+        const winnerElement = container.children.item(reelWinnerIndex) as HTMLElement | null;
+        if (!winnerElement) return;
+
+        const winnerCenter = winnerElement.offsetLeft + (winnerElement.offsetWidth / 2);
+        const requestedTranslate = (viewport.clientWidth / 2) - winnerCenter;
+        const minTranslate = Math.min(0, viewport.clientWidth - container.scrollWidth);
+        const correctedTranslate = clamp(requestedTranslate, minTranslate, 0);
+        container.style.transition = 'none';
+        container.style.transform = `translate3d(${correctedTranslate}px, 0, 0)`;
+      });
     });
     observer.observe(viewport);
 
     const firstCard = container.firstElementChild as HTMLElement | null;
     if (firstCard) observer.observe(firstCard);
 
-    return () => observer.disconnect();
-  }, [updateSpinnerMeasurements]);
+    return () => {
+      observer.disconnect();
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
+    };
+  }, [hasSpinSettled, reelWinnerIndex, updateSpinnerMeasurements]);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -1249,12 +1270,19 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         tickTimerRef.current = null;
       }
 
-      if (typeof animation.commitStyles === 'function') {
-        animation.commitStyles();
-      }
+      // The viewport can change while WAAPI is running (most commonly when a
+      // phone rotates). Re-measure at the finish line instead of trusting the
+      // destination captured at spin start, then pin the awarded card beneath
+      // the marker before the result is revealed.
+      updateSpinnerMeasurements();
+      const finalCenteredTranslateRaw = getCenteredTranslate(winnerIndex, 0);
+      const finalCenteredTranslate = finalCenteredTranslateRaw === null
+        ? centeredTranslate
+        : clampTranslate(finalCenteredTranslateRaw);
+
       animation.cancel();
       container.style.transition = 'none';
-      container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
+      container.style.transform = `translate3d(${finalCenteredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
@@ -1281,7 +1309,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, getCenteredTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -2160,10 +2188,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Spinner Window */}
-            <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
+            <div className="relative w-full overflow-hidden rounded-b-3xl" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
+              className="absolute inset-0 flex h-full w-full items-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
               style={{ height: `${spinnerViewportHeight}px` }}
             >
                 {isSpinnerAssetsLoading && (
