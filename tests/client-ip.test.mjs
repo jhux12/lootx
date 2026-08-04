@@ -26,10 +26,10 @@ test('normalizeIp handles bracketed IPv6 and rejects empty values', () => {
   assert.equal(normalizeIp(''), null);
 });
 
-test('the first five accounts from an IP are allowed and later accounts are banned', () => {
+test('the first three accounts from an IP are allowed and the fourth and later are banned', () => {
   for (let accountsBeforeSignup = 0; accountsBeforeSignup < MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP; accountsBeforeSignup += 1) {
     assert.equal(shouldAutoBanSignupIpAccount(accountsBeforeSignup), false);
   }
-  assert.equal(shouldAutoBanSignupIpAccount(5), true);
-  assert.equal(shouldAutoBanSignupIpAccount(6), true);
+  assert.equal(shouldAutoBanSignupIpAccount(3), true);
+  assert.equal(shouldAutoBanSignupIpAccount(4), true);
 });
