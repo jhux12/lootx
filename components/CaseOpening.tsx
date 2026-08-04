@@ -76,6 +76,8 @@ const SPINNER_MOTION = {
   approachOffsetNearMissMaxPx: 34,
   nearMissChance: 0.42,
   durationVarianceMs: 180,
+  settleWobbleMinPx: 4,
+  settleWobbleMaxPx: 16,
   initialBlurDurationMs: 260,
   // Keep the idle preview deliberately unhurried; it is ambient anticipation, not a spin.
   previewCycleDurationMs: 30000,
@@ -1112,9 +1114,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       return;
     }
 
-    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}`);
+    const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}:${Date.now()}`);
     const approachOffset = getApproachOffset(rng);
-    const landingJitterPx = 0;
+    // Small per-spin settle wobble so the reel doesn't decelerate identically every run.
+    // This only perturbs the pre-settle keyframe - the final keyframe below always
+    // resolves to the exact `centeredTranslate`, so the winner still lands precisely
+    // under the marker every time.
+    const settleWobbleDirection = rng() < 0.5 ? -1 : 1;
+    const settleWobbleMagnitude = SPINNER_MOTION.settleWobbleMinPx + Math.round(rng() * (SPINNER_MOTION.settleWobbleMaxPx - SPINNER_MOTION.settleWobbleMinPx));
+    const landingJitterPx = settleWobbleDirection * settleWobbleMagnitude;
     const durationVariance = Math.round((rng() - 0.5) * Math.min(180, SPINNER_MOTION.durationVarianceMs) * 2);
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
@@ -1757,11 +1765,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   animateSpin(goldReelResult.winnerIndex, goldFinalDuration, () => {
                     // Stage 2 Complete
                     finishSpin(winner);
-                  });
+                  }, { seed: goldSeed });
                 });
               goldStageTimerRef.current = null;
             }, goldStageDelay);
-        });
+        }, { seed: ticketSeed });
 
     } else {
         // --- NORMAL SPIN FLOW ---
@@ -1771,7 +1779,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
         animateSpin(normalReelResult.winnerIndex, isQuick ? SPINNER_MOTION.quickSpinDurationMs : SPINNER_MOTION.spinDurationMs, () => {
             finishSpin(winner);
-        });
+        }, { seed: mainSeed });
     }
   };
 
