@@ -70,11 +70,6 @@ const SPINNER_MOTION = {
   settleDurationMs: 2200,
   minSpinDurationMs: 6200,
   quickMinSpinDurationMs: 550,
-  overshootPx: 10,
-  approachOffsetSoftMaxPx: 10,
-  approachOffsetNearMissMinPx: 20,
-  approachOffsetNearMissMaxPx: 34,
-  nearMissChance: 0.42,
   durationVarianceMs: 180,
   settleWobbleMinPx: 4,
   settleWobbleMaxPx: 16,
@@ -450,6 +445,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isWinImageZoomed, setIsWinImageZoomed] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
+  const [reelBurst, setReelBurst] = useState<MicroConfettiParticle[]>([]);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
@@ -492,6 +488,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
+  const reelBurstTimerRef = useRef<number | null>(null);
+  const autoZoomTimerRef = useRef<number | null>(null);
   const goldStageTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
@@ -946,20 +944,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return `${rollData?.rollValue ?? 0}:${rollData?.nonce ?? nonce}:${stageTag}`;
   }, [nonce]);
 
-  const getApproachOffset = useCallback((rng: () => number) => {
-    const direction = rng() < 0.5 ? -1 : 1;
-
-    if (rng() < SPINNER_MOTION.nearMissChance) {
-      const min = SPINNER_MOTION.approachOffsetNearMissMinPx;
-      const max = SPINNER_MOTION.approachOffsetNearMissMaxPx;
-      const magnitude = min + Math.round(rng() * (max - min));
-      return direction * magnitude;
-    }
-
-    const softMagnitude = Math.round(rng() * SPINNER_MOTION.approachOffsetSoftMaxPx);
-    return direction * softMagnitude;
-  }, []);
-
   const generateReel = useCallback((target: CaseItem, pool: CaseItem[], options: { sprinkleGold: boolean; seed: string }) => {
     const { sprinkleGold, seed } = options;
     const rng = createSeededRng(seed);
@@ -1076,6 +1060,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       scrollContainerRef.current.getAnimations().forEach((animation) => animation.cancel());
       scrollContainerRef.current.style.transition = 'none';
       scrollContainerRef.current.style.transform = 'translate3d(0px, 0, 0)';
+      scrollContainerRef.current.classList.remove('is-spinning');
     }
 
     if (tickTimerRef.current !== null) {
@@ -1098,6 +1083,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setAnimationPhase('idle');
   }, []);
 
+  const fireReelLandingBurst = useCallback(() => {
+    if (prefersReducedMotion) return;
+    const base = createMicroConfetti(reduceMobileEffects ? 10 : 16);
+    // Recentre the shared confetti helper's spawn point (tuned for the win modal)
+    // onto the reel marker, which sits at the dead centre of the spinner viewport.
+    const particles = base.map((piece) => ({ ...piece, x: 46 + Math.random() * 8, y: 42 + Math.random() * 12 }));
+    setReelBurst(particles);
+    if (reelBurstTimerRef.current !== null) window.clearTimeout(reelBurstTimerRef.current);
+    reelBurstTimerRef.current = window.setTimeout(() => {
+      setReelBurst([]);
+      reelBurstTimerRef.current = null;
+    }, reduceMobileEffects ? 520 : 720);
+  }, [prefersReducedMotion, reduceMobileEffects]);
+
   useEffect(() => {
     isSpinningRef.current = isSpinning;
   }, [isSpinning]);
@@ -1115,7 +1114,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
 
     const rng = createSeededRng(options?.seed ?? `${winnerIndex}:${duration}:${Date.now()}`);
-    const approachOffset = getApproachOffset(rng);
     // Small per-spin settle wobble so the reel doesn't decelerate identically every run.
     // This only perturbs the pre-settle keyframe - the final keyframe below always
     // resolves to the exact `centeredTranslate`, so the winner still lands precisely
@@ -1127,8 +1125,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const minDuration = duration < SPINNER_MOTION.minSpinDurationMs ? SPINNER_MOTION.quickMinSpinDurationMs : SPINNER_MOTION.minSpinDurationMs;
     const resolvedDuration = Math.max(minDuration, duration + durationVariance);
     const settlePortion = clamp(SPINNER_MOTION.settleDurationMs / resolvedDuration, 0.18, 0.3);
-    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.82);
-    const overshootOffset = clamp(preSettleOffset - 0.16, 0.54, 0.7);
+    const preSettleOffset = clamp(1 - settlePortion, 0.7, 0.85);
 
     resetSpinnerAnimation();
 
@@ -1136,6 +1133,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     container.style.transform = 'translate3d(0px, 0, 0)';
     container.style.backfaceVisibility = 'hidden';
     container.style.willChange = 'transform';
+
+    // Motion-blur ramp is a pure CSS keyframe animation (see the <style> block below) so it
+    // never competes with the WAAPI transform timeline. Skipped on reduced-motion/low-power.
+    // Remove-then-reflow-then-add forces the keyframe animation to restart on every call,
+    // which matters for the gold-ticket flow where this function runs twice back to back.
+    const allowBlur = !reduceMobileEffects && !prefersReducedMotion;
+    container.classList.remove('is-spinning');
+    if (allowBlur) {
+      void container.offsetWidth;
+      container.style.setProperty('--pullz-spin-duration', `${resolvedDuration}ms`);
+      container.classList.add('is-spinning');
+    }
 
     // Two paint frames + layout read prevents mobile browsers from skipping early keyframes.
     await waitForNextPaint();
@@ -1151,21 +1160,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const centeredTranslateRaw = await resolveCenteredTranslate(winnerIndex, 0);
     const centeredTranslate = centeredTranslateRaw === null ? null : clampTranslate(centeredTranslateRaw);
     const jitterLandingTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + landingJitterPx);
-    const approachTranslate = centeredTranslate === null ? null : clampTranslate(centeredTranslate + approachOffset);
-    if (centeredTranslate === null || approachTranslate === null || jitterLandingTranslate === null) {
+    if (centeredTranslate === null || jitterLandingTranslate === null) {
+      container.classList.remove('is-spinning');
       spinRequestLockRef.current = false;
       setIsSpinning(false);
       return;
     }
 
-    const overshootDirection = approachOffset >= 0 ? -1 : 1;
-    const overshootTarget = clampTranslate(approachTranslate + (SPINNER_MOTION.overshootPx * overshootDirection));
     setAnimationPhase('spinning');
 
+    // A single fast-start/hard-decelerate curve (no overshoot/near-miss detour) plus the
+    // settle wobble above - the reel reads as one continuous spin-and-stop motion.
     const animation = container.animate(
       [
-        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.24, 0.62, 0.18, 1)' },
-        { transform: `translate3d(${overshootTarget}px, 0, 0)`, offset: overshootOffset, easing: 'cubic-bezier(0.12, 0.82, 0.2, 1)' },
+        { transform: 'translate3d(0px, 0, 0)', offset: 0, easing: 'cubic-bezier(0.11, 0.62, 0.18, 1)' },
         { transform: `translate3d(${jitterLandingTranslate}px, 0, 0)`, offset: preSettleOffset, easing: 'cubic-bezier(0.16, 0.72, 0.28, 1)' },
         { transform: `translate3d(${centeredTranslate}px, 0, 0)`, offset: 1, easing: 'cubic-bezier(0.18, 0, 0.2, 1)' }
       ],
@@ -1185,10 +1193,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const sampleIntervalMs = 60; // ~16.7 centre/tick checks per second.
     const translateAt = (elapsed: number) => {
       const progress = clamp(elapsed / resolvedDuration, 0, 1);
-      if (progress <= overshootOffset) return overshootTarget * cubicBezierProgress(progress / overshootOffset, 0.24, 0.62, 0.18, 1);
       if (progress <= preSettleOffset) {
-        const local = (progress - overshootOffset) / Math.max(0.001, preSettleOffset - overshootOffset);
-        return overshootTarget + (jitterLandingTranslate - overshootTarget) * cubicBezierProgress(local, 0.12, 0.82, 0.2, 1);
+        const local = progress / Math.max(0.001, preSettleOffset);
+        return jitterLandingTranslate * cubicBezierProgress(local, 0.11, 0.62, 0.18, 1);
       }
       const local = (progress - preSettleOffset) / Math.max(0.001, 1 - preSettleOffset);
       return jitterLandingTranslate + (centeredTranslate - jitterLandingTranslate) * cubicBezierProgress(local, 0.16, 0.72, 0.28, 1);
@@ -1234,11 +1241,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       container.style.transition = 'none';
       container.style.transform = `translate3d(${centeredTranslate}px, 0, 0)`;
       container.style.willChange = 'auto';
+      container.classList.remove('is-spinning');
       setCurrentCenterIndex(winnerIndex);
       lastCenterIndexRef.current = winnerIndex;
       setHasSpinSettled(true);
       if (frameId !== null) window.cancelAnimationFrame(frameId);
       tickFrameRef.current = null;
+
+      fireReelLandingBurst();
 
       setAnimationPhase('idle');
       spinnerAnimationRef.current = null;
@@ -1256,10 +1266,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       tickFrameRef.current = null;
       setAnimationPhase('idle');
       container.style.willChange = 'auto';
+      container.classList.remove('is-spinning');
       spinnerAnimationRef.current = null;
       spinRequestLockRef.current = false;
     };
-  }, [clampTranslate, getApproachOffset, getCenteredIndexFromTranslate, playSound, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
+  }, [clampTranslate, fireReelLandingBurst, getCenteredIndexFromTranslate, playSound, prefersReducedMotion, reduceMobileEffects, reduceSpinnerRerenders, resetSpinnerAnimation, resolveCenteredTranslate, updateSpinnerMeasurements]);
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -1837,6 +1848,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.clearTimeout(confettiTimerRef.current);
         confettiTimerRef.current = null;
       }
+      if (reelBurstTimerRef.current !== null) {
+        window.clearTimeout(reelBurstTimerRef.current);
+        reelBurstTimerRef.current = null;
+      }
+      if (autoZoomTimerRef.current !== null) {
+        window.clearTimeout(autoZoomTimerRef.current);
+        autoZoomTimerRef.current = null;
+      }
       if (topUpLockTimerRef.current !== null) {
         window.clearTimeout(topUpLockTimerRef.current);
         topUpLockTimerRef.current = null;
@@ -1879,6 +1898,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
     setWonItem(item);
     setRewardResolved(false);
+
+    // Auto-zoom the pull right after the reveal sheet slides up, instead of requiring a tap.
+    if (autoZoomTimerRef.current !== null) window.clearTimeout(autoZoomTimerRef.current);
+    autoZoomTimerRef.current = window.setTimeout(() => {
+      setIsWinImageZoomed(true);
+      autoZoomTimerRef.current = null;
+    }, prefersReducedMotion ? 0 : 320);
   };
 
   const resetReelTrackPosition = useCallback(() => {
@@ -1902,6 +1928,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   };
 
   const closeWinModal = () => {
+    if (autoZoomTimerRef.current !== null) {
+      window.clearTimeout(autoZoomTimerRef.current);
+      autoZoomTimerRef.current = null;
+    }
     setIsSellingItem(false);
     setIsWinImageZoomed(false);
     if (!rewardResolved) {
@@ -2141,8 +2171,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="relative left-1/2 w-screen -translate-x-1/2" style={{ height: `${spinnerViewportHeight}px` }}>
             <div
               ref={scrollViewportRef}
-              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
-              style={{ height: `${spinnerViewportHeight}px` }}
+              className="absolute left-1/2 top-1/2 flex h-full w-screen -translate-x-1/2 -translate-y-1/2 items-center overflow-hidden border-y border-white/10 shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]"
+              style={{
+                height: `${spinnerViewportHeight}px`,
+                backgroundImage: 'linear-gradient(rgba(56,189,248,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.055) 1px, transparent 1px), linear-gradient(180deg, rgba(5,9,17,0.92), rgba(20,27,40,0.82) 50%, rgba(5,9,17,0.92))',
+                backgroundSize: '28px 28px, 28px 28px, auto'
+              }}
             >
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
@@ -2175,6 +2209,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-[196px] -translate-x-1/2 rounded-2xl border-2 border-cyan-200/80 bg-cyan-300/[0.025] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_0_26px_rgba(34,211,238,0.24),inset_0_0_24px_rgba(34,211,238,0.08)]" aria-hidden="true">
                   <span className="absolute -bottom-1 left-1/2 h-2.5 w-10 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,0.9)]" />
                 </div>
+                <div className="pointer-events-none absolute bottom-3 left-1/2 top-3 z-30 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-cyan-200/70 to-transparent" aria-hidden="true" />
+
+                {/* Landing burst: a small particle pop at the marker when the reel settles. */}
+                {reelBurst.length > 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-[35] overflow-hidden" aria-hidden="true">
+                    {reelBurst.map((piece) => (
+                      <span
+                        key={piece.id}
+                        className="pointer-events-none absolute rounded-full"
+                        style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* The Moving Reel */}
                 <div
@@ -2467,13 +2515,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       <img
                         src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
                         alt={wonItem.name}
-                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-56 w-56 sm:h-72 sm:w-72' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
+                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-64 w-64 sm:h-80 sm:w-80' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
                         loading="eager"
                         decoding="async"
                         draggable={false}
                       />
                     </button>
-                    <div className={`relative z-10 grid transition-all duration-300 ease-out ${isWinImageZoomed ? 'mt-0 grid-rows-[0fr] opacity-0' : 'mt-1 grid-rows-[1fr] opacity-100'}`} aria-hidden={isWinImageZoomed}>
+                    <div className="relative z-10 mt-2 grid grid-rows-[1fr] opacity-100 transition-all duration-300 ease-out">
                       <div className="min-h-0 overflow-hidden">
                         <h4 className="text-lg font-bold text-white">{wonItem.name}</h4>
                         <CoinAmount
@@ -2639,6 +2687,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           @keyframes ambientPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 rgba(34,211,238,0.2);} 50% { transform: scale(1.02); box-shadow: 0 0 22px rgba(34,211,238,0.32);} }
           @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
           @media (prefers-reduced-motion: reduce){ .ambient-pulse { animation: none; } }
+          @keyframes pullzReelBlur {
+            0% { filter: blur(0px); }
+            8% { filter: blur(7px); }
+            62% { filter: blur(2.5px); }
+            100% { filter: blur(0px); }
+          }
+          .pullz-spinner-track.is-spinning {
+            animation: pullzReelBlur var(--pullz-spin-duration, 6000ms) cubic-bezier(0.11, 0.62, 0.18, 1) 1;
+          }
+          @media (prefers-reduced-motion: reduce){ .pullz-spinner-track.is-spinning { animation: none; } }
         `}</style>
 
 
