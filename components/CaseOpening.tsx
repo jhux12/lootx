@@ -312,7 +312,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [reactorIsGoldStage, setReactorIsGoldStage] = useState(false);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
-  const [showWinModal, setShowWinModal] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
@@ -334,7 +333,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [itemModalActive, setItemModalActive] = useState(false);
   const [isItemImageZoomed, setIsItemImageZoomed] = useState(false);
-  const [isWinImageZoomed, setIsWinImageZoomed] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
@@ -511,7 +509,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setVisibleDropItemCount(performanceMode.isMobile ? 12 : 24);
   }, [boxId, performanceMode.isMobile]);
 
-  const shouldHideMobileBottomNav = Boolean((showWinModal && wonItem) || selectedCaseItem || showXpConfirmSheet);
+  const shouldHideMobileBottomNav = Boolean(selectedCaseItem || showXpConfirmSheet);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -968,7 +966,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (!isDemo && isFree) {
       trackEvent('free_spin_started', { box_id: box.id });
     }
-    setShowWinModal(false);
     setIsGoldMode(false);
     setWonItem(null);
     setWonInventoryItem(null);
@@ -1248,7 +1245,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     spinRequestLockRef.current = false;
     setIsSpinning(false);
 
-    setShowWinModal(true);
     if (!winSoundPlayedRef.current) {
       const rarity = String(item.rarity ?? 'common').toLowerCase();
       winSoundTimerRef.current = window.setTimeout(() => {
@@ -1285,11 +1281,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
   const closeWinModal = () => {
     setIsSellingItem(false);
-    setIsWinImageZoomed(false);
     if (!rewardResolved) {
       setRewardResolved(true);
     }
-    setShowWinModal(false);
+    setWonItem(null);
     resetReactor();
     setWonInventoryItem(null);
 
@@ -1520,7 +1515,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Reactor Window */}
-            <div className="relative flex items-center justify-center overflow-hidden border-y border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_50%,rgba(5,9,17,0.92))] px-4 py-6 shadow-[inset_0_14px_30px_rgba(0,0,0,0.38),inset_0_-14px_30px_rgba(0,0,0,0.38)]">
+            <div className="relative mx-auto flex w-full max-w-[420px] items-center justify-center overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(5,9,17,0.92),rgba(20,27,40,0.82)_55%,rgba(5,9,17,0.92))] px-4 py-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),inset_0_14px_30px_rgba(0,0,0,0.38),0_20px_50px_-20px_rgba(0,0,0,0.55)]">
                 {isRevealAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/75 px-4">
                     <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/40 px-4 py-2 text-xs font-semibold text-white sm:text-sm">
@@ -1541,85 +1536,200 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 />
             </div>
 
-            {/* Action Bar */}
-            <div className="relative z-20 mt-1 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-4 pt-3 sm:mt-2 sm:gap-3 sm:px-4">
-                 <button
-                    onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
-                    disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isRevealAssetsLoading}
-                    className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
-                >
-                    <span>
-                      {isSyncingFair ? (
-                        'Syncing server...'
-                      ) : isSpinning ? (
-                        <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
-                      ) : isBalanceLoading ? (
-                        'Loading balance...'
-                      ) : isRewardOpen ? (
-                        'Open Reward Box'
-                      ) : isFree ? (
-                        'Free Spin'
-                      ) : (
-                    <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-[11px] sm:gap-3 sm:text-sm">
-                          <span className="inline-flex items-center gap-2">
-                            Open for
-                            {caseCurrencyType === 'XP' ? (
-                              <span className="inline-flex items-center gap-1 text-white">
-                                <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                                <span>{currentCaseXpPrice.toLocaleString()}</span>
-                              </span>
+            {wonItem ? (
+              /* Result Panel — shown in place of the Action Bar once the reactor reveals an item. */
+              <div className="relative z-20 mt-3 px-3 pb-5 sm:mt-4 sm:px-4">
+                {confetti.map((piece) => (
+                  <span
+                    key={piece.id}
+                    className="pointer-events-none absolute rounded-full"
+                    style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                  />
+                ))}
+                <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
+                      <Check className="h-4 w-4 text-emerald-400" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-bold text-white sm:text-base">{isDemoSpin ? 'Demo Open Result' : 'Item Unboxed'}</h3>
+                      <p className="text-xs text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setVerifyModalOpen(true)}
+                      className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
+                      aria-label="View fairness proof"
+                      title="View fairness proof"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div
+                    className="win-rarity-card relative flex w-full flex-col items-center rounded-2xl p-[2px]"
+                    style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
+                  >
+                    <div className="win-rarity-card__inner relative flex w-full items-center gap-4 overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-3 sm:p-4">
+                      <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
+                      <img
+                        src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
+                        alt={wonItem.name}
+                        className="relative z-10 h-20 w-20 flex-none object-contain sm:h-24 sm:w-24"
+                        loading="eager"
+                        decoding="async"
+                        draggable={false}
+                      />
+                      <div className="relative z-10 min-w-0 flex-1 text-left">
+                        <h4 className="truncate text-base font-bold text-white sm:text-lg">{wonItem.name}</h4>
+                        <CoinAmount
+                          amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
+                          formatOptions={{ maximumFractionDigits: 0 }}
+                          className="mt-2 font-semibold text-gray-200"
+                          iconClassName="w-4 h-4"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {isDemoSpin ? (
+                    <div className="flex flex-col gap-2.5 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          closeWinModal();
+                          void handleSpin({ isDemo: true, isQuick: isQuickSpinEnabled });
+                        }}
+                        disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isRevealAssetsLoading}
+                        className="h-12 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Demo Open Again
+                      </button>
+                      <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10 sm:w-auto sm:px-6">Done</button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
+                        <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
+                      </button>
+                      {wonItem.redeemable !== false && (
+                        <button
+                          onClick={handleSell}
+                          disabled={isSellingItem}
+                          className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
+                        >
+                          <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
+                            <Wallet className="h-4 w-4 flex-none" />
+                            {isSellingItem ? (
+                              'Selling item...'
                             ) : (
-                              <CoinAmount
-                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-white"
-                                iconClassName="w-4 h-4"
-                              />
+                              <>
+                                <span>Sell for</span>
+                                <CoinAmount
+                                  amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
+                                  formatOptions={{ maximumFractionDigits: 0 }}
+                                  className="text-emerald-50"
+                                  iconClassName="h-4 w-4"
+                                />
+                              </>
                             )}
                           </span>
-                          {previewTotalXp > 0 && (
-                            <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
-                              +{previewTotalXp.toLocaleString()} XP
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleShareUnboxing()}
+                        className="mx-auto min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
+                      >
+                        <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Action Bar */}
+                <div className="relative z-20 mt-1 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-4 pt-3 sm:mt-2 sm:gap-3 sm:px-4">
+                     <button
+                        onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
+                        disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isRevealAssetsLoading}
+                        className={`min-w-[220px] px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow-lg transition-all active:scale-95 flex flex-col items-center leading-tight ${!isSpinning && canOpenMain ? 'ambient-pulse' : ''} ${isGoldMode ? 'bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/20 text-black' : (isFree ? 'bg-green-500 hover:bg-green-400 shadow-green-500/20 text-black' : 'bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] hover:brightness-110 shadow-[#6f4dff]/25')}`}
+                    >
+                        <span>
+                          {isSyncingFair ? (
+                            'Syncing server...'
+                          ) : isSpinning ? (
+                            <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />Spinning...</span>
+                          ) : isBalanceLoading ? (
+                            'Loading balance...'
+                          ) : isRewardOpen ? (
+                            'Open Reward Box'
+                          ) : isFree ? (
+                            'Free Spin'
+                          ) : (
+                        <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-[11px] sm:gap-3 sm:text-sm">
+                              <span className="inline-flex items-center gap-2">
+                                Open for
+                                {caseCurrencyType === 'XP' ? (
+                                  <span className="inline-flex items-center gap-1 text-white">
+                                    <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
+                                    <span>{currentCaseXpPrice.toLocaleString()}</span>
+                                  </span>
+                                ) : (
+                                  <CoinAmount
+                                    amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                    formatOptions={{ maximumFractionDigits: 0 }}
+                                    className="text-white"
+                                    iconClassName="w-4 h-4"
+                                  />
+                                )}
+                              </span>
+                              {previewTotalXp > 0 && (
+                                <span className="inline-flex items-center text-[10px] font-semibold text-emerald-300 sm:rounded-full sm:border sm:border-emerald-300/40 sm:bg-emerald-500/15 sm:px-2 sm:py-0.5 sm:text-xs sm:text-emerald-200">
+                                  +{previewTotalXp.toLocaleString()} XP
+                                </span>
+                              )}
                             </span>
                           )}
                         </span>
-                      )}
-                    </span>
-                 </button>
-                {!isFreeOpening && !isRewardOpen && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleTryFree}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isRevealAssetsLoading}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                     </button>
+                    {!isFreeOpening && !isRewardOpen && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleTryFree}
+                          disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isRevealAssetsLoading}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                        >
+                          Demo Open
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playSound('click');
+                            setIsQuickSpinEnabled((prev) => !prev);
+                          }}
+                          className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
+                          aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
+                          title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
+                        >
+                          <Zap className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                </div>
+                {spinFeedbackMessage && (
+                  <div className="px-2 pb-4">
+                    <div
+                      role="status"
+                      aria-live="polite"
+                      className="mx-auto w-full max-w-xl rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs sm:text-sm text-amber-200"
                     >
-                      Demo Spin
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playSound('click');
-                        setIsQuickSpinEnabled((prev) => !prev);
-                      }}
-                      className={`inline-flex h-[46px] w-[46px] items-center justify-center rounded-lg border text-white transition-colors ${isQuickSpinEnabled ? 'border-[#8a6cff] bg-[#6f4dff]/25 text-[#c8bcff]' : 'border-white/10 bg-[#303741] text-white/80 hover:bg-[#39424d]'}`}
-                      aria-label={isQuickSpinEnabled ? 'Disable quick spin' : 'Enable quick spin'}
-                      title={isQuickSpinEnabled ? 'Quick spin enabled' : 'Quick spin disabled'}
-                    >
-                      <Zap className="h-4 w-4" />
-                    </button>
+                      {spinFeedbackMessage}
+                    </div>
                   </div>
                 )}
-            </div>
-            {spinFeedbackMessage && (
-              <div className="px-2 pb-4">
-                <div
-                  role="status"
-                  aria-live="polite"
-                  className="mx-auto w-full max-w-xl rounded-lg border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-center text-xs sm:text-sm text-amber-200"
-                >
-                  {spinFeedbackMessage}
-                </div>
-              </div>
+              </>
             )}
         </div>
 
@@ -1715,146 +1825,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           </div>
         )}
 
-        {/* Slide Up Win Sheet */}
-        <div className={`fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm transition-opacity duration-500 ${showWinModal && wonItem ? 'opacity-100' : 'pointer-events-none opacity-0'}`} onClick={closeWinModal} />
-        <div className={`fixed bottom-0 left-0 right-0 z-[100] transform transition-transform duration-500 ${showWinModal && wonItem ? 'translate-y-0' : 'translate-y-full'}`}>
-          {wonItem && (
-            <div className="mx-auto relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border-x border-t border-white/10 bg-[#1b2028]/95 backdrop-blur-xl shadow-[0_-10px_50px_rgba(0,0,0,0.75)] sm:max-h-[86vh]">
-              {confetti.map((piece) => (
-                <span
-                  key={piece.id}
-                  className="pointer-events-none absolute rounded-full"
-                  style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
-                />
-              ))}
-              <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
-                    <Check className="h-5 w-5 text-emerald-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white sm:text-lg">{isDemoSpin ? 'Demo Spin Result' : 'Item Unboxed'}</h3>
-                    <p className="text-xs text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
-                  </div>
-                </div>
-                <button type="button" onClick={closeWinModal} className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:text-white">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="overflow-y-auto p-5 sm:p-6">
-                <div
-                  className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
-                  style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
-                >
-                  <div className={`win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4 transition-all duration-300 ${isWinImageZoomed ? 'py-6 sm:py-8' : ''}`}>
-                    <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                    <button
-                      type="button"
-                      onClick={() => setVerifyModalOpen(true)}
-                      className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border border-emerald-300/25 bg-emerald-500/10 text-emerald-200 transition hover:border-emerald-300/45 hover:bg-emerald-500/15"
-                      aria-label="View fairness proof"
-                      title="View fairness proof"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsWinImageZoomed((zoomed) => !zoomed)}
-                      className="relative z-10 mx-auto touch-manipulation appearance-none rounded-2xl bg-transparent p-0 transition-transform duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 active:scale-[0.98]"
-                      aria-label={isWinImageZoomed ? `Shrink ${wonItem.name} image` : `Zoom ${wonItem.name} image`}
-                      aria-pressed={isWinImageZoomed}
-                    >
-                      <img
-                        src={wonItem.image || wonInventoryItem?.image || box?.image || ''}
-                        alt={wonItem.name}
-                        className={`mx-auto shrink-0 object-contain transition-all duration-300 ease-out ${isWinImageZoomed ? 'h-56 w-56 sm:h-72 sm:w-72' : 'h-32 w-32 sm:h-36 sm:w-36'}`}
-                        loading="eager"
-                        decoding="async"
-                        draggable={false}
-                      />
-                    </button>
-                    <div className={`relative z-10 grid transition-all duration-300 ease-out ${isWinImageZoomed ? 'mt-0 grid-rows-[0fr] opacity-0' : 'mt-1 grid-rows-[1fr] opacity-100'}`} aria-hidden={isWinImageZoomed}>
-                      <div className="min-h-0 overflow-hidden">
-                        <h4 className="text-lg font-bold text-white">{wonItem.name}</h4>
-                        <CoinAmount
-                          amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="mt-2 font-semibold text-gray-200"
-                          iconClassName="w-4 h-4"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
-                {isDemoSpin ? (
-                  <div className="flex flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeWinModal();
-                        void handleSpin({ isQuick: isQuickSpinEnabled });
-                      }}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isRevealAssetsLoading}
-                      className="h-12 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <span className="inline-flex items-center justify-center gap-2">
-                        Open for
-                        <CoinAmount
-                          amount={toCoins(box?.price ?? 0, PRICE_UNIT_MODE)}
-                          formatOptions={{ maximumFractionDigits: 0 }}
-                          className="text-white"
-                          iconClassName="h-4 w-4"
-                        />
-                      </span>
-                    </button>
-                    <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2.5">
-                    <button onClick={handleKeep} className="h-14 w-full rounded-xl btn-logo-gradient px-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(111,77,255,0.28)] transition hover:brightness-110">
-                      <span className="inline-flex items-center gap-2"><Backpack className="h-4 w-4 flex-none" />Keep This Card</span>
-                    </button>
-                    {wonItem.redeemable !== false && (
-                      <button
-                        onClick={handleSell}
-                        disabled={isSellingItem}
-                        className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
-                      >
-                        <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
-                          <Wallet className="h-4 w-4 flex-none" />
-                          {isSellingItem ? (
-                            'Selling item...'
-                          ) : (
-                            <>
-                              <span>Sell for</span>
-                              <CoinAmount
-                                amount={getSellBackValue(toCoins(wonItem.price, PRICE_UNIT_MODE), sellBackRate)}
-                                formatOptions={{ maximumFractionDigits: 0 }}
-                                className="text-emerald-50"
-                                iconClassName="h-4 w-4"
-                              />
-                            </>
-                          )}
-                        </span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => void handleShareUnboxing()}
-                      className="mx-auto min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
-                    >
-                      <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
 
         {showPostFreeBoxModal && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#070611]/75 p-3 backdrop-blur-sm sm:p-5">
