@@ -1013,18 +1013,48 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const resolvedViewportWidth = viewportWidth || viewport.clientWidth;
     const viewportCenterX = resolvedViewportWidth / 2;
-    const winnerCenterX = (winnerIndex * stepWidth) + (cardWidth / 2);
+    const winnerElement = container.children.item(winnerIndex) as HTMLElement | null;
+
+    // Use the card's real laid-out position whenever possible. Calculating from a
+    // nominal card width drifts when a mobile browser rounds card widths or flex
+    // gaps differently, which can leave the marker over an adjacent filler item.
+    // This only controls presentation: the server-provided winner is still the
+    // target inserted into the reel and no outcome/odds logic is involved here.
+    const winnerCenterX = winnerElement
+      ? winnerElement.offsetLeft + (winnerElement.offsetWidth / 2)
+      : (winnerIndex * stepWidth) + (cardWidth / 2);
     return viewportCenterX - winnerCenterX + landingOffset;
   }, [updateSpinnerMeasurements]);
 
   const getCenteredIndexFromTranslate = useCallback((translateX: number) => {
     const { cardWidth, stepWidth, viewportWidth } = spinnerMeasurementsRef.current;
     const viewportCenter = viewportWidth / 2;
-    const renderedItemCount = scrollContainerRef.current?.children.length ?? 0;
+    const renderedChildren = scrollContainerRef.current?.children;
+    const renderedItemCount = renderedChildren?.length ?? 0;
     const reelLength = renderedItemCount || reelItemsRef.current.length || reelItems.length;
     if (!Number.isFinite(stepWidth) || stepWidth <= 0 || !Number.isFinite(cardWidth) || viewportCenter <= 0 || reelLength <= 0) {
       return 0;
     }
+
+    if (renderedChildren?.length) {
+      const markerPositionInTrack = viewportCenter - translateX;
+      let nearestIndex = 0;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      for (let index = 0; index < renderedChildren.length; index += 1) {
+        const item = renderedChildren.item(index) as HTMLElement | null;
+        if (!item) continue;
+        const itemCenter = item.offsetLeft + (item.offsetWidth / 2);
+        const distance = Math.abs(itemCenter - markerPositionInTrack);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = index;
+        }
+      }
+
+      return nearestIndex;
+    }
+
     return Math.max(
       0,
       Math.min(
