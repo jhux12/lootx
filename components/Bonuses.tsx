@@ -4,6 +4,8 @@ import { useSound } from "../context/SoundContext";
 import { DailySpinPage } from "./DailySpinPage";
 import { authedFetch } from "../utils/authedFetch";
 import { useVisibleInterval } from "../hooks/useVisibleInterval";
+import { auth } from "../firebase";
+import { requestPhoneVerification } from "../utils/phoneVerification";
 
 const DAILY_SPIN_BALANCE_SUPPRESSION_KEY = "pullzDailySpinSuppressBalanceFeedbackUntil";
 const DAILY_SPIN_ANIMATION_MS = 5000;
@@ -33,6 +35,11 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
 
     if (!canClaim) {
       throw new Error("Daily spin is on cooldown.");
+    }
+
+    if (!auth.currentUser?.phoneNumber) {
+      requestPhoneVerification("daily_spin");
+      throw new Error("Verify your phone number to use the daily spin.");
     }
 
     if (typeof window !== "undefined") {

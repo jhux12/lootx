@@ -875,6 +875,7 @@ const normalizeTimestamp = (value: unknown, fallback: number) => {
 const USER_PROFILE_SAFE_KEYS = [
   'uid',
   'email',
+  'phoneNumber',
   'username',
   'usernameLower',
   'createdAt',
@@ -902,6 +903,7 @@ const buildUserDocument = (user: User) => {
   const payload: Record<string, unknown> = {
     uid: user.id,
     email: user.email ?? '',
+    phoneNumber: user.phoneNumber,
     username: user.username ?? user.name ?? '',
     usernameLower: toFirestoreUsernameLower(user.username ?? user.name ?? ''),
     createdAt: user.createdAt ?? Date.now(),
@@ -1106,6 +1108,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     username: data.username ?? data.name ?? name,
     displayName: data.displayName,
     email: data.email || '',
+    phoneNumber: typeof data.phoneNumber === 'string' ? data.phoneNumber : undefined,
     avatar,
     photoURL: data.photoURL,
     provider: data.provider,

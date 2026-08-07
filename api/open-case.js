@@ -9,6 +9,7 @@ import { recordBalanceChange } from './_lib/balanceAudit.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralFirstGameQualified } from './_lib/referrals.js';
+import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
@@ -89,6 +90,7 @@ export default async function handler(req, res) {
     if (!boxId || typeof boxId !== 'string') {
       return sendJson(res, 400, { error: 'INVALID_REQUEST', message: 'Missing case identifier (boxId).' });
     }
+    if (isFree) await requireVerifiedPhone(adminAuth, decoded.uid);
 
     const boxRef = firestore.collection('boxes').doc(boxId);
     const USER_BOX_EXPIRY_MS = 24 * 60 * 60 * 1000;

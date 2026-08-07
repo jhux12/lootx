@@ -34,6 +34,7 @@ service cloud.firestore {
       return [
         'uid',
         'email',
+        'phoneNumber',
         'username',
         'usernameLower',
         'createdAt',
@@ -50,6 +51,7 @@ service cloud.firestore {
       return [
         'uid',
         'email',
+        'phoneNumber',
         'username',
         'usernameLower',
         'createdAt',

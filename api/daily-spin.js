@@ -1,5 +1,6 @@
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { recordBalanceChange } from './_lib/balanceAudit.js';
+import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -72,6 +73,7 @@ export default async function handler(req, res) {
 
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
+    await requireVerifiedPhone(adminAuth, uid);
     const userRef = firestore.collection('users').doc(uid);
     const bonusSettingsRef = firestore.collection('settings').doc(BONUS_SETTINGS_DOC);
 
@@ -208,7 +210,7 @@ export default async function handler(req, res) {
   } catch (error) {
     const status = Number(error?.status) || 500;
     const code = error?.code || 'DAILY_SPIN_FAILED';
-    const message = error instanceof Error ? error.message : 'Unable to complete daily spin.';
+    const message = typeof error?.message === 'string' ? error.message : 'Unable to complete daily spin.';
     const payload = { error: code, message };
 
     if (error?.nextClaimAt) {
