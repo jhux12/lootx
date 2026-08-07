@@ -733,7 +733,7 @@ interface GameContextType {
   login: (email: string, pass: string, remember?: boolean) => Promise<EmailPasswordAuthResult>;
   loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
-  register: (name: string, email: string, pass: string) => Promise<EmailPasswordAuthResult>;
+  register: (name: string, email: string, pass: string, phoneNumber: string) => Promise<EmailPasswordAuthResult>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   setShowLoginModal: (show: boolean) => void;
@@ -875,6 +875,7 @@ const normalizeTimestamp = (value: unknown, fallback: number) => {
 const USER_PROFILE_SAFE_KEYS = [
   'uid',
   'email',
+  'phoneNumber',
   'username',
   'usernameLower',
   'createdAt',
@@ -902,6 +903,7 @@ const buildUserDocument = (user: User) => {
   const payload: Record<string, unknown> = {
     uid: user.id,
     email: user.email ?? '',
+    phoneNumber: user.phoneNumber,
     username: user.username ?? user.name ?? '',
     usernameLower: toFirestoreUsernameLower(user.username ?? user.name ?? ''),
     createdAt: user.createdAt ?? Date.now(),
@@ -1106,6 +1108,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     username: data.username ?? data.name ?? name,
     displayName: data.displayName,
     email: data.email || '',
+    phoneNumber: typeof data.phoneNumber === 'string' ? data.phoneNumber : undefined,
     avatar,
     photoURL: data.photoURL,
     provider: data.provider,
@@ -2635,7 +2638,11 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string) => {
+  const register = async (name: string, email: string, pass: string, phoneNumber: string) => {
+    const normalizedPhoneNumber = phoneNumber.trim().replace(/[\s().-]/g, '');
+    if (!/^\+?[0-9]{7,15}$/.test(normalizedPhoneNumber)) {
+      throw new Error('Enter a valid phone number with 7 to 15 digits.');
+    }
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
       trackSignUp({ method: 'email', has_referral: Boolean(sessionStorage.getItem('pendingReferralCode')), signup_location: 'auth_modal' });
@@ -2664,6 +2671,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         username,
         displayName: name,
         email,
+        phoneNumber: normalizedPhoneNumber,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
         provider: 'password',
         level: 1,
