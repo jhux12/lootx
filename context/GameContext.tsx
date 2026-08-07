@@ -52,6 +52,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { activityStore } from '../src/lib/activity/activityStore';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 
 const sanitizeData = <T extends Record<string, any>>(data: T): T => {
   return Object.fromEntries(
@@ -2164,21 +2165,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, [isAuthenticated, user.isAdmin, view.type]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setBoxes((prev) => {
-        const now = Date.now();
-        const next = prev.filter(
-          (box) =>
-            !box.isUserCreated ||
-            (box.createdAt !== undefined && now - box.createdAt < USER_BOX_EXPIRY_MS)
-        );
-        return next.length === prev.length ? prev : next;
-      });
-    }, 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  useVisibleInterval(() => {
+    setBoxes((prev) => {
+      const now = Date.now();
+      const next = prev.filter(
+        (box) =>
+          !box.isUserCreated ||
+          (box.createdAt !== undefined && now - box.createdAt < USER_BOX_EXPIRY_MS)
+      );
+      return next.length === prev.length ? prev : next;
+    });
+  }, 60 * 1000);
 
   const loadCoinPackages = useCallback(async () => {
     if (coinPackagesInFlightRef.current) {

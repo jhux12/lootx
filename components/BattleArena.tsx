@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 import { ChevronLeft, Crown, ExternalLink, Loader2, ShieldCheck, SkipForward, Swords } from 'lucide-react';
 import { collection, doc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -234,21 +235,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
     }
   };
 
-  useEffect(() => {
-    if (!battle) return;
-    if (battle.state === 'LOBBY' || battle.state === 'COUNTDOWN') {
-      void callTick();
-      const interval = window.setInterval(() => void callTick(), 2000);
-      return () => window.clearInterval(interval);
-    }
-  }, [battle?.id, battle?.state]);
+  useVisibleInterval(
+    () => void callTick(),
+    2000,
+    battle?.state === 'LOBBY' || battle?.state === 'COUNTDOWN'
+  );
 
-  useEffect(() => {
-    if (!battle || battle.state !== 'RUNNING') return;
-    void callProgress();
-    const interval = window.setInterval(() => void callProgress(), Math.max(2200, spinMs - 300));
-    return () => window.clearInterval(interval);
-  }, [battle?.id, battle?.state, spinMs]);
+  useVisibleInterval(
+    () => void callProgress(),
+    Math.max(2200, spinMs - 300),
+    battle?.state === 'RUNNING'
+  );
 
   useEffect(() => {
     if (!battle) return;

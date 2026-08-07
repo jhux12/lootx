@@ -5,7 +5,12 @@ import { useEffect, useRef } from 'react';
  * (instead of waiting a full period) the moment the tab becomes visible again.
  * Keeps 1s-tick UI clocks from running forever in backgrounded tabs.
  */
-export const useVisibleInterval = (callback: () => void, delayMs: number, enabled = true) => {
+export const useVisibleInterval = (
+  callback: () => void,
+  delayMs: number,
+  enabled = true,
+  fireImmediately = true
+) => {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
 
@@ -21,7 +26,7 @@ export const useVisibleInterval = (callback: () => void, delayMs: number, enable
     };
     const start = () => {
       if (intervalId !== null) return;
-      callbackRef.current();
+      if (fireImmediately) callbackRef.current();
       intervalId = window.setInterval(() => callbackRef.current(), delayMs);
     };
     const onVisibility = () => {
@@ -35,5 +40,5 @@ export const useVisibleInterval = (callback: () => void, delayMs: number, enable
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [delayMs, enabled]);
+  }, [delayMs, enabled, fireImmediately]);
 };

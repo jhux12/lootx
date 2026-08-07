@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useVisibleInterval } from "../hooks/useVisibleInterval";
 import { ArrowRight, CheckCircle2, ChevronLeft } from "lucide-react";
 import { COIN_ICON } from "../constants";
 
@@ -113,13 +114,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
   const prizes = useMemo(() => getWheelPrizes(dailySpinOdds), [dailySpinOdds]);
   const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
 
-  useEffect(() => {
-    const interval = window.setInterval(
-      () => setCountdownNow(Date.now()),
-      1000,
-    );
-    return () => window.clearInterval(interval);
-  }, []);
+  useVisibleInterval(() => setCountdownNow(Date.now()), 1000);
 
   const canSpinNow = canSpin && effectiveNextClaimAt <= countdownNow;
   const hasClaimedDailyBonus =

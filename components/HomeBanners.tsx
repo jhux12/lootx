@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import type { ViewState } from '../types';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
+import { useVisibleInterval } from '../hooks/useVisibleInterval';
 
 type HomeBanner = {
   title: string;
@@ -164,11 +165,12 @@ export const HomeBanners: React.FC = () => {
     setActiveIndex((current) => Math.min(current, Math.max(0, banners.length - 1)));
   }, [banners.length]);
 
-  useEffect(() => {
-    if (isMobileCarousel || isPaused || banners.length <= 1) return;
-    const rotationTimer = window.setInterval(goToNextSlide, ROTATION_INTERVAL_MS);
-    return () => window.clearInterval(rotationTimer);
-  }, [banners.length, goToNextSlide, isMobileCarousel, isPaused]);
+  useVisibleInterval(
+    goToNextSlide,
+    ROTATION_INTERVAL_MS,
+    !isMobileCarousel && !isPaused && banners.length > 1,
+    false
+  );
 
   if (banners.length === 0) {
     return null;
