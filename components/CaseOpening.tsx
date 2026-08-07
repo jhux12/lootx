@@ -8,9 +8,10 @@ import { useSound } from '../context/SoundContext';
 import { Input } from './ui/Input';
 import { getSellBackValue } from '../utils/sellBack';
 import { authedFetch } from '../utils/authedFetch';
+import { auth, db } from '../firebase';
+import { requestPhoneVerification } from '../utils/phoneVerification';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { ProvablyFairMiniModal } from './ProvablyFairMiniModal';
-import { db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { getBoxDetail, invalidateBoxDetail } from '../utils/boxRepository';
 import { DEFAULT_ECONOMY_SETTINGS, getXpCost, normalizeEconomySettings } from '../utils/economy';
@@ -1637,6 +1638,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       if (!canFreeSpin) {
         spinRequestLockRef.current = false;
         toast.info("Free signup box already claimed.");
+        return;
+      }
+      if (!auth.currentUser?.phoneNumber) {
+        spinRequestLockRef.current = false;
+        requestPhoneVerification('free_box');
         return;
       }
     }

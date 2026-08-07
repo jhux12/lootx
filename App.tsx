@@ -95,6 +95,7 @@ const trackClarityPageView = () => {
 const BoxCatalog = lazy(() => import('./components/BoxCatalog').then((module) => ({ default: module.BoxCatalog })));
 const Bonuses = lazy(() => import('./components/Bonuses').then((module) => ({ default: module.Bonuses })));
 const LoginModal = lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
+const PhoneVerificationModal = lazy(() => import('./components/PhoneVerificationModal').then((module) => ({ default: module.PhoneVerificationModal })));
 const EmailVerificationModal = lazy(() => import('./components/EmailVerificationModal').then((module) => ({ default: module.EmailVerificationModal })));
 const EmailVerifiedModal = lazy(() => import('./components/EmailVerifiedModal').then((module) => ({ default: module.EmailVerifiedModal })));
 const TopUpModal = lazy(() => import('./components/TopUpModal').then((module) => ({ default: module.TopUpModal })));
@@ -801,6 +802,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {/* Modals */}
       <Suspense fallback={<ModalLoadingShell />}>
         {showLoginModal && <LoginModal />}
+        <PhoneVerificationModal />
         {showEmailVerificationModal && <EmailVerificationModal />}
         {showEmailVerifiedModal && <EmailVerifiedModal />}
         {showTopUpModal && <TopUpModal />}
