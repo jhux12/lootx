@@ -7,6 +7,7 @@ import { useGame } from '../context/GameContext';
 import { Input } from './ui/Input';
 import { PHONE_VERIFICATION_REQUEST_EVENT } from '../utils/phoneVerification';
 import { lockPageScroll } from '../utils/scrollLock';
+import { getPhoneAuthErrorCode, getPhoneAuthErrorMessage } from '../utils/phoneAuthErrors';
 
 type VerificationReason = 'free_box' | 'daily_spin';
 
@@ -63,14 +64,17 @@ export const PhoneVerificationModal: React.FC = () => {
       verifierRef.current?.clear();
       const verifier = new RecaptchaVerifier(auth, 'phone-verification-recaptcha', { size: 'invisible' });
       verifierRef.current = verifier;
+      await verifier.render();
       const result = await linkWithPhoneNumber(currentUser, normalized, verifier);
       setConfirmation(result);
       setPhoneNumber(normalized);
       setMessage('We sent a 6-digit verification code to your phone.');
-    } catch (error: any) {
+    } catch (error: unknown) {
       verifierRef.current?.clear();
       verifierRef.current = null;
-      setMessage(error?.code === 'auth/credential-already-in-use' ? 'That phone number is already linked to another account.' : 'Unable to send the code. Check the number and try again.');
+      const code = getPhoneAuthErrorCode(error);
+      console.error('Phone verification code request failed', { code });
+      setMessage(getPhoneAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }
