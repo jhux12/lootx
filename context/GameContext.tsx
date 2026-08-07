@@ -733,7 +733,7 @@ interface GameContextType {
   login: (email: string, pass: string, remember?: boolean) => Promise<EmailPasswordAuthResult>;
   loginWithGoogle: (options?: GoogleAuthOptions) => Promise<GoogleAuthResult>;
   linkGoogleAccount: (email: string, password: string, credential: AuthCredential) => Promise<GoogleAuthResult>;
-  register: (name: string, email: string, pass: string, phoneNumber: string) => Promise<EmailPasswordAuthResult>;
+  register: (name: string, email: string, pass: string) => Promise<EmailPasswordAuthResult>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   setShowLoginModal: (show: boolean) => void;
@@ -2638,11 +2638,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const register = async (name: string, email: string, pass: string, phoneNumber: string) => {
-    const normalizedPhoneNumber = phoneNumber.trim().replace(/[\s().-]/g, '');
-    if (!/^\+?[0-9]{7,15}$/.test(normalizedPhoneNumber)) {
-      throw new Error('Enter a valid phone number with 7 to 15 digits.');
-    }
+  const register = async (name: string, email: string, pass: string) => {
     try {
       const credential = await createUserWithEmailAndPassword(auth, email, pass);
       trackSignUp({ method: 'email', has_referral: Boolean(sessionStorage.getItem('pendingReferralCode')), signup_location: 'auth_modal' });
@@ -2671,7 +2667,6 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         username,
         displayName: name,
         email,
-        phoneNumber: normalizedPhoneNumber,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=111827&color=10b981`,
         provider: 'password',
         level: 1,

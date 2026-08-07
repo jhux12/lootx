@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, Loader2, MailCheck, Phone } from 'lucide-react';
+import { X, Mail, Lock, User, Loader2, MailCheck } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -26,7 +26,6 @@ export const LoginModal: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [googleLinkEmail, setGoogleLinkEmail] = useState('');
   const [googleLinkPassword, setGoogleLinkPassword] = useState('');
   const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
@@ -78,12 +77,7 @@ export const LoginModal: React.FC = () => {
           setIsLoading(false);
           return;
         }
-        const normalizedPhoneNumber = phoneNumber.trim().replace(/[\s().-]/g, '');
-        if (!/^\+?[0-9]{7,15}$/.test(normalizedPhoneNumber)) {
-          setUserError('Enter a valid phone number with 7 to 15 digits.');
-          return;
-        }
-        const result = await register(username, email, password, normalizedPhoneNumber);
+        const result = await register(username, email, password);
         if (result?.requiresEmailVerification) {
           setShowEmailFields(true);
           setEmailConfirmationSentTo(normalizedEmail);
@@ -217,7 +211,6 @@ export const LoginModal: React.FC = () => {
     setGoogleLinkEmail('');
     setGoogleLinkPassword('');
     setGoogleLinkCredential(null);
-    setPhoneNumber('');
     setRememberMe(true);
     setShowEmailFields(false);
     setShowOAuthFallback(false);
@@ -485,27 +478,18 @@ export const LoginModal: React.FC = () => {
           ) : showEmailFields ? (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               {mode === 'register' && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="ml-1 text-xs font-semibold text-neutral-400">Username</label>
-                    <div className="relative">
-                      <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-                      <Input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
-                        placeholder="Display Name"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <label className="ml-1 text-xs font-semibold text-neutral-400" htmlFor="signup-phone">Phone number</label>
-                    <div className="relative">
-                      <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-                      <Input id="signup-phone" type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="min-h-12 rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-3" placeholder="+1 555 123 4567" required />
-                    </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="ml-1 text-xs font-semibold text-neutral-400">Username</label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                    <Input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="rounded-xl border-white/10 bg-[#18181b] py-3.5 pl-10 pr-4"
+                      placeholder="Display Name"
+                      required
+                    />
                   </div>
                 </div>
               )}

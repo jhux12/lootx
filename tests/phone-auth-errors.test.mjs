@@ -19,10 +19,8 @@ test('phone entry defaults to the US and offers every supported country calling 
   assert.match(modalSource, /autoComplete="tel-national"/);
 });
 
-test('signup collects the phone number in one mobile-friendly field', () => {
-  assert.match(loginModalSource, /id="signup-phone"/);
-  assert.match(loginModalSource, /type="tel" inputMode="tel" autoComplete="tel"/);
-  assert.doesNotMatch(loginModalSource, /confirmPhoneNumber|signup-confirm-phone|Confirm phone/);
+test('signup does not request a phone number', () => {
+  assert.doesNotMatch(loginModalSource, /phoneNumber|signup-phone|Confirm phone/);
 });
 
 test('phone verification distinguishes reCAPTCHA, domain, quota, and retry failures', () => {
