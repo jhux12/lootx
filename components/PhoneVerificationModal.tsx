@@ -8,13 +8,37 @@ import { Input } from './ui/Input';
 import { PHONE_VERIFICATION_REQUEST_EVENT } from '../utils/phoneVerification';
 import { lockPageScroll } from '../utils/scrollLock';
 import { getPhoneAuthErrorCode, getPhoneAuthErrorMessage } from '../utils/phoneAuthErrors';
+import { CountryCode, getCountries, getCountryCallingCode, parsePhoneNumberFromString } from 'libphonenumber-js';
 
 type VerificationReason = 'free_box' | 'daily_spin';
+
+const countryNames = typeof Intl.DisplayNames === 'function'
+  ? new Intl.DisplayNames(['en'], { type: 'region' })
+  : null;
+
+const COUNTRY_OPTIONS = getCountries()
+  .map((country) => ({
+    country,
+    callingCode: `+${getCountryCallingCode(country)}`,
+    name: countryNames?.of(country) ?? country
+  }))
+  .sort((left, right) => left.name.localeCompare(right.name));
+
+const splitPhoneNumber = (value?: string) => {
+  const parsed = value ? parsePhoneNumberFromString(value) : undefined;
+  return {
+    country: parsed?.country ?? 'US' as CountryCode,
+    nationalNumber: parsed?.nationalNumber ?? ''
+  };
+};
 
 export const PhoneVerificationModal: React.FC = () => {
   const { user } = useGame();
   const [reason, setReason] = useState<VerificationReason | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState(user.phoneNumber ?? '');
+  const initialPhone = splitPhoneNumber(user.phoneNumber);
+  const [country, setCountry] = useState<CountryCode>(initialPhone.country);
+  const [nationalNumber, setNationalNumber] = useState(initialPhone.nationalNumber);
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [code, setCode] = useState('');
   const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -25,7 +49,10 @@ export const PhoneVerificationModal: React.FC = () => {
     const open = (event: Event) => {
       const detail = (event as CustomEvent<{ reason?: VerificationReason }>).detail;
       setReason(detail?.reason === 'daily_spin' ? 'daily_spin' : 'free_box');
-      setPhoneNumber(user.phoneNumber ?? '');
+      const existingPhone = splitPhoneNumber(user.phoneNumber);
+      setCountry(existingPhone.country);
+      setNationalNumber(existingPhone.nationalNumber);
+      setPhoneNumber('');
       setCode('');
       setConfirmation(null);
       setMessage(null);
@@ -50,11 +77,13 @@ export const PhoneVerificationModal: React.FC = () => {
   };
 
   const sendCode = async () => {
-    const normalized = phoneNumber.trim().replace(/[\s().-]/g, '');
-    if (!/^\+[0-9]{7,15}$/.test(normalized)) {
-      setMessage('Enter your phone in international format, including the + and country code.');
+    const digits = nationalNumber.replace(/\D/g, '');
+    const parsed = parsePhoneNumberFromString(`+${getCountryCallingCode(country)}${digits}`, country);
+    if (!parsed?.isValid()) {
+      setMessage('Enter a valid mobile phone number.');
       return;
     }
+    const normalized = parsed.number;
     const currentUser = auth.currentUser;
     if (!currentUser) return setMessage('Please sign in again to verify your phone.');
 
@@ -114,7 +143,12 @@ export const PhoneVerificationModal: React.FC = () => {
         <div className="mt-6 space-y-4">
           {!confirmation ? <>
             <label htmlFor="verification-phone" className="block text-xs font-semibold text-neutral-300">Mobile phone number</label>
-            <div className="relative"><Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><Input id="verification-phone" type="tel" inputMode="tel" autoComplete="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} className="min-h-12 pl-10" placeholder="+1 555 123 4567" /></div>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-2">
+              <label className="min-w-0"><span className="sr-only">Country code</span><select aria-label="Country code" value={country} onChange={(event) => setCountry(event.target.value as CountryCode)} className="min-h-12 w-full truncate rounded-[14px] border border-white/10 bg-[#0b101a] px-3 text-sm text-white/90 outline-none focus:border-white/30 focus:ring-2 focus:ring-cyan-400/40">
+                {COUNTRY_OPTIONS.map((option) => <option key={option.country} value={option.country}>{option.name} ({option.callingCode})</option>)}
+              </select></label>
+              <div className="relative min-w-0"><Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><span className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 text-sm text-white/60">+{getCountryCallingCode(country)}</span><Input id="verification-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={nationalNumber} onChange={(event) => setNationalNumber(event.target.value)} className="min-h-12 pl-[4.5rem] pr-3" placeholder="555 123 4567" /></div>
+            </div>
             <button type="button" onClick={sendCode} disabled={loading} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#205DD7] px-4 font-bold text-white disabled:opacity-60">{loading && <Loader2 className="h-4 w-4 animate-spin" />}Send verification code</button>
           </> : <>
             <label htmlFor="verification-code" className="block text-xs font-semibold text-neutral-300">6-digit verification code</label>
