@@ -1173,6 +1173,8 @@ type AdminDirectoryUserRecord = {
   displayName?: string;
   photoURL?: string;
   provider?: string;
+  phoneNumber?: string;
+  phoneVerified?: boolean;
   disabled?: boolean;
   createdAt?: number;
   firestoreData?: Record<string, any>;
@@ -1194,6 +1196,7 @@ const buildUserProfileFromAdminDirectory = (record: AdminDirectoryUserRecord) =>
     photoURL: data.photoURL ?? record.photoURL,
     avatar: fallbackAvatar,
     provider: data.provider ?? record.provider,
+    phoneNumber: record.phoneVerified ? record.phoneNumber : undefined,
     createdAt: data.createdAt ?? record.createdAt ?? Date.now(),
     status: data.status ?? (record.disabled ? 'suspended' : 'active')
   });

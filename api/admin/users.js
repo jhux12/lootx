@@ -54,6 +54,8 @@ export default async function handler(req, res) {
         displayName: entry.displayName ?? '',
         photoURL: entry.photoURL ?? '',
         provider: primaryProvider ?? undefined,
+        phoneNumber: entry.phoneNumber ?? '',
+        phoneVerified: Boolean(entry.phoneNumber),
         disabled: entry.disabled === true,
         createdAt: entry.metadata?.creationTime ? Date.parse(entry.metadata.creationTime) : undefined,
         firestoreData: firestoreUsersById.get(entry.uid) ?? {}
@@ -68,6 +70,8 @@ export default async function handler(req, res) {
         displayName: data.displayName ?? data.name ?? '',
         photoURL: data.photoURL ?? data.avatar ?? '',
         provider: data.provider ?? undefined,
+        phoneNumber: '',
+        phoneVerified: false,
         disabled: false,
         createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
         firestoreData: data

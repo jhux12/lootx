@@ -7,7 +7,7 @@ import { useGame } from '../context/GameContext';
 import { Input } from './ui/Input';
 import { PHONE_VERIFICATION_REQUEST_EVENT } from '../utils/phoneVerification';
 import { lockPageScroll } from '../utils/scrollLock';
-import { getPhoneAuthErrorCode, getPhoneAuthErrorMessage } from '../utils/phoneAuthErrors';
+import { getPhoneAuthErrorCode, getPhoneAuthErrorMessage, getPhoneCodeErrorMessage } from '../utils/phoneAuthErrors';
 import { CountryCode, getCountries, getCountryCallingCode, parsePhoneNumberFromString } from 'libphonenumber-js';
 
 type VerificationReason = 'free_box' | 'daily_spin';
@@ -118,12 +118,24 @@ export const PhoneVerificationModal: React.FC = () => {
     setMessage(null);
     try {
       const result = await confirmation.confirm(code);
-      await result.user.getIdToken(true);
-      await updateDoc(doc(db, 'users', result.user.uid), { phoneNumber });
-      setMessage('Phone verified. You can now claim your free reward.');
-      window.setTimeout(close, 900);
-    } catch {
-      setMessage('That code is incorrect or expired. Please try again.');
+
+      // Linking the credential is the source of truth. Do not report a valid code
+      // as expired if the optional profile mirror fails after Firebase accepted it.
+      try {
+        await result.user.getIdToken(true);
+      } catch (error) {
+        console.error('Phone verified, but the session token could not refresh', error);
+        setMessage('Phone verified, but your session could not refresh. Check your connection, then try the reward again.');
+        return;
+      }
+
+      void updateDoc(doc(db, 'users', result.user.uid), { phoneNumber }).catch((error) => {
+        console.error('Phone verified, but the profile phone mirror could not update', error);
+      });
+      setMessage('Phone verified.');
+      window.setTimeout(close, 700);
+    } catch (error: unknown) {
+      setMessage(getPhoneCodeErrorMessage(error));
     } finally {
       setLoading(false);
     }

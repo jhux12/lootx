@@ -35,3 +35,18 @@ test('phone verification distinguishes reCAPTCHA, domain, quota, and retry failu
     assert.match(source, new RegExp(code.replace('/', '\\/')));
   }
 });
+
+test('code confirmation reports incorrect, expired, and missing codes separately', () => {
+  assert.match(source, /auth\/invalid-verification-code/);
+  assert.match(source, /verification code is incorrect/);
+  assert.match(source, /auth\/code-expired/);
+  assert.match(source, /verification code has expired/);
+  assert.match(source, /auth\/missing-verification-code/);
+  assert.match(modalSource, /getPhoneCodeErrorMessage\(error\)/);
+  assert.doesNotMatch(modalSource, /That code is incorrect or expired/);
+});
+
+test('post-verification profile mirroring cannot turn success into an expired-code error', () => {
+  assert.match(modalSource, /void updateDoc[\s\S]*?\.catch/);
+  assert.match(modalSource, /Phone verified\./);
+});

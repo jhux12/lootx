@@ -29,3 +29,9 @@ test('daily spin and free box APIs enforce the trusted Firebase phone guard', as
   assert.match(dailySpin, /await requireVerifiedPhone\(adminAuth, uid\)/);
   assert.match(openCase, /if \(isFree\) await requireVerifiedPhone\(adminAuth, decoded\.uid\)/);
 });
+
+test('admin directory exposes only Firebase-verified phone numbers', async () => {
+  const adminUsers = await readFile(new URL('../api/admin/users.js', import.meta.url), 'utf8');
+  assert.match(adminUsers, /phoneNumber: entry\.phoneNumber/);
+  assert.match(adminUsers, /phoneVerified: Boolean\(entry\.phoneNumber\)/);
+});
