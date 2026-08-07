@@ -7,7 +7,6 @@ import { auth } from '../firebase';
 import { CoinAmount } from './CoinAmount';
 import { PaymentMethodIcons } from './PaymentMethodIcons';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
-import { toast } from '../src/ui/toast/toast';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { lockPageScroll } from '../utils/scrollLock';
 import { getAttribution, getGaClientId, trackBeginCheckout, trackCoinPackageSelect, trackCoinPackageView, trackEvent as trackGaEvent } from '../services/analytics';
@@ -322,9 +321,6 @@ export const TopUpModal: React.FC = () => {
   }, [isInsufficientBalanceFlow, normalizedPackages, missingCoins, hasUserSelectedPackage, isPostFreeBoxFlow]);
 
   const handleClose = () => {
-    if (isPostFreeBoxFlow && missingCoins > 0) {
-      toast.info(`You’re still ${missingCoins.toLocaleString()} coins away from your first box`);
-    }
     setTopUpModalIntent(null);
     setShowTopUpModal(false);
   };
