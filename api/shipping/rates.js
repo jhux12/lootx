@@ -1,6 +1,6 @@
 import { admin, db } from '../_lib/firebaseAdmin.js';
 import { calculateShipmentParcel } from '../_lib/parcelCalculator.js';
-import { requestShippoRates } from '../_lib/shippoRates.js';
+import { requestShippoRates, selectCustomerRates } from '../_lib/shippoRates.js';
 import { loadOwnedShippingItems, loadShippingConfig } from '../_lib/shippingData.js';
 import { normalizeAddress, toShippoAddress, validateLocalAddress } from '../_lib/shippingAddress.js';
 import { loadShippingOrigin } from '../_lib/shippingOrigin.js';
@@ -23,8 +23,9 @@ export default async function handler(req, res) {
       return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : 'NO_SHIPPING_PACKAGE');
     }
     const origin = allFree ? null : await loadShippingOrigin();
-    const rates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
-    if (!rates.length) return deny(res, 404, 'NO_SHIPPING_RATES');
+    const quotedRates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', serviceLevelToken: 'free', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
+    const rates = allFree ? quotedRates : selectCustomerRates(quotedRates, destination.countryCode);
+    if (!rates.length) return deny(res, 404, destination.countryCode === 'US' ? 'NO_STANDARD_SHIPPING_RATE' : 'NO_SHIPPING_RATES');
     const quotedAt = Date.now(); const expiresAt = quotedAt + 15 * 60_000; const quoteRef = userRef.collection('shippingRateQuotes').doc();
     const parcelSnapshot = parcel.status === 'ready' ? { packageId: parcel.packageId, packageName: parcel.packageName, lengthIn: parcel.lengthIn, widthIn: parcel.widthIn, heightIn: parcel.heightIn, itemWeightOz: parcel.itemWeightOz, packagingWeightOz: parcel.packagingWeightOz, totalWeightOz: parcel.totalWeightOz } : null;
     await quoteRef.set({ uid, itemIds, parcel: parcelSnapshot, destinationSnapshot: destination, rates, status: allFree ? 'free_shipping' : 'quoted', createdAt: admin.firestore.FieldValue.serverTimestamp(), quotedAt, expiresAt });

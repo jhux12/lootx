@@ -226,7 +226,7 @@ export interface ParcelCalculationFailure {
 }
 
 export interface ShippingRateQuote {
-  id: string; shippoRateId: string; provider: string; service: string;
+  id: string; shippoRateId: string; provider: string; service: string; serviceLevelToken: string;
   carrierAmountCents: number; handlingFeeCents: number; customerAmountCents: number; currency: 'USD';
   estimatedDays?: number; durationTerms?: string; providerImage?: string; attributes?: string[];
 }
