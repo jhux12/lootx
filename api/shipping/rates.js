@@ -3,9 +3,9 @@ import { calculateShipmentParcel } from '../_lib/parcelCalculator.js';
 import { requestShippoRates } from '../_lib/shippoRates.js';
 import { loadOwnedShippingItems, loadShippingConfig } from '../_lib/shippingData.js';
 import { normalizeAddress, toShippoAddress, validateLocalAddress } from '../_lib/shippingAddress.js';
+import { loadShippingOrigin } from '../_lib/shippingOrigin.js';
 import { deny, ok, requireUser } from '../_utils/auth.js';
 
-const originAddress = () => normalizeAddress({ fullName: process.env.SHIP_FROM_NAME, street1: process.env.SHIP_FROM_STREET1, street2: process.env.SHIP_FROM_STREET2, city: process.env.SHIP_FROM_CITY, state: process.env.SHIP_FROM_STATE, postalCode: process.env.SHIP_FROM_POSTAL_CODE, countryCode: process.env.SHIP_FROM_COUNTRY, phone: process.env.SHIP_FROM_PHONE });
 const isFree = (item) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? Number.NaN) === 0 || item.source === 'xpShop' || item.acquisitionCurrencyType === 'XP' || item.openCurrencyType === 'XP';
 
 export default async function handler(req, res) {
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       const activePackageCount = config.shippingPackages.filter((entry) => entry.active !== false).length;
       return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : 'NO_SHIPPING_PACKAGE');
     }
-    const origin = originAddress(); if (!allFree && validateLocalAddress(origin).length) return deny(res, 503, 'SHIPPING_ORIGIN_NOT_CONFIGURED');
+    const origin = allFree ? null : await loadShippingOrigin();
     const rates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
     if (!rates.length) return deny(res, 404, 'NO_SHIPPING_RATES');
     const quotedAt = Date.now(); const expiresAt = quotedAt + 15 * 60_000; const quoteRef = userRef.collection('shippingRateQuotes').doc();

@@ -13,6 +13,11 @@ export interface ShippingAddress {
   validatedAt?: string | null;
   shippoAddressId?: string | null;
 }
+export interface ShippingOriginSettings {
+  shipFromName: string; shipFromStreet1: string; shipFromStreet2?: string;
+  shipFromCity: string; shipFromState: string; shipFromPostalCode: string;
+  shipFromCountry: string; shipFromPhone?: string;
+}
 export interface AddressValidationResult {
   status: 'valid' | 'corrected' | 'invalid' | 'unavailable';
   originalAddress: ShippingAddress;

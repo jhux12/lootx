@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Search } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Search, MapPin } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
@@ -18,6 +18,7 @@ import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
 import { ShippingProfilesAdminSection } from './admin/ShippingProfilesAdminSection';
 import { ShippingPackagesAdminSection } from './admin/ShippingPackagesAdminSection';
+import { ShippingOriginAdminSection } from './admin/ShippingOriginAdminSection';
 import { SeoManager } from './admin/SeoManager';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -402,7 +403,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
   const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
   const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
   useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
@@ -3707,6 +3708,7 @@ export const AdminPanel: React.FC = () => {
                    >
                        <PackageCheck className="w-4 h-4" /> Shipping Profiles
                    </button>
+                   <button onClick={() => setActiveTab('shipping-origin')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-origin' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}><MapPin className="w-4 h-4" /> Shipping Origin</button>
                    <button onClick={() => setActiveTab('shipping-packages')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}><PackageOpen className="w-4 h-4" /> Shipping Packages</button>
                    <button
                      onClick={() => setActiveTab('support')}
@@ -3795,6 +3797,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
+                    {activeTab === 'shipping-origin' && 'Shipping Origin'}
                     {activeTab === 'shipping-packages' && 'Shipping Packages'}
                     {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
@@ -3813,6 +3816,7 @@ export const AdminPanel: React.FC = () => {
 
             {/* TAB: DASHBOARD */}
             {activeTab === 'shipping-profiles' && <ShippingProfilesAdminSection profiles={shippingProfiles} onRefresh={loadShippingProfiles} />}
+            {activeTab === 'shipping-origin' && <ShippingOriginAdminSection />}
             {activeTab === 'shipping-packages' && <ShippingPackagesAdminSection packages={shippingPackages} profiles={shippingProfiles} onRefresh={loadShippingPackages} />}
             {activeTab === 'dashboard' && (
                 <>
