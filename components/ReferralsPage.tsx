@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ChevronDown,
   ChevronLeft,
   CheckCircle2,
+  Clock,
   Copy,
   Crown,
   Facebook,
-  HelpCircle,
+  Gift,
+  Link2,
   Mail,
   MessageCircle,
   Globe,
@@ -92,7 +95,7 @@ const statCards = [
   { key: 'referrals', label: 'Referrals', icon: Users },
   { key: 'creditsEarned', label: 'Coins Earned', icon: Wallet },
   { key: 'leaderboardPts', label: 'Leaderboard Pts', icon: Crown },
-  { key: 'pending', label: 'Pending', icon: HelpCircle }
+  { key: 'pending', label: 'Pending', icon: Clock }
 ] as const;
 
 const CANONICAL_REFERRAL_BASE_URL = 'https://pullz.gg';
@@ -120,6 +123,13 @@ const getReferralStatusLabel = (record: ReferralRecord) => {
   if (!normalizedStatus) return 'Pending';
   return normalizedStatus.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 };
+
+const GlowBackdrop: React.FC = () => (
+  <div className="pointer-events-none absolute inset-0">
+    <div className="absolute -top-24 left-4 h-52 w-52 rounded-full bg-cyan-500/20 blur-3xl sm:h-72 sm:w-72" />
+    <div className="absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl sm:h-80 sm:w-80" />
+  </div>
+);
 
 export const ReferralsPage: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useGame();
@@ -214,28 +224,101 @@ export const ReferralsPage: React.FC = () => {
     }
   ];
 
+  const howItWorks: Array<{ title: string; description: React.ReactNode }> = [
+    { title: 'Share Your Link', description: 'Copy your referral link and share it on social, text, email, or Discord.' },
+    {
+      title: 'Friend Joins with Your Code',
+      description: (
+        <>
+          They sign up through your link, deposit at least{' '}
+          <CoinValue amount={settings.requiredDepositCoins} className="align-middle font-semibold text-white" iconClassName="h-3.5 w-3.5" />,
+          {settings.requireFirstQualifyingGame ? ' and play their first qualifying game.' : ' then become eligible for reward review.'}
+        </>
+      )
+    },
+    {
+      title: 'You Both Get Rewarded',
+      description: (
+        <>
+          You receive <CoinValue amount={settings.referrerRewardCoins} className="align-middle font-semibold text-white" iconClassName="h-3.5 w-3.5" /> and
+          your friend receives <CoinValue amount={settings.friendRewardCoins} className="align-middle font-semibold text-white" iconClassName="h-3.5 w-3.5" />.
+        </>
+      )
+    }
+  ];
+
+  const faqSection = (
+    <section className="space-y-3">
+      <h2 className="text-2xl font-black text-white">FAQ</h2>
+      {settings.faqItems.map((faq) => {
+        const open = faqOpenId === faq.id;
+        return (
+          <div key={faq.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f] transition-colors hover:border-white/20">
+            <button
+              onClick={() => setFaqOpenId((prev) => (prev === faq.id ? null : faq.id))}
+              className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
+            >
+              <span className="font-semibold text-white">{faq.question}</span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && <p className="border-t border-white/10 px-4 py-4 text-sm leading-6 text-slate-300">{faq.answer}</p>}
+          </div>
+        );
+      })}
+    </section>
+  );
+
+  const howItWorksSection = (
+    <section className="space-y-4">
+      <h2 className="text-2xl font-black text-white">How It Works</h2>
+      <div className="grid gap-3 md:grid-cols-3">
+        {howItWorks.map((step, index) => (
+          <div key={step.title} className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
+            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#205DD7] to-sky-400 text-sm font-black text-white">
+              {index + 1}
+            </div>
+            <h3 className="text-base font-bold text-white">{step.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{step.description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
   if (!isAuthenticated) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <div className="rounded-3xl border border-white/10 bg-[#161b1f] p-8 text-center sm:p-12">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{settings.heroBadge}</p>
-          <h1 className="mb-3 flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-white sm:text-5xl">
-            <span>Give</span>
-            <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
-            <span>Get</span>
-            <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
-          </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-sm text-slate-300 sm:text-base">{settings.heroDescription}</p>
-          <button
-            onClick={() => openAuthModal('register')}
-            className="rounded-xl bg-cyan-500 px-6 py-3 text-sm font-bold text-[#05131d] transition hover:bg-cyan-400"
-          >
-            Sign in to start referring
-          </button>
-        </div>
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#0f1727] via-[#121a2d] to-[#111a2f] p-8 text-center sm:p-12">
+          <GlowBackdrop />
+          <div className="relative z-10">
+            <p className="mx-auto mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+              <Gift className="h-3.5 w-3.5" />
+              {settings.heroBadge}
+            </p>
+            <h1 className="mb-3 flex flex-wrap items-center justify-center gap-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
+              <span>Give</span>
+              <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+              <span>Get</span>
+              <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+            </h1>
+            <p className="mx-auto mb-8 max-w-2xl text-sm text-slate-300 sm:text-base">{settings.heroDescription}</p>
+            <button
+              onClick={() => openAuthModal('register')}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-7 text-sm font-bold text-white shadow-[0_16px_45px_-20px_rgba(32,93,215,0.9)] transition duration-300 hover:brightness-110"
+            >
+              Sign in to start referring
+            </button>
+          </div>
+        </section>
+
+        {howItWorksSection}
+        {faqSection}
       </div>
     );
   }
+
+  const visibleStatCards = statCards.filter((card) => settings.leaderboardPointsEnabled || card.key !== 'leaderboardPts');
+  const hasRecords = (data?.records?.length ?? 0) > 0;
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -246,111 +329,111 @@ export const ReferralsPage: React.FC = () => {
       >
         <ChevronLeft className="h-4 w-4" /> Back
       </button>
-      <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#161b1f] p-6 sm:p-10">
-        <button className="absolute right-5 top-5 hidden rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs font-semibold text-slate-200 md:inline-block">
-          How It Works
-        </button>
-        <p className="mb-3 w-fit rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-cyan-200">
-          {settings.heroBadge}
-        </p>
-        <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
-          <span>Give</span>
-          <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
-          <span>Get</span>
-          <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">{settings.heroDescription}</p>
-      </section>
 
-      <section className="rounded-3xl border border-white/10 bg-[#161b1f] p-4 sm:p-6">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Your Referral Link</p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <input
-            readOnly
-            value={referralLink}
-            className="h-12 flex-1 rounded-xl border border-white/15 bg-[#080c16] px-4 text-sm text-white outline-none"
-          />
-          <button
-            onClick={copyLink}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 text-sm font-semibold text-[#041016]"
-          >
-            {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-gradient-to-br from-[#0f1727] via-[#121a2d] to-[#111a2f] p-6 sm:p-10">
+        <GlowBackdrop />
+        <div className="relative z-10">
+          <p className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-100">
+            <Gift className="h-3.5 w-3.5" />
+            {settings.heroBadge}
+          </p>
+          <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black tracking-tight text-white sm:text-5xl">
+            <span>Give</span>
+            <CoinValue amount={settings.friendRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+            <span>Get</span>
+            <CoinValue amount={settings.referrerRewardCoins} className="text-3xl sm:text-5xl" iconClassName="h-7 w-7 sm:h-9 sm:w-9" />
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">{settings.heroDescription}</p>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {shareTargets.map((share) => (
-            <a
-              key={share.id}
-              href={share.href}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition hover:border-cyan-300/50 hover:text-cyan-200"
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-500/5 px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 text-cyan-300">
+                <Wallet className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-cyan-200">You Get</p>
+                <CoinValue amount={settings.referrerRewardCoins} className="text-lg font-black text-white" iconClassName="h-4 w-4" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-blue-400/20 bg-blue-500/5 px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 text-blue-300">
+                <Gift className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-200">Friend Gets</p>
+                <CoinValue amount={settings.friendRewardCoins} className="text-lg font-black text-white" iconClassName="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur sm:flex-row sm:items-center sm:p-4">
+            <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+              <Link2 className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="truncate text-sm text-slate-200">{referralLink || 'Loading your link…'}</span>
+            </div>
+            <button
+              onClick={copyLink}
+              className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-6 text-sm font-bold text-white shadow-[0_12px_30px_-14px_rgba(32,93,215,0.9)] transition duration-300 hover:brightness-110"
             >
-              <share.icon className="h-4 w-4" />
-            </a>
-          ))}
-          <button
-            onClick={copyLink}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-semibold text-slate-200"
-          >
-            <Share2 className="h-4 w-4" />
-            Copy Share Link
-          </button>
+              {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {shareTargets.map((share) => (
+              <a
+                key={share.id}
+                href={share.href}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition hover:border-cyan-300/50 hover:text-cyan-200"
+              >
+                <share.icon className="h-4 w-4" />
+              </a>
+            ))}
+            <button
+              onClick={copyLink}
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-semibold text-slate-200 transition hover:border-cyan-300/50 hover:text-cyan-200"
+            >
+              <Share2 className="h-4 w-4" />
+              Copy Share Link
+            </button>
+          </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {statCards
-          .filter((card) => settings.leaderboardPointsEnabled || card.key !== 'leaderboardPts')
-          .map((card) => {
-            const Icon = card.icon;
-            const value = data?.stats?.[card.key] ?? 0;
-            const valueClassName = 'mt-1 text-2xl font-black leading-none text-white sm:text-3xl';
-            return (
-              <div key={card.key} className="rounded-2xl border border-white/10 bg-[#161b1f] p-4">
-                <p className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-slate-400">
-                  <Icon className="h-3.5 w-3.5" />
-                  {card.label}
-                </p>
-                {card.key === 'creditsEarned' ? (
-                  <div className={valueClassName}>
-                    <CoinValue amount={Number(value)} className="flex" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
-                  </div>
-                ) : (
-                  <p className={valueClassName}>{Number(value).toLocaleString()}</p>
-                )}
+        {visibleStatCards.map((card) => {
+          const Icon = card.icon;
+          const value = data?.stats?.[card.key] ?? 0;
+          return (
+            <div key={card.key} className="rounded-2xl border border-white/10 bg-[#161b1f] p-4 transition-colors hover:border-cyan-400/30">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-cyan-300">
+                <Icon className="h-4 w-4" />
               </div>
-            );
-          })}
+              <p className="text-xs uppercase tracking-[0.14em] text-slate-400">{card.label}</p>
+              {card.key === 'creditsEarned' ? (
+                <CoinValue amount={Number(value)} className="mt-1 text-2xl font-black leading-none text-white sm:text-3xl" iconClassName="h-5 w-5 sm:h-6 sm:w-6" />
+              ) : (
+                <p className="mt-1 text-2xl font-black leading-none text-white sm:text-3xl">{Number(value).toLocaleString()}</p>
+              )}
+            </div>
+          );
+        })}
       </section>
 
-      <section className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-cyan-500/20 bg-[#161b1f] p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-cyan-200">You Get</p>
-          <CoinValue amount={settings.referrerRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
-          <p className="mt-1 text-sm text-slate-300">Coins per completed referral</p>
-          {settings.leaderboardPointsEnabled && (
-            <p className="mt-2 text-xs text-cyan-200">+{settings.referrerLeaderboardPoints} leaderboard pts</p>
-          )}
-        </div>
-        <div className="rounded-2xl border border-blue-500/20 bg-[#161b1f] p-5">
-          <p className="text-xs uppercase tracking-[0.16em] text-blue-200">Your Friend Gets</p>
-          <CoinValue amount={settings.friendRewardCoins} className="mt-2 text-4xl font-black text-white" iconClassName="h-7 w-7" />
-          <p className="mt-1 text-sm text-slate-300">Coins after qualifying</p>
-          {settings.leaderboardPointsEnabled && (
-            <p className="mt-2 text-xs text-blue-200">+{settings.friendLeaderboardPoints} leaderboard pts</p>
-          )}
-        </div>
-      </section>
+      {howItWorksSection}
 
       <section className="rounded-3xl border border-white/10 bg-[#161b1f] p-4 sm:p-6">
         <h2 className="text-xl font-bold text-white">Your Referrals</h2>
         {loading ? (
           <p className="mt-3 text-sm text-slate-400">Loading referrals…</p>
-        ) : (data?.records?.length ?? 0) === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">No referrals yet. Share your link to start earning.</p>
+        ) : !hasRecords ? (
+          <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-dashed border-white/10 py-10 text-center">
+            <Users className="h-8 w-8 text-slate-600" />
+            <p className="text-sm text-slate-400">No referrals yet. Share your link to start earning.</p>
+          </div>
         ) : (
           <>
             <div className="mt-4 hidden overflow-hidden rounded-xl border border-white/10 md:block">
@@ -390,55 +473,21 @@ export const ReferralsPage: React.FC = () => {
         )}
       </section>
 
-      <section className="space-y-4">
-        <h2 className="text-2xl font-black text-white">How It Works</h2>
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
-            <h3 className="text-base font-bold text-white">Share Your Link</h3>
-            <p className="mt-2 text-sm text-slate-300">Copy your referral link and share it on social, text, email, or Discord.</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
-            <h3 className="text-base font-bold text-white">Friend Joins with Your Code</h3>
-            <p className="mt-2 text-sm text-slate-300">
-              They sign up through your link, deposit at least <CoinValue amount={settings.requiredDepositCoins} className="align-middle font-semibold text-white" />,
-              {settings.requireFirstQualifyingGame ? ' and play their first qualifying game.' : ' then become eligible for reward review.'}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-[#161b1f] p-5">
-            <h3 className="text-base font-bold text-white">You Both Get Rewarded</h3>
-            <p className="mt-2 text-sm text-slate-300">
-              You receive <CoinValue amount={settings.referrerRewardCoins} className="align-middle font-semibold text-white" /> and your friend receives <CoinValue amount={settings.friendRewardCoins} className="align-middle font-semibold text-white" />.
-            </p>
-          </div>
+      {faqSection}
+
+      <section className="relative overflow-hidden rounded-3xl border border-cyan-500/20 bg-gradient-to-br from-[#0f1727] via-[#121a2d] to-[#111a2f] p-8 text-center sm:p-12">
+        <GlowBackdrop />
+        <div className="relative z-10">
+          <h2 className="text-3xl font-black text-white sm:text-4xl">{settings.ctaTitle}</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">{settings.ctaDescription}</p>
+          <button
+            onClick={copyLink}
+            className="mt-6 inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-6 text-sm font-bold text-white shadow-[0_16px_45px_-20px_rgba(32,93,215,0.9)] transition duration-300 hover:brightness-110"
+          >
+            {copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Copied!' : 'Copy Referral Link'}
+          </button>
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-2xl font-black text-white">FAQ</h2>
-        {settings.faqItems.map((faq) => {
-          const open = faqOpenId === faq.id;
-          return (
-            <div key={faq.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#161b1f]">
-              <button
-                onClick={() => setFaqOpenId((prev) => (prev === faq.id ? null : faq.id))}
-                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left"
-              >
-                <span className="font-semibold text-white">{faq.question}</span>
-                <span className="text-slate-400">{open ? '−' : '+'}</span>
-              </button>
-              {open && <p className="border-t border-white/10 px-4 py-4 text-sm text-slate-300">{faq.answer}</p>}
-            </div>
-          );
-        })}
-      </section>
-
-      <section className="rounded-3xl border border-cyan-500/20 bg-gradient-to-b from-[#0a1322] to-[#0b101c] p-8 text-center sm:p-12">
-        <h2 className="text-3xl font-black text-white sm:text-4xl">{settings.ctaTitle}</h2>
-        <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">{settings.ctaDescription}</p>
-        <button onClick={copyLink} className="mt-6 inline-flex h-12 items-center gap-2 rounded-xl bg-cyan-500 px-6 text-sm font-bold text-[#05131d]">
-          <Copy className="h-4 w-4" />
-          Copy Referral Link
-        </button>
       </section>
     </div>
   );
