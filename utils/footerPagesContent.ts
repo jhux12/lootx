@@ -53,7 +53,7 @@ export const DEFAULT_FOOTER_PAGE_CONTENT: Record<FooterPageKey, { title: string;
   },
   contact: {
     title: 'Contact Support',
-    content: `# Contact Support\n\nNeed help with your Pullz.gg account, a purchase, a shipment, or a reward? Send us a message with as much detail as possible.\n\n## Support tips\n- Include order, shipment, or reward names when relevant.\n- Use the email address tied to your account.\n- Our team will reply in your support thread.\n`
+    content: `# Contact Support\n\nNeed help with your Pullz.gg account, a purchase, a shipment, or a reward? Complete the form with as much detail as possible.\n\n## Support tips\n- Include order, shipment, or reward names when relevant.\n- Use an email address where our team can reach you.\n- Our team will reply to you by email.\n`
   }
 };
 

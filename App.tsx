@@ -892,7 +892,7 @@ const AppShell = () => {
                 </div>
               ))}
             </div>
-            <button onClick={() => setView({ type: 'CONTACT' })} className="mt-8 min-h-11 w-full rounded-xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-500 sm:w-auto">Submit a support ticket</button>
+            <button onClick={() => setView({ type: 'CONTACT' })} className="mt-8 min-h-11 w-full rounded-xl bg-red-600 px-5 py-3 font-bold text-white hover:bg-red-500 sm:w-auto">Contact customer support</button>
           </section>
         </div>
       ) : <AppLayout hasStickyHeader={shouldUseStickyHeader} hasBanBanner={isAccountBanned} />}
