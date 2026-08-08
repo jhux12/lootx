@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
 import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
+import { normalizeStoredShippingAddress } from '../src/lib/shippingAddress';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
 import { authedFetch } from '../utils/authedFetch';
@@ -1065,7 +1066,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
-    shippingAddress: data.shippingAddress,
+    shippingAddress: data.shippingAddress ? normalizeStoredShippingAddress(data.shippingAddress) : undefined,
     isAdmin: false,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
@@ -1138,7 +1139,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     affiliateCode: data.affiliateCode,
     referredBy: data.referredBy,
     followers: followerIds,
-    shippingAddress: data.shippingAddress,
+    shippingAddress: data.shippingAddress ? normalizeStoredShippingAddress(data.shippingAddress) : undefined,
     isAdmin: false,
     termsFlagged: data.termsFlagged ?? false,
     status: data.status ?? 'active',
@@ -3153,9 +3154,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateAddress = async (address: ShippingAddress) => {
       try {
-        await persistUserData({ shippingAddress: address });
-        setUser(prev => ({ ...prev, shippingAddress: address }));
-        setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, shippingAddress: address } : u));
+        const saved = normalizeStoredShippingAddress(address);
+        setUser(prev => ({ ...prev, shippingAddress: saved }));
+        setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, shippingAddress: saved } : u));
       } catch (error) {
         console.error('Failed to save shipping address', error);
         throw error;

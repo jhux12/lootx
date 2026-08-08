@@ -1,11 +1,30 @@
 
 export interface ShippingAddress {
   fullName: string;
-  street: string;
+  street1: string;
+  street2?: string;
   city: string;
-  state: string;
-  zipCode: string;
-  country: string;
+  state?: string;
+  postalCode: string;
+  countryCode: string;
+  phone?: string;
+  validated?: boolean;
+  validationStatus?: 'unvalidated' | 'valid' | 'corrected' | 'invalid';
+  validatedAt?: string | null;
+  shippoAddressId?: string | null;
+}
+export interface AddressValidationResult {
+  status: 'valid' | 'corrected' | 'invalid' | 'unavailable';
+  originalAddress: ShippingAddress;
+  suggestedAddress?: ShippingAddress;
+  messages?: string[];
+  provider?: string;
+  attemptId?: string;
+}
+export interface AddressAutocompleteSuggestion {
+  id: string;
+  label: string;
+  address: Pick<ShippingAddress, 'street1' | 'street2' | 'city' | 'state' | 'postalCode' | 'countryCode'>;
 }
 
 export interface User {
@@ -153,6 +172,24 @@ export interface CaseItem {
   marketPricing?: ItemMarketPricing;
   boxValueOverrideCoins?: number;
   originalPriceCoins?: number;
+  shippingProfileId?: string | null;
+  shippingOverride?: { weightOz?: number; lengthIn?: number; widthIn?: number; heightIn?: number };
+}
+
+export interface ShippingProfile {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  defaultWeightOz: number;
+  defaultLengthIn?: number;
+  defaultWidthIn?: number;
+  defaultHeightIn?: number;
+  packageType?: string;
+  active: boolean;
+  usageCount?: number;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface MysteryBox {

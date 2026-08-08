@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box a
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, ShippingProfile, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -16,6 +16,7 @@ import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
+import { ShippingProfilesAdminSection } from './admin/ShippingProfilesAdminSection';
 import { SeoManager } from './admin/SeoManager';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -400,7 +401,10 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-profiles' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
+  const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
+  useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -1764,7 +1768,9 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: newItem.upgraderEnabled === true,
           upgraderCategory,
           upgraderSort: Number.isFinite(upgraderSort) ? upgraderSort : undefined,
-          upgraderFeatured: newItem.upgraderFeatured === true
+          upgraderFeatured: newItem.upgraderFeatured === true,
+          shippingProfileId: newItem.shippingProfileId || null,
+          shippingOverride: newItem.shippingOverride
       };
 
       console.log("CATALOG ITEM SAVE CLICKED", item);
@@ -1804,7 +1810,9 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: item.upgraderEnabled === true,
           upgraderCategory: item.upgraderCategory ?? '',
           upgraderSort: item.upgraderSort,
-          upgraderFeatured: item.upgraderFeatured === true
+          upgraderFeatured: item.upgraderFeatured === true,
+          shippingProfileId: item.shippingProfileId ?? null,
+          shippingOverride: item.shippingOverride
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -1838,7 +1846,8 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: false,
           upgraderCategory: '',
           upgraderSort: undefined,
-          upgraderFeatured: false
+          upgraderFeatured: false,
+          shippingProfileId: null
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -3077,6 +3086,8 @@ export const AdminPanel: React.FC = () => {
           alert("Expected value is outside the allowed tolerance.");
           return;
       }
+      const missingProfiles = selectedItems.filter((item) => !item.shippingProfileId).length;
+      if (missingProfiles > 0 && !window.confirm(`${missingProfiles} item${missingProfiles === 1 ? '' : 's'} in this box do not have a shipping profile.\n\nShipping rates may not be available for these items.\n\nChoose Cancel to review items or OK to save anyway.`)) return;
 
       // Clone items to decouple from global pool (ensuring box-specific chances)
       const boxItems = selectedItems.map(i => ({...i}));
@@ -3683,6 +3694,12 @@ export const AdminPanel: React.FC = () => {
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
                    <button
+                     onClick={() => setActiveTab('shipping-profiles')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-profiles' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <PackageCheck className="w-4 h-4" /> Shipping Profiles
+                   </button>
+                   <button
                      onClick={() => setActiveTab('support')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3768,6 +3785,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'boxes' && 'Box Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
+                    {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
                     {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
                     {activeTab === 'referrals' && 'Referral Program'}
@@ -3784,6 +3802,7 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* TAB: DASHBOARD */}
+            {activeTab === 'shipping-profiles' && <ShippingProfilesAdminSection profiles={shippingProfiles} onRefresh={loadShippingProfiles} />}
             {activeTab === 'dashboard' && (
                 <>
                     {/* Stats Grid */}
@@ -3938,6 +3957,7 @@ export const AdminPanel: React.FC = () => {
                             </Select>
                             <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
                             <Input type="number" min={0} max={100} placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance ?? ''} onChange={e => setNewItem({...newItem, chance: e.target.value === '' ? undefined : Number(e.target.value)})} />
+                            <label className="text-[10px] font-bold uppercase text-gray-500">Shipping Profile<Select value={newItem.shippingProfileId ?? ''} onChange={(e) => setNewItem({ ...newItem, shippingProfileId: e.target.value || null })} className="mt-1 min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] p-2 text-sm normal-case text-gray-200"><option value="">Not Assigned</option>{shippingProfiles.filter((profile) => profile.active || profile.id === newItem.shippingProfileId).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}{!profile.active ? ' (Inactive)' : ''} • {profile.defaultWeightOz} oz</option>)}</Select></label>
                             <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
                                 <Checkbox
                                   checked={newItem.redeemable ?? true}
@@ -4707,7 +4727,7 @@ export const AdminPanel: React.FC = () => {
                              {/* Selected & Configured Items */}
                              {selectedItems.length > 0 && (
                                  <div className="border-t border-gray-800 pt-4">
-                                     <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
+                                     <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h4 className="text-sm font-bold text-gray-400 uppercase">Box Contents ({selectedItems.length})</h4><label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-gray-500 sm:flex-row sm:items-center">Assign all<Select aria-label="Assign a shipping profile to all box items" defaultValue="" onChange={(event) => { const id = event.target.value; if (!id) return; setSelectedItems((current) => current.map((entry) => ({ ...entry, shippingProfileId: id }))); event.target.value = ''; }} className="min-h-10 min-w-48 rounded border border-gray-700 bg-[#0b0e14] px-2 text-xs normal-case text-white"><option value="">Choose profile…</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select></label></div>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700 sm:flex-nowrap">
@@ -4722,6 +4742,7 @@ export const AdminPanel: React.FC = () => {
                                                  </button>
                                                  <img src={item.image} alt={item.name} className="w-8 h-8 object-contain sm:w-5 sm:h-5" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
+                                                 <label className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 text-[10px] font-bold uppercase text-gray-500 sm:w-52">Shipping Profile<Select value={item.shippingProfileId ?? ''} onChange={(event) => setSelectedItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, shippingProfileId: event.target.value || null } : entry))} className={`min-h-10 w-full rounded border bg-[#0b0e14] px-2 text-xs normal-case text-white ${item.shippingProfileId ? 'border-gray-700' : 'border-amber-500/60'}`}><option value="">Not Assigned</option>{shippingProfiles.filter((profile) => profile.active || profile.id === item.shippingProfileId).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}{!profile.active ? ' (Inactive)' : ''} • {profile.defaultWeightOz} oz</option>)}</Select>{!item.shippingProfileId && <span className="normal-case text-amber-300">Required for future rates</span>}</label>
                                                  <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
                                                      <div className="flex items-center justify-between gap-2">
                                                          <span className="text-[10px] uppercase text-gray-500">EV value</span>
@@ -5608,9 +5629,9 @@ export const AdminPanel: React.FC = () => {
                                                 {address ? (
                                                     <>
                                                         <div className="text-gray-200 font-semibold">{address.fullName}</div>
-                                                        <div>{address.street}</div>
-                                                        <div>{address.city}, {address.state} {address.zipCode}</div>
-                                                        <div>{address.country}</div>
+                                                        <div>{address.street1 ?? address.street}</div>
+                                                        <div>{address.city}{address.state ? `, ${address.state}` : ''} {address.postalCode ?? address.zipCode}</div>
+                                                        <div>{address.countryCode ?? address.country}</div>
                                                     </>
                                                 ) : (
                                                     <div className="text-yellow-400">No address saved.</div>

@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { requireActiveAccount } from './_utils/auth.js';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
+import { normalizeAddress, validateLocalAddress } from './_lib/shippingAddress.js';
 import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -76,9 +77,9 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Cash shipping is disabled' });
     }
 
-    const shippingInfo = userData.shippingAddress;
+    const shippingInfo = normalizeAddress(userData.shippingAddress);
 
-    if (!shippingInfo || typeof shippingInfo !== 'object') {
+    if (validateLocalAddress(shippingInfo).length) {
       return sendJson(res, 400, { error: 'Missing shipping address' });
     }
 
