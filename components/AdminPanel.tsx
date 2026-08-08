@@ -3063,7 +3063,7 @@ export const AdminPanel: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSaveBox = () => {
+  const handleSaveBox = async () => {
       const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
@@ -3107,15 +3107,19 @@ export const AdminPanel: React.FC = () => {
 
       const box: MysteryBox = buildEditableBoxPayload(boxItems);
 
-      if (editingBoxId) {
-          updateBox(box);
-          alert("Box Updated!");
-      } else {
-          createBox(box);
-          alert("Box Created in Firebase!");
+      try {
+          if (editingBoxId) {
+              await updateBox(box);
+              alert("Box Updated!");
+          } else {
+              await createBox(box);
+              alert("Box Created in Firebase!");
+          }
+          resetBoxForm();
+      } catch (error) {
+          console.error('Failed to persist box shipping profiles', error);
+          alert('The box could not be saved. Your shipping profile selections are still here—please try again.');
       }
-
-      resetBoxForm();
   };
 
   const handleEditBox = (box: MysteryBox) => {
