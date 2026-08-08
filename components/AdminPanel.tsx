@@ -3,7 +3,7 @@ import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box a
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, ShippingProfile, User, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, ShippingPackage, ShippingProfile, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -17,6 +17,7 @@ import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
 import { ShippingProfilesAdminSection } from './admin/ShippingProfilesAdminSection';
+import { ShippingPackagesAdminSection } from './admin/ShippingPackagesAdminSection';
 import { SeoManager } from './admin/SeoManager';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -401,10 +402,13 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-profiles' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
   const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
   const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
   useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
+  const [shippingPackages, setShippingPackages] = useState<ShippingPackage[]>([]);
+  const loadShippingPackages = async () => { const result = await authedFetch<{ packages: ShippingPackage[] }>('/api/admin/shipping-packages'); setShippingPackages(result.packages ?? []); };
+  useEffect(() => { void loadShippingPackages().catch((error) => console.error('Failed to load shipping packages', error)); }, []);
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -3699,6 +3703,7 @@ export const AdminPanel: React.FC = () => {
                    >
                        <PackageCheck className="w-4 h-4" /> Shipping Profiles
                    </button>
+                   <button onClick={() => setActiveTab('shipping-packages')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}><PackageOpen className="w-4 h-4" /> Shipping Packages</button>
                    <button
                      onClick={() => setActiveTab('support')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -3786,6 +3791,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
+                    {activeTab === 'shipping-packages' && 'Shipping Packages'}
                     {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
                     {activeTab === 'referrals' && 'Referral Program'}
@@ -3803,6 +3809,7 @@ export const AdminPanel: React.FC = () => {
 
             {/* TAB: DASHBOARD */}
             {activeTab === 'shipping-profiles' && <ShippingProfilesAdminSection profiles={shippingProfiles} onRefresh={loadShippingProfiles} />}
+            {activeTab === 'shipping-packages' && <ShippingPackagesAdminSection packages={shippingPackages} profiles={shippingProfiles} onRefresh={loadShippingPackages} />}
             {activeTab === 'dashboard' && (
                 <>
                     {/* Stats Grid */}

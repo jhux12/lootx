@@ -196,6 +196,10 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    match /shippingPackages/{packageId} {
+      allow read, write: if isAdmin();
+    }
+
     match /admin/{document=**} {
       allow read, write: if isAdmin();
     }

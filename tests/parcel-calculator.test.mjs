@@ -1,0 +1,24 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { calculateShipmentParcel } from '../api/_lib/parcelCalculator.js';
+
+const profiles = [{ id:'raw', defaultWeightOz:3 }, { id:'slab', defaultWeightOz:7 }];
+const packages = [
+  { id:'mailer', name:'Card Mailer', lengthIn:7, widthIn:5, heightIn:1, emptyWeightOz:1, capacityByProfileId:{raw:10,slab:0}, priority:10, active:true },
+  { id:'slab-box', name:'Small Slab Box', lengthIn:8, widthIn:6, heightIn:2, emptyWeightOz:2, capacityByProfileId:{raw:10,slab:3}, priority:20, active:true },
+  { id:'medium', name:'Medium Box', lengthIn:10, widthIn:8, heightIn:4, emptyWeightOz:4, capacityByProfileId:{raw:30,slab:8}, priority:30, active:true },
+  { id:'large', name:'Large Box', lengthIn:12, widthIn:10, heightIn:6, emptyWeightOz:6, capacityByProfileId:{raw:50,slab:15}, priority:40, active:true }
+];
+const items = (profile, count) => Array.from({ length: count }, (_, index) => ({ id:`${profile}-${index}`, shippingProfileId:profile }));
+
+test('one raw card chooses Card Mailer and adds empty weight', () => { const result = calculateShipmentParcel({ items:items('raw',1), shippingProfiles:profiles, shippingPackages:packages }); assert.equal(result.packageId,'mailer'); assert.equal(result.itemWeightOz,3); assert.equal(result.totalWeightOz,4); });
+test('one and three slabs choose Small Slab Box', () => { for (const count of [1,3]) assert.equal(calculateShipmentParcel({ items:items('slab',count), shippingProfiles:profiles, shippingPackages:packages }).packageId,'slab-box'); });
+test('four and eight slabs choose Medium Box while nine choose Large Box', () => { assert.equal(calculateShipmentParcel({ items:items('slab',4), shippingProfiles:profiles, shippingPackages:packages }).packageId,'medium'); assert.equal(calculateShipmentParcel({ items:items('slab',8), shippingProfiles:profiles, shippingPackages:packages }).packageId,'medium'); assert.equal(calculateShipmentParcel({ items:items('slab',9), shippingProfiles:profiles, shippingPackages:packages }).packageId,'large'); });
+test('mixed profiles require capacity for every profile', () => { const result = calculateShipmentParcel({ items:[...items('slab',4),...items('raw',2)], shippingProfiles:profiles, shippingPackages:packages }); assert.equal(result.packageId,'medium'); assert.deepEqual(result.profileCounts,{slab:4,raw:2}); assert.equal(result.totalWeightOz,38); assert.ok(result.warnings.length); });
+test('custom item weight overrides profile weight', () => { const result = calculateShipmentParcel({ items:[{id:'x',shippingProfileId:'raw',shippingOverride:{weightOz:9}}], shippingProfiles:profiles, shippingPackages:packages }); assert.equal(result.itemWeightOz,9); assert.equal(result.totalWeightOz,10); });
+test('custom dimensions reject packages that are too small', () => { const result = calculateShipmentParcel({ items:[{id:'x',shippingProfileId:'raw',shippingOverride:{lengthIn:9,widthIn:7,heightIn:3}}], shippingProfiles:profiles, shippingPackages:packages }); assert.equal(result.packageId,'medium'); });
+test('maximum weight and inactive packages are enforced', () => { const constrained = packages.map((pkg) => pkg.id === 'mailer' ? {...pkg,maxWeightOz:3} : pkg.id === 'slab-box' ? {...pkg,active:false} : pkg); assert.equal(calculateShipmentParcel({ items:items('raw',1), shippingProfiles:profiles, shippingPackages:constrained }).packageId,'medium'); });
+test('missing profile and no fitting package return controlled results', () => { assert.equal(calculateShipmentParcel({ items:[{id:'legacy'}], shippingProfiles:profiles, shippingPackages:packages }).status,'invalid_items'); assert.equal(calculateShipmentParcel({ items:items('slab',16), shippingProfiles:profiles, shippingPackages:packages }).status,'no_package'); });
+test('parcel endpoint is owner scoped and ignores client parcel values', async () => { const endpoint = await readFile(new URL('../api/shipping/calculate-parcel.js', import.meta.url),'utf8'); assert.match(endpoint,/requireUser/); assert.match(endpoint,/collection\('users'\)\.doc\(uid\)\.collection\('inventory'\)/); assert.match(endpoint,/db\.getAll/); assert.doesNotMatch(endpoint,/req\.body\?\.(weight|dimensions|packageId)/); });
+test('package changes only affect future calculations and shipment has snapshot type', async () => { const types = await readFile(new URL('../types.ts', import.meta.url),'utf8'); const edited = packages.map((pkg) => pkg.id === 'mailer' ? {...pkg,emptyWeightOz:2} : pkg); assert.equal(calculateShipmentParcel({ items:items('raw',1), shippingProfiles:profiles, shippingPackages:edited }).totalWeightOz,5); assert.match(types,/parcel\?: Omit<ParcelCalculationResult/); });

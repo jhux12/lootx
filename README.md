@@ -12,6 +12,10 @@ Set the server-only `SHIPPO_API_TOKEN` deployment environment variable to enable
 
 Set the optional server-only `GEOAPIFY_API_KEY` to show address suggestions while customers type. The profile form remains fully usable when autocomplete is not configured or temporarily unavailable.
 
+## Parcel package calculator
+
+Admins configure `shippingProfiles` and `shippingPackages` in the Admin shipping sections. Parcel selection uses package priority, capacity per immutable profile ID, maximum weight, and custom item dimensions. Mixed shipments currently use independent per-profile capacity limits and return a review warning; this intentionally leaves room for a future packing engine. The authenticated `/api/shipping/calculate-parcel` endpoint calculates dimensions and weight from server-owned inventory only and does not request carrier rates.
+
 View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYGEdUw7rNcF9
 
 ## Run Locally

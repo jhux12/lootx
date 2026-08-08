@@ -192,6 +192,34 @@ export interface ShippingProfile {
   updatedAt?: number;
 }
 
+export interface ShippingPackage {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  lengthIn: number;
+  widthIn: number;
+  heightIn: number;
+  emptyWeightOz: number;
+  maxWeightOz?: number;
+  capacityByProfileId: Record<string, number>;
+  priority: number;
+  active: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface ParcelCalculationResult {
+  status: 'ready'; packageId: string; packageName: string;
+  lengthIn: number; widthIn: number; heightIn: number;
+  itemWeightOz: number; packagingWeightOz: number; totalWeightOz: number;
+  profileCounts: Record<string, number>; warnings: string[];
+}
+
+export interface ParcelCalculationFailure {
+  status: 'invalid_items' | 'no_package'; reason: string; missingItemIds?: string[]; warnings: string[];
+}
+
 export interface MysteryBox {
   id: string;
   name: string;
@@ -317,6 +345,7 @@ export interface Shipment {
   trackingNumber?: string;
   createdAt?: number;
   updatedAt?: number;
+  parcel?: Omit<ParcelCalculationResult, 'status' | 'profileCounts' | 'warnings'>;
 }
 
 export type UserStatus = 'active' | 'suspended' | 'banned';
