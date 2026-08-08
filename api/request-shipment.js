@@ -3,6 +3,7 @@ import { requireActiveAccount } from './_utils/auth.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
+import { normalizeAddress, validateLocalAddress } from './_lib/shippingAddress.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
 
@@ -56,7 +57,7 @@ export default async function handler(req, res) {
       : typeof body?.inventoryId === 'string' && body.inventoryId.trim()
         ? [body.inventoryId.trim()]
         : [];
-    const shippingInfo = body?.shippingInfo;
+    const shippingInfo = normalizeAddress(userData.shippingAddress);
     const wantsShippingProtection = body?.shippingProtection === true;
     const wantsSignatureRequired = body?.signatureRequired === true;
 
@@ -64,7 +65,7 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'No items selected' });
     }
 
-    if (!shippingInfo || typeof shippingInfo !== 'object') {
+    if (validateLocalAddress(shippingInfo).length) {
       return sendJson(res, 400, { error: 'Missing shippingInfo' });
     }
 

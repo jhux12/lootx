@@ -11,7 +11,8 @@ import { formatShippingAddOnPrice, formatShippingTierSummary, getShipmentShippin
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { InventoryItem, Shipment, ShippingAddress } from '../types';
+import { AddressValidationResult, InventoryItem, Shipment, ShippingAddress } from '../types';
+import { emptyShippingAddress, normalizeStoredShippingAddress, validateShippingAddress } from '../src/lib/shippingAddress';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
 import { MobileBottomNav } from './profile/MobileBottomNav';
@@ -242,13 +243,12 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     avatar: user.avatar
   });
 
-  const [addressForm, setAddressForm] = useState<ShippingAddress>(
-    user.shippingAddress || { fullName: '', street: '', city: '', state: '', zipCode: '', country: '' }
-  );
+  const [addressForm, setAddressForm] = useState<ShippingAddress>(() => user.shippingAddress ? normalizeStoredShippingAddress(user.shippingAddress) : emptyShippingAddress());
+  const [addressValidation, setAddressValidation] = useState<AddressValidationResult | null>(null);
 
   useEffect(() => {
     if (user.shippingAddress) {
-      setAddressForm(user.shippingAddress);
+      setAddressForm(normalizeStoredShippingAddress(user.shippingAddress));
     }
   }, [user.shippingAddress]);
 
@@ -463,10 +463,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const savedShippingAddress = user.shippingAddress;
   const hasCompleteShippingAddress = Boolean(
     savedShippingAddress?.fullName
-    && savedShippingAddress?.street
+    && savedShippingAddress?.street1
     && savedShippingAddress?.city
-    && savedShippingAddress?.zipCode
-    && savedShippingAddress?.country
+    && savedShippingAddress?.postalCode
+    && savedShippingAddress?.countryCode
   );
   const userHasDeposit = hasUserMadeDeposit(user);
 
@@ -548,16 +548,36 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   };
 
   const handleSaveAddress = async () => {
+    const errors = validateShippingAddress(addressForm);
+    if (Object.keys(errors).length) { toast.error(Object.values(errors)[0]); setAddressValidation({ status: 'invalid', originalAddress: addressForm, messages: Object.values(errors) }); return; }
     setIsSavingAddress(true);
     try {
-      await updateAddress(addressForm);
-      toast.success('Shipping address saved!');
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/shipping/validate-address', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ address: addressForm }) });
+      const result = await response.json() as AddressValidationResult;
+      if (!response.ok && result.status !== 'unavailable') throw new Error(result.messages?.[0] ?? 'Address could not be checked.');
+      setAddressValidation(result);
+      if (result.status === 'valid' || result.status === 'unavailable') await saveAddressChoice('original', result);
+      else if (result.status === 'invalid') toast.error("We couldn't verify this address. Please edit it and try again.");
     } catch {
       toast.error('Could not save your shipping address.');
     } finally {
       setIsSavingAddress(false);
     }
   };
+
+  async function saveAddressChoice(choice: 'original' | 'suggested', result = addressValidation) {
+    if (!result?.attemptId) { toast.error('Please check the address again.'); return; }
+    setIsSavingAddress(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/shipping/save-address', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ attemptId: result.attemptId, choice }) });
+      const payload = await response.json(); if (!response.ok) throw new Error(payload.error);
+      await updateAddress(payload.address); setAddressForm(normalizeStoredShippingAddress(payload.address)); setAddressValidation(null);
+      toast.success(result.status === 'unavailable' ? 'Address saved. Verification will occur before shipment.' : choice === 'suggested' ? 'Suggested address saved.' : 'Address verified and saved.');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not save your shipping address.'); }
+    finally { setIsSavingAddress(false); }
+  }
 
 
 
@@ -818,7 +838,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
         <AccountView
           user={user} username={displayUsername} memberSince={joinedDate} xp={xp} balance={balance}
           activePanel={activeAccountPanel} onSelectPanel={setActiveAccountPanel}
-          addressForm={addressForm} setAddressForm={setAddressForm} onSaveAddress={handleSaveAddress} isSavingAddress={isSavingAddress}
+          addressForm={addressForm} setAddressForm={(next) => { setAddressForm(next); setAddressValidation(null); }} onSaveAddress={handleSaveAddress} validationResult={addressValidation} onAddressChoice={saveAddressChoice} isSavingAddress={isSavingAddress}
           securityForm={securityForm} setSecurityForm={setSecurityForm} onSaveUsername={handleSaveUsername} onSaveEmail={handleSaveEmail} onSavePassword={handleSavePassword}
           isSavingUsername={isSavingUsername} isSavingEmail={isSavingEmail} isSavingPassword={isSavingPassword}
           onClose={() => setShowEditProfile(false)}
@@ -968,9 +988,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
                     {hasCompleteShippingAddress && savedShippingAddress ? (
                       <div className="mt-1 space-y-0.5 text-sm leading-5 text-slate-300">
                         <p className="truncate font-black text-white">{savedShippingAddress.fullName}</p>
-                        <p>{savedShippingAddress.street}</p>
-                        <p>{savedShippingAddress.city}, {savedShippingAddress.state} {savedShippingAddress.zipCode}</p>
-                        <p>{savedShippingAddress.country}</p>
+                        <p>{savedShippingAddress.street1}</p>
+                        {savedShippingAddress.street2 && <p>{savedShippingAddress.street2}</p>}
+                        <p>{savedShippingAddress.city}{savedShippingAddress.state ? `, ${savedShippingAddress.state}` : ''} {savedShippingAddress.postalCode}</p>
+                        <p>{savedShippingAddress.countryCode}</p>
                       </div>
                     ) : (
                       <p className="mt-1 text-sm font-semibold text-amber-200">Add a shipping address before confirming.</p>

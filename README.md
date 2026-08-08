@@ -6,6 +6,10 @@
 
 This contains everything you need to run your app locally.
 
+## Shipping address verification
+
+Set the server-only `SHIPPO_API_TOKEN` deployment environment variable to enable live Shippo address validation. If it is absent or the provider is unavailable, locally valid addresses can still be saved as unvalidated. Never expose this value through a `NEXT_PUBLIC_` variable.
+
 View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYGEdUw7rNcF9
 
 ## Run Locally

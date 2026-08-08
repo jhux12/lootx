@@ -94,6 +94,7 @@ service cloud.firestore {
           && (!hasField(resource.data, 'uid') || request.resource.data.uid == resource.data.uid)
           && (!hasField(resource.data, 'createdAt') || request.resource.data.createdAt == resource.data.createdAt)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userProfileUpdateKeys())
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['shippingAddress'])
           && request.resource.data.username is string
           && validUsernameLower(request.resource.data.usernameLower)
           && request.resource.data.email is string
