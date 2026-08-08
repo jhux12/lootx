@@ -7,8 +7,15 @@ export const normalizeShippoRates = (rates, feeCents = handlingFee()) => (Array.
   return [{ id, shippoRateId: id, provider: provider.slice(0, 80), service: service.slice(0, 120), carrierAmountCents, handlingFeeCents: feeCents, customerAmountCents: carrierAmountCents + feeCents, currency, ...(Number.isFinite(estimatedDays) && estimatedDays >= 0 ? { estimatedDays } : {}), ...(typeof rate?.duration_terms === 'string' ? { durationTerms: rate.duration_terms.slice(0, 200) } : {}), ...(typeof rate?.provider_image_75 === 'string' ? { providerImage: rate.provider_image_75 } : {}), attributes: Array.isArray(rate?.attributes) ? rate.attributes.filter((value) => typeof value === 'string').slice(0, 10) : [] }];
 }).sort((a, b) => a.customerAmountCents - b.customerAmountCents);
 export const requestShippoRates = async ({ fromAddress, toAddress, parcel, fetchImpl = fetch }) => {
-  const token = process.env.SHIPPO_API_TOKEN; if (!token) throw { status: 503, error: 'SHIPPING_RATES_UNAVAILABLE' };
-  const response = await fetchImpl('https://api.goshippo.com/shipments', { method: 'POST', headers: { Authorization: `ShippoToken ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ address_from: fromAddress, address_to: toAddress, parcels: [toShippoParcel(parcel)], async: false }), signal: AbortSignal.timeout(10000) });
-  if (!response.ok) throw { status: 503, error: response.status === 400 ? 'CUSTOMS_DATA_REQUIRED' : 'SHIPPING_RATES_UNAVAILABLE' };
+  const token = process.env.SHIPPO_API_TOKEN; if (!token) throw { status: 503, error: 'SHIPPO_NOT_CONFIGURED' };
+  let response;
+  try {
+    response = await fetchImpl('https://api.goshippo.com/shipments', { method: 'POST', headers: { Authorization: `ShippoToken ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ address_from: fromAddress, address_to: toAddress, parcels: [toShippoParcel(parcel)], async: false }), signal: AbortSignal.timeout(10000) });
+  } catch { throw { status: 503, error: 'SHIPPO_UNAVAILABLE' }; }
+  if (!response.ok) {
+    const details = await response.json().catch(() => ({})); const summary = JSON.stringify(details).toLowerCase();
+    const error = response.status === 401 || response.status === 403 ? 'SHIPPO_AUTH_FAILED' : response.status === 400 && summary.includes('custom') ? 'CUSTOMS_DATA_REQUIRED' : response.status === 400 ? 'SHIPPO_RATE_REQUEST_REJECTED' : 'SHIPPO_UNAVAILABLE';
+    throw { status: response.status === 400 ? 422 : 503, error };
+  }
   const shipment = await response.json(); return normalizeShippoRates(shipment?.rates);
 };
