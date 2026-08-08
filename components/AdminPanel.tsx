@@ -5608,9 +5608,9 @@ export const AdminPanel: React.FC = () => {
                                                 {address ? (
                                                     <>
                                                         <div className="text-gray-200 font-semibold">{address.fullName}</div>
-                                                        <div>{address.street}</div>
-                                                        <div>{address.city}, {address.state} {address.zipCode}</div>
-                                                        <div>{address.country}</div>
+                                                        <div>{address.street1 ?? address.street}</div>
+                                                        <div>{address.city}{address.state ? `, ${address.state}` : ''} {address.postalCode ?? address.zipCode}</div>
+                                                        <div>{address.countryCode ?? address.country}</div>
                                                     </>
                                                 ) : (
                                                     <div className="text-yellow-400">No address saved.</div>
