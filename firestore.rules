@@ -108,6 +108,10 @@ service cloud.firestore {
       allow create, update, delete: if isOwnUser(uid);
     }
 
+    match /users/{uid}/shippingRateQuotes/{quoteId} {
+      allow read, write: if false;
+    }
+
     match /users/{uid}/inventory/{inventoryId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow write: if isAdmin();

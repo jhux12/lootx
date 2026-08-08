@@ -220,6 +220,18 @@ export interface ParcelCalculationFailure {
   status: 'invalid_items' | 'no_package'; reason: string; missingItemIds?: string[]; warnings: string[];
 }
 
+export interface ShippingRateQuote {
+  id: string; shippoRateId: string; provider: string; service: string;
+  carrierAmountCents: number; handlingFeeCents: number; customerAmountCents: number; currency: 'USD';
+  estimatedDays?: number; durationTerms?: string; providerImage?: string; attributes?: string[];
+}
+
+export interface ShippingRateResponse {
+  status: 'quoted' | 'free_shipping'; quoteId: string; rates: ShippingRateQuote[]; quotedAt: number; expiresAt: number;
+  parcel: { packageId: string; packageName: string; lengthIn: number; widthIn: number; heightIn: number; itemWeightOz: number; packagingWeightOz: number; totalWeightOz: number } | null;
+  destination: { city: string; state?: string; postalCode: string; countryCode: string };
+}
+
 export interface MysteryBox {
   id: string;
   name: string;

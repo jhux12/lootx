@@ -16,6 +16,8 @@ Set the optional server-only `GEOAPIFY_API_KEY` to show address suggestions whil
 
 Admins configure `shippingProfiles` and `shippingPackages` in the Admin shipping sections. Parcel selection uses package priority, capacity per immutable profile ID, maximum weight, and custom item dimensions. Mixed shipments currently use independent per-profile capacity limits and return a review warning; this intentionally leaves room for a future packing engine. The authenticated `/api/shipping/calculate-parcel` endpoint calculates dimensions and weight from server-owned inventory only and does not request carrier rates.
 
+Live quotes require `SHIPPO_API_TOKEN` plus the server-only origin variables `SHIP_FROM_NAME`, `SHIP_FROM_STREET1`, `SHIP_FROM_STREET2` (optional), `SHIP_FROM_CITY`, `SHIP_FROM_STATE` (when required), `SHIP_FROM_POSTAL_CODE`, `SHIP_FROM_COUNTRY`, and `SHIP_FROM_PHONE` (optional). `SHIPPING_HANDLING_FEE_CENTS` controls the fee added to carrier quotes and defaults to 150. Quotes expire after 15 minutes and do not purchase labels or initiate payment.
+
 View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYGEdUw7rNcF9
 
 ## Run Locally
