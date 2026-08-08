@@ -451,7 +451,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
   const selectedShipmentKey = selectedShipmentItems.map((item) => item.instanceId).sort().join(':');
   const destinationKey = user.shippingAddress ? [user.shippingAddress.street1, user.shippingAddress.street2, user.shippingAddress.city, user.shippingAddress.state, user.shippingAddress.postalCode, user.shippingAddress.countryCode, user.shippingAddress.validatedAt].join('|') : '';
-  const liveRateErrorMessage = liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' ? 'Please verify your shipping address before requesting rates.' : liveRateError === 'SHIPPING_PROFILE_REQUIRED' ? 'One or more selected items need shipping information before rates can be calculated.' : liveRateError === 'NO_SHIPPING_PACKAGE' ? "We couldn't automatically package these items. Please contact support." : liveRateError === 'NO_SHIPPING_RATES' ? 'No shipping services are currently available for this destination.' : liveRateError === 'CUSTOMS_DATA_REQUIRED' ? 'International shipping needs customs information before rates can be shown.' : liveRateError ? 'Shipping rates are temporarily unavailable. Please try again.' : '';
+  const liveRateErrorMessage = liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' ? 'Please verify your shipping address before requesting rates.' : liveRateError === 'SHIPPING_PROFILE_REQUIRED' ? 'One or more selected items need shipping information before rates can be calculated.' : liveRateError === 'SHIPPING_PACKAGES_NOT_CONFIGURED' ? 'Shipping packages are being configured. Please try again shortly.' : liveRateError === 'NO_SHIPPING_PACKAGE' ? "These items need a different package setup. Please contact support and we'll help arrange shipping." : liveRateError === 'NO_SHIPPING_RATES' ? 'No shipping services are currently available for this destination.' : liveRateError === 'CUSTOMS_DATA_REQUIRED' ? 'International shipping needs customs information before rates can be shown.' : liveRateError ? 'Shipping rates are temporarily unavailable. Please try again.' : '';
   useEffect(() => {
     if (!showShippingReview || !selectedShipmentKey) return;
     const controller = new AbortController(); setIsLoadingLiveRates(true); setLiveRateError(null); setLiveRateQuote(null); setSelectedRateId(null);
@@ -464,7 +464,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       } catch (error) { if ((error as Error).name !== 'AbortError') setLiveRateError((error as Error).message); }
       finally { if (!controller.signal.aborted) setIsLoadingLiveRates(false); }
     };
-    void load(); return () => controller.abort();
+    // A short debounce collapses React development remounts and rapid item/address
+    // updates into one Shippo request instead of producing duplicate 422/network calls.
+    const timer = window.setTimeout(() => void load(), 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
   }, [showShippingReview, selectedShipmentKey, destinationKey, rateRefreshVersion]);
   useEffect(() => {
     if (!showShippingReview || !liveRateQuote) return;

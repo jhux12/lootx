@@ -21,10 +21,17 @@ export function calculateShipmentParcel({ items = [], shippingProfiles = [], shi
     itemWeightOz += weight; profileCounts[profile.id] = (profileCounts[profile.id] ?? 0) + 1;
   }
   if (missingItemIds.length) return { status: 'invalid_items', reason: `${missingItemIds.length} selected item${missingItemIds.length === 1 ? ' is' : 's are'} missing a valid shipping profile or weight.`, missingItemIds, warnings: [] };
-  const packages = shippingPackages.filter((pkg) => pkg.active === true).sort((a, b) => Number(a.priority) - Number(b.priority));
+  // Profiles/packages created before the ID-based capacity migration may still
+  // use stable profile slugs as capacity keys. Read those keys without writing
+  // them back; all new admin saves continue to use immutable profile IDs.
+  const capacityFor = (pkg, profileId) => {
+    const profile = profiles.get(profileId); const capacities = pkg.capacityByProfileId ?? pkg.capacity ?? {};
+    return Number(capacities[profileId] ?? (profile?.slug ? capacities[profile.slug] : undefined) ?? 0);
+  };
+  const packages = shippingPackages.filter((pkg) => pkg.active !== false).sort((a, b) => (Number(a.priority) || Number.MAX_SAFE_INTEGER) - (Number(b.priority) || Number.MAX_SAFE_INTEGER));
   for (const pkg of packages) {
     if (![pkg.lengthIn, pkg.widthIn, pkg.heightIn, pkg.emptyWeightOz].every((value) => finite(Number(value)))) continue;
-    if (!Object.entries(profileCounts).every(([id, count]) => Number(pkg.capacityByProfileId?.[id] ?? 0) >= count)) continue;
+    if (!Object.entries(profileCounts).every(([id, count]) => capacityFor(pkg, id) >= count)) continue;
     if (!items.every((item) => fitsDimensions(pkg, item.shippingOverride))) continue;
     const totalWeightOz = itemWeightOz + Number(pkg.emptyWeightOz);
     if (pkg.maxWeightOz != null && (!finite(Number(pkg.maxWeightOz)) || totalWeightOz > Number(pkg.maxWeightOz))) continue;

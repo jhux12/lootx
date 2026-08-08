@@ -18,7 +18,10 @@ export default async function handler(req, res) {
     const parcel = calculateShipmentParcel({ items, ...config });
     const allFree = items.every(isFree);
     if (!allFree && parcel.status === 'invalid_items') return deny(res, 422, 'SHIPPING_PROFILE_REQUIRED');
-    if (!allFree && parcel.status === 'no_package') return deny(res, 422, 'NO_SHIPPING_PACKAGE');
+    if (!allFree && parcel.status === 'no_package') {
+      const activePackageCount = config.shippingPackages.filter((entry) => entry.active !== false).length;
+      return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : 'NO_SHIPPING_PACKAGE');
+    }
     const origin = originAddress(); if (!allFree && validateLocalAddress(origin).length) return deny(res, 503, 'SHIPPING_ORIGIN_NOT_CONFIGURED');
     const rates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
     if (!rates.length) return deny(res, 404, 'NO_SHIPPING_RATES');
