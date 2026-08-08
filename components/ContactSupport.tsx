@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useManagedFooterPage } from './FooterManagedContent';
 
 type ContactForm = {
   firstName: string;
@@ -18,7 +17,6 @@ const EMPTY_FORM: ContactForm = {
 };
 
 export const ContactSupport: React.FC = () => {
-  const managedContent = useManagedFooterPage('contact');
   const [form, setForm] = useState<ContactForm>(EMPTY_FORM);
   const [isSending, setIsSending] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -58,13 +56,7 @@ export const ContactSupport: React.FC = () => {
   const inputClasses = 'min-h-12 w-full rounded-xl border border-white/10 bg-[#0b0f1a] px-4 py-3 text-base text-white outline-none placeholder:text-gray-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm';
 
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-16 pt-8 sm:gap-8 sm:px-6 sm:pt-10 lg:px-8">
-      <div className="rounded-2xl border border-white/10 bg-[#0b0f1a] p-5 sm:p-6">
-        <h1 className="text-2xl font-semibold text-white sm:text-3xl">{managedContent.title}</h1>
-        {managedContent.lastUpdated && <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-500">Last updated {managedContent.lastUpdated}</p>}
-        <div className="mt-4 space-y-3 text-sm text-gray-400 sm:text-base" dangerouslySetInnerHTML={{ __html: managedContent.html }} />
-      </div>
-
+    <section className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
         <div className="mb-5">
           <h2 className="text-xl font-semibold text-white">Send us a message</h2>
