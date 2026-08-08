@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { normalizeAddress, toShippoAddress, validateLocalAddress } from '../api/_lib/shippingAddress.js';
 
 test('migrates legacy address fields', () => {
@@ -21,4 +22,13 @@ test('central Shippo mapper omits empty optional values', () => {
 test('shipment address normalization creates an independent snapshot', () => {
   const profile = { fullName:'A', street1:'Old St', city:'Oslo', postalCode:'0154', countryCode:'NO' };
   const snapshot = normalizeAddress(profile); profile.street1 = 'New St'; assert.equal(snapshot.street1, 'Old St');
+});
+test('address autocomplete stays authenticated, server-side, and mobile friendly', async () => {
+  const [endpoint, form] = await Promise.all([
+    readFile(new URL('../api/shipping/address-suggestions.js', import.meta.url), 'utf8'),
+    readFile(new URL('../components/profile/AccountView.tsx', import.meta.url), 'utf8')
+  ]);
+  assert.match(endpoint, /verifyIdToken/); assert.match(endpoint, /process\.env\.GEOAPIFY_API_KEY/);
+  assert.doesNotMatch(form, /GEOAPIFY_API_KEY/); assert.match(form, /350/);
+  assert.match(form, /Use Suggested Address/); assert.match(form, /min-h-12/); assert.match(form, /role="tablist"/);
 });

@@ -21,6 +21,11 @@ export interface AddressValidationResult {
   provider?: string;
   attemptId?: string;
 }
+export interface AddressAutocompleteSuggestion {
+  id: string;
+  label: string;
+  address: Pick<ShippingAddress, 'street1' | 'street2' | 'city' | 'state' | 'postalCode' | 'countryCode'>;
+}
 
 export interface User {
   id: string;

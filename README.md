@@ -10,6 +10,8 @@ This contains everything you need to run your app locally.
 
 Set the server-only `SHIPPO_API_TOKEN` deployment environment variable to enable live Shippo address validation. If it is absent or the provider is unavailable, locally valid addresses can still be saved as unvalidated. Never expose this value through a `NEXT_PUBLIC_` variable.
 
+Set the optional server-only `GEOAPIFY_API_KEY` to show address suggestions while customers type. The profile form remains fully usable when autocomplete is not configured or temporarily unavailable.
+
 View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYGEdUw7rNcF9
 
 ## Run Locally
