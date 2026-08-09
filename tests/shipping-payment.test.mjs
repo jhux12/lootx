@@ -7,6 +7,7 @@ const checkout = fs.readFileSync('api/shipping/create-checkout-session.js', 'utf
 const webhook = fs.readFileSync('api/stripe-webhook.js', 'utf8');
 const payment = fs.readFileSync('api/_lib/shippingPayment.js', 'utf8');
 const statusEndpoint = fs.readFileSync('api/shipping/payment-status.js', 'utf8');
+const cancelEndpoint = fs.readFileSync('api/shipping/cancel-checkout-session.js', 'utf8');
 const profile = fs.readFileSync('components/Profile.tsx', 'utf8');
 const rules = fs.readFileSync('firestore.rules', 'utf8');
 
@@ -64,6 +65,13 @@ test('expired Stripe sessions release only matching temporary locks', () => {
   assert.match(payment, /item\.shippingPaymentAttemptId === attemptId/); assert.match(payment, /status: 'available'/); assert.match(payment, /status: 'expired'/);
 });
 
+test('cancelled checkout is authenticated, expires Stripe session, and releases item locks', () => {
+  assert.match(cancelEndpoint, /requireUser\(req\)/); assert.match(cancelEndpoint, /attempt\.uid !== uid/);
+  assert.match(cancelEndpoint, /checkout\.sessions\.retrieve/); assert.match(cancelEndpoint, /checkout\.sessions\.expire/);
+  assert.match(cancelEndpoint, /releaseShippingPaymentAttempt/); assert.match(profile, /SHIPPING_SESSION_STORAGE_KEY/);
+  assert.match(profile, /\/api\/shipping\/cancel-checkout-session/);
+});
+
 test('payment status is authenticated and owner scoped', () => {
   assert.match(statusEndpoint, /requireUser\(req\)/); assert.match(statusEndpoint, /attempt\.uid !== uid/);
   assert.doesNotMatch(statusEndpoint, /customerAmountCents|addressSnapshot|shippoRateId/);
@@ -73,6 +81,7 @@ test('client displays USD checkout CTA, pending and paid states without coins', 
   assert.doesNotMatch(profile, /Payment will be enabled after live-rate verification/);
   assert.match(profile, /Pay \$\$\{/); assert.match(profile, /Creating secure checkout/);
   assert.match(profile, /Confirming payment/); assert.match(profile, /Payment received/);
+  assert.doesNotMatch(profile, /liveRateQuote\.parcel\.packageName|liveRateQuote\.parcel\.lengthIn/);
   const liveCheckout = profile.slice(profile.indexOf('const handleLiveShippingCheckout'), profile.indexOf("const joinedDate"));
   assert.doesNotMatch(liveCheckout, /coin|balance/i); assert.match(liveCheckout, /quoteId: liveRateQuote\.quoteId, rateId: selectedRate\.id/);
 });
