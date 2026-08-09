@@ -13,7 +13,9 @@ const normalizeLedgerEntry = (entry = {}) => ({
   createdAt: toFiniteNumber(entry.createdAt, Date.now()),
   balanceAfter: entry.balanceAfter == null ? undefined : toFiniteNumber(entry.balanceAfter, 0),
   sourceId: entry.sourceId ? String(entry.sourceId) : undefined,
-  memo: entry.memo ? String(entry.memo) : undefined
+  memo: entry.memo ? String(entry.memo) : undefined,
+  prizeName: entry.prizeName ? String(entry.prizeName) : undefined,
+  prizeImage: entry.prizeImage ? String(entry.prizeImage) : undefined
 });
 
 export const appendLedgerEntry = ({ transaction, userRef, userData, entry, maxEntries = MAX_LEDGER_ENTRIES }) => {

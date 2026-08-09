@@ -329,6 +329,8 @@ export interface LedgerEntry {
   balanceAfter?: number;
   sourceId?: string;
   memo?: string;
+  prizeName?: string;
+  prizeImage?: string;
 }
 
 export interface AdminActionLog {
