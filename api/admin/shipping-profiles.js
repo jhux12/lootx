@@ -1,10 +1,7 @@
 import { admin, db } from '../_lib/firebaseAdmin.js';
 import { deny, ok, requireAdmin } from '../_utils/auth.js';
 
-const defaults = [
-  ['Raw Card', 3, 7, 5, 1, 'card_mailer'], ['Graded Slab', 7, 8, 6, 2, 'slab_small_box'],
-  ['Small Sealed', 12, 8, 6, 4, 'small_box'], ['Large Sealed', 32, null, null, null, 'large_box']
-];
+const defaults = [['Raw Card', 1, false], ['Graded Slab', 5, false], ['Booster Pack', 2, false], ['Small Sealed', 12, false], ['Large Sealed', 32, true]];
 const slugify = (name) => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60);
 const finiteNonnegative = (value, optional = false) => {
   if (optional && (value === '' || value === null || value === undefined)) return undefined;
@@ -16,7 +13,7 @@ const sanitize = (raw, existing) => {
   if (!name) throw { status: 400, error: 'PROFILE_NAME_REQUIRED' };
   if (!existing?.slug && !slugify(name)) throw { status: 400, error: 'PROFILE_NAME_INVALID' };
   const dimensions = { defaultLengthIn: finiteNonnegative(raw.defaultLengthIn, true), defaultWidthIn: finiteNonnegative(raw.defaultWidthIn, true), defaultHeightIn: finiteNonnegative(raw.defaultHeightIn, true) };
-  return { name, slug: existing?.slug || slugify(name), description: typeof raw.description === 'string' ? raw.description.trim().slice(0, 500) : '', defaultWeightOz: finiteNonnegative(raw.defaultWeightOz), ...Object.fromEntries(Object.entries(dimensions).filter(([, value]) => value !== undefined)), packageType: typeof raw.packageType === 'string' ? raw.packageType.trim().slice(0, 80) : '', active: raw.active !== false };
+  return { name, slug: existing?.slug || slugify(name), description: typeof raw.description === 'string' ? raw.description.trim().slice(0, 500) : '', defaultWeightOz: finiteNonnegative(raw.defaultWeightOz), ...Object.fromEntries(Object.entries(dimensions).filter(([, value]) => value !== undefined)), requiresCustomDimensions: raw.requiresCustomDimensions === true, packageType: typeof raw.packageType === 'string' ? raw.packageType.trim().slice(0, 80) : '', active: raw.active !== false };
 };
 const getUsage = async () => {
   const [boxes, items] = await Promise.all([db.collection('boxes').get(), db.collection('items').get()]); const usage = new Map();
@@ -33,7 +30,7 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST' && req.body?.action === 'seed') {
       const existing = await collection.limit(1).get(); if (!existing.empty) return deny(res, 409, 'PROFILES_ALREADY_EXIST');
-      const batch = db.batch(); const now = admin.firestore.FieldValue.serverTimestamp(); defaults.forEach(([name, weight, length, width, height, packageType]) => { const ref = collection.doc(); batch.set(ref, { ...sanitize({ name, defaultWeightOz: weight, defaultLengthIn: length, defaultWidthIn: width, defaultHeightIn: height, packageType, active: true }), createdAt: now, updatedAt: now }); }); await batch.commit(); return ok(res);
+      const batch = db.batch(); const now = admin.firestore.FieldValue.serverTimestamp(); defaults.forEach(([name, weight, requiresCustomDimensions]) => { const ref = collection.doc(); batch.set(ref, { ...sanitize({ name, defaultWeightOz: weight, requiresCustomDimensions, active: true }), createdAt: now, updatedAt: now }); }); await batch.commit(); return ok(res);
     }
     if (req.method === 'PUT') {
       const id = typeof req.body?.id === 'string' ? req.body.id.trim().slice(0, 100) : ''; const ref = id ? collection.doc(id) : collection.doc(); const snap = await ref.get();

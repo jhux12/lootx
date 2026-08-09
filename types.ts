@@ -190,6 +190,7 @@ export interface ShippingProfile {
   defaultLengthIn?: number;
   defaultWidthIn?: number;
   defaultHeightIn?: number;
+  requiresCustomDimensions?: boolean;
   packageType?: string;
   active: boolean;
   usageCount?: number;
@@ -207,7 +208,8 @@ export interface ShippingPackage {
   heightIn: number;
   emptyWeightOz: number;
   maxWeightOz?: number;
-  capacityByProfileId: Record<string, number>;
+  maxItemCount?: number;
+  capacityByProfileId?: Record<string, number>;
   priority: number;
   active: boolean;
   createdAt?: number;
@@ -217,12 +219,12 @@ export interface ShippingPackage {
 export interface ParcelCalculationResult {
   status: 'ready'; packageId: string; packageName: string;
   lengthIn: number; widthIn: number; heightIn: number;
-  itemWeightOz: number; packagingWeightOz: number; totalWeightOz: number;
+  itemWeightOz: number; packagingWeightOz: number; bufferWeightOz: number; totalWeightOz: number;
   profileCounts: Record<string, number>; warnings: string[];
 }
 
 export interface ParcelCalculationFailure {
-  status: 'invalid_items' | 'no_package'; reason: string; missingItemIds?: string[]; warnings: string[];
+  status: 'invalid_items' | 'no_package'; errorCode: 'SHIPPING_PROFILE_REQUIRED' | 'ITEM_WEIGHT_REQUIRED' | 'ITEM_DIMENSIONS_REQUIRED' | 'NO_PACKAGE_AVAILABLE'; reason: string; missingItemIds?: string[]; warnings: string[];
 }
 
 export interface ShippingRateQuote {

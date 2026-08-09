@@ -6,9 +6,10 @@ const slugify = (name) => name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').
 const number = (value, { optional = false, integer = false, max = 100000 } = {}) => { if (optional && (value === '' || value == null)) return undefined; const parsed = Number(value); if (!Number.isFinite(parsed) || parsed < 0 || parsed > max || (integer && !Number.isInteger(parsed))) throw { status: 400, error: 'INVALID_PACKAGE_NUMBER' }; return parsed; };
 const sanitize = (raw, existing) => {
   const name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 100) : ''; if (!name || (!existing?.slug && !slugify(name))) throw { status: 400, error: 'PACKAGE_NAME_REQUIRED' };
-  const capacityByProfileId = {}; Object.entries(raw?.capacityByProfileId ?? {}).slice(0, 100).forEach(([id, capacity]) => { if (/^[\w-]{1,120}$/.test(id)) capacityByProfileId[id] = number(capacity === '' ? 0 : capacity, { integer: true, max: 10000 }); });
+  const capacityByProfileId = {}; Object.entries(raw?.capacityByProfileId ?? {}).slice(0, 100).forEach(([id, capacity]) => { if (/^[\w-]{1,120}$/.test(id) && capacity !== '' && capacity != null) capacityByProfileId[id] = number(capacity, { integer: true, max: 10000 }); });
   const maxWeightOz = number(raw.maxWeightOz, { optional: true });
-  return { name, slug: existing?.slug || slugify(name), description: typeof raw.description === 'string' ? raw.description.trim().slice(0, 500) : '', lengthIn: number(raw.lengthIn), widthIn: number(raw.widthIn), heightIn: number(raw.heightIn), emptyWeightOz: number(raw.emptyWeightOz), ...(maxWeightOz == null ? {} : { maxWeightOz }), priority: number(raw.priority, { integer: true }), capacityByProfileId, active: raw.active !== false };
+  const maxItemCount = number(raw.maxItemCount, { optional: true, integer: true, max: 10000 });
+  return { name, slug: existing?.slug || slugify(name), description: typeof raw.description === 'string' ? raw.description.trim().slice(0, 500) : '', lengthIn: number(raw.lengthIn), widthIn: number(raw.widthIn), heightIn: number(raw.heightIn), emptyWeightOz: number(raw.emptyWeightOz), ...(maxWeightOz == null ? {} : { maxWeightOz }), ...(maxItemCount == null ? {} : { maxItemCount }), priority: number(raw.priority, { integer: true }), capacityByProfileId, active: raw.active !== false };
 };
 const loadProfiles = async () => (await db.collection('shippingProfiles').get()).docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 const loadPackages = async () => (await db.collection('shippingPackages').orderBy('priority').get()).docs.map((doc) => ({ id: doc.id, ...doc.data() }));
@@ -19,9 +20,8 @@ export default async function handler(req, res) {
     if (req.method === 'GET') return ok(res, { packages: await loadPackages() });
     if (req.method === 'POST' && req.body?.action === 'seed') {
       if (!(await collection.limit(1).get()).empty) return deny(res, 409, 'PACKAGES_ALREADY_EXIST');
-      const profiles = await loadProfiles(); const bySlug = new Map(profiles.map((profile) => [profile.slug, profile.id])); const now = admin.firestore.FieldValue.serverTimestamp();
-      const presets = [['Card Mailer',7,5,1,1,10,{raw_card:10}],['Small Slab Box',8,6,2,2,20,{raw_card:10,graded_slab:3}],['Medium Box',10,8,4,4,30,{raw_card:30,graded_slab:8,small_sealed:2}],['Large Box',12,10,6,6,40,{raw_card:50,graded_slab:15,small_sealed:4,large_sealed:1}]];
-      const batch = db.batch(); presets.forEach(([name,lengthIn,widthIn,heightIn,emptyWeightOz,priority,capacities]) => { const capacityByProfileId = {}; Object.entries(capacities).forEach(([slug, capacity]) => { const id = bySlug.get(slug); if (id) capacityByProfileId[id] = capacity; }); const ref = collection.doc(); batch.set(ref, { name, slug: slugify(name), description: '', lengthIn, widthIn, heightIn, emptyWeightOz, priority, capacityByProfileId, active: true, createdAt: now, updatedAt: now }); }); await batch.commit(); return ok(res);
+      const now = admin.firestore.FieldValue.serverTimestamp(); const presets = [['Small Package',10,8,4,3,5,32,10],['Medium Package',12,10,6,5,12,80,20],['Large Package',16,12,8,8,30,320,30]];
+      const batch = db.batch(); presets.forEach(([name,lengthIn,widthIn,heightIn,emptyWeightOz,maxItemCount,maxWeightOz,priority]) => { const ref = collection.doc(); batch.set(ref, { name, slug: slugify(name), description: '', lengthIn, widthIn, heightIn, emptyWeightOz, maxItemCount, maxWeightOz, priority, capacityByProfileId: {}, active: true, createdAt: now, updatedAt: now }); }); await batch.commit(); return ok(res);
     }
     if (req.method === 'POST' && req.body?.action === 'preview') {
       const [profiles, packages] = await Promise.all([loadProfiles(), loadPackages()]); const items = [];

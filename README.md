@@ -60,3 +60,6 @@ View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYG
   - `roll < computedChance`
 - Each attempt is logged in `upgradeAttempts` including roll/chance/nonce/serverSeedHash snapshots.
 - Upgrader no longer depends on `settings/upgrader.serverSeed`; it reuses `provablyFair/{uid}.serverSeed` for consistency with box openings.
+
+- Parcel selection is weight-first: ordinary item profiles only require `defaultWeightOz`; generic packages supply Shippo dimensions and can use optional `maxItemCount`, `maxWeightOz`, and advanced profile-specific restrictions. Profiles marked `requiresCustomDimensions` require complete item-level dimensions.
+- Optional server-only `PACKING_WEIGHT_BUFFER_OZ` adds a conservative ounce buffer after item and package weights (default `0`).

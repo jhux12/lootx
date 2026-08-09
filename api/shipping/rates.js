@@ -17,17 +17,17 @@ export default async function handler(req, res) {
     const { itemIds, items } = await loadOwnedShippingItems(uid, req.body?.itemIds); const config = await loadShippingConfig();
     const parcel = calculateShipmentParcel({ items, ...config });
     const allFree = items.every(isFree);
-    if (!allFree && parcel.status === 'invalid_items') return deny(res, 422, 'SHIPPING_PROFILE_REQUIRED');
+    if (!allFree && parcel.status === 'invalid_items') return deny(res, 422, parcel.errorCode);
     if (!allFree && parcel.status === 'no_package') {
       const activePackageCount = config.shippingPackages.filter((entry) => entry.active !== false).length;
-      return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : 'NO_SHIPPING_PACKAGE');
+      return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : parcel.errorCode);
     }
     const origin = allFree ? null : await loadShippingOrigin();
     const quotedRates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', serviceLevelToken: 'free', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
     const rates = allFree ? quotedRates : selectCustomerRates(quotedRates, destination.countryCode);
     if (!rates.length) return deny(res, 404, destination.countryCode === 'US' ? 'NO_STANDARD_SHIPPING_RATE' : 'NO_SHIPPING_RATES');
     const quotedAt = Date.now(); const expiresAt = quotedAt + 15 * 60_000; const quoteRef = userRef.collection('shippingRateQuotes').doc();
-    const parcelSnapshot = parcel.status === 'ready' ? { packageId: parcel.packageId, packageName: parcel.packageName, lengthIn: parcel.lengthIn, widthIn: parcel.widthIn, heightIn: parcel.heightIn, itemWeightOz: parcel.itemWeightOz, packagingWeightOz: parcel.packagingWeightOz, totalWeightOz: parcel.totalWeightOz } : null;
+    const parcelSnapshot = parcel.status === 'ready' ? { packageId: parcel.packageId, packageName: parcel.packageName, lengthIn: parcel.lengthIn, widthIn: parcel.widthIn, heightIn: parcel.heightIn, itemWeightOz: parcel.itemWeightOz, packagingWeightOz: parcel.packagingWeightOz, bufferWeightOz: parcel.bufferWeightOz, totalWeightOz: parcel.totalWeightOz } : null;
     await quoteRef.set({ uid, itemIds, parcel: parcelSnapshot, destinationSnapshot: destination, rates, status: allFree ? 'free_shipping' : 'quoted', createdAt: admin.firestore.FieldValue.serverTimestamp(), quotedAt, expiresAt });
     return ok(res, { status: allFree ? 'free_shipping' : 'quoted', quoteId: quoteRef.id, parcel: parcelSnapshot, destination: { city: destination.city, state: destination.state, postalCode: destination.postalCode, countryCode: destination.countryCode }, rates, quotedAt, expiresAt });
   } catch (error) { return deny(res, error?.status ?? 500, error?.error ?? 'SHIPPING_RATES_UNAVAILABLE'); }
