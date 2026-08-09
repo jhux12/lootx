@@ -63,3 +63,4 @@ View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYG
 
 - Parcel selection is weight-first: ordinary item profiles only require `defaultWeightOz`; generic packages supply Shippo dimensions and can use optional `maxItemCount`, `maxWeightOz`, and advanced profile-specific restrictions. Profiles marked `requiresCustomDimensions` require complete item-level dimensions.
 - Optional server-only `PACKING_WEIGHT_BUFFER_OZ` adds a conservative ounce buffer after item and package weights (default `0`).
+- Live shipping checkout uses the existing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `APP_URL`. Configure the Stripe webhook to deliver both `checkout.session.completed` and `checkout.session.expired`; the latter releases temporary inventory payment locks. Shippo labels are not purchased during checkout.

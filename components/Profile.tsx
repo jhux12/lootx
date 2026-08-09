@@ -225,6 +225,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [shippingPaymentStatus, setShippingPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'cancelled'>('idle');
   const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
   const [shippingDepositNotice, setShippingDepositNotice] = useState<string | null>(null);
   const [shippingDepositMessage, setShippingDepositMessage] = useState<string | null>(null);
@@ -403,7 +404,9 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       setShowShippingReview(false);
     };
 
-    if (shippingStatus === 'cancel') {
+    if (shippingStatus === 'cancel' || shippingStatus === 'cancelled') {
+      setShippingPaymentStatus('cancelled');
+      toast.info("Shipping payment wasn't completed. Your items have not been shipped.");
       const shipmentBatchId = window.sessionStorage.getItem(SHIPPING_BATCH_STORAGE_KEY);
       if (shipmentBatchId && auth.currentUser) {
         void (async () => {
@@ -428,10 +431,19 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     }
 
     if (shippingStatus === 'success') {
-      clearStoredBatch();
-      setShowShippingReview(true);
-      setShippingRequestConfirmed(true);
-      clearUrlParams();
+      const sessionId = params.get('session_id');
+      setShowShippingReview(true); setShippingPaymentStatus('pending');
+      if (sessionId && auth.currentUser) void (async () => {
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          const token = await auth.currentUser?.getIdToken(); if (!token) break;
+          const response = await fetch(`/api/shipping/payment-status?session_id=${encodeURIComponent(sessionId)}`, { headers: { Authorization: `Bearer ${token}` } });
+          const payload = await response.json().catch(() => null);
+          if (response.ok && payload?.status === 'paid') { setShippingPaymentStatus('paid'); setShippingRequestConfirmed(true); window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY); setSelectedShipments([]); clearUrlParams(); return; }
+          if (response.ok && ['expired', 'failed'].includes(payload?.status)) { setShippingPaymentStatus('cancelled'); clearUrlParams(); return; }
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        }
+        toast.info('Payment is still being confirmed. Your shipment will appear shortly.');
+      })();
     }
   }, []);
 
@@ -450,6 +462,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
   const selectedShipmentKey = selectedShipmentItems.map((item) => item.instanceId).sort().join(':');
+  const selectedLiveRate = liveRateQuote?.rates.find((rate) => rate.id === selectedRateId);
   const destinationKey = user.shippingAddress ? [user.shippingAddress.street1, user.shippingAddress.street2, user.shippingAddress.city, user.shippingAddress.state, user.shippingAddress.postalCode, user.shippingAddress.countryCode, user.shippingAddress.validatedAt].join('|') : '';
   const liveRateErrorMessage = liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' ? 'Please verify your shipping address before requesting rates.' : liveRateError === 'SHIPPING_PROFILE_REQUIRED' ? 'One or more selected items need shipping information before rates can be calculated.' : liveRateError === 'ITEM_WEIGHT_REQUIRED' ? 'One or more selected items need a shipping weight before rates can be calculated.' : liveRateError === 'ITEM_DIMENSIONS_REQUIRED' ? 'One or more large items need individual dimensions before rates can be calculated.' : liveRateError === 'SHIPPING_PACKAGES_NOT_CONFIGURED' ? 'Shipping packages are being configured. Please try again shortly.' : liveRateError === 'NO_PACKAGE_AVAILABLE' ? "These items need a different package setup. Please contact support and we'll help arrange shipping." : liveRateError === 'NO_STANDARD_SHIPPING_RATE' ? 'Standard shipping is temporarily unavailable. Please try again.' : liveRateError === 'NO_SHIPPING_RATES' ? 'No shipping services are currently available for this destination.' : liveRateError === 'CUSTOMS_DATA_REQUIRED' ? 'International shipping needs customs information before rates can be shown.' : liveRateError === 'SHIPPING_ORIGIN_NOT_CONFIGURED' || liveRateError === 'SHIPPO_NOT_CONFIGURED' || liveRateError === 'SHIPPO_AUTH_FAILED' ? 'Live shipping is not fully configured yet. Please contact support.' : liveRateError === 'SHIPPO_RATE_REQUEST_REJECTED' ? 'The carrier could not quote this address and package. Please check your address or contact support.' : liveRateError ? 'Shipping rates are temporarily unavailable. Please try again.' : '';
   useEffect(() => {
@@ -768,6 +781,34 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     }
   };
 
+  const handleLiveShippingCheckout = async () => {
+    const selectedRate = selectedLiveRate;
+    if (!auth.currentUser || !liveRateQuote || !selectedRate) return;
+    setIsSubmittingCashShipping(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/shipping/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ quoteId: liveRateQuote.quoteId, rateId: selectedRate.id })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (['SHIPPING_QUOTE_EXPIRED', 'SHIPPING_ITEMS_CHANGED', 'SHIPPING_QUOTE_ALREADY_USED'].includes(payload?.error)) setRateRefreshVersion((value) => value + 1);
+        throw new Error(payload?.error ?? 'SHIPPING_CHECKOUT_UNAVAILABLE');
+      }
+      if (payload?.shipmentBatchId) window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, payload.shipmentBatchId);
+      if (!payload?.sessionId) {
+        setShippingPaymentStatus('paid'); setSelectedShipments([]); setShippingRequestConfirmed(true);
+        return;
+      }
+      const stripe = await getStripe(); if (!stripe) throw new Error('Stripe failed to initialize.');
+      const result = await stripe.redirectToCheckout({ sessionId: payload.sessionId }); if (result.error) throw result.error;
+    } catch {
+      toast.error('Unable to start secure shipping checkout. Please refresh rates and try again.');
+    } finally { setIsSubmittingCashShipping(false); }
+  };
+
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
@@ -919,13 +960,20 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
               </button>
             </div>
 
-            {shippingRequestConfirmed ? (
+            {shippingPaymentStatus === 'pending' ? (
+              <div className="rounded-3xl border border-blue-400/20 bg-[#171d24] px-4 py-10 text-center sm:px-5">
+                <span className="mx-auto block h-9 w-9 animate-spin rounded-full border-4 border-blue-300 border-t-transparent" />
+                <h3 className="mt-4 text-xl font-black text-white">Confirming payment…</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">Stripe is confirming your payment. Keep this page open; your items remain securely reserved.</p>
+              </div>
+            ) : shippingRequestConfirmed ? (
               <div className="rounded-3xl border border-white/10 bg-[#171d24] px-4 py-7 text-center sm:px-5 sm:py-8">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-950/30">
                   <Check className="h-9 w-9" />
                 </div>
-                <h3 className="mt-4 text-2xl font-black text-white">Shipment Requested</h3>
-                <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-6 text-slate-400">We received your request and will prepare your item for shipping.</p>
+                <h3 className="mt-4 text-2xl font-black text-white">Shipping requested</h3>
+                <p className="mt-2 font-bold text-emerald-200">Payment received</p>
+                <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-6 text-slate-400">We'll update your order when your shipment is prepared.</p>
                 <button
                   type="button"
                   className="mt-6 w-full rounded-xl border border-white/10 bg-[#262d35] px-4 py-3 text-base font-black text-white transition hover:border-white/20 hover:bg-[#2d3540] focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
@@ -1045,7 +1093,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
               <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Shipping method</p><button type="button" onClick={() => setRateRefreshVersion((value) => value + 1)} disabled={isLoadingLiveRates} className="min-h-9 rounded-lg border border-white/10 px-3 text-xs font-bold text-blue-200 disabled:opacity-50">Refresh rates</button></div>
               {isLoadingLiveRates && <div className="mt-3 flex min-h-20 items-center justify-center gap-2 text-sm font-bold text-slate-300"><span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-transparent" />Calculating shipping options…</div>}
               {!isLoadingLiveRates && liveRateError && <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-sm leading-5 text-amber-100"><p>{liveRateErrorMessage}</p>{liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' && <button type="button" onClick={handleEditShippingAddress} className="mt-2 min-h-10 w-full rounded-lg bg-amber-300 px-3 font-black text-slate-950">Edit Address</button>}</div>}
-              {!isLoadingLiveRates && liveRateQuote && <>{liveRateQuote.parcel && <div className="mt-3 rounded-xl bg-white/[0.03] p-3 text-xs text-slate-400"><strong className="text-sm text-white">{liveRateQuote.parcel.packageName}</strong><p>{liveRateQuote.parcel.lengthIn} × {liveRateQuote.parcel.widthIn} × {liveRateQuote.parcel.heightIn} in • {liveRateQuote.parcel.totalWeightOz} oz</p></div>}<div className="mt-2 space-y-2">{liveRateQuote.rates.map((rate) => <button type="button" key={rate.id} onClick={() => setSelectedRateId(rate.id)} className={`flex min-h-16 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/30' : 'border-white/10 bg-white/[0.02]'}`}><span className={`h-5 w-5 flex-none rounded-full border-2 p-1 ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-400 bg-clip-content' : 'border-slate-500'}`} /><span className="min-w-0 flex-1"><strong className="block text-sm text-white">{liveRateQuote.destination.countryCode === 'US' ? 'Standard Shipping' : `${rate.provider} ${rate.service}`}</strong><span className="text-xs text-slate-400">{rate.estimatedDays != null ? `Estimated ${rate.estimatedDays} business day${rate.estimatedDays === 1 ? '' : 's'}` : rate.durationTerms || 'Carrier estimate unavailable'}</span></span><strong className="text-base text-blue-300">${(rate.customerAmountCents / 100).toFixed(2)}</strong></button>)}</div>{liveRateQuote.destination.countryCode !== 'US' && <p className="mt-3 text-xs leading-5 text-amber-200">International shipments may be subject to customs duties, taxes, or import fees charged by the destination country.</p>}<p className="mt-3 text-center text-[11px] text-slate-500">Quote expires {new Date(liveRateQuote.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</p></>}
+              {!isLoadingLiveRates && liveRateQuote && <>{liveRateQuote.parcel && <div className="mt-3 rounded-xl bg-white/[0.03] p-3 text-xs text-slate-400"><strong className="text-sm text-white">{liveRateQuote.parcel.packageName}</strong><p>{liveRateQuote.parcel.lengthIn} × {liveRateQuote.parcel.widthIn} × {liveRateQuote.parcel.heightIn} in • {liveRateQuote.parcel.totalWeightOz} oz</p></div>}<div className="mt-2 space-y-2">{liveRateQuote.rates.map((rate) => <button type="button" key={rate.id} onClick={() => setSelectedRateId(rate.id)} className={`flex min-h-16 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/30' : 'border-white/10 bg-white/[0.02]'}`}><span className={`h-5 w-5 flex-none rounded-full border-2 p-1 ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-400 bg-clip-content' : 'border-slate-500'}`} /><span className="min-w-0 flex-1"><strong className="block text-sm text-white">{liveRateQuote.destination.countryCode === 'US' ? 'Standard Shipping' : 'International Shipping'}</strong><span className="block text-xs font-semibold text-slate-300">{rate.provider} {rate.service}</span><span className="text-xs text-slate-400">{rate.estimatedDays != null ? `Estimated ${rate.estimatedDays} business day${rate.estimatedDays === 1 ? '' : 's'}` : rate.durationTerms || 'Carrier estimate unavailable'}</span></span><strong className="text-base text-blue-300">${(rate.customerAmountCents / 100).toFixed(2)}</strong></button>)}</div>{liveRateQuote.destination.countryCode !== 'US' && <p className="mt-3 text-xs leading-5 text-amber-200">International shipments may be subject to customs duties, taxes, or import fees charged by the destination country.</p>}<p className="mt-3 text-center text-[11px] text-slate-500">Quote expires {new Date(liveRateQuote.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</p></>}
             </section>
 
             {false && !isFreeOnlySelection && (
@@ -1147,7 +1195,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             )}
 
             <div className="mt-4 space-y-2">
-              <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedRateId || isLoadingLiveRates} onClick={() => toast.info('Shipping method selected. Payment will be enabled after live-rate verification.')}>Select Shipping Method</button>
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
               <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
 

@@ -112,6 +112,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /shippingPaymentAttempts/{attemptId} {
+      allow read, write: if false;
+    }
+
     match /users/{uid}/inventory/{inventoryId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow write: if isAdmin();

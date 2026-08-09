@@ -311,7 +311,7 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
+  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_payment_pending' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
   trackingNumber?: string;
   size?: string;
@@ -356,6 +356,15 @@ export interface Shipment {
   shippingPaymentMethod?: 'coins' | 'cash' | 'FREE_XP';
   shippingCashAmountCents?: number;
   shippingBatchId?: string;
+  quoteId?: string;
+  paymentAttemptId?: string;
+  provider?: string;
+  service?: string;
+  shippoRateId?: string;
+  carrierAmountCents?: number;
+  handlingFeeCents?: number;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
   shippingBatchCost?: number;
   shippingBatchCostCents?: number;
   shippingBatchValueCoins?: number;
