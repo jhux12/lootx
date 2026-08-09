@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { getClientIp, normalizeIp } from '../api/_utils/clientIp.js';
 import { MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP, shouldAutoBanSignupIpAccount } from '../api/_lib/signupIpPolicy.js';
-import { evaluateSignupFraud } from '../api/_lib/fraudPolicy.js';
+import { evaluateSignupFraud, MAX_UNBANNED_ACCOUNTS_PER_DEVICE } from '../api/_lib/fraudPolicy.js';
 
 test('getClientIp uses the originating forwarded address', () => {
   const request = {
@@ -19,12 +19,13 @@ test('getClientIp uses the originating forwarded address', () => {
 
 test('fraud scoring applies device, IP, welcome bonus, and automatic-ban rules', () => {
   assert.deepEqual(evaluateSignupFraud({ accountsBeforeDevice: 1 }), {
-    score: 6, reasons: ['shared_device'], autoBanned: false, autoBanReason: null
+    score: 4, reasons: ['shared_device'], autoBanned: false, autoBanReason: null
   });
-  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 1, accountsBeforeIp: 1 }).autoBanned, true);
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 1, accountsBeforeIp: 1 }).autoBanned, false);
   assert.equal(evaluateSignupFraud({ deviceWelcomeBonusClaimed: true }).score, 8);
   assert.equal(evaluateSignupFraud({ ipWelcomeBonusClaimed: true }).score, 4);
-  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 2 }).autoBanReason, 'device_account_limit');
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 2 }).autoBanned, false);
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 3 }).autoBanReason, 'device_account_limit');
   assert.equal(evaluateSignupFraud({ accountsBeforeIp: 3 }).autoBanReason, 'signup_ip_account_limit');
 });
 
@@ -44,4 +45,12 @@ test('the first three accounts from an IP are allowed and the fourth and later a
   }
   assert.equal(shouldAutoBanSignupIpAccount(3), true);
   assert.equal(shouldAutoBanSignupIpAccount(4), true);
+});
+
+test('the first three accounts from a device are allowed and the fourth and later are banned', () => {
+  for (let accountsBeforeSignup = 0; accountsBeforeSignup < MAX_UNBANNED_ACCOUNTS_PER_DEVICE; accountsBeforeSignup += 1) {
+    assert.equal(evaluateSignupFraud({ accountsBeforeDevice: accountsBeforeSignup }).autoBanned, false);
+  }
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 3 }).autoBanReason, 'device_account_limit');
+  assert.equal(evaluateSignupFraud({ accountsBeforeDevice: 4 }).autoBanReason, 'device_account_limit');
 });
