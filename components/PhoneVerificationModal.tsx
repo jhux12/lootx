@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ConfirmationResult, linkWithPhoneNumber, RecaptchaVerifier } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
-import { ArrowRight, Check, CheckCircle2, Loader2, LockKeyhole, Shield, Smartphone, Sparkles, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, LockKeyhole, Shield, X } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { useGame } from '../context/GameContext';
 import { Input } from './ui/Input';
@@ -150,14 +150,7 @@ export const PhoneVerificationModal: React.FC = () => {
       <div className="relative max-h-[calc(100dvh-1.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-[34rem] overflow-y-auto overscroll-contain rounded-[22px] border border-blue-500/80 bg-[radial-gradient(circle_at_50%_13%,rgba(13,67,150,0.22),transparent_31%),linear-gradient(145deg,#07101f_0%,#020711_62%,#030914_100%)] px-5 pb-6 pt-5 shadow-[0_0_30px_rgba(20,102,255,0.24),inset_0_0_35px_rgba(15,70,160,0.08)] sm:px-10 sm:pb-8 sm:pt-7">
         <button type="button" onClick={close} className="absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-slate-600/70 bg-[#07101d]/80 text-white transition hover:border-blue-400 hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 sm:right-4 sm:top-4" aria-label="Close phone verification"><X className="h-6 w-6" /></button>
 
-        <div className="mx-auto flex max-w-md flex-col items-center text-center">
-          <div className="relative mb-3 mt-2 flex h-28 w-28 items-center justify-center sm:h-36 sm:w-36">
-            <Sparkles className="absolute left-0 top-7 h-5 w-5 text-blue-500" />
-            <Sparkles className="absolute right-1 top-4 h-4 w-4 text-cyan-400" />
-            <div className="absolute h-[82%] w-[72%] rounded-[42%_42%_48%_48%] border-2 border-cyan-300 bg-gradient-to-b from-blue-500/60 via-blue-700/30 to-blue-950/30 shadow-[0_0_22px_rgba(0,119,255,0.8),inset_0_0_18px_rgba(75,184,255,0.45)] [clip-path:polygon(50%_0,100%_22%,91%_72%,50%_100%,9%_72%,0_22%)]" />
-            <Smartphone className="relative h-16 w-16 fill-white text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.35)] sm:h-20 sm:w-20" strokeWidth={1.5} />
-            <span className="absolute bottom-2 right-2 grid h-11 w-11 place-items-center rounded-full border border-cyan-300 bg-gradient-to-br from-blue-400 to-blue-700 shadow-[0_0_14px_rgba(0,132,255,0.75)] sm:bottom-3 sm:right-3"><Check className="h-7 w-7 text-white" strokeWidth={3} /></span>
-          </div>
+        <div className="mx-auto flex max-w-md flex-col items-center pt-11 text-center sm:pt-3">
           <h2 id="phone-verification-title" className="text-[clamp(1.75rem,7vw,2.45rem)] font-black italic uppercase leading-none tracking-[-0.04em] text-white">Verify your <span className="text-blue-500">phone</span></h2>
           <p className="mt-3 max-w-[27rem] text-sm leading-6 text-slate-300 sm:text-base">Enter your phone number and we'll send you a 6-digit code to verify your account.</p>
         </div>
