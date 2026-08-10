@@ -1257,6 +1257,8 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     forceFullSellBack: data.forceFullSellBack === true,
     sellBackRate: Number(data.sellBackRate ?? 0),
     locked: data.locked ?? false,
+    shippingPaymentAttemptId: typeof data.shippingPaymentAttemptId === 'string' ? data.shippingPaymentAttemptId : undefined,
+    shippingLockExpiresAt: data.shippingLockExpiresAt == null ? undefined : Number(data.shippingLockExpiresAt),
     history,
     source: typeof data.source === 'string' ? data.source : undefined,
     sourceItemId: typeof data.sourceItemId === 'string' ? data.sourceItemId : undefined,

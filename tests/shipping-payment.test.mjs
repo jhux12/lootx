@@ -10,6 +10,7 @@ const statusEndpoint = fs.readFileSync('api/shipping/payment-status.js', 'utf8')
 const cancelEndpoint = fs.readFileSync('api/shipping/cancel-checkout-session.js', 'utf8');
 const resumeEndpoint = fs.readFileSync('api/shipping/resume-checkout-session.js', 'utf8');
 const profile = fs.readFileSync('components/Profile.tsx', 'utf8');
+const gameContext = fs.readFileSync('context/GameContext.tsx', 'utf8');
 const rules = fs.readFileSync('firestore.rules', 'utf8');
 
 test('checkout authenticates and accepts only quote and rate identifiers', () => {
@@ -74,6 +75,8 @@ test('cancelled checkout is authenticated, expires Stripe session, and releases 
 });
 
 test('pending inventory exposes mobile-friendly complete payment and cancel shipment actions', () => {
+  assert.match(gameContext, /shippingPaymentAttemptId: typeof data\.shippingPaymentAttemptId === 'string'/);
+  assert.match(gameContext, /shippingLockExpiresAt: data\.shippingLockExpiresAt/);
   assert.match(profile, /item\.status === 'shipping_payment_pending'/);
   assert.match(profile, /Complete Payment/);
   assert.match(profile, /Cancel Shipment/);
