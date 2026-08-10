@@ -6,6 +6,7 @@ import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralDepositQualified } from './_lib/referrals.js';
 import { recordBalanceChange } from './_lib/balanceAudit.js';
 import { sendGa4Event } from './_lib/ga4.js';
+import { finalizeShippingPayment, releaseShippingPaymentAttempt } from './_lib/shippingPayment.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const GA4_DELIVERY_LEASE_MS = 5 * 60 * 1000;
@@ -80,9 +81,44 @@ export default async function handler(req, res) {
     return sendJson(res, 400, { error: 'Invalid signature' });
   }
 
+  if (event.type === 'checkout.session.expired') {
+    const session = event.data.object; const metadata = session.metadata ?? {};
+    if (metadata.type === 'shipping' && metadata.paymentAttemptId) {
+      try {
+        const attemptRef = firestore.collection('shippingPaymentAttempts').doc(metadata.paymentAttemptId);
+        const attemptSnap = await attemptRef.get();
+        if (attemptSnap.exists && !attemptSnap.data()?.stripeCheckoutSessionId) await attemptRef.set({ stripeCheckoutSessionId: session.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await releaseShippingPaymentAttempt(metadata.paymentAttemptId, session.id);
+      }
+      catch (error) { console.error('stripe-webhook failed to release shipping lock', { attemptId: metadata.paymentAttemptId, sessionId: session.id, message: error?.message }); return sendJson(res, 500, { error: 'Failed to release shipping payment' }); }
+    }
+    return sendJson(res, 200, { received: true });
+  }
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const metadata = session.metadata ?? {};
+    if (metadata.type === 'shipping') {
+      const attemptId = metadata.paymentAttemptId;
+      if (!attemptId || !metadata.userId || !metadata.quoteId || !metadata.shippingBatchId || session.payment_status !== 'paid') {
+        console.warn('stripe-webhook invalid live shipping metadata', { attemptId, sessionId: session.id });
+        return sendJson(res, 200, { received: true });
+      }
+      try {
+        const attemptSnap = await firestore.collection('shippingPaymentAttempts').doc(attemptId).get();
+        const attempt = attemptSnap.data() ?? {};
+        if (!attemptSnap.exists || attempt.uid !== metadata.userId || attempt.quoteId !== metadata.quoteId || attempt.shipmentBatchId !== metadata.shippingBatchId) {
+          console.warn('stripe-webhook live shipping attempt mismatch', { attemptId, sessionId: session.id });
+          return sendJson(res, 200, { received: true });
+        }
+        if (!attempt.stripeCheckoutSessionId) await attemptSnap.ref.set({ stripeCheckoutSessionId: session.id, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await finalizeShippingPayment({ attemptId, sessionId: session.id, paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : null, amountTotal: session.amount_total, currency: session.currency });
+      } catch (error) {
+        console.error('stripe-webhook failed to finalize live shipping', { attemptId, sessionId: session.id, message: error?.error ?? error?.message });
+        return sendJson(res, 500, { error: 'Failed to finalize shipping payment' });
+      }
+      return sendJson(res, 200, { received: true });
+    }
     if (metadata.paymentType === 'shipping') {
       const shipmentBatchId = metadata.shipmentId;
       const uid = metadata.userId;

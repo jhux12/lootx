@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Search } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, Activity, ShieldAlert, Package, Box as BoxIcon, Calculator, Edit2, Trash2, Calendar, BellRing, Truck, PackageCheck, Lock, Unlock, ShieldCheck, ScrollText, UserCog, Sparkles, X, BadgeDollarSign, Beaker, Home as HomeIcon, PackageOpen, MessageCircle, BarChart3, Search, MapPin } from 'lucide-react';
 import { Timestamp, addDoc, arrayUnion, collection, deleteDoc, deleteField, doc, getDocs, limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { calculateLevelProgress, useGame } from '../context/GameContext';
-import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, User, UserLocks, UserStatus } from '../types';
+import { AdminActionLog, CaseItem, CoinPackage, InventoryHistoryEntry, InventoryItem, LedgerEntry, LedgerEntryType, MysteryBox, Shipment, ShippingPackage, ShippingProfile, User, UserLocks, UserStatus } from '../types';
 import { COIN_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { buildOddsWithRiskAndTargetEV, buildRiskAdjustedOdds, calculateExpectedValue, calculateOddsTotal, getRiskLabel } from '../utils/caseOdds';
@@ -16,6 +16,9 @@ import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
+import { ShippingProfilesAdminSection } from './admin/ShippingProfilesAdminSection';
+import { ShippingPackagesAdminSection } from './admin/ShippingPackagesAdminSection';
+import { ShippingOriginAdminSection } from './admin/ShippingOriginAdminSection';
 import { SeoManager } from './admin/SeoManager';
 import { Checkbox } from './ui/Checkbox';
 import { Input } from './ui/Input';
@@ -400,7 +403,13 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
+  const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
+  useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
+  const [shippingPackages, setShippingPackages] = useState<ShippingPackage[]>([]);
+  const loadShippingPackages = async () => { const result = await authedFetch<{ packages: ShippingPackage[] }>('/api/admin/shipping-packages'); setShippingPackages(result.packages ?? []); };
+  useEffect(() => { void loadShippingPackages().catch((error) => console.error('Failed to load shipping packages', error)); }, []);
 
   // --- ITEM FORM STATE ---
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -470,6 +479,7 @@ export const AdminPanel: React.FC = () => {
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
+  const [bulkShippingItemIds, setBulkShippingItemIds] = useState<string[]>([]);
   const [oddsEditorMode, setOddsEditorMode] = useState<'auto' | 'manual'>('auto');
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
@@ -500,6 +510,14 @@ export const AdminPanel: React.FC = () => {
   );
   const [dashboardTransactions, setDashboardTransactions] = useState<DashboardTransaction[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
+
+  useEffect(() => {
+      const currentIds = new Set(selectedItems.map((item) => item.id));
+      setBulkShippingItemIds((ids) => {
+          const next = ids.filter((id) => currentIds.has(id));
+          return next.length === ids.length && next.every((id, index) => id === ids[index]) ? ids : next;
+      });
+  }, [selectedItems]);
 
   useEffect(() => {
       if (activeTab !== 'dashboard') return;
@@ -1764,7 +1782,9 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: newItem.upgraderEnabled === true,
           upgraderCategory,
           upgraderSort: Number.isFinite(upgraderSort) ? upgraderSort : undefined,
-          upgraderFeatured: newItem.upgraderFeatured === true
+          upgraderFeatured: newItem.upgraderFeatured === true,
+          shippingProfileId: newItem.shippingProfileId || null,
+          shippingOverride: newItem.shippingOverride
       };
 
       console.log("CATALOG ITEM SAVE CLICKED", item);
@@ -1804,7 +1824,9 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: item.upgraderEnabled === true,
           upgraderCategory: item.upgraderCategory ?? '',
           upgraderSort: item.upgraderSort,
-          upgraderFeatured: item.upgraderFeatured === true
+          upgraderFeatured: item.upgraderFeatured === true,
+          shippingProfileId: item.shippingProfileId ?? null,
+          shippingOverride: item.shippingOverride
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -1838,7 +1860,8 @@ export const AdminPanel: React.FC = () => {
           upgraderEnabled: false,
           upgraderCategory: '',
           upgraderSort: undefined,
-          upgraderFeatured: false
+          upgraderFeatured: false,
+          shippingProfileId: null
       });
       setItemTagInput('');
       setItemSizeInput('');
@@ -3050,7 +3073,7 @@ export const AdminPanel: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSaveBox = () => {
+  const handleSaveBox = async () => {
       const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
@@ -3092,15 +3115,19 @@ export const AdminPanel: React.FC = () => {
 
       const box: MysteryBox = buildEditableBoxPayload(boxItems);
 
-      if (editingBoxId) {
-          updateBox(box);
-          alert("Box Updated!");
-      } else {
-          createBox(box);
-          alert("Box Created in Firebase!");
+      try {
+          if (editingBoxId) {
+              await updateBox(box);
+              alert("Box Updated!");
+          } else {
+              await createBox(box);
+              alert("Box Created in Firebase!");
+          }
+          resetBoxForm();
+      } catch (error) {
+          console.error('Failed to persist box shipping profiles', error);
+          alert('The box could not be saved. Your shipping profile selections are still here—please try again.');
       }
-
-      resetBoxForm();
   };
 
   const handleEditBox = (box: MysteryBox) => {
@@ -3683,6 +3710,14 @@ export const AdminPanel: React.FC = () => {
                        <Truck className="w-4 h-4" /> Shipment Manager
                    </button>
                    <button
+                     onClick={() => setActiveTab('shipping-profiles')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-profiles' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <PackageCheck className="w-4 h-4" /> Shipping Profiles
+                   </button>
+                   <button onClick={() => setActiveTab('shipping-origin')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-origin' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}><MapPin className="w-4 h-4" /> Shipping Origin</button>
+                   <button onClick={() => setActiveTab('shipping-packages')} className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'shipping-packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}><PackageOpen className="w-4 h-4" /> Shipping Packages</button>
+                   <button
                      onClick={() => setActiveTab('support')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'support' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3768,6 +3803,9 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'boxes' && 'Box Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
+                    {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
+                    {activeTab === 'shipping-origin' && 'Shipping Origin'}
+                    {activeTab === 'shipping-packages' && 'Shipping Packages'}
                     {activeTab === 'support' && 'Support Inbox'}
                     {activeTab === 'bonuses' && 'Bonuses & Pull Pass'}
                     {activeTab === 'referrals' && 'Referral Program'}
@@ -3784,6 +3822,9 @@ export const AdminPanel: React.FC = () => {
             </div>
 
             {/* TAB: DASHBOARD */}
+            {activeTab === 'shipping-profiles' && <ShippingProfilesAdminSection profiles={shippingProfiles} onRefresh={loadShippingProfiles} />}
+            {activeTab === 'shipping-origin' && <ShippingOriginAdminSection />}
+            {activeTab === 'shipping-packages' && <ShippingPackagesAdminSection packages={shippingPackages} profiles={shippingProfiles} onRefresh={loadShippingPackages} />}
             {activeTab === 'dashboard' && (
                 <>
                     {/* Stats Grid */}
@@ -3938,6 +3979,7 @@ export const AdminPanel: React.FC = () => {
                             </Select>
                             <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})} />
                             <Input type="number" min={0} max={100} placeholder="Chance % (0-100)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newItem.chance ?? ''} onChange={e => setNewItem({...newItem, chance: e.target.value === '' ? undefined : Number(e.target.value)})} />
+                            <label className="text-[10px] font-bold uppercase text-gray-500">Shipping Profile<Select value={newItem.shippingProfileId ?? ''} onChange={(e) => setNewItem({ ...newItem, shippingProfileId: e.target.value || null })} className="mt-1 min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] p-2 text-sm normal-case text-gray-200"><option value="">Default — Raw Card • 0.5 oz</option>{shippingProfiles.filter((profile) => profile.active || profile.id === newItem.shippingProfileId).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}{!profile.active ? ' (Inactive)' : ''} • {profile.defaultWeightOz} oz</option>)}</Select></label>
                             <label className="col-span-1 md:col-span-2 flex items-center gap-3 rounded-lg border border-gray-700 bg-[#0b0e14] px-3 py-2 text-sm text-gray-300">
                                 <Checkbox
                                   checked={newItem.redeemable ?? true}
@@ -4707,10 +4749,22 @@ export const AdminPanel: React.FC = () => {
                              {/* Selected & Configured Items */}
                              {selectedItems.length > 0 && (
                                  <div className="border-t border-gray-800 pt-4">
-                                     <h4 className="text-sm font-bold text-gray-400 uppercase mb-2">Box Contents ({selectedItems.length})</h4>
+                                     <div className="mb-3 space-y-2 rounded-xl border border-gray-700 bg-[#10141c] p-3">
+                                         <div className="flex flex-wrap items-center justify-between gap-2">
+                                             <h4 className="text-sm font-bold uppercase text-gray-300">Box Contents ({selectedItems.length})</h4>
+                                             <div className="flex gap-2">
+                                                 <button type="button" onClick={() => setBulkShippingItemIds(selectedItems.map((item) => item.id))} className="min-h-10 rounded-lg border border-gray-600 px-3 text-xs font-bold text-gray-200">Select all</button>
+                                                 {bulkShippingItemIds.length > 0 && <button type="button" onClick={() => setBulkShippingItemIds([])} className="min-h-10 rounded-lg border border-gray-700 px-3 text-xs font-bold text-gray-400">Clear</button>}
+                                             </div>
+                                         </div>
+                                         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-gray-500 sm:flex-row sm:items-center">Assign profile to {bulkShippingItemIds.length} selected
+                                             <Select aria-label="Assign a shipping profile to selected box items" defaultValue="" disabled={bulkShippingItemIds.length === 0} onChange={(event) => { const id = event.target.value; if (!id) return; const selectedIds = new Set(bulkShippingItemIds); setSelectedItems((current) => current.map((entry) => selectedIds.has(entry.id) ? { ...entry, shippingProfileId: id === '__unassigned' ? null : id } : entry)); event.target.value = ''; }} className="min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] px-3 text-sm normal-case text-white disabled:opacity-50 sm:min-w-64 sm:flex-1"><option value="">Choose profile…</option><option value="__unassigned">Default — Raw Card • 0.5 oz</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select>
+                                         </label>
+                                     </div>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700 sm:flex-nowrap">
+                                                 <label className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-600 bg-black/25" aria-label={`Select ${item.name} for bulk shipping profile assignment`}><input type="checkbox" checked={bulkShippingItemIds.includes(item.id)} onChange={(event) => setBulkShippingItemIds((ids) => event.target.checked ? Array.from(new Set([...ids, item.id])) : ids.filter((id) => id !== item.id))} className="h-5 w-5 accent-blue-500" /></label>
                                                  <button
                                                      type="button"
                                                      onClick={() => toggleItemSelection(item)}
@@ -4722,6 +4776,7 @@ export const AdminPanel: React.FC = () => {
                                                  </button>
                                                  <img src={item.image} alt={item.name} className="w-8 h-8 object-contain sm:w-5 sm:h-5" />
                                                  <span className="min-w-[120px] flex-1 text-gray-300 truncate">{item.name}</span>
+                                                 <label className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 text-[10px] font-bold uppercase text-gray-500 sm:w-52">Shipping Profile<Select value={item.shippingProfileId ?? ''} onChange={(event) => setSelectedItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, shippingProfileId: event.target.value || null } : entry))} className={`min-h-10 w-full rounded border bg-[#0b0e14] px-2 text-xs normal-case text-white ${item.shippingProfileId ? 'border-gray-700' : 'border-amber-500/60'}`}><option value="">Default — Raw Card • 0.5 oz</option>{shippingProfiles.filter((profile) => profile.active || profile.id === item.shippingProfileId).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}{!profile.active ? ' (Inactive)' : ''} • {profile.defaultWeightOz} oz</option>)}</Select>{!item.shippingProfileId && <span className="normal-case text-amber-300">Defaults to Raw Card • 0.5 oz</span>}</label>
                                                  <div className="flex w-full flex-col gap-1 rounded bg-black/30 px-2 py-1 sm:w-[150px]">
                                                      <div className="flex items-center justify-between gap-2">
                                                          <span className="text-[10px] uppercase text-gray-500">EV value</span>

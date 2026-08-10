@@ -108,6 +108,14 @@ service cloud.firestore {
       allow create, update, delete: if isOwnUser(uid);
     }
 
+    match /users/{uid}/shippingRateQuotes/{quoteId} {
+      allow read, write: if false;
+    }
+
+    match /shippingPaymentAttempts/{attemptId} {
+      allow read, write: if false;
+    }
+
     match /users/{uid}/inventory/{inventoryId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow write: if isAdmin();
@@ -190,6 +198,14 @@ service cloud.firestore {
     match /shipments/{shipmentId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
       allow write: if isAdmin();
+    }
+
+    match /shippingProfiles/{profileId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /shippingPackages/{packageId} {
+      allow read, write: if isAdmin();
     }
 
     match /admin/{document=**} {

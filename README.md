@@ -12,6 +12,12 @@ Set the server-only `SHIPPO_API_TOKEN` deployment environment variable to enable
 
 Set the optional server-only `GEOAPIFY_API_KEY` to show address suggestions while customers type. The profile form remains fully usable when autocomplete is not configured or temporarily unavailable.
 
+## Parcel package calculator
+
+Admins configure `shippingProfiles` and `shippingPackages` in the Admin shipping sections. Parcel selection uses package priority, capacity per immutable profile ID, maximum weight, and custom item dimensions. Mixed shipments currently use independent per-profile capacity limits and return a review warning; this intentionally leaves room for a future packing engine. The authenticated `/api/shipping/calculate-parcel` endpoint calculates dimensions and weight from server-owned inventory only and does not request carrier rates.
+
+Live quotes require `SHIPPO_API_TOKEN`. The fulfillment origin is stored in the admin-only `settings/shipping` document and can be edited under Admin → Shipping Origin; the server initializes the Pullz Indianapolis origin when the document is absent. Existing server-only `SHIP_FROM_NAME`, `SHIP_FROM_STREET1`, `SHIP_FROM_STREET2` (optional), `SHIP_FROM_CITY`, `SHIP_FROM_STATE`, `SHIP_FROM_POSTAL_CODE`, `SHIP_FROM_COUNTRY`, and `SHIP_FROM_PHONE` values remain a migration fallback. `SHIPPING_HANDLING_FEE_CENTS` controls the fee added to carrier quotes and defaults to 150. Quotes expire after 15 minutes and do not purchase labels or initiate payment.
+
 View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYGEdUw7rNcF9
 
 ## Run Locally
@@ -54,3 +60,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1jzMWG_BfQY623gwFGCJsYG
   - `roll < computedChance`
 - Each attempt is logged in `upgradeAttempts` including roll/chance/nonce/serverSeedHash snapshots.
 - Upgrader no longer depends on `settings/upgrader.serverSeed`; it reuses `provablyFair/{uid}.serverSeed` for consistency with box openings.
+
+- Parcel selection is weight-first: ordinary item profiles only require `defaultWeightOz`; generic packages supply Shippo dimensions and can use optional `maxItemCount`, `maxWeightOz`, and advanced profile-specific restrictions. Profiles marked `requiresCustomDimensions` require complete item-level dimensions.
+- Optional server-only `PACKING_WEIGHT_BUFFER_OZ` adds a conservative ounce buffer after item and package weights (default `0`).
+- Live shipping checkout uses the existing `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `APP_URL`. Configure the Stripe webhook to deliver both `checkout.session.completed` and `checkout.session.expired`; the latter releases temporary inventory payment locks. Shippo labels are not purchased during checkout.
