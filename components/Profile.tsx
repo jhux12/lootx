@@ -11,7 +11,8 @@ import { formatShippingAddOnPrice, formatShippingTierSummary, getShipmentShippin
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
 import { CoinAmount } from './CoinAmount';
 import { resolveUserDisplayName } from '../utils/userIdentity';
-import { InventoryItem, Shipment, ShippingAddress } from '../types';
+import { AddressValidationResult, InventoryItem, Shipment, ShippingAddress, ShippingRateResponse } from '../types';
+import { emptyShippingAddress, normalizeStoredShippingAddress, validateShippingAddress } from '../src/lib/shippingAddress';
 import { AccountView } from './profile/AccountView';
 import { InventoryView } from './profile/InventoryView';
 import { MobileBottomNav } from './profile/MobileBottomNav';
@@ -21,6 +22,7 @@ import { AnimatedNumber } from '../src/ui/numbers/AnimatedNumber';
 import { coinsToUsd, trackShippingRequested, trackShippingStart } from '../services/analytics';
 
 const SHIPPING_BATCH_STORAGE_KEY = 'pullzgg_shipping_batch';
+const SHIPPING_SESSION_STORAGE_KEY = 'pullzgg_shipping_session';
 
 
 
@@ -224,10 +226,17 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [pendingCheckoutActionId, setPendingCheckoutActionId] = useState<string | null>(null);
+  const [shippingPaymentStatus, setShippingPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'cancelled'>('idle');
   const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
   const [shippingDepositNotice, setShippingDepositNotice] = useState<string | null>(null);
   const [shippingDepositMessage, setShippingDepositMessage] = useState<string | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [liveRateQuote, setLiveRateQuote] = useState<ShippingRateResponse | null>(null);
+  const [selectedRateId, setSelectedRateId] = useState<string | null>(null);
+  const [liveRateError, setLiveRateError] = useState<string | null>(null);
+  const [isLoadingLiveRates, setIsLoadingLiveRates] = useState(false);
+  const [rateRefreshVersion, setRateRefreshVersion] = useState(0);
 
   const [activeAccountPanel, setActiveAccountPanel] = useState<AccountPanel>('overview');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
@@ -242,13 +251,12 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     avatar: user.avatar
   });
 
-  const [addressForm, setAddressForm] = useState<ShippingAddress>(
-    user.shippingAddress || { fullName: '', street: '', city: '', state: '', zipCode: '', country: '' }
-  );
+  const [addressForm, setAddressForm] = useState<ShippingAddress>(() => user.shippingAddress ? normalizeStoredShippingAddress(user.shippingAddress) : emptyShippingAddress());
+  const [addressValidation, setAddressValidation] = useState<AddressValidationResult | null>(null);
 
   useEffect(() => {
     if (user.shippingAddress) {
-      setAddressForm(user.shippingAddress);
+      setAddressForm(normalizeStoredShippingAddress(user.shippingAddress));
     }
   }, [user.shippingAddress]);
 
@@ -387,6 +395,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     const clearUrlParams = () => {
       params.delete('shipping');
       params.delete('session_id');
+      params.delete('attempt_id');
       const nextQuery = params.toString();
       const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', nextUrl);
@@ -394,22 +403,28 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
 
     const clearStoredBatch = () => {
       window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY);
+      window.sessionStorage.removeItem(SHIPPING_SESSION_STORAGE_KEY);
       setSelectedShipments([]);
       setShowShippingReview(false);
     };
 
-    if (shippingStatus === 'cancel') {
+    if (shippingStatus === 'cancel' || shippingStatus === 'cancelled') {
+      setShippingPaymentStatus('cancelled');
+      toast.info("Shipping payment wasn't completed. Your items have not been shipped.");
       const shipmentBatchId = window.sessionStorage.getItem(SHIPPING_BATCH_STORAGE_KEY);
-      if (shipmentBatchId && auth.currentUser) {
+      const liveSessionId = window.sessionStorage.getItem(SHIPPING_SESSION_STORAGE_KEY);
+      const paymentAttemptId = params.get('attempt_id');
+      if ((paymentAttemptId || liveSessionId || shipmentBatchId) && auth.currentUser) {
         void (async () => {
           try {
             const token = await auth.currentUser?.getIdToken();
             if (!token) return;
-            await fetch('/api/cancel-shipping-checkout-session', {
+            const response = await fetch(paymentAttemptId || liveSessionId ? '/api/shipping/cancel-checkout-session' : '/api/cancel-shipping-checkout-session', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ shipmentBatchId })
+              body: JSON.stringify(paymentAttemptId ? { attemptId: paymentAttemptId } : liveSessionId ? { sessionId: liveSessionId } : { shipmentBatchId })
             });
+            if (!response.ok) toast.info('Your shipping payment is still being confirmed. Items will unlock automatically if payment is not completed.');
           } finally {
             clearStoredBatch();
             clearUrlParams();
@@ -423,12 +438,21 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     }
 
     if (shippingStatus === 'success') {
-      clearStoredBatch();
-      setShowShippingReview(true);
-      setShippingRequestConfirmed(true);
-      clearUrlParams();
+      const sessionId = params.get('session_id');
+      setShowShippingReview(true); setShippingPaymentStatus('pending');
+      if (sessionId && auth.currentUser) void (async () => {
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          const token = await auth.currentUser?.getIdToken(); if (!token) break;
+          const response = await fetch(`/api/shipping/payment-status?session_id=${encodeURIComponent(sessionId)}`, { headers: { Authorization: `Bearer ${token}` } });
+          const payload = await response.json().catch(() => null);
+          if (response.ok && payload?.status === 'paid') { setShippingPaymentStatus('paid'); setShippingRequestConfirmed(true); window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY); window.sessionStorage.removeItem(SHIPPING_SESSION_STORAGE_KEY); setSelectedShipments([]); clearUrlParams(); return; }
+          if (response.ok && ['expired', 'failed'].includes(payload?.status)) { setShippingPaymentStatus('cancelled'); clearUrlParams(); return; }
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        }
+        toast.info('Payment is still being confirmed. Your shipment will appear shortly.');
+      })();
     }
-  }, []);
+  }, [user.id]);
 
   const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
   const shipmentPreviewItems = selectedShipmentItems.slice(0, 6);
@@ -444,6 +468,33 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const freeShippingItemCount = selectedShipmentItems.filter((item) => isFreeShippingItem(item)).length;
   const paidShippingItemCount = Math.max(0, selectedShipmentItems.length - freeShippingItemCount);
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
+  const selectedShipmentKey = selectedShipmentItems.map((item) => item.instanceId).sort().join(':');
+  const selectedLiveRate = liveRateQuote?.rates.find((rate) => rate.id === selectedRateId);
+  const destinationKey = user.shippingAddress ? [user.shippingAddress.street1, user.shippingAddress.street2, user.shippingAddress.city, user.shippingAddress.state, user.shippingAddress.postalCode, user.shippingAddress.countryCode, user.shippingAddress.validatedAt].join('|') : '';
+  const liveRateErrorMessage = liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' ? 'Please verify your shipping address before requesting rates.' : liveRateError === 'SHIPPING_PROFILE_REQUIRED' ? 'One or more selected items need shipping information before rates can be calculated.' : liveRateError === 'ITEM_WEIGHT_REQUIRED' ? 'One or more selected items need a shipping weight before rates can be calculated.' : liveRateError === 'ITEM_DIMENSIONS_REQUIRED' ? 'One or more large items need individual dimensions before rates can be calculated.' : liveRateError === 'SHIPPING_PACKAGES_NOT_CONFIGURED' ? 'Shipping packages are being configured. Please try again shortly.' : liveRateError === 'NO_PACKAGE_AVAILABLE' ? "These items need a different package setup. Please contact support and we'll help arrange shipping." : liveRateError === 'NO_STANDARD_SHIPPING_RATE' ? 'Standard shipping is temporarily unavailable. Please try again.' : liveRateError === 'NO_SHIPPING_RATES' ? 'No shipping services are currently available for this destination.' : liveRateError === 'CUSTOMS_DATA_REQUIRED' ? 'International shipping needs customs information before rates can be shown.' : liveRateError === 'SHIPPING_ORIGIN_NOT_CONFIGURED' || liveRateError === 'SHIPPO_NOT_CONFIGURED' || liveRateError === 'SHIPPO_AUTH_FAILED' ? 'Live shipping is not fully configured yet. Please contact support.' : liveRateError === 'SHIPPO_RATE_REQUEST_REJECTED' ? 'The carrier could not quote this address and package. Please check your address or contact support.' : liveRateError ? 'Shipping rates are temporarily unavailable. Please try again.' : '';
+  useEffect(() => {
+    if (!showShippingReview || !selectedShipmentKey) return;
+    const controller = new AbortController(); setIsLoadingLiveRates(true); setLiveRateError(null); setLiveRateQuote(null); setSelectedRateId(null);
+    const load = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken(); if (!token) throw new Error('AUTH_REQUIRED');
+        const response = await fetch('/api/shipping/rates', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ itemIds: selectedShipmentKey.split(':') }), signal: controller.signal });
+        const payload = await response.json(); if (!response.ok) throw new Error(payload?.error ?? 'SHIPPING_RATES_UNAVAILABLE');
+        setLiveRateQuote(payload); setSelectedRateId(null);
+      } catch (error) { if ((error as Error).name !== 'AbortError') setLiveRateError((error as Error).message); }
+      finally { if (!controller.signal.aborted) setIsLoadingLiveRates(false); }
+    };
+    // A short debounce collapses React development remounts and rapid item/address
+    // updates into one Shippo request instead of producing duplicate 422/network calls.
+    const timer = window.setTimeout(() => void load(), 250);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [showShippingReview, selectedShipmentKey, destinationKey, rateRefreshVersion]);
+  useEffect(() => {
+    if (!showShippingReview || !liveRateQuote) return;
+    const delay = Math.max(0, liveRateQuote.expiresAt - Date.now());
+    const timer = window.setTimeout(() => setRateRefreshVersion((value) => value + 1), delay + 100);
+    return () => window.clearTimeout(timer);
+  }, [showShippingReview, liveRateQuote]);
 
   const canUseCoinShipping = !isFreeOnlySelection && shippingCoinEnabled;
   const canUseCashShipping = !isFreeOnlySelection && shippingCashEnabled;
@@ -463,10 +514,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const savedShippingAddress = user.shippingAddress;
   const hasCompleteShippingAddress = Boolean(
     savedShippingAddress?.fullName
-    && savedShippingAddress?.street
+    && savedShippingAddress?.street1
     && savedShippingAddress?.city
-    && savedShippingAddress?.zipCode
-    && savedShippingAddress?.country
+    && savedShippingAddress?.postalCode
+    && savedShippingAddress?.countryCode
   );
   const userHasDeposit = hasUserMadeDeposit(user);
 
@@ -527,6 +578,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     setShowSignatureRequiredInfo(false);
     setShippingDepositNotice(null);
     setShippingDepositMessage(null);
+    setLiveRateQuote(null); setSelectedRateId(null); setLiveRateError(null);
     setShowShippingReview(true);
   };
 
@@ -548,16 +600,36 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   };
 
   const handleSaveAddress = async () => {
+    const errors = validateShippingAddress(addressForm);
+    if (Object.keys(errors).length) { toast.error(Object.values(errors)[0]); setAddressValidation({ status: 'invalid', originalAddress: addressForm, messages: Object.values(errors) }); return; }
     setIsSavingAddress(true);
     try {
-      await updateAddress(addressForm);
-      toast.success('Shipping address saved!');
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/shipping/validate-address', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ address: addressForm }) });
+      const result = await response.json() as AddressValidationResult;
+      if (!response.ok && result.status !== 'unavailable') throw new Error(result.messages?.[0] ?? 'Address could not be checked.');
+      setAddressValidation(result);
+      if (result.status === 'valid' || result.status === 'unavailable') await saveAddressChoice('original', result);
+      else if (result.status === 'invalid') toast.error("We couldn't verify this address. Please edit it and try again.");
     } catch {
       toast.error('Could not save your shipping address.');
     } finally {
       setIsSavingAddress(false);
     }
   };
+
+  async function saveAddressChoice(choice: 'original' | 'suggested', result = addressValidation) {
+    if (!result?.attemptId) { toast.error('Please check the address again.'); return; }
+    setIsSavingAddress(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/shipping/save-address', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ attemptId: result.attemptId, choice }) });
+      const payload = await response.json(); if (!response.ok) throw new Error(payload.error);
+      await updateAddress(payload.address); setAddressForm(normalizeStoredShippingAddress(payload.address)); setAddressValidation(null);
+      toast.success(result.status === 'unavailable' ? 'Address saved. Verification will occur before shipment.' : choice === 'suggested' ? 'Suggested address saved.' : 'Address verified and saved.');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not save your shipping address.'); }
+    finally { setIsSavingAddress(false); }
+  }
 
 
 
@@ -716,6 +788,77 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     }
   };
 
+  const handleLiveShippingCheckout = async () => {
+    const selectedRate = selectedLiveRate;
+    if (!auth.currentUser || !liveRateQuote || !selectedRate) return;
+    let checkoutSessionId = '';
+    setIsSubmittingCashShipping(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/shipping/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ quoteId: liveRateQuote.quoteId, rateId: selectedRate.id })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        if (['SHIPPING_QUOTE_EXPIRED', 'SHIPPING_ITEMS_CHANGED', 'SHIPPING_QUOTE_ALREADY_USED'].includes(payload?.error)) setRateRefreshVersion((value) => value + 1);
+        throw new Error(payload?.error ?? 'SHIPPING_CHECKOUT_UNAVAILABLE');
+      }
+      if (payload?.shipmentBatchId) window.sessionStorage.setItem(SHIPPING_BATCH_STORAGE_KEY, payload.shipmentBatchId);
+      if (!payload?.sessionId) {
+        setShippingPaymentStatus('paid'); setSelectedShipments([]); setShippingRequestConfirmed(true);
+        return;
+      }
+      checkoutSessionId = payload.sessionId;
+      window.sessionStorage.setItem(SHIPPING_SESSION_STORAGE_KEY, payload.sessionId);
+      const stripe = await getStripe(); if (!stripe) throw new Error('Stripe failed to initialize.');
+      const result = await stripe.redirectToCheckout({ sessionId: payload.sessionId }); if (result.error) throw result.error;
+    } catch {
+      if (checkoutSessionId && auth.currentUser) {
+        const token = await auth.currentUser.getIdToken().catch(() => '');
+        if (token) await fetch('/api/shipping/cancel-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ sessionId: checkoutSessionId }) }).catch(() => null);
+      }
+      toast.error('Unable to start secure shipping checkout. Please refresh rates and try again.');
+    } finally { setIsSubmittingCashShipping(false); }
+  };
+
+  const handlePendingCheckout = async (item: InventoryItem, action: 'resume' | 'cancel') => {
+    const attemptId = item.shippingPaymentAttemptId;
+    if (!auth.currentUser || !attemptId || pendingCheckoutActionId) return;
+    setPendingCheckoutActionId(item.instanceId);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(action === 'resume' ? '/api/shipping/resume-checkout-session' : '/api/shipping/cancel-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ attemptId })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? 'SHIPPING_CHECKOUT_UNAVAILABLE');
+      if (action === 'cancel') {
+        window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY);
+        window.sessionStorage.removeItem(SHIPPING_SESSION_STORAGE_KEY);
+        toast.success('Shipping payment cancelled. Your item is available again.');
+        return;
+      }
+      if (payload?.status === 'paid' || payload?.status === 'confirming') {
+        toast.info('Your payment is being confirmed.');
+        return;
+      }
+      if (!payload?.sessionId) throw new Error('SHIPPING_PAYMENT_NOT_AVAILABLE');
+      window.sessionStorage.setItem(SHIPPING_SESSION_STORAGE_KEY, payload.sessionId);
+      const stripe = await getStripe();
+      if (!stripe) throw new Error('Stripe failed to initialize.');
+      const result = await stripe.redirectToCheckout({ sessionId: payload.sessionId });
+      if (result.error) throw result.error;
+    } catch {
+      toast.error(action === 'resume' ? 'Unable to reopen checkout. Cancel this shipment and try again.' : 'Unable to cancel shipping payment. Please try again.');
+    } finally {
+      setPendingCheckoutActionId(null);
+    }
+  };
+
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
@@ -727,6 +870,17 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
     const isLocked = !!item.locked;
+    if (item.status === 'shipping_payment_pending' && item.shippingPaymentAttemptId) {
+      const isWorking = pendingCheckoutActionId === item.instanceId;
+      return {
+        label: isWorking ? 'Please wait…' : 'Complete Payment',
+        disabled: isWorking,
+        onClick: () => void handlePendingCheckout(item, 'resume'),
+        secondaryLabel: 'Cancel Shipment',
+        secondaryDisabled: isWorking,
+        onSecondaryClick: () => void handlePendingCheckout(item, 'cancel')
+      };
+    }
     if (isPullPassBoxReward(item)) {
       return {
         label: item.status === 'opened' ? 'Opened' : 'Open Box',
@@ -818,7 +972,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
         <AccountView
           user={user} username={displayUsername} memberSince={joinedDate} xp={xp} balance={balance}
           activePanel={activeAccountPanel} onSelectPanel={setActiveAccountPanel}
-          addressForm={addressForm} setAddressForm={setAddressForm} onSaveAddress={handleSaveAddress} isSavingAddress={isSavingAddress}
+          addressForm={addressForm} setAddressForm={(next) => { setAddressForm(next); setAddressValidation(null); }} onSaveAddress={handleSaveAddress} validationResult={addressValidation} onAddressChoice={saveAddressChoice} isSavingAddress={isSavingAddress}
           securityForm={securityForm} setSecurityForm={setSecurityForm} onSaveUsername={handleSaveUsername} onSaveEmail={handleSaveEmail} onSavePassword={handleSavePassword}
           isSavingUsername={isSavingUsername} isSavingEmail={isSavingEmail} isSavingPassword={isSavingPassword}
           onClose={() => setShowEditProfile(false)}
@@ -867,13 +1021,20 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
               </button>
             </div>
 
-            {shippingRequestConfirmed ? (
+            {shippingPaymentStatus === 'pending' ? (
+              <div className="rounded-3xl border border-blue-400/20 bg-[#171d24] px-4 py-10 text-center sm:px-5">
+                <span className="mx-auto block h-9 w-9 animate-spin rounded-full border-4 border-blue-300 border-t-transparent" />
+                <h3 className="mt-4 text-xl font-black text-white">Confirming payment…</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">Stripe is confirming your payment. Keep this page open; your items remain securely reserved.</p>
+              </div>
+            ) : shippingRequestConfirmed ? (
               <div className="rounded-3xl border border-white/10 bg-[#171d24] px-4 py-7 text-center sm:px-5 sm:py-8">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/15 text-emerald-300 shadow-lg shadow-emerald-950/30">
                   <Check className="h-9 w-9" />
                 </div>
-                <h3 className="mt-4 text-2xl font-black text-white">Shipment Requested</h3>
-                <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-6 text-slate-400">We received your request and will prepare your item for shipping.</p>
+                <h3 className="mt-4 text-2xl font-black text-white">Shipping requested</h3>
+                <p className="mt-2 font-bold text-emerald-200">Payment received</p>
+                <p className="mx-auto mt-2 max-w-[17rem] text-sm leading-6 text-slate-400">We'll update your order when your shipment is prepared.</p>
                 <button
                   type="button"
                   className="mt-6 w-full rounded-xl border border-white/10 bg-[#262d35] px-4 py-3 text-base font-black text-white transition hover:border-white/20 hover:bg-[#2d3540] focus:outline-none focus:ring-2 focus:ring-emerald-300/50"
@@ -916,7 +1077,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
                 </div>
               </div>
               <div className="h-px bg-white/10" />
-              <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-[#205DD7]/25 via-blue-500/15 to-transparent px-3 py-3 sm:px-4">
+              {false && <div className="flex items-center justify-between gap-3 bg-gradient-to-r from-[#205DD7]/25 via-blue-500/15 to-transparent px-3 py-3 sm:px-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/25 text-blue-300 shadow-lg shadow-blue-500/20">
                     {activeShippingMethod === 'cash' ? <CreditCard className="h-5 w-5" /> : <Coins className="h-5 w-5" />}
@@ -935,9 +1096,9 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
                   )}
                 </div>
                 <span className="text-base font-black text-blue-400 sm:text-lg">{isFreeOnlySelection ? 'Free' : selectedShippingCostLabel}</span>
-              </div>
+              </div>}
             </div>
-            {!isFreeOnlySelection && showShippingRateTooltip && (
+            {false && !isFreeOnlySelection && showShippingRateTooltip && (
               <div className="relative mt-3 rounded-2xl border border-blue-400/25 bg-[#0d1b34] px-3 py-3 text-xs shadow-xl shadow-blue-950/30 sm:px-4 sm:text-sm">
                 <div className="absolute -top-2 left-8 h-4 w-4 rotate-45 border-l border-t border-blue-400/25 bg-[#0d1b34]" />
                 <div className="relative space-y-2">
@@ -968,9 +1129,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
                     {hasCompleteShippingAddress && savedShippingAddress ? (
                       <div className="mt-1 space-y-0.5 text-sm leading-5 text-slate-300">
                         <p className="truncate font-black text-white">{savedShippingAddress.fullName}</p>
-                        <p>{savedShippingAddress.street}</p>
-                        <p>{savedShippingAddress.city}, {savedShippingAddress.state} {savedShippingAddress.zipCode}</p>
-                        <p>{savedShippingAddress.country}</p>
+                        <p>{savedShippingAddress.street1}</p>
+                        {savedShippingAddress.street2 && <p>{savedShippingAddress.street2}</p>}
+                        <p>{savedShippingAddress.city}{savedShippingAddress.state ? `, ${savedShippingAddress.state}` : ''} {savedShippingAddress.postalCode}</p>
+                        <p>{savedShippingAddress.countryCode}</p>
                       </div>
                     ) : (
                       <p className="mt-1 text-sm font-semibold text-amber-200">Add a shipping address before confirming.</p>
@@ -988,7 +1150,14 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
               </div>
             </div>
 
-            {!isFreeOnlySelection && (
+            <section className="mt-4 rounded-2xl border border-white/10 bg-[#141821] p-3" aria-live="polite">
+              <div className="flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Shipping method</p><button type="button" onClick={() => setRateRefreshVersion((value) => value + 1)} disabled={isLoadingLiveRates} className="min-h-9 rounded-lg border border-white/10 px-3 text-xs font-bold text-blue-200 disabled:opacity-50">Refresh rates</button></div>
+              {isLoadingLiveRates && <div className="mt-3 flex min-h-20 items-center justify-center gap-2 text-sm font-bold text-slate-300"><span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-transparent" />Calculating shipping options…</div>}
+              {!isLoadingLiveRates && liveRateError && <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-500/10 p-3 text-sm leading-5 text-amber-100"><p>{liveRateErrorMessage}</p>{liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' && <button type="button" onClick={handleEditShippingAddress} className="mt-2 min-h-10 w-full rounded-lg bg-amber-300 px-3 font-black text-slate-950">Edit Address</button>}</div>}
+              {!isLoadingLiveRates && liveRateQuote && <><div className="mt-3 space-y-2">{liveRateQuote.rates.map((rate) => <button type="button" key={rate.id} onClick={() => setSelectedRateId(rate.id)} className={`flex min-h-16 w-full items-center gap-3 rounded-xl border p-3 text-left transition ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-500/10 ring-1 ring-blue-400/30' : 'border-white/10 bg-white/[0.02]'}`}><span className={`h-5 w-5 flex-none rounded-full border-2 p-1 ${selectedRateId === rate.id ? 'border-blue-400 bg-blue-400 bg-clip-content' : 'border-slate-500'}`} /><span className="min-w-0 flex-1"><strong className="block text-sm text-white">{liveRateQuote.destination.countryCode === 'US' ? 'Standard Shipping' : 'International Shipping'}</strong><span className="block text-xs font-semibold text-slate-300">{rate.provider} {rate.service}</span></span><strong className="shrink-0 text-base text-blue-300">${(rate.customerAmountCents / 100).toFixed(2)}</strong></button>)}</div>{liveRateQuote.destination.countryCode !== 'US' && <p className="mt-3 text-xs leading-5 text-amber-200">International shipments may be subject to customs duties, taxes, or import fees charged by the destination country.</p>}<p className="mt-3 text-center text-[11px] text-slate-500">Quote expires {new Date(liveRateQuote.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.</p></>}
+            </section>
+
+            {false && !isFreeOnlySelection && (
               <div className="mt-4 space-y-1.5">
                 <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Add-ons</p>
                 <div className={`rounded-xl border transition ${shippingProtectionSelected ? activeAddOnClass : 'border-white/10 bg-white/[0.03] hover:border-white/20'}`}>
@@ -1042,7 +1211,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
               </div>
             )}
 
-            {(canUseCoinShipping || canUseCashShipping) && !isFreeOnlySelection && (
+            {false && (canUseCoinShipping || canUseCashShipping) && !isFreeOnlySelection && (
               <div className="mt-4">
                 <p className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Pay with</p>
                 <div className="grid grid-cols-2 gap-2">
@@ -1087,11 +1256,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             )}
 
             <div className="mt-4 space-y-2">
-              {activeShippingMethod === 'cash' && canUseCashShipping ? (
-                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleCashShipping} disabled={isSubmittingCashShipping}>{isSubmittingCashShipping ? 'Redirecting...' : 'Continue to Checkout'}</button>
-              ) : (
-                <button className="w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50" onClick={handleConfirmShipping} disabled={isSubmittingShipment}>{isSubmittingShipment ? 'Submitting...' : isFreeOnlySelection ? 'Confirm Free Shipping' : 'Confirm Shipping'}</button>
-              )}
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
               <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
 

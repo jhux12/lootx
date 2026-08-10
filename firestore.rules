@@ -94,6 +94,7 @@ service cloud.firestore {
           && (!hasField(resource.data, 'uid') || request.resource.data.uid == resource.data.uid)
           && (!hasField(resource.data, 'createdAt') || request.resource.data.createdAt == resource.data.createdAt)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(userProfileUpdateKeys())
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['shippingAddress'])
           && request.resource.data.username is string
           && validUsernameLower(request.resource.data.usernameLower)
           && request.resource.data.email is string
@@ -105,6 +106,14 @@ service cloud.firestore {
     match /users/{uid}/notifications/{notificationId} {
       allow read: if isOwnUser(uid) || isAdmin();
       allow create, update, delete: if isOwnUser(uid);
+    }
+
+    match /users/{uid}/shippingRateQuotes/{quoteId} {
+      allow read, write: if false;
+    }
+
+    match /shippingPaymentAttempts/{attemptId} {
+      allow read, write: if false;
     }
 
     match /users/{uid}/inventory/{inventoryId} {
@@ -189,6 +198,14 @@ service cloud.firestore {
     match /shipments/{shipmentId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
       allow write: if isAdmin();
+    }
+
+    match /shippingProfiles/{profileId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /shippingPackages/{packageId} {
+      allow read, write: if isAdmin();
     }
 
     match /admin/{document=**} {

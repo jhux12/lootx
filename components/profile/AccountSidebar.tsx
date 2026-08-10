@@ -39,10 +39,10 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
 }) => {
   const hasShippingAddress = Boolean(
     user.shippingAddress?.fullName
-    && user.shippingAddress?.street
+    && user.shippingAddress?.street1
     && user.shippingAddress?.city
-    && user.shippingAddress?.zipCode
-    && user.shippingAddress?.country
+    && user.shippingAddress?.postalCode
+    && user.shippingAddress?.countryCode
   );
   const profileCompletionChecks = [Boolean(user.name), Boolean(user.email), Boolean(user.avatar), hasShippingAddress];
   const completedChecks = profileCompletionChecks.filter(Boolean).length;
