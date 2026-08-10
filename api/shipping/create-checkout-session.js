@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       mode: 'payment',
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${process.env.APP_URL}/profile?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/profile?shipping=cancelled`,
+      cancel_url: `${process.env.APP_URL}/profile?shipping=cancelled&attempt_id=${encodeURIComponent(attemptId)}`,
       line_items: [{ price_data: { currency: 'usd', unit_amount: checkout.rate.customerAmountCents, product_data: { name: 'Pullz.gg Shipping', description: `${checkout.rate.provider} ${checkout.rate.service}`.slice(0, 200) } }, quantity: 1 }],
       metadata: { type: 'shipping', paymentType: 'live_shipping', userId: uid, quoteId, shippoRateId: checkout.rate.shippoRateId, shippingBatchId: checkout.shipmentBatchId, paymentAttemptId: attemptId }
     }, { idempotencyKey: `shipping-${attemptId}` });

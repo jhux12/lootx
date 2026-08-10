@@ -313,6 +313,8 @@ export interface InventoryItem extends CaseItem {
   obtainedAt: number;
   status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_payment_pending' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
+  shippingPaymentAttemptId?: string;
+  shippingLockExpiresAt?: number;
   trackingNumber?: string;
   size?: string;
   provenance?: InventoryProvenance;

@@ -10,20 +10,24 @@ export default async function handler(req, res) {
   try {
     const { uid } = await requireUser(req);
     const sessionId = typeof req.body?.sessionId === 'string' && /^cs_[A-Za-z0-9_]+$/.test(req.body.sessionId) ? req.body.sessionId : '';
-    if (!sessionId) return deny(res, 400, 'INVALID_SESSION_ID');
-    const snapshot = await db.collection('shippingPaymentAttempts').where('stripeCheckoutSessionId', '==', sessionId).limit(1).get();
-    if (snapshot.empty) return deny(res, 404, 'SHIPPING_PAYMENT_NOT_FOUND');
-    const attempt = snapshot.docs[0].data() ?? {};
+    const attemptId = typeof req.body?.attemptId === 'string' && /^[A-Za-z0-9_-]{1,150}$/.test(req.body.attemptId) ? req.body.attemptId : '';
+    if (!sessionId && !attemptId) return deny(res, 400, 'INVALID_SESSION_ID');
+    const attemptSnapshot = attemptId
+      ? await db.collection('shippingPaymentAttempts').doc(attemptId).get()
+      : (await db.collection('shippingPaymentAttempts').where('stripeCheckoutSessionId', '==', sessionId).limit(1).get()).docs[0];
+    if (!attemptSnapshot?.exists) return deny(res, 404, 'SHIPPING_PAYMENT_NOT_FOUND');
+    const attempt = attemptSnapshot.data() ?? {};
     if (attempt.uid !== uid) return deny(res, 404, 'SHIPPING_PAYMENT_NOT_FOUND');
     if (attempt.status === 'paid') return deny(res, 409, 'SHIPPING_PAYMENT_ALREADY_COMPLETED');
     if (attempt.status !== 'pending') return ok(res, { released: true });
 
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const storedSessionId = attempt.stripeCheckoutSessionId;
+    if (!storedSessionId) return deny(res, 409, 'SHIPPING_PAYMENT_NOT_READY');
+    const session = await stripe.checkout.sessions.retrieve(storedSessionId);
     if (session.payment_status === 'paid') return deny(res, 409, 'SHIPPING_PAYMENT_ALREADY_COMPLETED');
     if (session.status === 'complete') return deny(res, 409, 'SHIPPING_PAYMENT_CONFIRMING');
-    if (session.status === 'open') await stripe.checkout.sessions.expire(sessionId);
-    const released = await releaseShippingPaymentAttempt(snapshot.docs[0].id, sessionId);
+    if (session.status === 'open') await stripe.checkout.sessions.expire(storedSessionId);
+    const released = await releaseShippingPaymentAttempt(attemptSnapshot.id, storedSessionId);
     return ok(res, { released });
   } catch (error) { return deny(res, error?.status ?? 500, error?.error ?? 'SHIPPING_CHECKOUT_CANCEL_FAILED'); }
 }
-

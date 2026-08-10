@@ -8,6 +8,7 @@ const webhook = fs.readFileSync('api/stripe-webhook.js', 'utf8');
 const payment = fs.readFileSync('api/_lib/shippingPayment.js', 'utf8');
 const statusEndpoint = fs.readFileSync('api/shipping/payment-status.js', 'utf8');
 const cancelEndpoint = fs.readFileSync('api/shipping/cancel-checkout-session.js', 'utf8');
+const resumeEndpoint = fs.readFileSync('api/shipping/resume-checkout-session.js', 'utf8');
 const profile = fs.readFileSync('components/Profile.tsx', 'utf8');
 const rules = fs.readFileSync('firestore.rules', 'utf8');
 
@@ -70,6 +71,23 @@ test('cancelled checkout is authenticated, expires Stripe session, and releases 
   assert.match(cancelEndpoint, /checkout\.sessions\.retrieve/); assert.match(cancelEndpoint, /checkout\.sessions\.expire/);
   assert.match(cancelEndpoint, /releaseShippingPaymentAttempt/); assert.match(profile, /SHIPPING_SESSION_STORAGE_KEY/);
   assert.match(profile, /\/api\/shipping\/cancel-checkout-session/);
+});
+
+test('pending inventory exposes mobile-friendly complete payment and cancel shipment actions', () => {
+  assert.match(profile, /item\.status === 'shipping_payment_pending'/);
+  assert.match(profile, /Complete Payment/);
+  assert.match(profile, /Cancel Shipment/);
+  assert.match(profile, /handlePendingCheckout\(item, 'resume'\)/);
+  assert.match(profile, /handlePendingCheckout\(item, 'cancel'\)/);
+  assert.match(resumeEndpoint, /requireUser\(req\)/);
+  assert.match(resumeEndpoint, /attempt\.uid !== uid/);
+  assert.match(resumeEndpoint, /checkout\.sessions\.retrieve/);
+});
+
+test('Stripe cancel return carries a server-verifiable attempt and releases it', () => {
+  assert.match(checkout, /cancel_url:.*attempt_id=/);
+  assert.match(cancelEndpoint, /req\.body\?\.attemptId/);
+  assert.match(profile, /params\.get\('attempt_id'\)/);
 });
 
 test('payment status is authenticated and owner scoped', () => {

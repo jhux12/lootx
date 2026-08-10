@@ -226,6 +226,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const [isSellingItems, setIsSellingItems] = useState<Record<string, boolean>>({});
   const [isSubmittingShipment, setIsSubmittingShipment] = useState(false);
   const [isSubmittingCashShipping, setIsSubmittingCashShipping] = useState(false);
+  const [pendingCheckoutActionId, setPendingCheckoutActionId] = useState<string | null>(null);
   const [shippingPaymentStatus, setShippingPaymentStatus] = useState<'idle' | 'pending' | 'paid' | 'cancelled'>('idle');
   const [shippingRequestConfirmed, setShippingRequestConfirmed] = useState(false);
   const [shippingDepositNotice, setShippingDepositNotice] = useState<string | null>(null);
@@ -394,6 +395,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     const clearUrlParams = () => {
       params.delete('shipping');
       params.delete('session_id');
+      params.delete('attempt_id');
       const nextQuery = params.toString();
       const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', nextUrl);
@@ -411,15 +413,16 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       toast.info("Shipping payment wasn't completed. Your items have not been shipped.");
       const shipmentBatchId = window.sessionStorage.getItem(SHIPPING_BATCH_STORAGE_KEY);
       const liveSessionId = window.sessionStorage.getItem(SHIPPING_SESSION_STORAGE_KEY);
-      if ((liveSessionId || shipmentBatchId) && auth.currentUser) {
+      const paymentAttemptId = params.get('attempt_id');
+      if ((paymentAttemptId || liveSessionId || shipmentBatchId) && auth.currentUser) {
         void (async () => {
           try {
             const token = await auth.currentUser?.getIdToken();
             if (!token) return;
-            const response = await fetch(liveSessionId ? '/api/shipping/cancel-checkout-session' : '/api/cancel-shipping-checkout-session', {
+            const response = await fetch(paymentAttemptId || liveSessionId ? '/api/shipping/cancel-checkout-session' : '/api/cancel-shipping-checkout-session', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify(liveSessionId ? { sessionId: liveSessionId } : { shipmentBatchId })
+              body: JSON.stringify(paymentAttemptId ? { attemptId: paymentAttemptId } : liveSessionId ? { sessionId: liveSessionId } : { shipmentBatchId })
             });
             if (!response.ok) toast.info('Your shipping payment is still being confirmed. Items will unlock automatically if payment is not completed.');
           } finally {
@@ -449,7 +452,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
         toast.info('Payment is still being confirmed. Your shipment will appear shortly.');
       })();
     }
-  }, []);
+  }, [user.id]);
 
   const selectedShipmentItems = activeInventory.filter((item) => selectedShipments.includes(item.instanceId));
   const shipmentPreviewItems = selectedShipmentItems.slice(0, 6);
@@ -820,6 +823,42 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     } finally { setIsSubmittingCashShipping(false); }
   };
 
+  const handlePendingCheckout = async (item: InventoryItem, action: 'resume' | 'cancel') => {
+    const attemptId = item.shippingPaymentAttemptId;
+    if (!auth.currentUser || !attemptId || pendingCheckoutActionId) return;
+    setPendingCheckoutActionId(item.instanceId);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(action === 'resume' ? '/api/shipping/resume-checkout-session' : '/api/shipping/cancel-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ attemptId })
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? 'SHIPPING_CHECKOUT_UNAVAILABLE');
+      if (action === 'cancel') {
+        window.sessionStorage.removeItem(SHIPPING_BATCH_STORAGE_KEY);
+        window.sessionStorage.removeItem(SHIPPING_SESSION_STORAGE_KEY);
+        toast.success('Shipping payment cancelled. Your item is available again.');
+        return;
+      }
+      if (payload?.status === 'paid' || payload?.status === 'confirming') {
+        toast.info('Your payment is being confirmed.');
+        return;
+      }
+      if (!payload?.sessionId) throw new Error('SHIPPING_PAYMENT_NOT_AVAILABLE');
+      window.sessionStorage.setItem(SHIPPING_SESSION_STORAGE_KEY, payload.sessionId);
+      const stripe = await getStripe();
+      if (!stripe) throw new Error('Stripe failed to initialize.');
+      const result = await stripe.redirectToCheckout({ sessionId: payload.sessionId });
+      if (result.error) throw result.error;
+    } catch {
+      toast.error(action === 'resume' ? 'Unable to reopen checkout. Cancel this shipment and try again.' : 'Unable to cancel shipping payment. Please try again.');
+    } finally {
+      setPendingCheckoutActionId(null);
+    }
+  };
+
   const joinedDate = user.createdAt ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(user.createdAt) : 'Recently';
   const xp = Number(user.xpBalance ?? user.xp ?? 0);
   const balance = Number(user.balance ?? 0);
@@ -831,6 +870,17 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const getActionForItem = (item: InventoryItem) => {
     const isAvailable = item.status === 'available';
     const isLocked = !!item.locked;
+    if (item.status === 'shipping_payment_pending' && item.shippingPaymentAttemptId) {
+      const isWorking = pendingCheckoutActionId === item.instanceId;
+      return {
+        label: isWorking ? 'Please wait…' : 'Complete Payment',
+        disabled: isWorking,
+        onClick: () => void handlePendingCheckout(item, 'resume'),
+        secondaryLabel: 'Cancel Shipment',
+        secondaryDisabled: isWorking,
+        onSecondaryClick: () => void handlePendingCheckout(item, 'cancel')
+      };
+    }
     if (isPullPassBoxReward(item)) {
       return {
         label: item.status === 'opened' ? 'Opened' : 'Open Box',
