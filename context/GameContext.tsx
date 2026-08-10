@@ -776,9 +776,9 @@ interface GameContextType {
   updateUserFlags: (updates: Partial<User>) => Promise<void>;
   updateUserAdminData: (userId: string, updates: Partial<User>) => Promise<void>;
   updateUserBalance: (userId: string, balance: number) => Promise<void>;
-  createBox: (box: MysteryBox) => void; // Admin
+  createBox: (box: MysteryBox) => Promise<void>; // Admin
   createUserBox: (box: MysteryBox) => Promise<string>; // User Custom
-  updateBox: (box: MysteryBox) => void;
+  updateBox: (box: MysteryBox) => Promise<void>;
   deleteBox: (boxId: string) => Promise<void>;
   claimFreeBox: (claimedAt?: number, options?: { persist?: boolean }) => Promise<void>;
   claimRakeback: () => Promise<void>;
@@ -1257,6 +1257,8 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     forceFullSellBack: data.forceFullSellBack === true,
     sellBackRate: Number(data.sellBackRate ?? 0),
     locked: data.locked ?? false,
+    shippingPaymentAttemptId: typeof data.shippingPaymentAttemptId === 'string' ? data.shippingPaymentAttemptId : undefined,
+    shippingLockExpiresAt: data.shippingLockExpiresAt == null ? undefined : Number(data.shippingLockExpiresAt),
     history,
     source: typeof data.source === 'string' ? data.source : undefined,
     sourceItemId: typeof data.sourceItemId === 'string' ? data.sourceItemId : undefined,
@@ -2055,7 +2057,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Legacy fallback until the documented boxSummaries collection is deployed.
         // Firestore cannot field-project a document. Prefer the deployment-managed
         // summary collection; use a bounded legacy fallback while it is populated.
-        const summarySnapshot = await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
+        const summarySnapshot = user.isAdmin
+          ? await getDocs(query(collection(db, 'boxes'), limit(100)))
+          : await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
         // A compatibility read is allowed only after a successful, confirmed-empty
         // migration collection. Network/permission/query failures stay errors.
         const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
@@ -2088,6 +2092,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               valueUsd: item.valueUsd !== undefined ? Number(item.valueUsd) : undefined,
               valueCoins: item.valueCoins !== undefined ? Number(item.valueCoins) : price,
               sellBackCoins: item.sellBackCoins !== undefined ? Number(item.sellBackCoins) : undefined,
+              shippingProfileId: typeof item.shippingProfileId === 'string' ? item.shippingProfileId : null,
+              shippingOverride: item.shippingOverride && typeof item.shippingOverride === 'object' ? item.shippingOverride : undefined,
               marketPricing: user.isAdmin ? item.marketPricing : undefined
             };
           }) : [];
@@ -3568,7 +3574,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
       } catch (error) {
           console.error('Failed to save box to Firebase', error);
-          boxId = boxId || `local-box-${Date.now()}`;
+          throw error;
       }
 
       upsertAdminBox({ ...boxData, id: boxId });
@@ -3613,6 +3619,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
       } catch (error) {
           console.error('Failed to update box in Firebase', error);
+          throw error;
       }
 
       upsertAdminBox({ ...boxData, id });

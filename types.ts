@@ -13,6 +13,11 @@ export interface ShippingAddress {
   validatedAt?: string | null;
   shippoAddressId?: string | null;
 }
+export interface ShippingOriginSettings {
+  shipFromName: string; shipFromStreet1: string; shipFromStreet2?: string;
+  shipFromCity: string; shipFromState: string; shipFromPostalCode: string;
+  shipFromCountry: string; shipFromPhone?: string;
+}
 export interface AddressValidationResult {
   status: 'valid' | 'corrected' | 'invalid' | 'unavailable';
   originalAddress: ShippingAddress;
@@ -172,6 +177,66 @@ export interface CaseItem {
   marketPricing?: ItemMarketPricing;
   boxValueOverrideCoins?: number;
   originalPriceCoins?: number;
+  shippingProfileId?: string | null;
+  shippingOverride?: { weightOz?: number; lengthIn?: number; widthIn?: number; heightIn?: number };
+}
+
+export interface ShippingProfile {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  defaultWeightOz: number;
+  defaultLengthIn?: number;
+  defaultWidthIn?: number;
+  defaultHeightIn?: number;
+  requiresCustomDimensions?: boolean;
+  packageType?: string;
+  active: boolean;
+  usageCount?: number;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface ShippingPackage {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  lengthIn: number;
+  widthIn: number;
+  heightIn: number;
+  emptyWeightOz: number;
+  maxWeightOz?: number;
+  maxItemCount?: number;
+  capacityByProfileId?: Record<string, number>;
+  priority: number;
+  active: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export interface ParcelCalculationResult {
+  status: 'ready'; packageId: string; packageName: string;
+  lengthIn: number; widthIn: number; heightIn: number;
+  itemWeightOz: number; packagingWeightOz: number; bufferWeightOz: number; totalWeightOz: number;
+  profileCounts: Record<string, number>; warnings: string[];
+}
+
+export interface ParcelCalculationFailure {
+  status: 'invalid_items' | 'no_package'; errorCode: 'SHIPPING_PROFILE_REQUIRED' | 'ITEM_WEIGHT_REQUIRED' | 'ITEM_DIMENSIONS_REQUIRED' | 'NO_PACKAGE_AVAILABLE'; reason: string; missingItemIds?: string[]; warnings: string[];
+}
+
+export interface ShippingRateQuote {
+  id: string; shippoRateId: string; provider: string; service: string; serviceLevelToken: string;
+  carrierAmountCents: number; handlingFeeCents: number; customerAmountCents: number; currency: 'USD';
+  estimatedDays?: number; durationTerms?: string; providerImage?: string; attributes?: string[];
+}
+
+export interface ShippingRateResponse {
+  status: 'quoted' | 'free_shipping'; quoteId: string; rates: ShippingRateQuote[]; quotedAt: number; expiresAt: number;
+  parcel: { packageId: string; packageName: string; lengthIn: number; widthIn: number; heightIn: number; itemWeightOz: number; packagingWeightOz: number; totalWeightOz: number } | null;
+  destination: { city: string; state?: string; postalCode: string; countryCode: string };
 }
 
 export interface MysteryBox {
@@ -246,8 +311,10 @@ export interface StripeSettings {
 export interface InventoryItem extends CaseItem {
   instanceId: string;
   obtainedAt: number;
-  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_requested' | 'pending_shipment' | 'shipped';
+  status: 'available' | 'sold' | 'opened' | 'shipping' | 'shipping_payment_pending' | 'shipping_requested' | 'pending_shipment' | 'shipped';
   locked?: boolean;
+  shippingPaymentAttemptId?: string;
+  shippingLockExpiresAt?: number;
   trackingNumber?: string;
   size?: string;
   provenance?: InventoryProvenance;
@@ -291,6 +358,15 @@ export interface Shipment {
   shippingPaymentMethod?: 'coins' | 'cash' | 'FREE_XP';
   shippingCashAmountCents?: number;
   shippingBatchId?: string;
+  quoteId?: string;
+  paymentAttemptId?: string;
+  provider?: string;
+  service?: string;
+  shippoRateId?: string;
+  carrierAmountCents?: number;
+  handlingFeeCents?: number;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
   shippingBatchCost?: number;
   shippingBatchCostCents?: number;
   shippingBatchValueCoins?: number;
@@ -299,6 +375,7 @@ export interface Shipment {
   trackingNumber?: string;
   createdAt?: number;
   updatedAt?: number;
+  parcel?: Omit<ParcelCalculationResult, 'status' | 'profileCounts' | 'warnings'>;
 }
 
 export type UserStatus = 'active' | 'suspended' | 'banned';

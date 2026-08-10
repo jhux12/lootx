@@ -491,6 +491,17 @@ export default async function handler(req, res) {
         redeemable: prize.redeemable ?? true,
         forceFullSellBack: prizeForcesFullSellBack
       };
+      if (typeof prize.shippingProfileId === 'string' && prize.shippingProfileId) {
+        inventoryPayload.shippingProfileId = prize.shippingProfileId;
+      }
+      if (prize.shippingOverride && typeof prize.shippingOverride === 'object') {
+        const override = {};
+        for (const key of ['weightOz', 'lengthIn', 'widthIn', 'heightIn']) {
+          const value = Number(prize.shippingOverride[key]);
+          if (Number.isFinite(value) && value >= 0) override[key] = value;
+        }
+        if (Object.keys(override).length) inventoryPayload.shippingOverride = override;
+      }
       if (selectedSize) {
         inventoryPayload.size = selectedSize;
       }
