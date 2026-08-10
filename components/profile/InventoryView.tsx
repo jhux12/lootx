@@ -44,7 +44,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
   selectedValue
 }) => {
   return (
-    <section className={`w-full space-y-4 bg-[#08080a] px-5 sm:px-7 ${selectedIds.length > 0 ? 'pb-36 md:pb-5' : 'pb-5'}`}>
+    <section className={`w-full space-y-4 bg-[#08080a] px-5 sm:px-7 ${selectedIds.length > 0 ? 'pb-40 md:pb-5' : 'pb-5'}`}>
 
       <InventoryFilters
         search={search}
@@ -92,7 +92,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
 
 
       {selectedIds.length > 0 && (
-        <div className="fixed inset-x-3 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-[30rem] flex-wrap items-center justify-between gap-3 rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.55)] backdrop-blur md:sticky md:inset-auto md:bottom-4 md:max-w-none">
+        <div className="fixed inset-x-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-50 mx-auto flex max-w-[30rem] flex-wrap items-center justify-between gap-3 rounded-2xl border border-purple-400/30 bg-[#111824]/95 p-3 shadow-[0_18px_45px_rgba(0,0,0,0.55)] backdrop-blur md:sticky md:inset-auto md:bottom-4 md:z-30 md:max-w-none">
           <p className="text-sm text-gray-200">{selectedIds.length} items selected</p>
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:flex-none">
             <CoinAmount amount={selectedValue} formatOptions={{ maximumFractionDigits: 0 }} className="text-sm font-bold text-white" iconClassName="h-4 w-4" />
