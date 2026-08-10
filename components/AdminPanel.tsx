@@ -479,6 +479,7 @@ export const AdminPanel: React.FC = () => {
   const [riskBalance, setRiskBalance] = useState(50);
   const [targetEV, setTargetEV] = useState(0.85);
   const [selectedItems, setSelectedItems] = useState<CaseItem[]>([]);
+  const [bulkShippingItemIds, setBulkShippingItemIds] = useState<string[]>([]);
   const [oddsEditorMode, setOddsEditorMode] = useState<'auto' | 'manual'>('auto');
   const [itemBrandFilter, setItemBrandFilter] = useState('');
   const [itemCategoryFilter, setItemCategoryFilter] = useState('');
@@ -509,6 +510,14 @@ export const AdminPanel: React.FC = () => {
   );
   const [dashboardTransactions, setDashboardTransactions] = useState<DashboardTransaction[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
+
+  useEffect(() => {
+      const currentIds = new Set(selectedItems.map((item) => item.id));
+      setBulkShippingItemIds((ids) => {
+          const next = ids.filter((id) => currentIds.has(id));
+          return next.length === ids.length && next.every((id, index) => id === ids[index]) ? ids : next;
+      });
+  }, [selectedItems]);
 
   useEffect(() => {
       if (activeTab !== 'dashboard') return;
@@ -4742,10 +4751,22 @@ export const AdminPanel: React.FC = () => {
                              {/* Selected & Configured Items */}
                              {selectedItems.length > 0 && (
                                  <div className="border-t border-gray-800 pt-4">
-                                     <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><h4 className="text-sm font-bold text-gray-400 uppercase">Box Contents ({selectedItems.length})</h4><label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-gray-500 sm:flex-row sm:items-center">Assign all<Select aria-label="Assign a shipping profile to all box items" defaultValue="" onChange={(event) => { const id = event.target.value; if (!id) return; setSelectedItems((current) => current.map((entry) => ({ ...entry, shippingProfileId: id }))); event.target.value = ''; }} className="min-h-10 min-w-48 rounded border border-gray-700 bg-[#0b0e14] px-2 text-xs normal-case text-white"><option value="">Choose profile…</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select></label></div>
+                                     <div className="mb-3 space-y-2 rounded-xl border border-gray-700 bg-[#10141c] p-3">
+                                         <div className="flex flex-wrap items-center justify-between gap-2">
+                                             <h4 className="text-sm font-bold uppercase text-gray-300">Box Contents ({selectedItems.length})</h4>
+                                             <div className="flex gap-2">
+                                                 <button type="button" onClick={() => setBulkShippingItemIds(selectedItems.map((item) => item.id))} className="min-h-10 rounded-lg border border-gray-600 px-3 text-xs font-bold text-gray-200">Select all</button>
+                                                 {bulkShippingItemIds.length > 0 && <button type="button" onClick={() => setBulkShippingItemIds([])} className="min-h-10 rounded-lg border border-gray-700 px-3 text-xs font-bold text-gray-400">Clear</button>}
+                                             </div>
+                                         </div>
+                                         <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-gray-500 sm:flex-row sm:items-center">Assign profile to {bulkShippingItemIds.length} selected
+                                             <Select aria-label="Assign a shipping profile to selected box items" defaultValue="" disabled={bulkShippingItemIds.length === 0} onChange={(event) => { const id = event.target.value; if (!id) return; const selectedIds = new Set(bulkShippingItemIds); setSelectedItems((current) => current.map((entry) => selectedIds.has(entry.id) ? { ...entry, shippingProfileId: id === '__unassigned' ? null : id } : entry)); event.target.value = ''; }} className="min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] px-3 text-sm normal-case text-white disabled:opacity-50 sm:min-w-64 sm:flex-1"><option value="">Choose profile…</option><option value="__unassigned">Not Assigned</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select>
+                                         </label>
+                                     </div>
                                      <div className="space-y-1">
                                          {selectedItems.map((item, idx) => (
                                              <div key={idx} className="flex flex-wrap items-center gap-2 text-xs bg-[#131720] p-2 rounded border border-gray-700 sm:flex-nowrap">
+                                                 <label className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-600 bg-black/25" aria-label={`Select ${item.name} for bulk shipping profile assignment`}><input type="checkbox" checked={bulkShippingItemIds.includes(item.id)} onChange={(event) => setBulkShippingItemIds((ids) => event.target.checked ? Array.from(new Set([...ids, item.id])) : ids.filter((id) => id !== item.id))} className="h-5 w-5 accent-blue-500" /></label>
                                                  <button
                                                      type="button"
                                                      onClick={() => toggleItemSelection(item)}
