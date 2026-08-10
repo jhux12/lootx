@@ -16,8 +16,8 @@ export default async function handler(req, res) {
     const acceptedSuggestion = choice === 'suggested' && attempt.status === 'corrected' && attempt.suggestedAddress;
     const address = normalizeAddress(acceptedSuggestion ? attempt.suggestedAddress : attempt.originalAddress);
     if (validateLocalAddress(address).length) return sendJson(res, 400, { error: 'Please complete the required address fields.' });
-    const isValidated = attempt.status === 'valid' || Boolean(acceptedSuggestion);
-    const savedAddress = { ...address, validated: isValidated, validationStatus: acceptedSuggestion ? 'corrected' : attempt.status === 'valid' ? 'valid' : 'unvalidated', validatedAt: isValidated ? new Date().toISOString() : null, shippoAddressId: isValidated ? attempt.shippoAddressId ?? null : null };
+    const isValidated = attempt.status === 'valid' || attempt.status === 'inconclusive' || Boolean(acceptedSuggestion);
+    const savedAddress = { ...address, validated: isValidated, validationStatus: acceptedSuggestion ? 'corrected' : attempt.status === 'valid' ? 'valid' : attempt.status === 'inconclusive' ? 'inconclusive' : 'unvalidated', validatedAt: isValidated ? new Date().toISOString() : null, shippoAddressId: isValidated ? attempt.shippoAddressId ?? null : null };
     await firestore.collection('users').doc(uid).set({ shippingAddress: savedAddress, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     await attemptRef.delete();
     return sendJson(res, 200, { address: savedAddress });

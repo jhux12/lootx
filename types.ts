@@ -9,7 +9,7 @@ export interface ShippingAddress {
   countryCode: string;
   phone?: string;
   validated?: boolean;
-  validationStatus?: 'unvalidated' | 'valid' | 'corrected' | 'invalid';
+  validationStatus?: 'unvalidated' | 'valid' | 'corrected' | 'inconclusive' | 'invalid';
   validatedAt?: string | null;
   shippoAddressId?: string | null;
 }
@@ -19,7 +19,7 @@ export interface ShippingOriginSettings {
   shipFromCountry: string; shipFromPhone?: string;
 }
 export interface AddressValidationResult {
-  status: 'valid' | 'corrected' | 'invalid' | 'unavailable';
+  status: 'valid' | 'corrected' | 'inconclusive' | 'invalid' | 'unavailable';
   originalAddress: ShippingAddress;
   suggestedAddress?: ShippingAddress;
   messages?: string[];
