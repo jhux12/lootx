@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return deny(res, 405, 'METHOD_NOT_ALLOWED');
   try {
     const { uid } = await requireUser(req); const userRef = db.collection('users').doc(uid); const userSnap = await userRef.get(); const storedAddress = userSnap.data()?.shippingAddress;
-    if (!storedAddress || storedAddress.validated !== true || !['valid', 'corrected'].includes(storedAddress.validationStatus)) return deny(res, 409, 'ADDRESS_VERIFICATION_REQUIRED');
+    if (!storedAddress || storedAddress.validated !== true || !['valid', 'corrected', 'inconclusive'].includes(storedAddress.validationStatus)) return deny(res, 409, 'ADDRESS_VERIFICATION_REQUIRED');
     const destination = normalizeAddress(storedAddress); if (validateLocalAddress(destination).length) return deny(res, 409, 'ADDRESS_VERIFICATION_REQUIRED');
     const { itemIds, items } = await loadOwnedShippingItems(uid, req.body?.itemIds); const config = await loadShippingConfig();
     const parcel = calculateShipmentParcel({ items, ...config });

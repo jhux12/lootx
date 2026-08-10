@@ -13,14 +13,19 @@ const legacyCountries: Record<string, string> = {
   'united states': 'US', usa: 'US', canada: 'CA', norway: 'NO', 'united kingdom': 'GB', uk: 'GB', australia: 'AU'
 };
 
+export const normalizeCountryCode = (value: unknown): string => {
+  const input = String(value ?? '').trim();
+  return legacyCountries[input.toLowerCase()] ?? input.toUpperCase();
+};
+
 export function normalizeStoredShippingAddress(value: unknown): ShippingAddress {
   const a = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
-  const country = String(a.countryCode ?? legacyCountries[String(a.country ?? '').trim().toLowerCase()] ?? 'US').toUpperCase();
+  const country = normalizeCountryCode(a.countryCode ?? a.country ?? 'US');
   return {
     fullName: String(a.fullName ?? ''), street1: String(a.street1 ?? a.street ?? ''), street2: String(a.street2 ?? ''),
     city: String(a.city ?? ''), state: String(a.state ?? ''), postalCode: String(a.postalCode ?? a.zipCode ?? ''),
     countryCode: COUNTRY_CODES.includes(country) ? country : 'US', phone: String(a.phone ?? ''),
-    validated: a.validated === true, validationStatus: ['valid', 'corrected', 'invalid'].includes(String(a.validationStatus)) ? a.validationStatus as ShippingAddress['validationStatus'] : 'unvalidated',
+    validated: a.validated === true, validationStatus: ['valid', 'corrected', 'inconclusive', 'invalid'].includes(String(a.validationStatus)) ? a.validationStatus as ShippingAddress['validationStatus'] : 'unvalidated',
     validatedAt: typeof a.validatedAt === 'string' ? a.validatedAt : null,
     shippoAddressId: typeof a.shippoAddressId === 'string' ? a.shippoAddressId : null
   };
@@ -30,7 +35,7 @@ export const countryAddressRules = (code: string) => ({
   cityLabel: code === 'GB' ? 'City / Town' : 'City',
   stateLabel: code === 'US' ? 'State' : code === 'CA' ? 'Province' : code === 'GB' ? 'County / Region' : 'State / Province / Region',
   postalLabel: code === 'US' ? 'ZIP Code' : code === 'GB' ? 'Postcode' : 'Postal Code',
-  stateRequired: code === 'US' || code === 'CA', postalRequired: !['AO', 'AG', 'AW', 'BS', 'BZ', 'BJ', 'BW', 'BF', 'BI', 'CM', 'CF', 'KM', 'CG', 'CD', 'CK', 'CI', 'DJ', 'DM', 'GQ', 'ER', 'FJ', 'TF', 'GM', 'GH', 'GD', 'GN', 'GY', 'HK', 'IE', 'JM', 'KE', 'KI', 'MO', 'MW', 'ML', 'MR', 'MU', 'MS', 'NR', 'NU', 'KP', 'PA', 'QA', 'RW', 'KN', 'LC', 'ST', 'SC', 'SL', 'SB', 'SO', 'ZA', 'SR', 'SY', 'TZ', 'TL', 'TG', 'TK', 'TO', 'TT', 'TV', 'UG', 'AE', 'VU', 'YE', 'ZW'].includes(code)
+  stateRequired: code === 'US' || code === 'CA' || code === 'AU', postalRequired: !['AO', 'AG', 'AW', 'BS', 'BZ', 'BJ', 'BW', 'BF', 'BI', 'CM', 'CF', 'KM', 'CG', 'CD', 'CK', 'CI', 'DJ', 'DM', 'GQ', 'ER', 'FJ', 'TF', 'GM', 'GH', 'GD', 'GN', 'GY', 'HK', 'IE', 'JM', 'KE', 'KI', 'MO', 'MW', 'ML', 'MR', 'MU', 'MS', 'NR', 'NU', 'KP', 'PA', 'QA', 'RW', 'KN', 'LC', 'ST', 'SC', 'SL', 'SB', 'SO', 'SR', 'SY', 'TZ', 'TL', 'TG', 'TK', 'TO', 'TT', 'TV', 'UG', 'AE', 'VU', 'YE', 'ZW'].includes(code)
 });
 
 export function validateShippingAddress(address: ShippingAddress): Record<string, string> {
