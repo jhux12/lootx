@@ -1,7 +1,10 @@
+import { MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP } from './signupIpPolicy.js';
+
 export const FRAUD_BAN_SCORE = 8;
+export const MAX_UNBANNED_ACCOUNTS_PER_DEVICE = 3;
 
 export const FRAUD_POINTS = Object.freeze({
-  sharedDevice: 6,
+  sharedDevice: 4,
   sharedIp: 3,
   deviceWelcomeBonus: 8,
   ipWelcomeBonus: 4
@@ -35,9 +38,9 @@ export const evaluateSignupFraud = ({
     reasons.push('ip_welcome_bonus_claimed');
   }
 
-  const immediateReason = deviceAccountCount >= 2
+  const immediateReason = deviceAccountCount >= MAX_UNBANNED_ACCOUNTS_PER_DEVICE
     ? 'device_account_limit'
-    : ipAccountCount >= 3
+    : ipAccountCount >= MAX_UNBANNED_ACCOUNTS_PER_SIGNUP_IP
       ? 'signup_ip_account_limit'
       : null;
 
