@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { buildAppliedItem, calculatePricingSnapshot, clearTcgCache, extractTcgplayerVariants, findTcgplayerMatches, parseTcgplayerUrl, withoutUndefined } from '../lib/server/boxPricing.js';
 
 test('accepts and canonicalizes TCGplayer product links with tracking parameters', () => {
@@ -48,4 +49,17 @@ test('existing customer inventory remains unchanged when a box item price is app
   const inventory = Object.freeze({ id: 'won', valueAtWin: 100, sellbackValueAtWin: 80 });
   buildAppliedItem({ item: { id: 'card', price: 100 }, resolved: { canonicalUrl: 'https://www.tcgplayer.com/product/1', productId: '1' }, match: { tcgdexId: 'x' }, variant: { key: 'normal', marketPriceCoins: 200, marketPriceCents: 200 }, now: 'now' });
   assert.deepEqual(inventory, { id: 'won', valueAtWin: 100, sellbackValueAtWin: 80 });
+});
+
+test('admin UI uses flat Vercel function routes for match and apply', async () => {
+  const source = await readFile(new URL('../components/admin/BoxMarketPricingEditor.tsx', import.meta.url), 'utf8');
+  assert.match(source, /\/api\/admin\/box-pricing-match/);
+  assert.match(source, /\/api\/admin\/box-pricing-apply/);
+  assert.doesNotMatch(source, /\/api\/admin\/boxes\/\$\{box\.id\}\/pricing/);
+  const [matchRoute, applyRoute] = await Promise.all([
+    readFile(new URL('../api/admin/box-pricing-match.js', import.meta.url), 'utf8'),
+    readFile(new URL('../api/admin/box-pricing-apply.js', import.meta.url), 'utf8')
+  ]);
+  assert.match(matchRoute, /req\.method !== 'POST'/);
+  assert.match(applyRoute, /req\.method !== 'POST'/);
 });

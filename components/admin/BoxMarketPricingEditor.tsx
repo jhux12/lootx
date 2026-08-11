@@ -14,7 +14,7 @@ export const BoxMarketPricingEditor = ({ box, items, onItemsChange }: { box: Mys
   const findMatch = async (item: CaseItem) => {
     const state = states[item.id] || { url: '', matches: [] }; patchState(item.id, { busy: true, error: undefined, applied: undefined, matches: [] });
     try {
-      const result: any = await authedFetch(`/api/admin/boxes/${box.id}/pricing/match`, { method: 'POST', body: JSON.stringify({ itemId: item.id, tcgplayerUrl: state.url }) });
+      const result: any = await authedFetch('/api/admin/box-pricing-match', { method: 'POST', body: JSON.stringify({ boxId: box.id, itemId: item.id, tcgplayerUrl: state.url }) });
       const matches: Match[] = result.matches || [];
       patchState(item.id, { busy: false, matches, canonicalUrl: result.canonicalUrl, productId: result.productId, selectedCard: matches.length === 1 ? matches[0].tcgdexId : undefined, selectedVariant: matches.length === 1 && matches[0].variants.length === 1 ? matches[0].variants[0].key : undefined, error: matches.length ? undefined : 'Automatic price unavailable' });
     } catch (error) { patchState(item.id, { busy: false, error: error instanceof Error ? error.message : 'Automatic price unavailable' }); }
@@ -24,7 +24,7 @@ export const BoxMarketPricingEditor = ({ box, items, onItemsChange }: { box: Mys
     if (!state || !match || !variant) return patchState(item.id, { error: 'Choose an exact card and available market-price variant.' });
     patchState(item.id, { busy: true, error: undefined });
     try {
-      await authedFetch(`/api/admin/boxes/${box.id}/pricing/apply`, { method: 'POST', body: JSON.stringify({ itemId: item.id, tcgplayerUrl: state.canonicalUrl || state.url, tcgdexId: match.tcgdexId, pricingVariant: variant.key }) });
+      await authedFetch('/api/admin/box-pricing-apply', { method: 'POST', body: JSON.stringify({ boxId: box.id, itemId: item.id, tcgplayerUrl: state.canonicalUrl || state.url, tcgdexId: match.tcgdexId, pricingVariant: variant.key }) });
       onItemsChange(items.map((entry) => entry.id === item.id ? { ...entry, tcgplayerUrl: state.canonicalUrl, tcgplayerProductId: state.productId, tcgdexId: match.tcgdexId, pricingVariant: variant.key as CaseItem['pricingVariant'], marketPriceCoins: variant.marketPriceCoins, marketPriceCents: variant.marketPriceCents, priceSource: 'tcgdex_tcgplayer', effectiveValue: variant.marketPriceCoins, price: variant.marketPriceCoins, valueCoins: variant.marketPriceCoins } : entry));
       patchState(item.id, { busy: false, applied: `${variant.label} price ${money(variant.marketPriceCoins)} applied to this box only.` });
     } catch (error) { patchState(item.id, { busy: false, error: error instanceof Error ? error.message : 'Price could not be applied.' }); }
