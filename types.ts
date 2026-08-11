@@ -182,7 +182,14 @@ export interface CaseItem {
   tcgdexSetId?: string;
   tcgdexCardNumber?: string;
   pricingLanguage?: string;
-  pricingVariant?: 'normal' | 'reverse' | 'holo';
+  pricingVariant?: 'normal' | 'reverse-holofoil' | 'holofoil';
+  tcgplayerUrl?: string;
+  tcgplayerProductId?: string;
+  marketPriceCoins?: number;
+  marketPriceCents?: number;
+  priceSource?: 'tcgdex_tcgplayer';
+  priceUpdatedAt?: any;
+  priceAppliedAt?: any;
   manualValue?: number | null;
   previousValue?: number;
   marketPrice?: number;

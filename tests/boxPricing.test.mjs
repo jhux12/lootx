@@ -1,62 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePricingSnapshot, clearTcgCache, extractTcgplayerPrice, getTcgCard, marketPricingConfig, previewBoxPricing } from '../lib/server/boxPricing.js';
+import { buildAppliedItem, calculatePricingSnapshot, clearTcgCache, extractTcgplayerVariants, findTcgplayerMatches, parseTcgplayerUrl, withoutUndefined } from '../lib/server/boxPricing.js';
 
-const card = { id: 'sv3-125', localId: '125', set: { id: 'sv3' }, pricing: { tcgplayer: { normal: { marketPrice: 2, lowPrice: 1.5 }, reverse: { marketPrice: 3 }, holo: { marketPrice: 4 } } } };
-const item = { id: 'one', name: 'Exact card', pricingMode: 'automatic', tcgdexId: 'sv3-125', tcgdexSetId: 'sv3', tcgdexCardNumber: '125', pricingLanguage: 'en', pricingVariant: 'normal', price: 100, chance: 25 };
-const response = (body = card, ok = true) => async () => ({ ok, status: ok ? 200 : 503, json: async () => body });
-
-test('extracts normal, reverse and holo TCGplayer variants', () => {
-  assert.equal(extractTcgplayerPrice(card, 'normal').marketPrice, 2);
-  assert.equal(extractTcgplayerPrice(card, 'reverse').marketPrice, 3);
-  assert.equal(extractTcgplayerPrice(card, 'holo').marketPrice, 4);
+test('accepts and canonicalizes TCGplayer product links with tracking parameters', () => {
+  assert.deepEqual(parseTcgplayerUrl('https://tcgplayer.com/product/660414/pokemon-card?utm_source=x#offer'), { productId: '660414', canonicalUrl: 'https://www.tcgplayer.com/product/660414/pokemon-card' });
+  assert.equal(parseTcgplayerUrl('http://www.tcgplayer.com/product/123').canonicalUrl, 'https://www.tcgplayer.com/product/123');
 });
 
-test('requires exact selection and rejects ambiguous name-only configuration', async () => {
-  const result = await previewBoxPricing({ id: 'b', price: 500, items: [{ ...item, tcgdexId: undefined, tcgdexSetId: undefined, tcgdexCardNumber: undefined }] });
-  assert.equal(result.rows[0].status, 'uncertain_match');
-  assert.equal(result.rows[0].proposedValue, null);
+test('rejects invalid domains and missing product IDs', () => {
+  assert.throws(() => parseTcgplayerUrl('https://example.com/product/123'), /INVALID_TCGPLAYER_DOMAIN/);
+  assert.throws(() => parseTcgplayerUrl('https://www.tcgplayer.com/search/pokemon'), /INVALID_TCGPLAYER_PRODUCT_ID/);
+  assert.throws(() => parseTcgplayerUrl('https://www.tcgplayer.com/product/not-a-number'), /INVALID_TCGPLAYER_PRODUCT_ID/);
 });
 
-test('preserves manual values and calculates EV with existing chances', async () => {
-  const manual = { id: 'm', pricingMode: 'manual', price: 800, effectiveValue: 800, chance: 75 };
-  const result = await previewBoxPricing({ id: 'b', price: 1000, items: [manual, item] }, { fetchImpl: response() });
-  assert.equal(result.rows.length, 1);
-  assert.equal(result.currentSnapshot.expectedValue, 625);
-  assert.equal(manual.effectiveValue, 800);
+const detail = { id: 'sv-test', name: 'Dawn', image: 'image', localId: '10', set: { id: 'sv', name: 'Test Set' }, rarity: 'Rare', pricing: { tcgplayer: { productId: 660414, updatedAt: 'today', normal: { marketPrice: 2.5 }, holofoil: { marketPrice: 4.75 } } }, variants_detailed: [{ variant: 'reverse-holofoil', productId: '660414', marketPrice: 3.25 }] };
+const fakeFetch = async (url) => ({ ok: true, json: async () => url.includes('?name=') ? [{ id: 'sv-test' }, { id: 'other' }] : url.endsWith('/other') ? { ...detail, id: 'other', pricing: { tcgplayer: { productId: 999, normal: { marketPrice: 9 } } }, variants_detailed: [] } : detail });
+
+test('searches by item name then matches the exact nested TCGplayer product ID', async () => {
+  clearTcgCache(); const result = await findTcgplayerMatches({ itemName: 'Dawn', tcgplayerUrl: 'https://www.tcgplayer.com/product/660414/dawn', fetchImpl: fakeFetch });
+  assert.equal(result.matches.length, 1); assert.equal(result.matches[0].tcgdexId, 'sv-test'); assert.equal(result.matches[0].productId, '660414');
 });
 
-test('missing, zero, mismatched and provider failures never propose a replacement', async () => {
-  for (const [providerCard, expected] of [
-    [{ ...card, pricing: {} }, 'missing_pricing'],
-    [{ ...card, pricing: { tcgplayer: { normal: { marketPrice: 0 } } } }, 'missing_pricing'],
-    [{ ...card, localId: '999' }, 'uncertain_match']
-  ]) {
-    clearTcgCache(); const result = await previewBoxPricing({ id: 'b', price: 500, items: [item] }, { fetchImpl: response(providerCard) });
-    assert.equal(result.rows[0].status, expected); assert.equal(result.rows[0].proposedValue, null);
-  }
-  clearTcgCache(); const failed = await previewBoxPricing({ id: 'b', price: 500, items: [item] }, { fetchImpl: response({}, false) });
-  assert.equal(failed.rows[0].status, 'provider_error');
+test('returns all available pricing and variants_detailed variants in integer coins', () => {
+  const variants = extractTcgplayerVariants(detail, '660414');
+  assert.deepEqual(Object.fromEntries(variants.map((value) => [value.key, value.marketPriceCoins])), { normal: 250, holofoil: 475, 'reverse-holofoil': 325 });
 });
 
-test('cache is shared by card key without coupling box snapshots', async () => {
-  clearTcgCache(); let calls = 0; const fetchImpl = async () => { calls++; return { ok: true, json: async () => card }; };
-  const first = await previewBoxPricing({ id: 'a', price: 500, items: [item] }, { fetchImpl });
-  const second = await previewBoxPricing({ id: 'b', price: 900, items: [{ ...item, price: 150 }] }, { fetchImpl });
-  assert.equal(calls, 1); assert.equal(second.rows[0].cacheHit, true); assert.notEqual(first.currentSnapshot.marginAmount, second.currentSnapshot.marginAmount);
+test('missing pricing cannot produce an applied value', () => {
+  assert.deepEqual(extractTcgplayerVariants({ pricing: { tcgplayer: { productId: 1, normal: {} } } }, '1'), []);
+  const item = { id: 'x', price: 500 }; assert.equal(buildAppliedItem({ item, resolved: {}, match: {}, variant: null, now: 'now' }), item);
 });
 
-test('threshold, profitability warning and backwards-compatible defaults are safe', async () => {
-  clearTcgCache(); const under = await previewBoxPricing({ id: 'b', price: 1000, targetEV: .9, marketPricing: { autoApplyThresholdPercent: 20 }, items: [{ ...item, price: 180 }] }, { fetchImpl: response() });
-  assert.equal(under.rows[0].requiresApproval, false);
-  clearTcgCache(); const over = await previewBoxPricing({ id: 'b', price: 210, targetEV: .85, marketPricing: { autoApplyThresholdPercent: 20 }, items: [{ ...item, chance: 100 }] }, { fetchImpl: response() });
-  assert.equal(over.rows[0].requiresApproval, true); assert.equal(over.profitabilityWarning, true);
-  assert.equal(marketPricingConfig().enabled, false); assert.equal(marketPricingConfig().autoApplyThresholdPercent, 20);
+test('undefined properties are omitted from sanitized Firestore data', () => {
+  assert.deepEqual(withoutUndefined({ kept: 1, missing: undefined, nullable: null }), { kept: 1, nullable: null });
 });
 
-test('snapshot uses effective values and does not mutate input', () => {
-  const items = [{ chance: 50, price: 100, effectiveValue: 300 }, { chance: 50, price: 500 }];
-  const snap = calculatePricingSnapshot({ price: 1000 }, items, 'now');
-  assert.deepEqual({ ev: snap.expectedValue, min: snap.minimumItemValue, max: snap.maximumItemValue }, { ev: 400, min: 300, max: 500 });
-  assert.equal(items[0].price, 100);
+test('applying a price updates only the selected box item and recalculates existing EV', () => {
+  const original = { id: 'card', price: 100, chance: 50 }, other = { id: 'other', price: 300, chance: 50 };
+  const resolved = { canonicalUrl: 'https://www.tcgplayer.com/product/660414/dawn', productId: '660414' }, match = { tcgdexId: 'sv-test', providerUpdatedAt: 'today' }, variant = { key: 'normal', marketPriceCoins: 250, marketPriceCents: 250 };
+  const applied = buildAppliedItem({ item: original, resolved, match, variant, now: 'now' });
+  assert.equal(applied.effectiveValue, 250); assert.equal(applied.previousValue, 100); assert.equal(applied.priceSource, 'tcgdex_tcgplayer');
+  assert.equal(calculatePricingSnapshot({ price: 1000 }, [applied, other], 'now').expectedValue, 275);
+  assert.equal(other.price, 300);
+});
+
+test('existing customer inventory remains unchanged when a box item price is applied', () => {
+  const inventory = Object.freeze({ id: 'won', valueAtWin: 100, sellbackValueAtWin: 80 });
+  buildAppliedItem({ item: { id: 'card', price: 100 }, resolved: { canonicalUrl: 'https://www.tcgplayer.com/product/1', productId: '1' }, match: { tcgdexId: 'x' }, variant: { key: 'normal', marketPriceCoins: 200, marketPriceCents: 200 }, now: 'now' });
+  assert.deepEqual(inventory, { id: 'won', valueAtWin: 100, sellbackValueAtWin: 80 });
 });

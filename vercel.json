@@ -31,10 +31,6 @@
     {
       "path": "/api/cron/update-market-prices",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/sync-box-prices",
-      "schedule": "0 8 * * *"
     }
   ]
 }
