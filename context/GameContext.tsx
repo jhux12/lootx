@@ -1977,12 +1977,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setItems((current) => current.length === CASE_ITEMS.length ? current : CASE_ITEMS);
       return;
     }
-    let cancelled = false;
-    const loadItems = () => {
-      if (cancelled) return;
-      void (async () => {
-      try {
-        const snapshot = await getDocs(query(collection(db, 'items'), limit(500)));
+    // Keep the admin catalogue subscribed to the complete collection. The old
+    // bounded one-shot query made successfully saved items outside its arbitrary
+    // 500-document window disappear from the UI after a refresh.
+    const unsubscribe = onSnapshot(collection(db, 'items'), (snapshot) => {
         const loaded: CaseItem[] = snapshot.docs
         .map((docSnap, index) => {
           const data = docSnap.data();
@@ -2008,6 +2006,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               : '',
             upgraderSort: Number.isFinite(Number(data.upgraderSort)) ? Number(data.upgraderSort) : undefined,
             upgraderFeatured: data.upgraderFeatured === true,
+            shippingProfileId: typeof data.shippingProfileId === 'string' ? data.shippingProfileId : null,
+            shippingOverride: data.shippingOverride,
             valueUsd: data.valueUsd !== undefined ? Number(data.valueUsd) : undefined,
             valueCoins: data.valueCoins !== undefined ? Number(data.valueCoins) : Number(data.price ?? 0),
             sellBackCoins: data.sellBackCoins !== undefined ? Number(data.sellBackCoins) : undefined,
@@ -2023,23 +2023,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           tags: Array.isArray(item.tags) ? item.tags : []
         }));
         setItems(loaded.length ? loaded : fallbackItems);
-      } catch (error) {
+      }, (error) => {
         console.error('Failed to load items', error);
-      }
-      })();
-    };
-    const idleWindow = window as Window & {
-      requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-    const idleId = typeof idleWindow.requestIdleCallback === 'function'
-      ? idleWindow.requestIdleCallback(loadItems, { timeout: 2500 })
-      : window.setTimeout(loadItems, 1200);
-    return () => {
-      cancelled = true;
-      if (typeof idleWindow.cancelIdleCallback === 'function' && typeof idleId === 'number') idleWindow.cancelIdleCallback(idleId);
-      else window.clearTimeout(idleId as number);
-    };
+      });
+    return unsubscribe;
   }, [isAuthenticated, user.isAdmin]);
 
   const expiredUserBoxDeletesRef = useRef<Set<string>>(new Set());
