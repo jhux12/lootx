@@ -177,6 +177,21 @@ export interface CaseItem {
   marketPricing?: ItemMarketPricing;
   boxValueOverrideCoins?: number;
   originalPriceCoins?: number;
+  pricingMode?: 'automatic' | 'manual';
+  tcgdexId?: string;
+  tcgdexSetId?: string;
+  tcgdexCardNumber?: string;
+  pricingLanguage?: string;
+  pricingVariant?: 'normal' | 'reverse' | 'holo';
+  manualValue?: number | null;
+  previousValue?: number;
+  marketPrice?: number;
+  marketLowPrice?: number | null;
+  effectiveValue?: number;
+  marketPriceUpdatedAt?: any;
+  priceCheckedAt?: any;
+  pricingStatus?: string;
+  pricingError?: string | null;
   shippingProfileId?: string | null;
   shippingOverride?: { weightOz?: number; lengthIn?: number; widthIn?: number; heightIn?: number };
 }
@@ -260,6 +275,12 @@ export interface MysteryBox {
   sellBackRate?: number;
   createdAt?: number;
   marketValueAudit?: BoxMarketValueAudit;
+  marketPricing?: {
+    enabled: boolean; provider: 'tcgdex'; marketplace: 'tcgplayer'; autoApplyEnabled: boolean;
+    autoApplyThresholdPercent: number; lastCheckedAt?: any; lastAppliedAt?: any;
+    status?: string; itemsChecked?: number; itemsUpdated?: number; itemsMissingPricing?: number; itemsPendingApproval?: number;
+  };
+  pricingSnapshot?: { expectedValue: number; marginAmount: number; marginPercent: number; minimumItemValue: number; maximumItemValue: number; calculatedAt?: any };
 }
 
 export interface CoinPackage {

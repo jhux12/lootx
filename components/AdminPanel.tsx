@@ -16,6 +16,7 @@ import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { PollsAdminSection } from './admin/PollsAdminSection';
 import { ReferralAdminSection } from './admin/ReferralAdminSection';
 import { MarketPricingAdminSection } from './admin/MarketPricingAdminSection';
+import { BoxMarketPricingEditor } from './admin/BoxMarketPricingEditor';
 import { ShippingProfilesAdminSection } from './admin/ShippingProfilesAdminSection';
 import { ShippingPackagesAdminSection } from './admin/ShippingPackagesAdminSection';
 import { ShippingOriginAdminSection } from './admin/ShippingOriginAdminSection';
@@ -4837,6 +4838,11 @@ export const AdminPanel: React.FC = () => {
                                  </div>
                              )}
                         </div>
+
+                        {editingBoxId && (() => {
+                            const persistedBox = boxes.find((entry) => entry.id === editingBoxId);
+                            return persistedBox ? <BoxMarketPricingEditor box={{ ...persistedBox, items: selectedItems, price: Number(newBox.price ?? persistedBox.price) }} items={selectedItems} onItemsChange={setSelectedItems} /> : null;
+                        })()}
 
                         <button
                             onClick={handleSaveBox}

@@ -1,0 +1,3 @@
+import { requireAdmin, deny, ok } from '../../../_utils/auth.js';
+import { syncBox } from '../../../_lib/boxPricingService.js';
+export default async function handler(req, res) { if (req.method !== 'POST') return deny(res, 405, 'METHOD_NOT_ALLOWED'); try { const user = await requireAdmin(req); const snap = await (await import('../../../_lib/firebaseAdmin.js')).firestore.collection('boxes').where('marketPricing.enabled', '==', true).limit(25).get(); const results = []; for (const doc of snap.docs) { try { results.push({ boxId: doc.id, ...(await syncBox(doc.id, user.uid)) }); } catch (e) { results.push({ boxId: doc.id, error: e.message }); } } return ok(res, { results }); } catch (e) { return deny(res, e.status || 500, e.error || e.message || 'SYNC_ALL_FAILED'); } }
