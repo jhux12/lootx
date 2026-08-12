@@ -316,7 +316,7 @@ export default async function handler(req, res) {
       const appliedSellBackRate = isFree || prizeForcesFullSellBack ? 1 : sellBackRate;
       const sizeOptions = normalizeSizes(prize.sizes ?? []);
       const selectedSize = sizeOptions.length ? pickRandomSize(sizeOptions) : null;
-      const prizeValue = Number(prize.value ?? prize.price ?? 0);
+      const prizeValue = Number(prize.effectiveValue ?? prize.value ?? prize.price ?? 0);
       const resolvedXpCost = currencyType === 'XP' ? priceXP : xpCostForCoinCase;
       const coinCost = currencyType === 'COIN' && !isPullPassRewardOpen && !isFree && !shouldUseXpForOpen ? price : 0;
       let newCoins = currentCoins;
@@ -483,11 +483,16 @@ export default async function handler(req, res) {
         prizeId: prize.id ?? null,
         name: prize.name ?? 'Mystery Item',
         value: prizeValue,
+        valueAtWin: prizeValue,
         image: prize.image ?? '',
         rarity: prize.rarity ?? 'common',
         status: 'available',
         obtainedAt,
         sellBackRate: appliedSellBackRate,
+        sellbackRateAtWin: appliedSellBackRate,
+        sellbackValueAtWin: Math.floor(prizeValue * appliedSellBackRate),
+        boxPricingSnapshotAtWin: boxData.pricingSnapshot?.calculatedAt ?? null,
+        wonAt: obtainedAt,
         redeemable: prize.redeemable ?? true,
         forceFullSellBack: prizeForcesFullSellBack
       };
