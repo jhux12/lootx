@@ -3,7 +3,7 @@ import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
-import { getBoxSummaryPage } from '../utils/boxRepository';
+import { getBoxSummaryPage, getCatalogSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
 import { getBoxTags, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
@@ -91,14 +91,12 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
   };
 };
 
-const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
+const CatalogBoxCard = memo(({ model, staticImages, onOpen }: {
   model: CatalogBoxModel;
-  index: number;
   staticImages: boolean;
   onOpen: (boxId: string) => void;
 }) => {
   const { box } = model;
-  const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
 
   return (
@@ -117,8 +115,8 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
             src={box.image}
             fallbackSrc="/assets/favicon/android-chrome-512.png"
             alt={box.name}
-            loading={isPriority ? 'eager' : 'lazy'}
-            fetchPriority={isPriority ? 'high' : 'low'}
+            loading="lazy"
+            fetchPriority="low"
             decoding="async"
             width={360}
             height={230}
@@ -209,7 +207,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   useEffect(() => {
     let active = true; const requestId = ++catalogRequestRef.current;
     setCatalogLoading(true); setCatalogError(null); setCatalogEnd(false); setCatalogCursor(null);
-    void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24).then((page) => {
+    void getCatalogSummaryPage(performanceMode.isMobile ? 12 : 24).then((page) => {
       if (!active || requestId !== catalogRequestRef.current) return;
       setBoxes(page.boxes); setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => { if (active) setCatalogError('Unable to load boxes. Please retry.'); }).finally(() => { if (active) setCatalogLoading(false); });
@@ -520,9 +518,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
           <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
             <div className="pullz-boxes-hero-orbit" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="eager" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="eager" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" width={640} height={892} alt="" aria-hidden="true" loading="eager" fetchPriority="low" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" width={640} height={892} alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
+            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" width={640} height={892} alt="" aria-hidden="true" loading="eager" fetchPriority="low" decoding="async" />
             <div className="pullz-boxes-hero-platform" />
             <span className="pullz-boxes-particle pullz-boxes-particle-1" />
             <span className="pullz-boxes-particle pullz-boxes-particle-2" />
@@ -576,6 +574,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                       <img
                         src={cat.iconClass}
                         alt={cat.title}
+                        width={44}
+                        height={44}
                         className="h-9 w-9 shrink-0 object-contain sm:h-11 sm:w-11"
                         loading="lazy"
                         decoding="async"
@@ -627,11 +627,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
           {!isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {visibleBoxes.map((model, index) => (
+              {visibleBoxes.map((model) => (
                 <CatalogBoxCard
                   key={model.id}
                   model={model}
-                  index={index}
                   staticImages={staticCatalogImages}
                   onOpen={openBox}
                 />

@@ -135,7 +135,6 @@
   position: absolute;
   object-fit: contain;
   filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
-  will-change: transform;
 }
 
 .pullz-boxes-slab-left { left: 4%; top: 18%; z-index: 1; width: min(32%, 175px); animation: pullz-boxes-float-left 5.4s ease-in-out infinite; }
@@ -193,6 +192,8 @@
   .pullz-boxes-hero-platform { width: 230px; height: 68px; }
   .pullz-boxes-hero-copy h1 { margin-bottom: 10px; font-size: 38px; letter-spacing: -0.061em; }
   .pullz-boxes-hero-copy p { font-size: 14px; line-height: 1.5; }
+  .pullz-boxes-slab, .pullz-boxes-hero-orbit, .pullz-boxes-particle { animation: none; }
+  .pullz-boxes-hero-platform { filter: none; opacity: .72; }
 }
 
 @media (prefers-reduced-motion: reduce) {

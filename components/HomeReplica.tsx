@@ -144,7 +144,7 @@ const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
         <p className="mt-1.5 text-[9px] font-bold uppercase leading-tight tracking-[.12em] text-[#fff1d9] sm:text-[11px] lg:text-sm">What will you pull</p>
         <span className="mt-2 inline-flex rounded-xl border border-[#fff0d0]/70 bg-[linear-gradient(135deg,#ffe2b7,#df8c6d)] px-3 py-2 text-[10px] font-black uppercase tracking-wide text-[#54271f] shadow-[0_8px_20px_rgba(82,34,25,.32)] sm:px-4 sm:text-xs">Open now</span>
       </div>
-      <img src={EEVEE_PROMO_IMAGES[1]} alt="Eevee evolution graded slab" width={500} height={500} fetchPriority="high" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-24 w-24 -translate-y-1/2 object-contain drop-shadow-[0_0_18px_rgba(255,225,185,.42)] drop-shadow-[0_18px_25px_rgba(76,35,26,.48)] sm:-right-1 sm:h-32 sm:w-32 lg:right-3 lg:h-40 lg:w-40" />
+      <img src={EEVEE_PROMO_IMAGES[1]} alt="Eevee evolution graded slab" width={500} height={500} fetchPriority="auto" decoding="async" className="pointer-events-none absolute right-0 top-1/2 h-24 w-24 -translate-y-1/2 object-contain drop-shadow-[0_0_18px_rgba(255,225,185,.42)] drop-shadow-[0_18px_25px_rgba(76,35,26,.48)] sm:-right-1 sm:h-32 sm:w-32 lg:right-3 lg:h-40 lg:w-40" />
     </div>
   </div>
 );
@@ -177,16 +177,21 @@ const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: Mobil
   }, []);
 
   useEffect(() => {
-    if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
+    if (wins.length <= 1 || !isVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower || performanceMode.isMobile) return undefined;
     const rotateTimer = window.setInterval(() => setActiveIndex((current) => (current + 1) % wins.length), 2400);
     return () => window.clearInterval(rotateTimer);
-  }, [isVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, wins.length]);
+  }, [isVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion, wins.length]);
+
+  const move = (direction: 1 | -1) => {
+    if (!wins.length) return;
+    setActiveIndex((current) => (current + direction + wins.length) % wins.length);
+  };
 
   return (
     <section ref={sectionRef} id="mobile-live-wins" className="pullz-home-live-wins scroll-mt-4 mt-7 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-slate-400" /><h2 className="text-[18px] font-black uppercase tracking-tight text-white">Live Wins</h2></div>
-        <div className="flex gap-2"><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500"><ChevronLeft className="h-4 w-4" /></button><button className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400"><ChevronRight className="h-4 w-4" /></button></div>
+        <div className="flex gap-2"><button type="button" aria-label="View previous win" onClick={() => move(-1)} disabled={!wins.length} className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-500 disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button><button type="button" aria-label="View next win" onClick={() => move(1)} disabled={!wins.length} className="grid h-8 w-8 place-items-center rounded-full bg-[#252d42] text-slate-400 disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button></div>
       </div>
       <div className="overflow-hidden">
         <div className="flex gap-2 transition-transform duration-700 ease-out" style={{ transform: `translate3d(-${activeIndex * 108}px,0,0)` }}>
@@ -276,9 +281,12 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
 
   useEffect(() => {
     let cancelled = false;
-    setIsLiveWinsLoading(true);
-
-    void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
+    let started = false;
+    const loadLiveWins = () => {
+      if (cancelled || started) return;
+      started = true;
+      setIsLiveWinsLoading(true);
+      void Promise.all(boxes.slice(0, 8).map((box) => getBoxDetail(box.id, mapHomepageLiveWinBox)))
       .then((details) => {
         if (!cancelled) setLiveWinBoxes(details.filter((box): box is MysteryBox => Boolean(box)));
       })
@@ -288,8 +296,19 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       .finally(() => {
         if (!cancelled) setIsLiveWinsLoading(false);
       });
-
-    return () => { cancelled = true; };
+    };
+    const section = document.getElementById('mobile-live-wins');
+    if (!section || !('IntersectionObserver' in window)) {
+      const timer = window.setTimeout(loadLiveWins, 1800);
+      return () => { cancelled = true; window.clearTimeout(timer); };
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      observer.disconnect();
+      loadLiveWins();
+    }, { rootMargin: '240px 0px' });
+    observer.observe(section);
+    return () => { cancelled = true; observer.disconnect(); };
   }, [boxes]);
   const customerReviewCards = customerReviews.length
     ? customerReviews
@@ -311,12 +330,12 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, [promoBox, showFreeBoxSlide]);
 
   useEffect(() => {
-    if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower) return undefined;
+    if (showFreeBoxSlide || !isHeroVisible || performanceMode.isHidden || performanceMode.prefersReducedMotion || performanceMode.isLowPower || performanceMode.isMobile) return undefined;
     const heroTimer = window.setInterval(() => {
       setActiveHeroSlide((current) => (current + 1) % heroSlides.length);
     }, 10000);
     return () => window.clearInterval(heroTimer);
-  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
+  }, [isHeroVisible, performanceMode.isHidden, performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion, showFreeBoxSlide]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -502,10 +521,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
     <div className="animate-in fade-in duration-500">
       <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
         <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
-          <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
-            {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
-            {promoBox && <PromoBoxHeroSlide box={promoBox} />}
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+          <div key={activeHero} className="h-full animate-in fade-in duration-500">
+            {showFreeBoxHero && freeSignupBox ? <FreeBoxHeroSlide box={freeSignupBox} /> : null}
+            {showPromoBoxHero && promoBox ? <PromoBoxHeroSlide box={promoBox} /> : null}
+            {showDepositSlide ? <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
@@ -526,8 +545,8 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
                 <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
               </div>
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
-            </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+            </div> : null}
+            {!showFreeBoxHero && !showPromoBoxHero && !showDepositSlide ? <div className="relative h-full w-full overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(139,92,246,0.22),transparent_36%)]" />
               <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
@@ -541,7 +560,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
                   </div>
                 ))}
               </div>
-            </div>
+            </div> : null}
           </div>
           <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showPromoBoxHero ? 'Open Promo Box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
@@ -594,7 +613,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
             <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.98] sm:h-[184px] lg:h-[204px]">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
-              <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
+              <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading="lazy" decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
               <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
                 <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} className="shrink-0 text-[10px] font-black text-[#c4b5fd] sm:text-xs" iconClassName="h-3 w-3" animated={false} />

@@ -48,6 +48,20 @@ export const getHomepageSummaries = (pageSize: number) => {
 };
 export const invalidateHomepageSummaries = (pageSize?: number) => { if (pageSize) homepageCache.delete(pageSize); else homepageCache.clear(); };
 
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+const catalogFirstPageCache = new Map<number, { page: Awaited<ReturnType<typeof getBoxSummaryPage>>; cachedAt: number }>();
+const catalogFirstPageInFlight = new Map<number, ReturnType<typeof getBoxSummaryPage>>();
+/** Bounded first-page cache for fast return navigation; cursor pages remain explicit user actions. */
+export const getCatalogSummaryPage = (pageSize: number) => {
+ const cached = catalogFirstPageCache.get(pageSize);
+ if (cached && Date.now() - cached.cachedAt < CATALOG_CACHE_TTL_MS) return Promise.resolve(cached.page);
+ const ongoing = catalogFirstPageInFlight.get(pageSize); if (ongoing) return ongoing;
+ const request = getBoxSummaryPage(pageSize)
+   .then((page) => { catalogFirstPageCache.set(pageSize, { page, cachedAt: Date.now() }); return page; })
+   .finally(() => catalogFirstPageInFlight.delete(pageSize));
+ catalogFirstPageInFlight.set(pageSize, request); return request;
+};
+
 
 export const getBoxSummaryById = (id: string) => {
  const cached = summaryCache.get(id); if (cached) return Promise.resolve(cached);

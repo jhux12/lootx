@@ -2162,6 +2162,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isAuthenticated, user.isAdmin, view.type]);
 
   useEffect(() => {
+    // User-created box expiry is irrelevant to the summary-backed homepage and
+    // must not wake an idle/hidden mobile tab every minute.
+    if (view.type === 'HOME' || (typeof document !== 'undefined' && document.hidden)) return undefined;
     const interval = setInterval(() => {
       setBoxes((prev) => {
         const now = Date.now();
@@ -2175,7 +2178,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [view.type]);
 
   const loadCoinPackages = useCallback(async () => {
     if (coinPackagesInFlightRef.current) {
