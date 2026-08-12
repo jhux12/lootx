@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { admin, db } from '../_lib/firebaseAdmin.js';
 import { finalizeShippingPayment, isValidCents, paymentAttemptIdFor, releaseShippingPaymentAttempt, SHIPPING_LOCK_MS } from '../_lib/shippingPayment.js';
 import { deny, ok, requireUser } from '../_utils/auth.js';
+import { requireShipmentDeposit } from '../_lib/depositEligibility.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const cleanId = (value) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,150}$/.test(value) ? value : '';
@@ -11,6 +12,8 @@ export default async function handler(req, res) {
   let attemptId = ''; let createdSessionId = ''; let lockedThisRequest = false;
   try {
     const { uid } = await requireUser(req);
+    const userSnap = await db.collection('users').doc(uid).get();
+    requireShipmentDeposit(userSnap.data() ?? {});
     const quoteId = cleanId(req.body?.quoteId); const rateId = cleanId(req.body?.rateId);
     if (!quoteId || !rateId) return deny(res, 400, 'INVALID_SHIPPING_CHECKOUT_REQUEST');
     attemptId = paymentAttemptIdFor(uid, quoteId, rateId);

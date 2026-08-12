@@ -470,10 +470,11 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const isFreeOnlySelection = selectedShipmentItems.length > 0 && paidShippingItemCount === 0;
   const selectedShipmentKey = selectedShipmentItems.map((item) => item.instanceId).sort().join(':');
   const selectedLiveRate = liveRateQuote?.rates.find((rate) => rate.id === selectedRateId);
+  const userHasDeposit = hasUserMadeDeposit(user);
   const destinationKey = user.shippingAddress ? [user.shippingAddress.street1, user.shippingAddress.street2, user.shippingAddress.city, user.shippingAddress.state, user.shippingAddress.postalCode, user.shippingAddress.countryCode, user.shippingAddress.validatedAt].join('|') : '';
   const liveRateErrorMessage = liveRateError === 'ADDRESS_VERIFICATION_REQUIRED' ? 'Please verify your shipping address before requesting rates.' : liveRateError === 'SHIPPING_PROFILE_REQUIRED' ? 'One or more selected items need shipping information before rates can be calculated.' : liveRateError === 'ITEM_WEIGHT_REQUIRED' ? 'One or more selected items need a shipping weight before rates can be calculated.' : liveRateError === 'ITEM_DIMENSIONS_REQUIRED' ? 'One or more large items need individual dimensions before rates can be calculated.' : liveRateError === 'SHIPPING_PACKAGES_NOT_CONFIGURED' ? 'Shipping packages are being configured. Please try again shortly.' : liveRateError === 'NO_PACKAGE_AVAILABLE' ? "These items need a different package setup. Please contact support and we'll help arrange shipping." : liveRateError === 'NO_STANDARD_SHIPPING_RATE' ? 'Standard shipping is temporarily unavailable. Please try again.' : liveRateError === 'NO_SHIPPING_RATES' ? 'No shipping services are currently available for this destination.' : liveRateError === 'CUSTOMS_DATA_REQUIRED' ? 'International shipping needs customs information before rates can be shown.' : liveRateError === 'SHIPPING_ORIGIN_NOT_CONFIGURED' || liveRateError === 'SHIPPO_NOT_CONFIGURED' || liveRateError === 'SHIPPO_AUTH_FAILED' ? 'Live shipping is not fully configured yet. Please contact support.' : liveRateError === 'SHIPPO_RATE_REQUEST_REJECTED' ? 'The carrier could not quote this address and package. Please check your address or contact support.' : liveRateError ? 'Shipping rates are temporarily unavailable. Please try again.' : '';
   useEffect(() => {
-    if (!showShippingReview || !selectedShipmentKey) return;
+    if (!showShippingReview || !selectedShipmentKey || !userHasDeposit) return;
     const controller = new AbortController(); setIsLoadingLiveRates(true); setLiveRateError(null); setLiveRateQuote(null); setSelectedRateId(null);
     const load = async () => {
       try {
@@ -488,7 +489,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     // updates into one Shippo request instead of producing duplicate 422/network calls.
     const timer = window.setTimeout(() => void load(), 250);
     return () => { window.clearTimeout(timer); controller.abort(); };
-  }, [showShippingReview, selectedShipmentKey, destinationKey, rateRefreshVersion]);
+  }, [showShippingReview, selectedShipmentKey, destinationKey, rateRefreshVersion, userHasDeposit]);
   useEffect(() => {
     if (!showShippingReview || !liveRateQuote) return;
     const delay = Math.max(0, liveRateQuote.expiresAt - Date.now());
@@ -519,8 +520,6 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     && savedShippingAddress?.postalCode
     && savedShippingAddress?.countryCode
   );
-  const userHasDeposit = hasUserMadeDeposit(user);
-
   const showShippingDepositText = (message = 'Make your first deposit before requesting shipment.') => {
     setShippingDepositNotice(message);
     setShippingDepositMessage(null);
@@ -576,7 +575,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     setSignatureRequiredSelected(false);
     setShowShippingProtectionInfo(false);
     setShowSignatureRequiredInfo(false);
-    setShippingDepositNotice(null);
+    setShippingDepositNotice(userHasDeposit ? null : 'Make your first deposit before requesting shipment.');
     setShippingDepositMessage(null);
     setLiveRateQuote(null); setSelectedRateId(null); setLiveRateError(null);
     setShowShippingReview(true);
@@ -801,6 +800,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const handleLiveShippingCheckout = async () => {
     const selectedRate = selectedLiveRate;
     if (!auth.currentUser || !liveRateQuote || !selectedRate) return;
+    if (!userHasDeposit) {
+      showShippingDepositText('Make your first deposit before requesting shipment.');
+      return;
+    }
     let checkoutSessionId = '';
     setIsSubmittingCashShipping(true);
     try {
@@ -812,6 +815,10 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
+        if (payload?.error === 'DEPOSIT_REQUIRED') {
+          showShippingDepositText(payload?.message || 'Make your first deposit before requesting shipment.');
+          return;
+        }
         if (['SHIPPING_QUOTE_EXPIRED', 'SHIPPING_ITEMS_CHANGED', 'SHIPPING_QUOTE_ALREADY_USED'].includes(payload?.error)) setRateRefreshVersion((value) => value + 1);
         throw new Error(payload?.error ?? 'SHIPPING_CHECKOUT_UNAVAILABLE');
       }
@@ -1266,7 +1273,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             )}
 
             <div className="mt-4 space-y-2">
-              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!userHasDeposit || !selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : !userHasDeposit ? 'Deposit to Unlock Shipping' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
               <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
 
