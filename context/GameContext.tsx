@@ -3157,7 +3157,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const updateUserInfo = async (name: string, avatar: string) => {
-      if (!isAuthenticated || !auth.currentUser) return;
+      if (!isAuthenticated || !auth.currentUser) throw new Error('Please sign in again.');
 
       const trimmedName = name.trim();
       const nextName = trimmedName || user.name || 'Player';
@@ -3185,16 +3185,17 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         displayName: nextName,
         photoURL: nextAvatar
       };
-      setUser(prev => ({ ...prev, ...updates }));
-      setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
-
       try {
-        await persistUserData({
-          username: nextName,
-          usernameLower: nextUsernameLower,
-          displayName: nextName,
-          photoURL: nextAvatar
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/update-account-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ username: nextName })
         });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.message || 'Could not update username.');
+        setUser(prev => ({ ...prev, ...updates }));
+        setUsers(prev => prev.map(u => u.id === auth.currentUser?.uid ? { ...u, ...updates } : u));
       } catch (error) {
         console.error('Failed to persist profile changes', error);
         throw error;

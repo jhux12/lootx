@@ -31,9 +31,9 @@ interface AccountViewProps {
   isSavingAddress: boolean;
   securityForm: SecurityForm;
   setSecurityForm: (next: SecurityForm) => void;
-  onSaveUsername: () => void;
-  onSaveEmail: () => void;
-  onSavePassword: () => void;
+  onSaveUsername: () => Promise<boolean>;
+  onSaveEmail: () => Promise<boolean>;
+  onSavePassword: () => Promise<boolean>;
   isSavingUsername: boolean;
   isSavingEmail: boolean;
   isSavingPassword: boolean;
@@ -78,10 +78,15 @@ export const AccountView: React.FC<AccountViewProps> = ({
     setAddressForm({ ...addressForm, ...suggestion.address, validated: false, validationStatus: 'unvalidated', validatedAt: null, shippoAddressId: null });
   };
   const addressBlock = (address: ShippingAddress) => <address className="not-italic text-sm leading-6 text-gray-200"><strong>{address.fullName}</strong><br />{address.street1}{address.street2 && <><br />{address.street2}</>}<br />{address.city}{address.state ? `, ${address.state}` : ''} {address.postalCode}<br />{COUNTRY_NAMES.of(address.countryCode)}</address>;
-  const saveAccount = () => {
-    if (securityForm.username.trim() && securityForm.username.trim() !== (user.name ?? '').trim()) onSaveUsername();
-    if (securityForm.email.trim() && securityForm.email.trim() !== (user.email ?? '').trim() && securityForm.currentPassword.trim()) onSaveEmail();
-    if (securityForm.currentPassword && securityForm.newPassword && securityForm.confirmPassword) onSavePassword();
+  const saveAccount = async () => {
+    const usernameChanged = Boolean(securityForm.username.trim() && securityForm.username.trim() !== (user.name ?? '').trim());
+    const emailChanged = Boolean(securityForm.email.trim() && securityForm.email.trim() !== (user.email ?? '').trim());
+    const passwordChanged = Boolean(securityForm.newPassword || securityForm.confirmPassword);
+    if (!usernameChanged && !emailChanged && !passwordChanged) return;
+    // Avoid overlapping reauthentication and token refresh operations on slower mobile connections.
+    if (usernameChanged && !(await onSaveUsername())) return;
+    if (emailChanged && !(await onSaveEmail())) return;
+    if (passwordChanged) await onSavePassword();
   };
 
   return (
@@ -145,7 +150,7 @@ export const AccountView: React.FC<AccountViewProps> = ({
 
         <div className="mt-7 grid grid-cols-2 gap-3">
           <button type="button" onClick={onClose} className="rounded-xl px-4 py-3 text-sm font-bold text-gray-400 transition hover:bg-white/5 hover:text-white">Cancel</button>
-          <button type="button" onClick={activePanel === 'settings' ? onSaveAddress : saveAccount} disabled={isSavingAddress || isSavingUsername || isSavingEmail || isSavingPassword} className="rounded-xl bg-[#f4f4f5] px-4 py-3 text-sm font-black text-[#14151a] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">{activePanel === 'settings' && isSavingAddress ? 'Checking address…' : isSavingUsername || isSavingEmail || isSavingPassword ? 'Saving…' : activePanel === 'settings' ? 'Save Address' : 'Save Account'}</button>
+          <button type="button" onClick={activePanel === 'settings' ? onSaveAddress : () => void saveAccount()} disabled={isSavingAddress || isSavingUsername || isSavingEmail || isSavingPassword} className="min-h-12 rounded-xl bg-[#f4f4f5] px-4 py-3 text-sm font-black text-[#14151a] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">{activePanel === 'settings' && isSavingAddress ? 'Checking address…' : isSavingUsername || isSavingEmail || isSavingPassword ? 'Saving…' : activePanel === 'settings' ? 'Save Address' : 'Save Account'}</button>
         </div>
       </section>
     </div>
