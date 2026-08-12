@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildAppliedItem, calculatePricingSnapshot, clearTcgCache, extractTcgplayerVariants, findTcgplayerMatches, parseTcgplayerUrl, withoutUndefined } from '../lib/server/boxPricing.js';
+import { buildAppliedItem, buildLinkedItems, calculatePricingSnapshot, clearTcgCache, extractTcgplayerVariants, findTcgplayerMatches, parseTcgplayerUrl, withoutUndefined } from '../lib/server/boxPricing.js';
 
 test('accepts and canonicalizes TCGplayer product links with tracking parameters', () => {
   assert.deepEqual(parseTcgplayerUrl('https://tcgplayer.com/product/660414/pokemon-card?utm_source=x#offer'), { productId: '660414', canonicalUrl: 'https://www.tcgplayer.com/product/660414/pokemon-card' });
@@ -50,6 +50,16 @@ test('undefined properties are omitted from sanitized Firestore data', () => {
   assert.deepEqual(withoutUndefined({ kept: 1, missing: undefined, nullable: null }), { kept: 1, nullable: null });
 });
 
+test('saving a TCGplayer link updates only the selected embedded box item', () => {
+  const items = [{ id: 'selected', price: 100 }, { id: 'other', price: 200 }];
+  const parsedUrl = parseTcgplayerUrl('https://tcgplayer.com/product/660414/card?utm_source=test');
+  const linked = buildLinkedItems(items, 'selected', parsedUrl);
+  assert.equal(linked[0].tcgplayerUrl, 'https://www.tcgplayer.com/product/660414/card');
+  assert.equal(linked[0].tcgplayerProductId, '660414');
+  assert.deepEqual(linked[1], items[1]);
+  assert.equal(items[0].tcgplayerUrl, undefined);
+});
+
 test('applying a price updates only the selected box item and recalculates existing EV', () => {
   const original = { id: 'card', price: 100, chance: 50 }, other = { id: 'other', price: 300, chance: 50 };
   const resolved = { canonicalUrl: 'https://www.tcgplayer.com/product/660414/dawn', productId: '660414' }, match = { tcgdexId: 'sv-test', providerUpdatedAt: 'today' }, variant = { key: 'normal', marketPriceCoins: 250, marketPriceCents: 250 };
@@ -70,6 +80,8 @@ test('admin UI uses flat Vercel function routes for match and apply', async () =
   assert.match(source, /\/api\/admin\/box-pricing-match/);
   assert.match(source, /\/api\/admin\/box-pricing-apply/);
   assert.doesNotMatch(source, /\/api\/admin\/boxes\/\$\{box\.id\}\/pricing/);
+  assert.match(source, /Refresh Price/);
+  assert.match(source, /Open saved link/);
   const [matchRoute, applyRoute] = await Promise.all([
     readFile(new URL('../api/admin/box-pricing-match.js', import.meta.url), 'utf8'),
     readFile(new URL('../api/admin/box-pricing-apply.js', import.meta.url), 'utf8')

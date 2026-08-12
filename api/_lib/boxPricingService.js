@@ -1,5 +1,5 @@
 import { admin, firestore } from './firebaseAdmin.js';
-import { buildAppliedItem, calculatePricingSnapshot, findTcgplayerMatches } from '../../lib/server/boxPricing.js';
+import { buildAppliedItem, buildLinkedItems, calculatePricingSnapshot, findTcgplayerMatches, parseTcgplayerUrl } from '../../lib/server/boxPricing.js';
 
 export const loadBox = async (boxId) => {
   const snapshot = await firestore.collection('boxes').doc(String(boxId)).get();
@@ -10,6 +10,14 @@ export const loadBox = async (boxId) => {
 export const matchBoxItem = async (boxId, itemId, tcgplayerUrl, options = {}) => {
   const box = await loadBox(boxId), item = (box.items || []).find((entry) => entry.id === itemId);
   if (!item) throw Object.assign(new Error('BOX_ITEM_NOT_FOUND'), { status: 404 });
+  const parsedUrl = parseTcgplayerUrl(tcgplayerUrl);
+  await firestore.runTransaction(async (transaction) => {
+    const ref = firestore.collection('boxes').doc(String(boxId)), snapshot = await transaction.get(ref);
+    if (!snapshot.exists) throw Object.assign(new Error('BOX_NOT_FOUND'), { status: 404 });
+    const items = snapshot.data()?.items || [];
+    if (!items.some((entry) => entry.id === itemId)) throw Object.assign(new Error('BOX_ITEM_NOT_FOUND'), { status: 404 });
+    transaction.update(ref, { items: buildLinkedItems(items, itemId, parsedUrl) });
+  });
   return findTcgplayerMatches({ itemName: item.name, tcgplayerUrl, fetchImpl: options.fetchImpl });
 };
 
