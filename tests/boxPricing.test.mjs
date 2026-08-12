@@ -27,6 +27,20 @@ test('returns all available pricing and variants_detailed variants in integer co
   assert.deepEqual(Object.fromEntries(variants.map((value) => [value.key, value.marketPriceCoins])), { normal: 250, holofoil: 475, 'reverse-holofoil': 325 });
 });
 
+test('extracts variant type and inherited product ID from nested variants_detailed pricing', () => {
+  const card = { variants_detailed: [{ type: 'Reverse Holofoil', pricing: { tcgplayer: { productId: 660414, marketPrice: 6.12, updatedAt: 'now' } } }] };
+  assert.deepEqual(extractTcgplayerVariants(card, '660414').map(({ key, marketPriceCoins }) => ({ key, marketPriceCoins })), [{ key: 'reverse-holofoil', marketPriceCoins: 612 }]);
+});
+
+test('uses TCGdex like filters and accepts paginated search response shapes', async () => {
+  clearTcgCache(); const urls = [];
+  const fetchImpl = async (url) => { urls.push(url); return { ok: true, json: async () => url.includes('?name=') ? { data: [{ id: 'sv-test' }] } : detail }; };
+  const result = await findTcgplayerMatches({ itemName: 'Dawn PSA 10 (Phantasmal Flames)', tcgplayerUrl: 'https://tcgplayer.com/product/660414/dawn', fetchImpl });
+  assert.equal(result.matches.length, 1);
+  assert.ok(urls.some((url) => url.includes('name=like%3ADawn')));
+  assert.deepEqual(result.searchedNames, ['Dawn']);
+});
+
 test('missing pricing cannot produce an applied value', () => {
   assert.deepEqual(extractTcgplayerVariants({ pricing: { tcgplayer: { productId: 1, normal: {} } } }, '1'), []);
   const item = { id: 'x', price: 500 }; assert.equal(buildAppliedItem({ item, resolved: {}, match: {}, variant: null, now: 'now' }), item);
