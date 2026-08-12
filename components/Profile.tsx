@@ -638,47 +638,55 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     const nextUsername = securityForm.username.trim();
     if (!nextUsername || nextUsername === user.name) {
       toast.info('Enter a new username to update.');
-      return;
+      return false;
     }
     setIsSavingUsername(true);
     try {
       await updateUserInfo(nextUsername, securityForm.avatar || user.avatar);
       toast.success('Username updated.');
+      return true;
     } catch (error) {
       console.error('Failed to update username', error);
-      toast.error('Could not update username.');
+      toast.error(error instanceof Error ? error.message : 'Could not update username.');
+      return false;
     } finally {
       setIsSavingUsername(false);
     }
   };
 
   const handleSaveEmail = async () => {
-    if (!auth.currentUser) return toast.error('Please sign in again to update your email.');
+    if (!auth.currentUser) { toast.error('Please sign in again to update your email.'); return false; }
     const nextEmail = securityForm.email.trim();
-    if (!nextEmail || nextEmail === (auth.currentUser.email ?? user.email ?? '')) return toast.info('Enter a different email to update.');
-    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update email.');
-    if (!auth.currentUser.email) return toast.error('Email updates are unavailable for this account type.');
+    if (!nextEmail || nextEmail === (auth.currentUser.email ?? user.email ?? '')) { toast.info('Enter a different email to update.'); return false; }
+    if (!securityForm.currentPassword.trim()) { toast.error('Current password is required to update email.'); return false; }
+    if (!auth.currentUser.email) { toast.error('Email updates are unavailable for this account type.'); return false; }
     setIsSavingEmail(true);
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
       await reauthenticateWithCredential(auth.currentUser, credential);
       await updateFirebaseEmail(auth.currentUser, nextEmail);
-      setSecurityForm((prev) => ({ ...prev, currentPassword: '' }));
+      const token = await auth.currentUser.getIdToken(true);
+      const response = await fetch('/api/update-account-profile', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ email: nextEmail }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || 'Could not save the new email to your profile.');
+      setSecurityForm((prev) => ({ ...prev, currentPassword: prev.newPassword ? prev.currentPassword : '' }));
       toast.success('Email updated.');
+      return true;
     } catch (error) {
       console.error('Failed to update email', error);
-      toast.error('Could not update email. Please verify your current password.');
+      toast.error(error instanceof Error ? error.message : 'Could not update email. Please verify your current password.');
+      return false;
     } finally {
       setIsSavingEmail(false);
     }
   };
 
   const handleSavePassword = async () => {
-    if (!auth.currentUser) return toast.error('Please sign in again to update your password.');
-    if (!securityForm.newPassword.trim()) return toast.error('Enter a new password.');
-    if (securityForm.newPassword !== securityForm.confirmPassword) return toast.error('New passwords do not match.');
-    if (!securityForm.currentPassword.trim()) return toast.error('Current password is required to update password.');
-    if (!auth.currentUser.email) return toast.error('Password updates are unavailable for this account type.');
+    if (!auth.currentUser) { toast.error('Please sign in again to update your password.'); return false; }
+    if (!securityForm.newPassword.trim()) { toast.error('Enter a new password.'); return false; }
+    if (securityForm.newPassword !== securityForm.confirmPassword) { toast.error('New passwords do not match.'); return false; }
+    if (!securityForm.currentPassword.trim()) { toast.error('Current password is required to update password.'); return false; }
+    if (!auth.currentUser.email) { toast.error('Password updates are unavailable for this account type.'); return false; }
     setIsSavingPassword(true);
     try {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, securityForm.currentPassword.trim());
@@ -686,9 +694,11 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       await updateFirebasePassword(auth.currentUser, securityForm.newPassword.trim());
       setSecurityForm((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
       toast.success('Password updated.');
+      return true;
     } catch (error) {
       console.error('Failed to update password', error);
       toast.error('Could not update password. Please verify your current password.');
+      return false;
     } finally {
       setIsSavingPassword(false);
     }
