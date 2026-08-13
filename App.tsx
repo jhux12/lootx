@@ -334,6 +334,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
   }, [performanceMode.isLowPower, performanceMode.isMobile, performanceMode.prefersReducedMotion]);
 
   useEffect(() => {
+    if (view.type !== 'HOME') return undefined;
     // Trending selections determine the first homepage content users see, so do
     // not defer this subscription behind the rest of the non-critical work.
     return subscribeHomepageConfig(
@@ -348,7 +349,7 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
         setHomepageTrendingBoxIds((current) => (current.length === 0 ? current : []));
       }
     );
-  }, []);
+  }, [view.type]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
