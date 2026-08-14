@@ -241,6 +241,26 @@
         100% { transform: translateX(100%); }
       }
 
+      @keyframes pullzLandingBloom {
+        0% { transform: scale(1); filter: brightness(1); }
+        45% { transform: scale(1.03); filter: brightness(1.25); }
+        100% { transform: scale(1); filter: brightness(1); }
+      }
+      @keyframes pullzLandingBloomRing {
+        0% { transform: scale(1); opacity: 0.9; }
+        100% { transform: scale(1.28); opacity: 0; }
+      }
+      .pullz-landing-impact {
+        animation: pullzLandingBloom 480ms ease-out;
+      }
+      .pullz-landing-impact-ring {
+        animation: pullzLandingBloomRing 480ms ease-out;
+      }
+      html.pullz-reduced-motion .pullz-landing-impact,
+      html.pullz-reduced-motion .pullz-landing-impact-ring {
+        animation: none;
+      }
+
       @media (max-width: 768px) {
         html.pullz-mobile-optimized body {
           text-rendering: optimizeSpeed;
