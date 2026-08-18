@@ -1,5 +1,6 @@
 import { adminAuth, db } from '../_lib/firebaseAdmin.js';
 import { deny, ok, requireAdmin } from '../_utils/auth.js';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 const listAllAuthUsers = async (nextPageToken, acc = []) => {
   const result = await adminAuth.listUsers(1000, nextPageToken);
@@ -16,10 +17,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    await requireAdmin(req);
+    const adminUser = await requireAdmin(req);
 
     if (req.method === 'PATCH') {
-      const { userId, status } = req.body ?? {};
+      const { action, userId, status } = req.body ?? {};
+      if (action === 'verify_phone') {
+        if (typeof userId !== 'string' || !userId.trim()) return deny(res, 400, 'USER_ID_REQUIRED');
+        const parsedPhone = parsePhoneNumberFromString(typeof req.body?.phoneNumber === 'string' ? req.body.phoneNumber.trim() : '');
+        if (!parsedPhone?.isValid()) return deny(res, 400, 'INVALID_PHONE_NUMBER');
+
+        const phoneNumber = parsedPhone.number;
+        await adminAuth.updateUser(userId, { phoneNumber });
+        await db.collection('users').doc(userId).set({
+          phoneNumber,
+          phoneVerifiedByAdmin: true,
+          phoneVerifiedByAdminAt: new Date(),
+          phoneVerifiedByAdminUid: adminUser.uid,
+          updatedAt: new Date()
+        }, { merge: true });
+        return ok(res, { userId, phoneNumber, phoneVerified: true });
+      }
       if (typeof userId !== 'string' || !['active', 'suspended', 'banned'].includes(status)) {
         return deny(res, 400, 'INVALID_USER_STATUS');
       }
@@ -80,8 +97,9 @@ export default async function handler(req, res) {
 
     return ok(res, { users });
   } catch (error) {
-    const status = error?.status ?? 500;
-    const message = error?.error ?? error?.message ?? 'FAILED_TO_LOAD_ADMIN_USERS';
+    const duplicatePhone = error?.code === 'auth/phone-number-already-exists';
+    const status = duplicatePhone ? 409 : error?.status ?? 500;
+    const message = duplicatePhone ? 'PHONE_NUMBER_ALREADY_IN_USE' : error?.error ?? error?.message ?? 'FAILED_TO_LOAD_ADMIN_USERS';
     return deny(res, status, message);
   }
 }

@@ -35,3 +35,18 @@ test('admin directory exposes only Firebase-verified phone numbers', async () =>
   assert.match(adminUsers, /phoneNumber: entry\.phoneNumber/);
   assert.match(adminUsers, /phoneVerified: Boolean\(entry\.phoneNumber\)/);
 });
+
+test('admin can manually verify a validated phone through Firebase Auth', async () => {
+  const [adminUsers, adminPanel] = await Promise.all([
+    readFile(new URL('../api/admin/users.js', import.meta.url), 'utf8'),
+    readFile(new URL('../components/AdminPanel.tsx', import.meta.url), 'utf8')
+  ]);
+
+  assert.match(adminUsers, /action === 'verify_phone'/);
+  assert.match(adminUsers, /parsePhoneNumberFromString/);
+  assert.match(adminUsers, /adminAuth\.updateUser\(userId, \{ phoneNumber \}\)/);
+  assert.match(adminUsers, /phoneVerifiedByAdminUid: adminUser\.uid/);
+  assert.match(adminPanel, /Manual phone verification/);
+  assert.match(adminPanel, /type="tel"/);
+  assert.match(adminPanel, /min-h-11 w-full/);
+});
