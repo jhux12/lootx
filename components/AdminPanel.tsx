@@ -251,7 +251,7 @@ type ShipmentOrderRecord = {
     shippingBatchCostCents: number;
     shippingPaymentMethod?: Shipment['shippingPaymentMethod'];
     shippingRateTier?: string;
-    trackingNumber: string;
+    trackingNumbers: string[];
 };
 
 
@@ -1039,7 +1039,9 @@ export const AdminPanel: React.FC = () => {
               const totalValue = sortedShipments.reduce((sum, shipment) => sum + Number(shipment.item?.value ?? 0), 0);
               const createdAt = Math.min(...sortedShipments.map((shipment) => shipment.createdAt ?? Date.now()));
               const updatedAt = Math.max(...sortedShipments.map((shipment) => shipment.updatedAt ?? shipment.createdAt ?? 0));
-              const trackingNumber = sortedShipments.find((shipment) => shipment.trackingNumber)?.trackingNumber ?? '';
+              const trackingNumbers = Array.from(new Set(sortedShipments.flatMap((shipment) =>
+                  shipment.trackingNumbers?.length ? shipment.trackingNumbers : shipment.trackingNumber ? [shipment.trackingNumber] : []
+              )));
 
               return {
                   id: orderId,
@@ -1055,7 +1057,7 @@ export const AdminPanel: React.FC = () => {
                   shippingBatchCostCents,
                   shippingPaymentMethod: sortedShipments.find((shipment) => shipment.shippingPaymentMethod)?.shippingPaymentMethod,
                   shippingRateTier: sortedShipments.find((shipment) => shipment.shippingRateTier)?.shippingRateTier,
-                  trackingNumber
+                  trackingNumbers
               };
           })
           .sort((a, b) => b.createdAt - a.createdAt);
@@ -5568,7 +5570,8 @@ export const AdminPanel: React.FC = () => {
                                 const address = firstShipment?.shippingInfo ?? order.user?.shippingAddress;
                                 const canUpdate = order.shipments.some((shipment) => Boolean(shipment.id));
                                 const trackingKey = order.id;
-                                const trackingValue = shipmentTracking[trackingKey] ?? order.trackingNumber ?? '';
+                                const trackingValue = shipmentTracking[trackingKey] ?? order.trackingNumbers.join('\n');
+                                const trackingNumbers = Array.from(new Set(trackingValue.split(/[\n,]+/).map((value) => value.trim()).filter(Boolean)));
                                 const displayName = order.user?.name ?? address?.fullName ?? 'Unknown user';
                                 const displayEmail = order.user?.email || 'No email on file';
                                 const orderStatusLabel = order.status === 'shipped'
@@ -5679,9 +5682,8 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Order Actions</div>
-                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number for all bundled items</label>
-                                                <Input
-                                                    type="text"
+                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking numbers for all bundled items</label>
+                                                <Textarea
                                                     value={trackingValue}
                                                     onChange={(event) =>
                                                         setShipmentTracking((prev) => ({
@@ -5689,9 +5691,11 @@ export const AdminPanel: React.FC = () => {
                                                             [trackingKey]: event.target.value
                                                         }))
                                                     }
-                                                    placeholder="Enter tracking number"
-                                                    className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"
+                                                    placeholder={'Enter one tracking number per line'}
+                                                    rows={Math.min(5, Math.max(2, trackingNumbers.length + 1))}
+                                                    className="min-h-20 w-full resize-y bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-base sm:text-xs text-gray-200"
                                                 />
+                                                <p className="text-[10px] leading-4 text-gray-500">One per line or comma-separated. {trackingNumbers.length}/20 tracking numbers.</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     <button
                                                         onClick={() => {
@@ -5701,7 +5705,7 @@ export const AdminPanel: React.FC = () => {
                                                                     shipment.uid,
                                                                     shipment.inventoryId,
                                                                     'shipped',
-                                                                    trackingValue
+                                                                    trackingNumbers
                                                                 )
                                                             ));
                                                         }}

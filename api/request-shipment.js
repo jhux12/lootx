@@ -3,6 +3,7 @@ import { requireActiveAccount } from './_utils/auth.js';
 import { applySpendAndRewards, getRewardsSettings } from './_lib/rewards.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { getSignatureRequiredCents, getShipmentShippingRate, getShippingProtectionRate } from './_lib/shippingRates.js';
+import { hasUserMadeDeposit } from './_lib/depositEligibility.js';
 import { normalizeAddress, validateLocalAddress } from './_lib/shippingAddress.js';
 
 const STRIPE_SETTINGS_DOC = 'stripe-settings';
@@ -41,10 +42,7 @@ export default async function handler(req, res) {
     const userRef = firestore.collection('users').doc(decoded.uid);
     const userSnap = await userRef.get();
     const userData = userSnap.data() ?? {};
-    const depositCount = Math.max(0, Number(userData.depositCount ?? 0));
-    const totalDepositedCents = Math.max(0, Number(userData.totalDepositedCents ?? 0));
-    const totalSpent = Math.max(0, Number(userData.totalSpent ?? 0));
-    if (depositCount <= 0 && totalDepositedCents <= 0 && totalSpent <= 0) {
+    if (!hasUserMadeDeposit(userData)) {
       return sendJson(res, 403, {
         error: 'DEPOSIT_REQUIRED',
         message: 'Make your first deposit before requesting shipment.'

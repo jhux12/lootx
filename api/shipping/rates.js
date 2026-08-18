@@ -5,13 +5,15 @@ import { loadOwnedShippingItems, loadShippingConfig } from '../_lib/shippingData
 import { normalizeAddress, toShippoAddress, validateLocalAddress } from '../_lib/shippingAddress.js';
 import { loadShippingOrigin } from '../_lib/shippingOrigin.js';
 import { deny, ok, requireUser } from '../_utils/auth.js';
+import { hasUserMadeDeposit } from '../_lib/depositEligibility.js';
 
 const isFree = (item) => item.freeShipping === true || Number(item.shippingCostOverrideCoins ?? Number.NaN) === 0 || item.source === 'xpShop' || item.acquisitionCurrencyType === 'XP' || item.openCurrencyType === 'XP';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return deny(res, 405, 'METHOD_NOT_ALLOWED');
   try {
-    const { uid } = await requireUser(req); const userRef = db.collection('users').doc(uid); const userSnap = await userRef.get(); const storedAddress = userSnap.data()?.shippingAddress;
+    const { uid } = await requireUser(req); const userRef = db.collection('users').doc(uid); const userSnap = await userRef.get(); const userData = userSnap.data() ?? {}; const storedAddress = userSnap.data()?.shippingAddress;
+    if (!hasUserMadeDeposit(userData)) return deny(res, 403, 'DEPOSIT_REQUIRED');
     if (!storedAddress || storedAddress.validated !== true || !['valid', 'corrected', 'inconclusive'].includes(storedAddress.validationStatus)) return deny(res, 409, 'ADDRESS_VERIFICATION_REQUIRED');
     const destination = normalizeAddress(storedAddress); if (validateLocalAddress(destination).length) return deny(res, 409, 'ADDRESS_VERIFICATION_REQUIRED');
     const { itemIds, items } = await loadOwnedShippingItems(uid, req.body?.itemIds); const config = await loadShippingConfig();

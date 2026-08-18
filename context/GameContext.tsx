@@ -788,7 +788,7 @@ interface GameContextType {
   registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
-  updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumber?: string) => Promise<void>;
+  updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumbers?: string[]) => Promise<void>;
   cancelShipmentAsAdmin: (shipmentId: string, userId: string, inventoryId?: string) => Promise<void>;
 }
 
@@ -3708,9 +3708,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     userId: string,
     inventoryId: string | undefined,
     status: ShipmentStatus,
-    trackingNumber?: string
+    trackingNumbers?: string[]
   ) => {
-    const sanitizedTrackingNumber = trackingNumber?.trim();
+    const sanitizedTrackingNumbers = Array.from(new Set((trackingNumbers ?? []).map((value) => value.trim()).filter(Boolean)));
+    const sanitizedTrackingNumber = sanitizedTrackingNumbers[0];
     if (!shipmentId) {
       console.warn('Attempted to update shipment without a shipment id');
       return;
@@ -3719,7 +3720,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authedFetch('/api/admin/shipments', {
         method: 'PATCH',
-        body: JSON.stringify({ shipmentId, status, trackingNumber: sanitizedTrackingNumber })
+        body: JSON.stringify({ shipmentId, status, trackingNumbers: sanitizedTrackingNumbers })
       });
     } catch (error) {
       console.error('Failed to update shipment status', error);
@@ -3728,7 +3729,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setShipments((prev) => prev.map((shipment) =>
       shipment.id === shipmentId
-        ? { ...shipment, status, trackingNumber: sanitizedTrackingNumber || shipment.trackingNumber, updatedAt: Date.now() }
+        ? { ...shipment, status, trackingNumber: sanitizedTrackingNumber || shipment.trackingNumber, trackingNumbers: sanitizedTrackingNumbers, updatedAt: Date.now() }
         : shipment
     ));
 
@@ -3741,7 +3742,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             ? {
                 ...item,
                 status,
-                trackingNumber: sanitizedTrackingNumber || item.trackingNumber
+                trackingNumber: sanitizedTrackingNumber || item.trackingNumber,
+                trackingNumbers: sanitizedTrackingNumbers
               }
             : item
         );
