@@ -43,6 +43,7 @@ type OrderSummary = {
   value: number;
   status: 'pending' | 'shipped';
   trackingNumber?: string;
+  trackingNumbers?: string[];
   createdAt?: number;
   shippedAt?: number;
   size?: string | null;
@@ -58,7 +59,7 @@ type OrderGroupSummary = {
   id: string;
   items: OrderSummary[];
   status: OrderSummary['status'];
-  trackingNumber?: string;
+  trackingNumbers: string[];
   createdAt?: number;
   shippedAt?: number;
 };
@@ -100,7 +101,9 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
           id,
           items: sortedItems,
           status,
-          trackingNumber: sortedItems.find((item) => item.trackingNumber)?.trackingNumber,
+          trackingNumbers: Array.from(new Set(sortedItems.flatMap((item) =>
+            item.trackingNumbers?.length ? item.trackingNumbers : item.trackingNumber ? [item.trackingNumber] : []
+          ))),
           createdAt: Math.min(...sortedItems.map((item) => item.createdAt ?? item.shippedAt ?? Date.now())),
           shippedAt: Math.max(...sortedItems.map((item) => item.shippedAt ?? item.createdAt ?? 0)) || undefined
         };
@@ -122,7 +125,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       const matchesSearch = !term
         || order.id.toLowerCase().includes(term)
-        || order.items.some((item) => item.name.toLowerCase().includes(term) || item.id.toLowerCase().includes(term) || (item.trackingNumber ?? '').toLowerCase().includes(term));
+        || order.items.some((item) => item.name.toLowerCase().includes(term) || item.id.toLowerCase().includes(term) || [...(item.trackingNumbers ?? []), item.trackingNumber ?? ''].some((tracking) => tracking.toLowerCase().includes(term)));
       return matchesStatus && matchesSearch;
     });
   }, [orderGroups, orderSearch, statusFilter]);
@@ -170,7 +173,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
             const activeIndex = Math.min(activeItemIndexes[orderGroup.id] ?? 0, orderGroup.items.length - 1);
             const order = orderGroup.items[activeIndex] ?? orderGroup.items[0];
             const isExpanded = expandedOrderIds.has(orderGroup.id);
-            const trackingNumber = orderGroup.trackingNumber;
+            const trackingNumbers = orderGroup.trackingNumbers;
             const toggleExpanded = () => setExpandedOrderIds((current) => {
               const next = new Set(current);
               if (next.has(orderGroup.id)) next.delete(orderGroup.id); else next.add(orderGroup.id);
@@ -181,7 +184,7 @@ const OrdersView: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => {
                 <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#09090c] p-1.5"><img src={order.image} alt={order.name} className="h-full w-full object-contain" loading="lazy" />{orderGroup.items.length > 1 ? <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-[9px] font-bold">+{orderGroup.items.length - 1}</span> : null}</div>
                 <div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><p className="truncate text-sm font-bold text-white">{order.name}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${orderGroup.status === 'shipped' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-amber-300/10 text-amber-200'}`}>{orderGroup.status === 'shipped' ? 'Shipped' : 'Pending'}</span></div><p className="mt-1 text-xs text-[#6c6c74]">{formatOrderDate(orderGroup.createdAt)}</p><CoinAmount amount={order.value} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 text-xs font-bold text-white" iconClassName="h-3.5 w-3.5" /></div>
               </div>
-              {trackingNumber ? <div className="mx-3 mb-3 flex min-w-0 items-center gap-2 rounded-lg bg-black/20 px-2.5 py-2"><span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-[#71717a]">Tracking</span><code className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d2d2d8]">{trackingNumber}</code><button type="button" onClick={() => { void handleCopyTracking(orderGroup.id, trackingNumber); }} className="shrink-0 rounded px-1.5 py-1 text-[10px] font-black text-white transition hover:bg-white/10">{copiedTrackingId === orderGroup.id ? 'Copied' : 'Copy'}</button></div> : null}
+              {trackingNumbers.length ? <div className="mx-3 mb-3 rounded-lg bg-black/20 px-2.5 py-2"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[#71717a]">Tracking</div><div className="space-y-1.5">{trackingNumbers.map((trackingNumber, index) => <div key={trackingNumber} className="flex min-w-0 items-center gap-2"><code className="min-w-0 flex-1 break-all text-xs font-semibold text-[#d2d2d8]">{trackingNumber}</code><button type="button" onClick={() => { void handleCopyTracking(`${orderGroup.id}-${index}`, trackingNumber); }} className="min-h-9 shrink-0 rounded px-2 text-[10px] font-black text-white transition hover:bg-white/10">{copiedTrackingId === `${orderGroup.id}-${index}` ? 'Copied' : 'Copy'}</button></div>)}</div></div> : null}
               {orderGroup.items.length > 1 ? <><button type="button" onClick={toggleExpanded} aria-expanded={isExpanded} className="flex w-full items-center justify-between border-t border-white/[0.06] px-3 py-2.5 text-xs font-bold text-[#b6b6be] transition hover:bg-white/[0.03] hover:text-white"><span>{isExpanded ? 'Hide' : 'Show'} all {orderGroup.items.length} items</span><ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></button>{isExpanded ? <div className="space-y-2 border-t border-white/[0.06] bg-black/10 p-3">{orderGroup.items.map((item) => <div key={item.id} className="flex items-center gap-2"><img src={item.image} alt="" className="h-9 w-9 rounded bg-[#09090c] object-contain p-1" loading="lazy" /><p className="min-w-0 flex-1 truncate text-xs font-semibold text-[#d4d4da]">{item.name}</p><CoinAmount amount={item.value} formatOptions={{ maximumFractionDigits: 0 }} className="text-[11px] font-bold text-white" iconClassName="h-3 w-3" /></div>)}</div> : null}</> : null}
             </article>;
           })}
@@ -324,6 +327,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
         value: shipment.item.value,
         status: shipment.status === 'shipped' ? 'shipped' as const : 'pending' as const,
         trackingNumber: shipment.trackingNumber,
+        trackingNumbers: shipment.trackingNumbers,
         createdAt: shipment.createdAt,
         shippedAt: shipment.updatedAt,
         size: shipment.item.size
@@ -342,6 +346,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
         value: toCoins(item.price, PRICE_UNIT_MODE),
         status: item.status === 'shipped' ? 'shipped' as const : 'pending' as const,
         trackingNumber: item.trackingNumber,
+        trackingNumbers: item.trackingNumbers,
         createdAt: item.obtainedAt,
         shippedAt: item.history?.find((entry) => entry.action === 'shipped')?.createdAt ?? item.obtainedAt,
         size: item.size ?? null

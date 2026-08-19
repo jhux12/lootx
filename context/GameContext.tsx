@@ -79,6 +79,13 @@ const buildFallbackInstanceId = (item: Partial<InventoryItem>, fallbackId: strin
   return `${fallbackId}-${obtainedAt}-${price}-${name}`;
 };
 
+const normalizeTrackingNumbers = (value: unknown, legacyValue?: unknown): string[] => Array.from(new Set(
+  (Array.isArray(value) ? value : typeof legacyValue === 'string' ? [legacyValue] : [])
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+));
+
 const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
   if (!Array.isArray(items)) return [];
   return items.map((item, index) => {
@@ -102,6 +109,7 @@ const normalizeInventoryItems = (items: unknown): InventoryItem[] => {
       sizes: Array.isArray(typed.sizes) ? typed.sizes.filter((size) => typeof size === 'string') : [],
       size: typeof typed.size === 'string' ? typed.size : undefined,
       trackingNumber: typeof typed.trackingNumber === 'string' ? typed.trackingNumber : undefined,
+      trackingNumbers: normalizeTrackingNumbers(typed.trackingNumbers, typed.trackingNumber),
       redeemable: typed.redeemable ?? true,
       forceFullSellBack: typed.forceFullSellBack === true,
       sellBackRate: Number(typed.sellBackRate ?? 0),
@@ -788,7 +796,7 @@ interface GameContextType {
   registerSpend: (amount: number) => void;
   generateAffiliateCode: () => Promise<string | undefined>;
   updateUserProgress: (userId: string, xp: number) => Promise<void>;
-  updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumber?: string) => Promise<void>;
+  updateShipmentStatus: (shipmentId: string, userId: string, inventoryId: string | undefined, status: ShipmentStatus, trackingNumbers?: string[]) => Promise<void>;
   cancelShipmentAsAdmin: (shipmentId: string, userId: string, inventoryId?: string) => Promise<void>;
 }
 
@@ -1252,6 +1260,7 @@ const mapInventoryDoc = (docSnap: QueryDocumentSnapshot) => {
     status,
     size: typeof data.size === 'string' ? data.size : undefined,
     trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
+    trackingNumbers: normalizeTrackingNumbers(data.trackingNumbers, data.trackingNumber),
     provenance: data.provenance ?? (data.boxId ? { sourceType: 'case_open', sourceId: data.boxId } : undefined),
     redeemable: data.redeemable ?? true,
     forceFullSellBack: data.forceFullSellBack === true,
@@ -1308,6 +1317,7 @@ const mapShipmentDoc = (docSnap: QueryDocumentSnapshot) => {
     shippingRateTier: typeof data.shippingRateTier === 'string' ? data.shippingRateTier : undefined,
     status,
     trackingNumber: typeof data.trackingNumber === 'string' ? data.trackingNumber : undefined,
+    trackingNumbers: normalizeTrackingNumbers(data.trackingNumbers, data.trackingNumber),
     createdAt,
     updatedAt
   } as Shipment;
@@ -1937,18 +1947,23 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
-    void (async () => {
-      try {
-        const loaded = user.isAdmin
-          ? (await authedFetch<{ shipments?: Shipment[] }>('/api/admin/shipments')).shipments ?? []
-          : (await getDocs(query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100))))
-            .docs.map(mapShipmentDoc);
-        setShipments(loaded);
-      } catch (error) {
-        console.error('Failed to load shipments', error);
-        setShipments([]);
-      }
-    })();
+    if (user.isAdmin) {
+      void authedFetch<{ shipments?: Shipment[] }>('/api/admin/shipments')
+        .then((result) => setShipments(result.shipments ?? []))
+        .catch((error) => {
+          console.error('Failed to load shipments', error);
+          setShipments([]);
+        });
+      return;
+    }
+
+    const shipmentsQuery = query(collection(db, 'shipments'), where('uid', '==', user.id), limit(100));
+    return onSnapshot(shipmentsQuery, (snapshot) => {
+      setShipments(snapshot.docs.map(mapShipmentDoc));
+    }, (error) => {
+      console.error('Failed to load shipments', error);
+      setShipments([]);
+    });
   }, [isAuthenticated, user.id, user.isAdmin]);
 
   useEffect(() => {
@@ -3708,9 +3723,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     userId: string,
     inventoryId: string | undefined,
     status: ShipmentStatus,
-    trackingNumber?: string
+    trackingNumbers?: string[]
   ) => {
-    const sanitizedTrackingNumber = trackingNumber?.trim();
+    const sanitizedTrackingNumbers = Array.from(new Set((trackingNumbers ?? []).map((value) => value.trim()).filter(Boolean)));
+    const sanitizedTrackingNumber = sanitizedTrackingNumbers[0];
     if (!shipmentId) {
       console.warn('Attempted to update shipment without a shipment id');
       return;
@@ -3719,7 +3735,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await authedFetch('/api/admin/shipments', {
         method: 'PATCH',
-        body: JSON.stringify({ shipmentId, status, trackingNumber: sanitizedTrackingNumber })
+        body: JSON.stringify({ shipmentId, status, trackingNumbers: sanitizedTrackingNumbers })
       });
     } catch (error) {
       console.error('Failed to update shipment status', error);
@@ -3728,7 +3744,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     setShipments((prev) => prev.map((shipment) =>
       shipment.id === shipmentId
-        ? { ...shipment, status, trackingNumber: sanitizedTrackingNumber || shipment.trackingNumber, updatedAt: Date.now() }
+        ? { ...shipment, status, trackingNumber: sanitizedTrackingNumber || shipment.trackingNumber, trackingNumbers: sanitizedTrackingNumbers, updatedAt: Date.now() }
         : shipment
     ));
 
@@ -3741,7 +3757,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             ? {
                 ...item,
                 status,
-                trackingNumber: sanitizedTrackingNumber || item.trackingNumber
+                trackingNumber: sanitizedTrackingNumber || item.trackingNumber,
+                trackingNumbers: sanitizedTrackingNumbers
               }
             : item
         );

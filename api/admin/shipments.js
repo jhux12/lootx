@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       return deny(res, 405, 'METHOD_NOT_ALLOWED');
     }
 
-    const { shipmentId, status, trackingNumber } = req.body ?? {};
+    const { shipmentId, status, trackingNumber, trackingNumbers } = req.body ?? {};
     if (typeof shipmentId !== 'string' || !shipmentId.trim()) {
       return deny(res, 400, 'SHIPMENT_ID_REQUIRED');
     }
@@ -48,12 +48,19 @@ export default async function handler(req, res) {
       const shipment = shipmentSnap.data() ?? {};
       const inventoryId = typeof shipment.inventoryId === 'string' ? shipment.inventoryId : null;
       const uid = typeof shipment.uid === 'string' ? shipment.uid : null;
-      const normalizedTrackingNumber = typeof trackingNumber === 'string' ? trackingNumber.trim() : '';
+      const normalizedTrackingNumbers = Array.from(new Set(
+        (Array.isArray(trackingNumbers) ? trackingNumbers : [trackingNumber])
+          .filter((value) => typeof value === 'string')
+          .flatMap((value) => value.split(/[\n,]+/))
+          .map((value) => value.trim())
+          .filter(Boolean)
+      )).slice(0, 20);
+      const normalizedTrackingNumber = normalizedTrackingNumbers[0] ?? '';
       const updatedAt = admin.firestore.FieldValue.serverTimestamp();
 
       transaction.set(shipmentRef, {
         status,
-        ...(status === 'shipped' ? { trackingNumber: normalizedTrackingNumber } : {}),
+        ...(status === 'shipped' ? { trackingNumber: normalizedTrackingNumber, trackingNumbers: normalizedTrackingNumbers } : {}),
         updatedAt
       }, { merge: true });
 
@@ -65,10 +72,11 @@ export default async function handler(req, res) {
             shipmentId: admin.firestore.FieldValue.delete(),
             shipmentBatchId: admin.firestore.FieldValue.delete(),
             trackingNumber: admin.firestore.FieldValue.delete(),
+            trackingNumbers: admin.firestore.FieldValue.delete(),
             updatedAt
           }, { merge: true });
         } else {
-          transaction.set(inventoryRef, { status, trackingNumber: normalizedTrackingNumber, updatedAt }, { merge: true });
+          transaction.set(inventoryRef, { status, trackingNumber: normalizedTrackingNumber, trackingNumbers: normalizedTrackingNumbers, updatedAt }, { merge: true });
         }
       }
     });

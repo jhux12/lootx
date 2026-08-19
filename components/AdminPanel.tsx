@@ -251,7 +251,7 @@ type ShipmentOrderRecord = {
     shippingBatchCostCents: number;
     shippingPaymentMethod?: Shipment['shippingPaymentMethod'];
     shippingRateTier?: string;
-    trackingNumber: string;
+    trackingNumbers: string[];
 };
 
 
@@ -500,6 +500,8 @@ export const AdminPanel: React.FC = () => {
   const [deletingAdminNoticeId, setDeletingAdminNoticeId] = useState<string | null>(null);
   const [shipmentFilter, setShipmentFilter] = useState<'all' | 'processing' | 'shipped'>('processing');
   const [shipmentTracking, setShipmentTracking] = useState<Record<string, string>>({});
+  const [phoneVerificationDraft, setPhoneVerificationDraft] = useState('');
+  const [phoneVerificationState, setPhoneVerificationState] = useState<{ saving: boolean; error?: string; success?: string }>({ saving: false });
   const [supportCases, setSupportCases] = useState<SupportCase[]>([]);
   const [expandedSupportCases, setExpandedSupportCases] = useState<Set<string>>(new Set());
   const [supportReplyDrafts, setSupportReplyDrafts] = useState<Record<string, string>>({});
@@ -1039,7 +1041,9 @@ export const AdminPanel: React.FC = () => {
               const totalValue = sortedShipments.reduce((sum, shipment) => sum + Number(shipment.item?.value ?? 0), 0);
               const createdAt = Math.min(...sortedShipments.map((shipment) => shipment.createdAt ?? Date.now()));
               const updatedAt = Math.max(...sortedShipments.map((shipment) => shipment.updatedAt ?? shipment.createdAt ?? 0));
-              const trackingNumber = sortedShipments.find((shipment) => shipment.trackingNumber)?.trackingNumber ?? '';
+              const trackingNumbers = Array.from(new Set(sortedShipments.flatMap((shipment) =>
+                  shipment.trackingNumbers?.length ? shipment.trackingNumbers : shipment.trackingNumber ? [shipment.trackingNumber] : []
+              )));
 
               return {
                   id: orderId,
@@ -1055,7 +1059,7 @@ export const AdminPanel: React.FC = () => {
                   shippingBatchCostCents,
                   shippingPaymentMethod: sortedShipments.find((shipment) => shipment.shippingPaymentMethod)?.shippingPaymentMethod,
                   shippingRateTier: sortedShipments.find((shipment) => shipment.shippingRateTier)?.shippingRateTier,
-                  trackingNumber
+                  trackingNumbers
               };
           })
           .sort((a, b) => b.createdAt - a.createdAt);
@@ -2792,6 +2796,37 @@ export const AdminPanel: React.FC = () => {
   };
 
   const selectedUser = useMemo(() => isRealSelectedUserId(selectedUserId) ? users.find((profile) => profile.id === selectedUserId) : undefined, [users, selectedUserId]);
+  useEffect(() => {
+      setPhoneVerificationDraft(selectedUser?.phoneNumber ?? '');
+      setPhoneVerificationState({ saving: false });
+  }, [selectedUser?.id]);
+
+  const handleAdminPhoneVerification = async () => {
+      if (!selectedUser || phoneVerificationState.saving) return;
+      const phoneNumber = phoneVerificationDraft.trim();
+      if (!phoneNumber) {
+          setPhoneVerificationState({ saving: false, error: 'Enter a phone number with its country code.' });
+          return;
+      }
+      setPhoneVerificationState({ saving: true });
+      try {
+          const result = await authedFetch<{ phoneNumber: string }>('/api/admin/users', {
+              method: 'PATCH',
+              body: JSON.stringify({ action: 'verify_phone', userId: selectedUser.id, phoneNumber })
+          });
+          await updateUserAdminData(selectedUser.id, { phoneNumber: result.phoneNumber });
+          setPhoneVerificationDraft(result.phoneNumber);
+          setPhoneVerificationState({ saving: false, success: 'Phone number manually verified.' });
+          logAdminAction(selectedUser.id, 'phone_verification', { phoneNumber: selectedUser.phoneNumber ?? null }, { phoneNumber: result.phoneNumber }, 'Manually verified phone number');
+      } catch (error) {
+          const message = error instanceof Error && error.message.includes('PHONE_NUMBER_ALREADY_IN_USE')
+              ? 'That phone number is already assigned to another account.'
+              : error instanceof Error && error.message.includes('INVALID_PHONE_NUMBER')
+                  ? 'Enter a valid phone number with its country code.'
+                  : 'Unable to verify this phone number right now.';
+          setPhoneVerificationState({ saving: false, error: message });
+      }
+  };
   const signupIpAccounts = useMemo(() => {
       const grouped = new Map<string, typeof users>();
       users.forEach((profile) => {
@@ -5313,6 +5348,35 @@ export const AdminPanel: React.FC = () => {
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-4">
                                                 <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Account Controls</h4>
+                                                <div className="rounded-xl border border-gray-700 bg-[#0b0e14] p-3">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <label htmlFor="admin-phone-verification" className="text-xs font-bold text-white">Manual phone verification</label>
+                                                        {selectedUser.phoneNumber && <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[10px] font-bold uppercase text-emerald-300">Verified</span>}
+                                                    </div>
+                                                    <p className="mt-1 text-xs leading-5 text-gray-400">Use only after independently confirming ownership. Include the country code, for example +1 555 123 4567.</p>
+                                                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                                                        <Input
+                                                            id="admin-phone-verification"
+                                                            type="tel"
+                                                            inputMode="tel"
+                                                            autoComplete="off"
+                                                            value={phoneVerificationDraft}
+                                                            onChange={(event) => { setPhoneVerificationDraft(event.target.value); setPhoneVerificationState({ saving: false }); }}
+                                                            placeholder="+1 555 123 4567"
+                                                            className="min-h-11 w-full min-w-0 bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-base text-gray-200 sm:text-sm"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { void handleAdminPhoneVerification(); }}
+                                                            disabled={phoneVerificationState.saving || !phoneVerificationDraft.trim() || phoneVerificationDraft.trim() === (selectedUser.phoneNumber ?? '')}
+                                                            className="min-h-11 w-full shrink-0 rounded-lg bg-emerald-600 px-4 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                                        >
+                                                            {phoneVerificationState.saving ? 'Verifying…' : selectedUser.phoneNumber ? 'Update & verify' : 'Verify phone'}
+                                                        </button>
+                                                    </div>
+                                                    {phoneVerificationState.error && <p role="alert" className="mt-2 text-xs leading-5 text-red-300">{phoneVerificationState.error}</p>}
+                                                    {phoneVerificationState.success && <p role="status" className="mt-2 text-xs leading-5 text-emerald-300">{phoneVerificationState.success}</p>}
+                                                </div>
                                                 <Select value={status} onChange={(event) => handleStatusChange(selectedUser.id, event.target.value as UserStatus)} className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="active">Active</option><option value="suspended">Suspended</option><option value="banned">Banned</option></Select>
                                                 <label className="flex flex-col gap-3 rounded-xl border border-gray-700 bg-[#0b0e14] p-3 text-sm text-gray-200 sm:flex-row sm:items-start">
                                                     <Checkbox
@@ -5568,7 +5632,8 @@ export const AdminPanel: React.FC = () => {
                                 const address = firstShipment?.shippingInfo ?? order.user?.shippingAddress;
                                 const canUpdate = order.shipments.some((shipment) => Boolean(shipment.id));
                                 const trackingKey = order.id;
-                                const trackingValue = shipmentTracking[trackingKey] ?? order.trackingNumber ?? '';
+                                const trackingValue = shipmentTracking[trackingKey] ?? order.trackingNumbers.join('\n');
+                                const trackingNumbers = Array.from(new Set(trackingValue.split(/[\n,]+/).map((value) => value.trim()).filter(Boolean)));
                                 const displayName = order.user?.name ?? address?.fullName ?? 'Unknown user';
                                 const displayEmail = order.user?.email || 'No email on file';
                                 const orderStatusLabel = order.status === 'shipped'
@@ -5679,9 +5744,8 @@ export const AdminPanel: React.FC = () => {
                                             </div>
                                             <div className="bg-[#0b0e14] border border-gray-800 rounded-lg p-3 text-xs text-gray-400 flex flex-col gap-3">
                                                 <div className="text-[10px] uppercase font-bold text-gray-500">Order Actions</div>
-                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking number for all bundled items</label>
-                                                <Input
-                                                    type="text"
+                                                <label className="text-[10px] uppercase font-bold text-gray-500">Tracking numbers for all bundled items</label>
+                                                <Textarea
                                                     value={trackingValue}
                                                     onChange={(event) =>
                                                         setShipmentTracking((prev) => ({
@@ -5689,9 +5753,11 @@ export const AdminPanel: React.FC = () => {
                                                             [trackingKey]: event.target.value
                                                         }))
                                                     }
-                                                    placeholder="Enter tracking number"
-                                                    className="w-full bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200"
+                                                    placeholder={'Enter one tracking number per line'}
+                                                    rows={Math.min(5, Math.max(2, trackingNumbers.length + 1))}
+                                                    className="min-h-20 w-full resize-y bg-[#131720] border border-gray-700 rounded-lg px-3 py-2 text-base sm:text-xs text-gray-200"
                                                 />
+                                                <p className="text-[10px] leading-4 text-gray-500">One per line or comma-separated. {trackingNumbers.length}/20 tracking numbers.</p>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     <button
                                                         onClick={() => {
@@ -5701,7 +5767,7 @@ export const AdminPanel: React.FC = () => {
                                                                     shipment.uid,
                                                                     shipment.inventoryId,
                                                                     'shipped',
-                                                                    trackingValue
+                                                                    trackingNumbers
                                                                 )
                                                             ));
                                                         }}

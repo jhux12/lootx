@@ -344,6 +344,7 @@ export interface InventoryItem extends CaseItem {
   shippingPaymentAttemptId?: string;
   shippingLockExpiresAt?: number;
   trackingNumber?: string;
+  trackingNumbers?: string[];
   size?: string;
   provenance?: InventoryProvenance;
   history?: InventoryHistoryEntry[];
@@ -401,6 +402,7 @@ export interface Shipment {
   shippingRateTier?: string;
   status: ShipmentStatus;
   trackingNumber?: string;
+  trackingNumbers?: string[];
   createdAt?: number;
   updatedAt?: number;
   parcel?: Omit<ParcelCalculationResult, 'status' | 'profileCounts' | 'warnings'>;
