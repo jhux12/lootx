@@ -328,8 +328,6 @@ export const SlabPacks: React.FC = () => {
   const [particles, setParticles] = useState<{ id: number; px: number; py: number; color: string }[]>([]);
   const particleIdRef = useRef(0);
   const [cardTilt, setCardTilt] = useState({ x: 0, y: 0 });
-  const [balancePulse, setBalancePulse] = useState(false);
-  const prevBalanceRef = useRef(balance);
 
   const browseCF = useCoverflow(configuredTiers.length, (i) => setBrowseIndex(i));
   const pickCF = useCoverflow(PICK_COPIES);
@@ -341,15 +339,6 @@ export const SlabPacks: React.FC = () => {
     setBrowseIndex(startAt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configuredTiers.length]);
-
-  useEffect(() => {
-    if (balance !== prevBalanceRef.current) {
-      setBalancePulse(true);
-      const t = window.setTimeout(() => setBalancePulse(false), 500);
-      prevBalanceRef.current = balance;
-      return () => window.clearTimeout(t);
-    }
-  }, [balance]);
 
   const spawnParticles = useCallback((count: number, colors: string[], spread: [number, number], life: number) => {
     const batch = Array.from({ length: count }, () => {
@@ -382,6 +371,7 @@ export const SlabPacks: React.FC = () => {
     }
     setPendingTier(tier);
     setPageView('pick');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     window.setTimeout(() => pickCF.goTo(Math.floor(PICK_COPIES / 2)), 0);
   };
 
@@ -391,6 +381,7 @@ export const SlabPacks: React.FC = () => {
     setOpenStage('idle');
     setPrize(null);
     setPageView('open');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const startOpen = async () => {
@@ -443,6 +434,7 @@ export const SlabPacks: React.FC = () => {
     setPageView('browse');
     setOpenStage('idle');
     setPrize(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const activeBox = configuredTiers.length > 0 ? slabBoxes[configuredTiers[Math.min(browseIndex, configuredTiers.length - 1)]] : undefined;
@@ -483,14 +475,9 @@ export const SlabPacks: React.FC = () => {
     return (
       <div className="sp-root">
         <style>{SLAB_PACKS_CSS}</style>
-        <div className="sp-app-bar">
-          <div className="sp-brand"><span className="sp-brand-mark">P</span>Slab Packs</div>
-        </div>
-        <div className="sp-stage">
-          <div className="sp-view-heading" style={{ padding: '0 24px' }}>
-            <h1>Slab Packs are coming soon</h1>
-            <p>An admin needs to configure at least one Bronze, Silver, or Gold pack in the box editor first.</p>
-          </div>
+        <div className="sp-view-heading" style={{ padding: '48px 24px' }}>
+          <h1>Slab Packs are coming soon</h1>
+          <p>An admin needs to configure at least one Bronze, Silver, or Gold pack in the box editor first.</p>
         </div>
       </div>
     );
@@ -500,17 +487,9 @@ export const SlabPacks: React.FC = () => {
     <div className="sp-root">
       <style>{SLAB_PACKS_CSS}</style>
 
-      <div className="sp-app-bar">
-        <div className="sp-brand"><span className="sp-brand-mark">P</span>Slab Packs</div>
-        <div className={`sp-balance-chip${balancePulse ? ' sp-pulse' : ''}`}>
-          <span className="sp-coin-icon" />
-          <span>{fmtCoins(balance)}</span>
-        </div>
-      </div>
-
       <div className="sp-stage">
-        {/* ============ BROWSE ============ */}
-        <div className={`sp-view${pageView !== 'browse' ? ' sp-hidden' : ' sp-scrollable'}`}>
+        {pageView === 'browse' && (
+        <div className="sp-view">
           <div className="sp-view-heading">
             <h1>Choose Your Pack</h1>
             <p>Swipe to browse, then buy one to open</p>
@@ -578,9 +557,10 @@ export const SlabPacks: React.FC = () => {
             </>
           )}
         </div>
+        )}
 
-        {/* ============ PICK A PACK ============ */}
-        <div className={`sp-view${pageView !== 'pick' ? ' sp-hidden' : ''}`}>
+        {pageView === 'pick' && (
+        <div className="sp-view">
           <button type="button" className="sp-back-btn" onClick={backToBrowse}>&larr; Back to Packs</button>
           <div className="sp-view-heading">
             <h1>Pick a Pack</h1>
@@ -607,9 +587,10 @@ export const SlabPacks: React.FC = () => {
             <button type="button" className="sp-arrow sp-right" onClick={() => pickCF.goTo(pickCF.current() + 1)} aria-label="Next copy">&#8250;</button>
           </div>
         </div>
+        )}
 
-        {/* ============ OPEN ============ */}
-        <div className={`sp-view${pageView !== 'open' ? ' sp-hidden' : ''}`}>
+        {pageView === 'open' && (
+        <div className="sp-view">
           <button type="button" className="sp-back-btn" onClick={backToBrowse}>&larr; Back to Packs</button>
 
           <div className="sp-reveal-stage">
@@ -662,6 +643,7 @@ export const SlabPacks: React.FC = () => {
             </button>
           </div>
         </div>
+        )}
       </div>
 
       <div className="sp-footer-note">Hold steady &mdash; good luck</div>
@@ -671,24 +653,16 @@ export const SlabPacks: React.FC = () => {
 
 const SLAB_PACKS_CSS = `
 .sp-root{ --sp-void:#08070d; --sp-holo-a:#6ee7ff; --sp-holo-b:#c084fc; --sp-holo-c:#ffd166; --sp-text:#f5f2fc; --sp-text-dim:#a49cc4; --sp-gold:#ffd166;
-  position:relative; width:100%; min-height:100vh; display:flex; flex-direction:column; overflow:hidden;
-  background: radial-gradient(ellipse 120% 80% at 50% 0%, #1e1836 0%, var(--sp-void) 55%), var(--sp-void);
-  color:var(--sp-text); font-family:'Segoe UI', system-ui, -apple-system, sans-serif; border-radius:16px; }
-.sp-app-bar{ position:relative; z-index:10; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; padding:18px clamp(18px,4vw,32px) 14px; }
-.sp-brand{ display:flex; align-items:center; gap:10px; font-size:clamp(17px,3vw,20px); font-weight:800; }
-.sp-brand-mark{ width:30px; height:30px; border-radius:9px; background:linear-gradient(135deg,var(--sp-holo-a),var(--sp-holo-b)); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:900; color:#0c0a14; }
-.sp-balance-chip{ display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.06); padding:8px 16px 8px 10px; border-radius:999px; font-size:clamp(14px,2.6vw,16px); font-weight:700; font-variant-numeric:tabular-nums; }
-.sp-balance-chip.sp-pulse{ animation:sp-balancePulse .5s ease; }
-@keyframes sp-balancePulse{ 0%{transform:scale(1);} 30%{transform:scale(1.09); color:var(--sp-gold);} 100%{transform:scale(1);} }
+  position:relative; width:100%; display:flex; flex-direction:column; overflow-x:hidden;
+  background: radial-gradient(ellipse 120% 60% at 50% 0%, #1e1836 0%, var(--sp-void) 60%), var(--sp-void);
+  color:var(--sp-text); font-family:'Segoe UI', system-ui, -apple-system, sans-serif; }
 .sp-coin-icon{ width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fff6d8, var(--sp-gold) 55%, #b9840f 100%); box-shadow:0 0 0 1px rgba(0,0,0,.25) inset, 0 1px 3px rgba(0,0,0,.4); flex-shrink:0; display:inline-block; }
-.sp-stage{ position:relative; flex:1; min-height:640px; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; }
-.sp-view{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity .4s ease, transform .4s ease; }
-.sp-view.sp-hidden{ opacity:0; transform:scale(.94); pointer-events:none; }
-.sp-view.sp-scrollable{ overflow-y:auto; overflow-x:hidden; justify-content:flex-start; padding-bottom:28px; touch-action:pan-y; overscroll-behavior-y:contain; }
+.sp-stage{ width:100%; display:flex; flex-direction:column; align-items:center; }
+.sp-view{ position:relative; width:100%; display:flex; flex-direction:column; align-items:center; padding:clamp(20px,4vh,32px) 0 clamp(32px,6vh,48px); }
 .sp-view-heading{ text-align:center; margin-bottom:clamp(18px,2.6vh,26px); padding:0 20px; }
 .sp-view-heading h1{ margin:0; font-size:clamp(24px,4.6vw,34px); font-weight:800; }
 .sp-view-heading p{ margin:9px 0 0; font-size:clamp(13px,2.4vw,15px); color:var(--sp-text-dim); }
-.sp-back-btn{ position:absolute; top:14px; left:clamp(18px,4vw,32px); z-index:6; background:transparent; border:none; color:var(--sp-text-dim); font-size:13px; padding:8px 4px; cursor:pointer; }
+.sp-back-btn{ align-self:flex-start; margin:0 0 clamp(10px,2vh,18px) clamp(18px,4vw,32px); background:transparent; border:none; color:var(--sp-text-dim); font-size:13px; padding:8px 10px 8px 0; cursor:pointer; }
 .sp-back-btn:hover{ color:var(--sp-text); }
 .sp-coverflow-outer{ position:relative; width:100%; display:flex; align-items:center; justify-content:center; }
 .sp-coverflow-viewport{ position:relative; width:min(96vw,500px); margin:0 auto; overflow:visible; perspective:1200px; padding:10px 0 32px; touch-action:none; cursor:grab; user-select:none; }
