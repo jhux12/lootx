@@ -672,13 +672,13 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card{ position:absolute; top:0; left:50%; width:60vw; max-width:250px; display:flex; flex-direction:column; align-items:center; padding:0 14px; will-change:transform,opacity; }
 .sp-fan-card-art{ position:relative; width:100%; }
 .sp-fan-card-glow{ position:absolute; inset:-25%; filter:blur(30px); z-index:-1; opacity:.55; border-radius:50%; }
-.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; filter:drop-shadow(0 22px 34px rgba(0,0,0,.6)); }
+.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 22px 34px rgba(0,0,0,.6)); }
 .sp-foil-shine{ position:absolute; inset:0; pointer-events:none; z-index:2; background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,.05) 40%, rgba(255,255,255,.35) 48%, rgba(110,231,255,.3) 51%, rgba(192,132,252,.3) 54%, rgba(255,255,255,.05) 60%, transparent 75%); background-size:220% 220%; mix-blend-mode:overlay; animation:sp-foilSweep 5s ease-in-out infinite; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-size:100% 100%; mask-repeat:no-repeat; }
 @keyframes sp-foilSweep{ 0%{background-position:15% 0%;} 50%{background-position:85% 100%;} 100%{background-position:15% 0%;} }
 .sp-foil-shine.sp-fast{ animation:sp-foilFlicker .5s ease-in-out 2; }
 @keyframes sp-foilFlicker{ 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
 .sp-fan-card-reflect{ width:100%; height:56px; overflow:hidden; pointer-events:none; margin-top:2px; }
-.sp-fan-card-reflect img{ display:block; width:100%; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
+.sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
 .sp-tier-ribbon{ position:absolute; top:14px; left:14px; padding:5px 13px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; border-radius:999px; backdrop-filter:blur(4px); z-index:3; }
 .sp-fan-card-name{ margin-top:18px; font-size:clamp(16px,3.1vw,18px); font-weight:700; }
 .sp-fan-card-sub{ margin-top:3px; font-size:12px; color:var(--sp-text-dim); letter-spacing:.06em; text-transform:uppercase; }
@@ -712,7 +712,7 @@ const SLAB_PACKS_CSS = `
 @keyframes sp-floatShake{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.15);} }
 .sp-pack-glow{ position:absolute; inset:-30%; background:radial-gradient(circle, rgba(192,132,252,.35), rgba(110,231,255,.15) 45%, transparent 70%); filter:blur(24px); z-index:-1; animation:sp-pulseGlow 2.6s ease-in-out infinite; }
 @keyframes sp-pulseGlow{ 0%,100%{opacity:.55; transform:scale(1);} 50%{opacity:1; transform:scale(1.08);} }
-.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; filter:drop-shadow(0 26px 42px rgba(0,0,0,.6)); }
+.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 26px 42px rgba(0,0,0,.6)); }
 .sp-pack-flash-out{ position:absolute; inset:0; z-index:2; border-radius:22px; background:#fff; animation:sp-packOut .5s cubic-bezier(.6,0,1,.4) forwards; }
 @keyframes sp-packOut{ 0%{opacity:0;} 35%{opacity:.9;} 100%{opacity:0; transform:scale(1.5);} }
 .sp-prompt{ margin-top:30px; text-align:center; z-index:4; transition:opacity .3s ease; }
