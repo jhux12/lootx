@@ -109,6 +109,7 @@ const PollsPage = lazy(() => import('./components/PollsPage').then((module) => (
 const SpinLandingPage = lazy(() => import('./components/SpinLandingPage').then((module) => ({ default: module.SpinLandingPage })));
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((module) => ({ default: module.AdminPanel })));
 const CaseOpening = lazy(() => import('./components/CaseOpening').then((module) => ({ default: module.CaseOpening })));
+const SlabPacks = lazy(() => import('./components/SlabPacks').then((module) => ({ default: module.SlabPacks })));
 const Profile = lazy(() => import('./components/Profile').then((module) => ({ default: module.Profile })));
 const Leaderboard = lazy(() => import('./components/Leaderboard').then((module) => ({ default: module.Leaderboard })));
 const CustomCaseCreator = lazy(() => import('./components/CustomCaseCreator').then((module) => ({ default: module.CustomCaseCreator })));
@@ -628,6 +629,18 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
       {view.type === 'BOXES' && (
         <div className="w-full">
           <BoxCatalog isChatCollapsed={isChatCollapsed} />
+        </div>
+      )}
+
+      {view.type === 'SLAB_PACKS' && (
+        <div className="w-full">
+          <ErrorBoundary
+            title="Slab Packs needs a refresh"
+            message="We could not render the Slab Packs page. Retry the view to continue without exposing internal details."
+            actionLabel="Retry Slab Packs"
+          >
+            <SlabPacks />
+          </ErrorBoundary>
         </div>
       )}
 

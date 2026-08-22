@@ -490,6 +490,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BOXES' };
   }
 
+  if (primary === 'slab-packs') {
+    return { type: 'SLAB_PACKS' };
+  }
+
   if (primary === 'spin') {
     return { type: 'SPIN' };
   }
@@ -586,6 +590,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/';
     case 'BOXES':
       return '/boxes';
+    case 'SLAB_PACKS':
+      return '/slab-packs';
     case 'SPIN':
       return '/spin';
     case 'PLINKO':

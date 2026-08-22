@@ -456,6 +456,8 @@ export const AdminPanel: React.FC = () => {
       isDaily: false,
       isPullPassBox: false,
       pullPassBoxType: 'bronze',
+      isSlabPack: false,
+      slabPackTier: 'bronze',
       tags: [],
       sellBackRate: 0.82
   });
@@ -3103,6 +3105,8 @@ export const AdminPanel: React.FC = () => {
           isDaily: false,
           isPullPassBox: false,
           pullPassBoxType: 'bronze',
+          isSlabPack: false,
+          slabPackTier: 'bronze',
           tags: [],
           sellBackRate: 0.82
       });
@@ -3181,6 +3185,8 @@ export const AdminPanel: React.FC = () => {
           isDaily: box.isDaily,
           isPullPassBox: box.isPullPassBox ?? false,
           pullPassBoxType: box.pullPassBoxType ?? 'bronze',
+          isSlabPack: box.isSlabPack ?? false,
+          slabPackTier: box.slabPackTier ?? 'bronze',
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
@@ -3413,6 +3419,8 @@ export const AdminPanel: React.FC = () => {
       isDaily: newBox.isDaily,
       isPullPassBox: newBox.isPullPassBox === true,
       pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
+      isSlabPack: newBox.isSlabPack === true,
+      slabPackTier: newBox.isSlabPack ? (newBox.slabPackTier ?? 'bronze') : undefined,
       sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
@@ -4657,6 +4665,33 @@ export const AdminPanel: React.FC = () => {
                                         </label>
                                     )}
                                 </div>
+                                <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3">
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="slab-pack-case"
+                                            checked={newBox.isSlabPack || false}
+                                            onChange={e => setNewBox({...newBox, isSlabPack: e.target.checked, slabPackTier: e.target.checked ? (newBox.slabPackTier ?? 'bronze') : newBox.slabPackTier})}
+                                            className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
+                                        />
+                                        <label htmlFor="slab-pack-case" className="text-sm text-gray-300">Set as Slab Pack</label>
+                                    </div>
+                                    {newBox.isSlabPack && (
+                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Slab Pack tier
+                                            <Select
+                                                value={newBox.slabPackTier ?? 'bronze'}
+                                                onChange={(event) => setNewBox((prev) => ({ ...prev, slabPackTier: event.target.value as any }))}
+                                                className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            >
+                                                <option value="bronze">Bronze</option>
+                                                <option value="silver">Silver</option>
+                                                <option value="gold">Gold</option>
+                                            </Select>
+                                        </label>
+                                    )}
+                                    <p className="mt-2 text-[10px] text-gray-500">
+                                        Powers the "Slab Packs" page &amp; nav link. One box per tier (Bronze/Silver/Gold) &mdash; the items you add below become that tier's real prize pool and odds.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -4909,6 +4944,7 @@ export const AdminPanel: React.FC = () => {
                                                     {box.name}
                                                     {box.isDaily && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">DAILY</span>}
                                                     {box.isPullPassBox && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1 rounded">PULL PASS {box.pullPassBoxType?.toUpperCase()}</span>}
+                                                    {box.isSlabPack && <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1 rounded">SLAB PACK {box.slabPackTier?.toUpperCase()}</span>}
                                                 </div>
                                             </div>
                                         </td>
