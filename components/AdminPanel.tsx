@@ -404,7 +404,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'slab-packs' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
   const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
   const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
   useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
@@ -3105,7 +3105,7 @@ export const AdminPanel: React.FC = () => {
           isDaily: false,
           isPullPassBox: false,
           pullPassBoxType: 'bronze',
-          isSlabPack: false,
+          isSlabPack: activeTab === 'slab-packs',
           slabPackTier: 'bronze',
           tags: [],
           sellBackRate: 0.82
@@ -3294,6 +3294,8 @@ export const AdminPanel: React.FC = () => {
         spinnerBackgroundImage: '',
         accentColor: '#3b82f6',
         isDaily: false,
+        isSlabPack: activeTab === 'slab-packs',
+        slabPackTier: 'bronze',
         tags: [],
         sellBackRate: 0.82
       });
@@ -3303,6 +3305,14 @@ export const AdminPanel: React.FC = () => {
       setRiskBalance(50);
       setTargetEV(0.85);
   };
+
+  // Keep the create-new-box form's isSlabPack flag in sync with whichever
+  // tab (Boxes vs Slab Packs) is active, as long as the admin isn't mid-edit.
+  useEffect(() => {
+    if (editingBoxId) return;
+    if (activeTab !== 'boxes' && activeTab !== 'slab-packs') return;
+    setNewBox((prev) => ({ ...prev, isSlabPack: activeTab === 'slab-packs' }));
+  }, [activeTab, editingBoxId]);
 
   const toggleBoxTag = (tag: string) => {
       const normalized = tag.trim().toLowerCase();
@@ -3736,6 +3746,12 @@ export const AdminPanel: React.FC = () => {
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
                    <button
+                     onClick={() => setActiveTab('slab-packs')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'slab-packs' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Sparkles className="w-4 h-4" /> Slab Packs
+                   </button>
+                   <button
                      onClick={() => setActiveTab('packages')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3845,6 +3861,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'slab-packs' && 'Slab Pack Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
@@ -4322,13 +4339,13 @@ export const AdminPanel: React.FC = () => {
                 </div>
             )}
 
-            {/* TAB: BOXES */}
-            {activeTab === 'boxes' && (
+            {/* TAB: BOXES / SLAB PACKS (shared editor, scoped by tab) */}
+            {(activeTab === 'boxes' || activeTab === 'slab-packs') && (
                 <div className="space-y-8">
                     {/* Create/Edit Box Form */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-white">{editingBoxId ? 'Edit Box' : 'Create New Box'}</h3>
+                            <h3 className="text-lg font-bold text-white">{editingBoxId ? (activeTab === 'slab-packs' ? 'Edit Slab Pack' : 'Edit Box') : (activeTab === 'slab-packs' ? 'Create New Slab Pack' : 'Create New Box')}</h3>
                             {editingBoxId && <button onClick={resetBoxForm} className="text-xs text-red-400 hover:text-red-300">Cancel Edit</button>}
                         </div>
 
@@ -4624,6 +4641,8 @@ export const AdminPanel: React.FC = () => {
                                         {evOutOfBounds && <div>⚠ EV must stay within ±1% of target.</div>}
                                     </div>
                                 )}
+                                {activeTab === 'boxes' && (
+                                <>
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         id="daily-case"
@@ -4665,17 +4684,13 @@ export const AdminPanel: React.FC = () => {
                                         </label>
                                     )}
                                 </div>
-                                <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3">
-                                    <div className="flex items-center gap-2">
-                                        <Checkbox
-                                            id="slab-pack-case"
-                                            checked={newBox.isSlabPack || false}
-                                            onChange={e => setNewBox({...newBox, isSlabPack: e.target.checked, slabPackTier: e.target.checked ? (newBox.slabPackTier ?? 'bronze') : newBox.slabPackTier})}
-                                            className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
-                                        />
-                                        <label htmlFor="slab-pack-case" className="text-sm text-gray-300">Set as Slab Pack</label>
-                                    </div>
-                                    {newBox.isSlabPack && (
+                                </>
+                                )}
+                                {activeTab === 'slab-packs' && (
+                                    <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3">
+                                        <p className="text-sm font-semibold text-cyan-200 flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4" /> Slab Pack
+                                        </p>
                                         <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Slab Pack tier
                                             <Select
                                                 value={newBox.slabPackTier ?? 'bronze'}
@@ -4687,11 +4702,11 @@ export const AdminPanel: React.FC = () => {
                                                 <option value="gold">Gold</option>
                                             </Select>
                                         </label>
-                                    )}
-                                    <p className="mt-2 text-[10px] text-gray-500">
-                                        Powers the "Slab Packs" page &amp; nav link. One box per tier (Bronze/Silver/Gold) &mdash; the items you add below become that tier's real prize pool and odds.
-                                    </p>
-                                </div>
+                                        <p className="mt-2 text-[10px] text-gray-500">
+                                            One Slab Pack per tier (Bronze/Silver/Gold) &mdash; the items you add below become that tier's real prize pool and odds on the "Slab Packs" page. This won't appear on the regular Boxes page.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -4919,7 +4934,7 @@ export const AdminPanel: React.FC = () => {
                             disabled={!canSaveBox}
                             className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                            {editingBoxId ? 'Update Box' : 'Create Box'}
+                            {editingBoxId ? (activeTab === 'slab-packs' ? 'Update Slab Pack' : 'Update Box') : (activeTab === 'slab-packs' ? 'Create Slab Pack' : 'Create Box')}
                         </button>
                     </div>
 
@@ -4928,14 +4943,14 @@ export const AdminPanel: React.FC = () => {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                 <tr>
-                                    <th className="px-4 py-3">Box</th>
+                                    <th className="px-4 py-3">{activeTab === 'slab-packs' ? 'Slab Pack' : 'Box'}</th>
                                     <th className="px-4 py-3">Items</th>
                                     <th className="px-4 py-3">Price</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-800">
-                                {boxes.map((box, i) => (
+                                {boxes.filter((box) => (activeTab === 'slab-packs' ? Boolean(box.isSlabPack) : !box.isSlabPack)).map((box, i) => (
                                     <tr key={i}>
                                         <td className="px-4 py-3 flex items-center gap-2">
                                             <img src={box.image} alt={box.name} className="w-8 h-8 object-contain" />
