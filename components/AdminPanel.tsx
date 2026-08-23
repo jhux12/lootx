@@ -458,6 +458,7 @@ export const AdminPanel: React.FC = () => {
       pullPassBoxType: 'bronze',
       isSlabPack: false,
       slabPackTier: 'bronze',
+      slabPackOddsRanges: [],
       tags: [],
       sellBackRate: 0.82
   });
@@ -3107,6 +3108,7 @@ export const AdminPanel: React.FC = () => {
           pullPassBoxType: 'bronze',
           isSlabPack: activeTab === 'slab-packs',
           slabPackTier: 'bronze',
+          slabPackOddsRanges: [],
           tags: [],
           sellBackRate: 0.82
       });
@@ -3187,6 +3189,7 @@ export const AdminPanel: React.FC = () => {
           pullPassBoxType: box.pullPassBoxType ?? 'bronze',
           isSlabPack: box.isSlabPack ?? false,
           slabPackTier: box.slabPackTier ?? 'bronze',
+          slabPackOddsRanges: box.slabPackOddsRanges ?? [],
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
@@ -3296,6 +3299,7 @@ export const AdminPanel: React.FC = () => {
         isDaily: false,
         isSlabPack: activeTab === 'slab-packs',
         slabPackTier: 'bronze',
+        slabPackOddsRanges: [],
         tags: [],
         sellBackRate: 0.82
       });
@@ -3431,6 +3435,7 @@ export const AdminPanel: React.FC = () => {
       pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
       isSlabPack: newBox.isSlabPack === true,
       slabPackTier: newBox.isSlabPack ? (newBox.slabPackTier ?? 'bronze') : undefined,
+      slabPackOddsRanges: newBox.isSlabPack && (newBox.slabPackOddsRanges ?? []).length > 0 ? newBox.slabPackOddsRanges : undefined,
       sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
@@ -4705,6 +4710,88 @@ export const AdminPanel: React.FC = () => {
                                         <p className="mt-2 text-[10px] text-gray-500">
                                             One Slab Pack per tier (Bronze/Silver/Gold) &mdash; the items you add below become that tier's real prize pool and odds on the "Slab Packs" page. This won't appear on the regular Boxes page.
                                         </p>
+
+                                        <div className="mt-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs text-gray-500 uppercase font-bold">Custom Odds Ranges (optional)</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNewBox((prev) => ({
+                                                        ...prev,
+                                                        slabPackOddsRanges: [...(prev.slabPackOddsRanges ?? []), { min: 0, max: 0, chance: 0 }]
+                                                    }))}
+                                                    className="text-xs text-cyan-300 hover:text-cyan-200"
+                                                >
+                                                    + Add Range
+                                                </button>
+                                            </div>
+                                            {(newBox.slabPackOddsRanges ?? []).length === 0 && (
+                                                <p className="text-[10px] text-gray-500">
+                                                    No custom ranges set &mdash; the Odds table will fall back to auto-grouping by item rarity.
+                                                </p>
+                                            )}
+                                            {(newBox.slabPackOddsRanges ?? []).map((range, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 mt-2">
+                                                    <span className="text-gray-500 text-xs">$</span>
+                                                    <input
+                                                        type="number"
+                                                        value={range.min}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], min: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="Min"
+                                                    />
+                                                    <span className="text-gray-500 text-xs">&ndash;</span>
+                                                    <input
+                                                        type="number"
+                                                        value={range.max}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], max: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="Max"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={range.chance}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], chance: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="%"
+                                                    />
+                                                    <span className="text-gray-500 text-xs">%</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setNewBox((prev) => ({
+                                                            ...prev,
+                                                            slabPackOddsRanges: (prev.slabPackOddsRanges ?? []).filter((_, i) => i !== idx)
+                                                        }))}
+                                                        className="text-red-400 hover:text-red-300 text-xs ml-1"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {(newBox.slabPackOddsRanges ?? []).length > 0 && (() => {
+                                                const total = (newBox.slabPackOddsRanges ?? []).reduce((sum, r) => sum + (Number(r.chance) || 0), 0);
+                                                const rounded = Math.round(total * 100) / 100;
+                                                const isValid = Math.abs(rounded - 100) < 0.5;
+                                                return (
+                                                    <p className={`mt-2 text-[10px] ${isValid ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                        Total: {rounded}% {isValid ? '' : '(should add up to 100%)'}
+                                                    </p>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
                                 )}
                             </div>

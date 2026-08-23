@@ -281,6 +281,7 @@ export interface MysteryBox {
   pullPassBoxType?: 'bronze' | 'silver' | 'gold' | 'elite' | 'master' | 'collector';
   isSlabPack?: boolean;
   slabPackTier?: 'bronze' | 'silver' | 'gold';
+  slabPackOddsRanges?: { min: number; max: number; chance: number }[];
   sellBackRate?: number;
   createdAt?: number;
   marketValueAudit?: BoxMarketValueAudit;

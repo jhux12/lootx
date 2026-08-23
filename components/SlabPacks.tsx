@@ -75,6 +75,7 @@ const fmtUsd = (coins: number) =>
 const fmtUsdWhole = (coins: number) => '$' + Math.round(coinsToUsd(coins)).toLocaleString('en-US');
 
 const TIER_LABEL: Record<Tier, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold' };
+const fmtPct = (n: number) => `${parseFloat((Math.round(n * 100) / 100).toFixed(2))}%`;
 
 const PICK_COPIES = 5;
 
@@ -526,6 +527,20 @@ export const SlabPacks: React.FC = () => {
 
   const oddsRows = useMemo(() => {
     if (!activeBox) return [];
+
+    // Admin-configured custom ranges take priority when set. Admins enter
+    // these directly in dollars, so convert back to coins here (x100) to
+    // match the rest of this computation -- the renderer always expects
+    // coin-denominated min/max and converts to dollars for display itself.
+    if (activeBox.slabPackOddsRanges && activeBox.slabPackOddsRanges.length > 0) {
+      return activeBox.slabPackOddsRanges.map((r, i) => ({
+        rarity: `custom-${i}`,
+        pct: r.chance,
+        min: r.min * 100,
+        max: r.max * 100
+      }));
+    }
+
     const groups = new Map<string, { chance: number; min: number; max: number }>();
     activeBox.items.forEach((item) => {
       const g = groups.get(item.rarity) ?? { chance: 0, min: Infinity, max: -Infinity };
@@ -539,11 +554,21 @@ export const SlabPacks: React.FC = () => {
       .filter((r) => groups.has(r))
       .map((r) => {
         const g = groups.get(r)!;
-        return { rarity: r, pct: g.chance, min: g.min, max: g.max };
+        return { rarity: r as string, pct: g.chance, min: g.min, max: g.max };
       });
   }, [activeBox]);
 
-  const expectedValue = useMemo(() => (activeBox ? calculateExpectedValue(activeBox.items) : 0), [activeBox]);
+  const expectedValue = useMemo(() => {
+    if (!activeBox) return 0;
+    if (activeBox.slabPackOddsRanges && activeBox.slabPackOddsRanges.length > 0) {
+      const evDollars = activeBox.slabPackOddsRanges.reduce(
+        (sum, r) => sum + ((r.min + r.max) / 2) * (r.chance / 100),
+        0
+      );
+      return evDollars * 100; // back to coins so fmtUsd's /100 stays uniform everywhere
+    }
+    return calculateExpectedValue(activeBox.items);
+  }, [activeBox]);
 
   const potentialHits = useMemo(() => {
     if (!activeBox) return [];
@@ -633,7 +658,7 @@ export const SlabPacks: React.FC = () => {
                   <div className="sp-odds-row" key={rarity}>
                     <span className="sp-range">{min === max ? fmtUsdWhole(min) : `${fmtUsdWhole(min)}-${fmtUsdWhole(max)}`}</span>
                     <span className="sp-leader" />
-                    <span className="sp-pct">{pct.toFixed(pct < 1 ? 2 : 1)}%</span>
+                    <span className="sp-pct">{fmtPct(pct)}</span>
                   </div>
                 ))}
                 {oddsRows.length === 0 && <p style={{ color: 'var(--sp-text-dim)', fontSize: 13 }}>No items configured for this pack yet.</p>}

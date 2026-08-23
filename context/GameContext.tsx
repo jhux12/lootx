@@ -2135,6 +2135,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
             isSlabPack: data.isSlabPack === true,
             slabPackTier: typeof data.slabPackTier === 'string' ? data.slabPackTier as MysteryBox['slabPackTier'] : undefined,
+            slabPackOddsRanges: Array.isArray(data.slabPackOddsRanges) ? data.slabPackOddsRanges : undefined,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items,
