@@ -29,37 +29,24 @@ import type { CaseItem } from '../types';
 type Tier = 'bronze' | 'silver' | 'gold';
 
 interface TierVisuals {
-  ribbon: string;
-  filter: string;
   glow: string;
   ctaGradient: string;
 }
 
 const TIER_VISUALS: Record<Tier, TierVisuals> = {
   bronze: {
-    ribbon: 'Tier I',
-    filter: 'hue-rotate(-32deg) saturate(1.05) brightness(.98)',
     glow: 'radial-gradient(circle, rgba(255,159,110,.5), transparent 70%)',
     ctaGradient: 'linear-gradient(90deg, #ffcf9e, #ff9f6e)'
   },
   silver: {
-    ribbon: 'Tier II',
-    filter: '',
     glow: 'radial-gradient(circle, rgba(192,132,252,.5), rgba(110,231,255,.2) 45%, transparent 70%)',
     ctaGradient: 'linear-gradient(90deg, #6ee7ff, #c084fc)'
   },
   gold: {
-    ribbon: 'Tier III',
-    filter: 'hue-rotate(38deg) saturate(1.25) brightness(1.06)',
     glow: 'radial-gradient(circle, rgba(255,209,102,.55), transparent 70%)',
     ctaGradient: 'linear-gradient(90deg, #fff0bd, #ffd166)'
   }
 };
-
-// Inline `style.filter` fully replaces (rather than merges with) a CSS class's
-// `filter` declaration, so any drop-shadow set in CSS never actually applies
-// once a tier tint is also set inline. Combine both into one string instead.
-const packImgFilter = (tint: string, shadow: string) => `${tint} drop-shadow(${shadow})`.trim();
 
 const TIER_ORDER: Tier[] = ['bronze', 'silver', 'gold'];
 const RARITY_COLOR: Record<string, string> = {
@@ -317,17 +304,17 @@ function useCoverflow(count: number, onChange?: (index: number) => void): Coverf
 // Small presentational pieces
 // ---------------------------------------------------------------------------
 
-const FanCardArt: React.FC<{ visuals: TierVisuals; alt: string; fast?: boolean }> = ({ visuals, alt, fast }) => (
+const FanCardArt: React.FC<{ imageUrl: string; glow: string; alt: string; fast?: boolean }> = ({ imageUrl, glow, alt, fast }) => (
   <div className="sp-fan-card-art">
-    <div className="sp-fan-card-glow" style={{ background: visuals.glow }} />
-    <img className="sp-fan-card-img" src={packImg} alt={alt} style={{ filter: packImgFilter(visuals.filter, '0 22px 34px rgba(0,0,0,.6)') }} draggable={false} />
-    <div className={`sp-foil-shine${fast ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
+    <div className="sp-fan-card-glow" style={{ background: glow }} />
+    <img className="sp-fan-card-img" src={imageUrl} alt={alt} style={{ filter: 'drop-shadow(0 22px 34px rgba(0,0,0,.6))' }} draggable={false} />
+    <div className={`sp-foil-shine${fast ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${imageUrl})`, maskImage: `url(${imageUrl})` }} />
   </div>
 );
 
-const FanCardReflect: React.FC<{ visuals: TierVisuals }> = ({ visuals }) => (
+const FanCardReflect: React.FC<{ imageUrl: string }> = ({ imageUrl }) => (
   <div className="sp-fan-card-reflect">
-    <img src={packImg} alt="" style={{ filter: visuals.filter || undefined }} draggable={false} />
+    <img src={imageUrl} alt="" draggable={false} />
   </div>
 );
 
@@ -622,7 +609,6 @@ export const SlabPacks: React.FC = () => {
   };
 
   const openBox = openTier ? slabBoxes[openTier] : undefined;
-  const openVisuals = openTier ? TIER_VISUALS[openTier] : TIER_VISUALS.silver;
   const prizeImage = prize?.image || cardImg;
   const prizeValue = prize ? (prize.value ?? prize.price ?? 0) : 0;
   const prizeRarityColor = prize ? (RARITY_COLOR[prize.rarity] ?? RARITY_COLOR.common) : RARITY_COLOR.common;
@@ -655,8 +641,8 @@ export const SlabPacks: React.FC = () => {
             onPointerCancel={onHeroPointerCancel}
           >
             <div className="sp-pack-glow" style={{ background: TIER_VISUALS[selectedTier].glow }} />
-            <img className="sp-hero-pack-img" src={packImg} alt={activeBox.name} style={{ filter: packImgFilter(TIER_VISUALS[selectedTier].filter, '0 22px 40px rgba(0,0,0,.55)') }} draggable={false} />
-            <div className="sp-foil-shine" style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
+            <img className="sp-hero-pack-img" src={activeBox.image || packImg} alt={activeBox.name} style={{ filter: 'drop-shadow(0 22px 40px rgba(0,0,0,.55))' }} draggable={false} />
+            <div className="sp-foil-shine" style={{ WebkitMaskImage: `url(${activeBox.image || packImg})`, maskImage: `url(${activeBox.image || packImg})` }} />
           </div>
 
           <div className="sp-detail-panel">
@@ -668,7 +654,6 @@ export const SlabPacks: React.FC = () => {
             <div className="sp-tier-tabs">
               {configuredTiers.map((tier) => {
                 const box = slabBoxes[tier]!;
-                const visuals = TIER_VISUALS[tier];
                 const active = tier === selectedTier;
                 return (
                   <button
@@ -677,7 +662,7 @@ export const SlabPacks: React.FC = () => {
                     className={`sp-tier-tab${active ? ' sp-tier-tab-active' : ''}`}
                     onClick={() => setSelectedTier(tier)}
                   >
-                    <img className="sp-tier-tab-thumb" src={packImg} alt="" style={{ filter: visuals.filter }} draggable={false} />
+                    <img className="sp-tier-tab-thumb" src={box.image || packImg} alt="" draggable={false} />
                     <span className="sp-tier-tab-name">{TIER_LABEL[tier]}</span>
                     <span className="sp-tier-tab-price"><span className="sp-coin-icon sp-coin-icon-sm" />{fmtCoins(box.price)}</span>
                   </button>
@@ -748,10 +733,12 @@ export const SlabPacks: React.FC = () => {
               <div className="sp-coverflow-track">
                 {pendingTier && Array.from({ length: PICK_COPIES }).map((_, i) => {
                   const visuals = TIER_VISUALS[pendingTier];
+                  const box = slabBoxes[pendingTier];
+                  const imageUrl = box?.image || packImg;
                   return (
                     <div key={i} className="sp-fan-card sp-fan-card-pick" ref={pickCF.setCardRef(i)}>
-                      <FanCardArt visuals={visuals} alt={slabBoxes[pendingTier]?.name ?? 'Pack'} />
-                      <FanCardReflect visuals={visuals} />
+                      <FanCardArt imageUrl={imageUrl} glow={visuals.glow} alt={box?.name ?? 'Pack'} />
+                      <FanCardReflect imageUrl={imageUrl} />
                     </div>
                   );
                 })}
@@ -787,8 +774,8 @@ export const SlabPacks: React.FC = () => {
               aria-label="Open pack"
             >
               <div className="sp-pack-glow" />
-              <img className="sp-pack-img" src={packImg} alt={openBox?.name ?? 'Card pack'} style={{ filter: packImgFilter(openVisuals.filter, '0 26px 42px rgba(0,0,0,.6)') }} draggable={false} />
-              <div className={`sp-foil-shine${openStage === 'shaking' ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
+              <img className="sp-pack-img" src={openBox?.image || packImg} alt={openBox?.name ?? 'Card pack'} style={{ filter: 'drop-shadow(0 26px 42px rgba(0,0,0,.6))' }} draggable={false} />
+              <div className={`sp-foil-shine${openStage === 'shaking' ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${openBox?.image || packImg})`, maskImage: `url(${openBox?.image || packImg})` }} />
               {(openStage === 'exploding') && <div className="sp-pack-flash-out" />}
             </div>
 
@@ -866,7 +853,7 @@ const SLAB_PACKS_CSS = `
 .sp-view-heading p{ margin:9px 0 0; font-size:clamp(13px,2.4vw,15px); color:var(--sp-text-dim); }
 .sp-browse-view{ padding-top:clamp(24px,4vh,36px); }
 .sp-hero-pack{ position:relative; z-index:4; width:min(52vw,260px); margin:0 auto; touch-action:pan-y; cursor:grab; user-select:none; }
-.sp-hero-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; transition:filter .25s ease; }
+.sp-hero-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; object-fit:contain; transition:filter .25s ease; }
 .sp-detail-panel{ width:100%; max-width:560px; margin:clamp(20px,3.5vh,30px) auto 0; padding:0 clamp(18px,4vw,26px) clamp(24px,4vh,32px); padding-bottom:calc(120px + var(--pullz-mobile-bottom-nav-height, 0px)); }
 @media (min-width:1024px){ .sp-detail-panel{ padding-bottom:110px; } }
 .sp-detail-title{ margin:0; text-align:center; font-size:clamp(22px,4.4vw,30px); font-weight:800; }
@@ -875,7 +862,7 @@ const SLAB_PACKS_CSS = `
 .sp-tier-tabs::-webkit-scrollbar{ display:none; }
 .sp-tier-tab{ flex:1 0 auto; min-width:96px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 14px; border-radius:16px; border:1.5px solid transparent; background:rgba(255,255,255,.035); color:var(--sp-text-dim); cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease; }
 .sp-tier-tab-active{ border-color:var(--sp-holo-b); background:rgba(192,132,252,.12); color:var(--sp-text); }
-.sp-tier-tab-thumb{ width:34px; height:auto; aspect-ratio:520/780; display:block; }
+.sp-tier-tab-thumb{ width:34px; height:auto; aspect-ratio:520/780; object-fit:contain; display:block; }
 .sp-tier-tab-name{ font-size:12.5px; font-weight:700; }
 .sp-tier-tab-price{ display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:var(--sp-text-dim); }
 .sp-coin-icon-sm{ width:14px; height:14px; }
@@ -905,13 +892,13 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card{ position:absolute; top:0; left:50%; width:60vw; max-width:250px; display:flex; flex-direction:column; align-items:center; padding:0 14px; will-change:transform,opacity; }
 .sp-fan-card-art{ position:relative; width:100%; }
 .sp-fan-card-glow{ position:absolute; inset:-25%; filter:blur(30px); z-index:-1; opacity:.55; border-radius:50%; }
-.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; }
+.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; object-fit:contain; }
 .sp-foil-shine{ position:absolute; inset:0; pointer-events:none; z-index:2; background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,.05) 40%, rgba(255,255,255,.35) 48%, rgba(110,231,255,.3) 51%, rgba(192,132,252,.3) 54%, rgba(255,255,255,.05) 60%, transparent 75%); background-size:220% 220%; mix-blend-mode:overlay; animation:sp-foilSweep 5s ease-in-out infinite; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-size:100% 100%; mask-repeat:no-repeat; }
 @keyframes sp-foilSweep{ 0%{background-position:15% 0%;} 50%{background-position:85% 100%;} 100%{background-position:15% 0%;} }
 .sp-foil-shine.sp-fast{ animation:sp-foilFlicker .5s ease-in-out 2; }
 @keyframes sp-foilFlicker{ 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
 .sp-fan-card-reflect{ width:100%; height:56px; overflow:hidden; pointer-events:none; margin-top:2px; }
-.sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
+.sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; object-fit:contain; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
 .sp-fan-card-name{ margin-top:18px; font-size:clamp(16px,3.1vw,18px); font-weight:700; }
 .sp-fan-card-sub{ margin-top:3px; font-size:12px; color:var(--sp-text-dim); letter-spacing:.06em; text-transform:uppercase; }
 .sp-price-row{ display:flex; align-items:center; gap:7px; margin-top:14px; font-size:clamp(17px,3.2vw,19px); font-weight:800; }
@@ -941,7 +928,7 @@ const SLAB_PACKS_CSS = `
 @keyframes sp-floatShake{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.15);} }
 .sp-pack-glow{ position:absolute; inset:-30%; background:radial-gradient(circle, rgba(192,132,252,.35), rgba(110,231,255,.15) 45%, transparent 70%); filter:blur(24px); z-index:-1; animation:sp-pulseGlow 2.6s ease-in-out infinite; }
 @keyframes sp-pulseGlow{ 0%,100%{opacity:.55; transform:scale(1);} 50%{opacity:1; transform:scale(1.08);} }
-.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; }
+.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; object-fit:contain; }
 .sp-pack-flash-out{ position:absolute; inset:0; z-index:2; border-radius:22px; background:#fff; animation:sp-packOut .5s cubic-bezier(.6,0,1,.4) forwards; }
 @keyframes sp-packOut{ 0%{opacity:0;} 35%{opacity:.9;} 100%{opacity:0; transform:scale(1.5);} }
 .sp-prompt{ margin-top:30px; text-align:center; z-index:4; transition:opacity .3s ease; }
