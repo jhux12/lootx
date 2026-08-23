@@ -304,11 +304,10 @@ function useCoverflow(count: number, onChange?: (index: number) => void): Coverf
 // Small presentational pieces
 // ---------------------------------------------------------------------------
 
-const FanCardArt: React.FC<{ imageUrl: string; glow: string; alt: string; fast?: boolean }> = ({ imageUrl, glow, alt, fast }) => (
+const FanCardArt: React.FC<{ imageUrl: string; glow: string; alt: string }> = ({ imageUrl, glow, alt }) => (
   <div className="sp-fan-card-art">
     <div className="sp-fan-card-glow" style={{ background: glow }} />
-    <img className="sp-fan-card-img" src={imageUrl} alt={alt} style={{ filter: 'drop-shadow(0 22px 34px rgba(0,0,0,.6))' }} draggable={false} />
-    <div className={`sp-foil-shine${fast ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${imageUrl})`, maskImage: `url(${imageUrl})` }} />
+    <img className="sp-fan-card-img sp-pack-rock" src={imageUrl} alt={alt} style={{ filter: 'drop-shadow(0 22px 34px rgba(0,0,0,.6))' }} draggable={false} />
   </div>
 );
 
@@ -641,8 +640,7 @@ export const SlabPacks: React.FC = () => {
             onPointerCancel={onHeroPointerCancel}
           >
             <div className="sp-pack-glow" style={{ background: TIER_VISUALS[selectedTier].glow }} />
-            <img className="sp-hero-pack-img" src={activeBox.image || packImg} alt={activeBox.name} style={{ filter: 'drop-shadow(0 22px 40px rgba(0,0,0,.55))' }} draggable={false} />
-            <div className="sp-foil-shine" style={{ WebkitMaskImage: `url(${activeBox.image || packImg})`, maskImage: `url(${activeBox.image || packImg})` }} />
+            <img className="sp-hero-pack-img sp-pack-rock" src={activeBox.image || packImg} alt={activeBox.name} style={{ filter: 'drop-shadow(0 22px 40px rgba(0,0,0,.55))' }} draggable={false} />
           </div>
 
           <div className="sp-detail-panel">
@@ -775,7 +773,6 @@ export const SlabPacks: React.FC = () => {
             >
               <div className="sp-pack-glow" />
               <img className="sp-pack-img" src={openBox?.image || packImg} alt={openBox?.name ?? 'Card pack'} style={{ filter: 'drop-shadow(0 26px 42px rgba(0,0,0,.6))' }} draggable={false} />
-              <div className={`sp-foil-shine${openStage === 'shaking' ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${openBox?.image || packImg})`, maskImage: `url(${openBox?.image || packImg})` }} />
               {(openStage === 'exploding') && <div className="sp-pack-flash-out" />}
             </div>
 
@@ -868,10 +865,11 @@ const SLAB_PACKS_CSS = `
 .sp-coin-icon-sm{ width:14px; height:14px; }
 .sp-info-icon{ font-size:13px; color:var(--sp-text-dim); cursor:help; vertical-align:middle; }
 .sp-hits-grid-2col{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(10px,2.4vw,14px); }
-.sp-hit-card-v2{ border-radius:16px; background:#f2f1f6; padding:10px 10px 12px; display:flex; flex-direction:column; align-items:center; }
-.sp-hit-card-v2-img{ width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; }
-.sp-hit-card-v2-img img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
-.sp-hit-card-v2-price{ margin-top:8px; font-size:clamp(12.5px,2.4vw,14px); font-weight:800; color:#14121c; }
+.sp-hit-card-v2{ border-radius:16px; background:linear-gradient(160deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border:1px solid rgba(255,255,255,.06); padding:10px 10px 12px; display:flex; flex-direction:column; align-items:center; transition:background .2s ease, border-color .2s ease, transform .2s ease; }
+.sp-hit-card-v2:hover{ background:linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.03)); border-color:rgba(255,209,102,.3); transform:translateY(-2px); }
+.sp-hit-card-v2-img{ width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; border-radius:10px; background:radial-gradient(circle, rgba(255,255,255,.05), transparent 70%); }
+.sp-hit-card-v2-img img{ max-width:100%; max-height:100%; object-fit:contain; display:block; filter:drop-shadow(0 8px 14px rgba(0,0,0,.5)); }
+.sp-hit-card-v2-price{ margin-top:8px; font-size:clamp(12.5px,2.4vw,14px); font-weight:800; color:var(--sp-gold); }
 .sp-buy-bar{ position:fixed; left:50%; transform:translateX(-50%); width:min(calc(100% - 24px), 560px); bottom:0; z-index:60; display:flex; align-items:center; gap:12px; padding:clamp(14px,2.6vw,18px); border-radius:20px; background:rgba(20,17,31,.92); backdrop-filter:blur(14px); box-shadow:0 -8px 30px rgba(0,0,0,.4); flex-wrap:wrap; margin-bottom:clamp(12px,2.4vh,18px); }
 @media (max-width:1023px){ .sp-buy-bar{ bottom:var(--pullz-mobile-bottom-nav-height, 0px); } }
 .sp-buy-bar-price{ display:flex; align-items:center; gap:8px; font-size:clamp(16px,3vw,19px); font-weight:800; }
@@ -893,10 +891,8 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card-art{ position:relative; width:100%; }
 .sp-fan-card-glow{ position:absolute; inset:-25%; filter:blur(30px); z-index:-1; opacity:.55; border-radius:50%; }
 .sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; object-fit:contain; }
-.sp-foil-shine{ position:absolute; inset:0; pointer-events:none; z-index:2; background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,.05) 40%, rgba(255,255,255,.35) 48%, rgba(110,231,255,.3) 51%, rgba(192,132,252,.3) 54%, rgba(255,255,255,.05) 60%, transparent 75%); background-size:220% 220%; mix-blend-mode:overlay; animation:sp-foilSweep 5s ease-in-out infinite; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-size:100% 100%; mask-repeat:no-repeat; }
-@keyframes sp-foilSweep{ 0%{background-position:15% 0%;} 50%{background-position:85% 100%;} 100%{background-position:15% 0%;} }
-.sp-foil-shine.sp-fast{ animation:sp-foilFlicker .5s ease-in-out 2; }
-@keyframes sp-foilFlicker{ 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
+@keyframes sp-packRock{ 0%,100%{transform:rotate(-4deg);} 50%{transform:rotate(4deg);} }
+.sp-pack-rock{ animation:sp-packRock 3.2s ease-in-out infinite; transform-origin:50% 85%; }
 .sp-fan-card-reflect{ width:100%; height:56px; overflow:hidden; pointer-events:none; margin-top:2px; }
 .sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; object-fit:contain; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
 .sp-fan-card-name{ margin-top:18px; font-size:clamp(16px,3.1vw,18px); font-weight:700; }
@@ -922,7 +918,7 @@ const SLAB_PACKS_CSS = `
 .sp-reveal-stage > .sp-pack-wrap, .sp-reveal-stage > .sp-card-wrap{ grid-area:1/1; }
 .sp-pack-wrap{ position:relative; z-index:4; width:min(58vw,380px); cursor:pointer; animation:sp-float 3.4s ease-in-out infinite; transition:opacity .5s ease, transform .5s ease; }
 .sp-pack-wrap.sp-hidden-pack{ opacity:0; pointer-events:none; transform:scale(.4); }
-@keyframes sp-float{ 0%,100%{transform:translateY(0) rotate(-1.2deg);} 50%{transform:translateY(-16px) rotate(1.2deg);} }
+@keyframes sp-float{ 0%,100%{transform:translateY(0) rotate(-4deg);} 50%{transform:translateY(-16px) rotate(4deg);} }
 .sp-pack-wrap.sp-shaking{ animation:sp-shake .09s linear infinite, sp-floatShake 3s ease-in-out infinite; }
 @keyframes sp-shake{ 0%{transform:translate(0,0) rotate(0deg) scale(1);} 20%{transform:translate(-7px,3px) rotate(-2deg) scale(1.01,.99);} 40%{transform:translate(7px,-3px) rotate(2deg) scale(.99,1.01);} 60%{transform:translate(-6px,3px) rotate(-3deg) scale(1.015,.985);} 80%{transform:translate(6px,-2px) rotate(2deg) scale(.985,1.015);} 100%{transform:translate(0,0) rotate(0deg) scale(1);} }
 @keyframes sp-floatShake{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.15);} }
