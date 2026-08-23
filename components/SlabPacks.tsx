@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import packImg from '../assets/slabpacks/pack.png';
 import cardImg from '../assets/slabpacks/flareon-card.png';
-import { useAuth, useBoxes, useWallet } from '../context/GameContext';
+import { useAuth, useBoxes, useInventory, useWallet } from '../context/GameContext';
 import { authedFetch } from '../utils/authedFetch';
 import { toast } from '../src/ui/toast/toast';
 import { calculateExpectedValue } from '../utils/caseOdds';
+import { getSellBackValue } from '../utils/sellBack';
 import type { CaseItem } from '../types';
 
 /**
@@ -43,7 +44,7 @@ const TIER_VISUALS: Record<Tier, TierVisuals> = {
   },
   silver: {
     ribbon: 'Tier II',
-    filter: 'none',
+    filter: '',
     glow: 'radial-gradient(circle, rgba(192,132,252,.5), rgba(110,231,255,.2) 45%, transparent 70%)',
     ctaGradient: 'linear-gradient(90deg, #6ee7ff, #c084fc)'
   },
@@ -54,6 +55,11 @@ const TIER_VISUALS: Record<Tier, TierVisuals> = {
     ctaGradient: 'linear-gradient(90deg, #fff0bd, #ffd166)'
   }
 };
+
+// Inline `style.filter` fully replaces (rather than merges with) a CSS class's
+// `filter` declaration, so any drop-shadow set in CSS never actually applies
+// once a tier tint is also set inline. Combine both into one string instead.
+const packImgFilter = (tint: string, shadow: string) => `${tint} drop-shadow(${shadow})`.trim();
 
 const TIER_ORDER: Tier[] = ['bronze', 'silver', 'gold'];
 const RARITY_COLOR: Record<string, string> = {
@@ -283,14 +289,14 @@ function useCoverflow(count: number, onChange?: (index: number) => void): Coverf
 const FanCardArt: React.FC<{ visuals: TierVisuals; alt: string; fast?: boolean }> = ({ visuals, alt, fast }) => (
   <div className="sp-fan-card-art">
     <div className="sp-fan-card-glow" style={{ background: visuals.glow }} />
-    <img className="sp-fan-card-img" src={packImg} alt={alt} style={{ filter: visuals.filter }} draggable={false} />
+    <img className="sp-fan-card-img" src={packImg} alt={alt} style={{ filter: packImgFilter(visuals.filter, '0 22px 34px rgba(0,0,0,.6)') }} draggable={false} />
     <div className={`sp-foil-shine${fast ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
   </div>
 );
 
 const FanCardReflect: React.FC<{ visuals: TierVisuals }> = ({ visuals }) => (
   <div className="sp-fan-card-reflect">
-    <img src={packImg} alt="" style={{ filter: visuals.filter }} draggable={false} />
+    <img src={packImg} alt="" style={{ filter: visuals.filter || undefined }} draggable={false} />
   </div>
 );
 
@@ -315,6 +321,7 @@ export const SlabPacks: React.FC = () => {
   const { isAuthenticated, openAuthModal } = useAuth();
   const { balance, syncBalance } = useWallet();
   const { boxes } = useBoxes();
+  const { sellItem } = useInventory();
 
   const slabBoxes = useMemo(() => {
     const map: Partial<Record<Tier, ReturnType<typeof boxes.find>>> = {};
@@ -335,6 +342,9 @@ export const SlabPacks: React.FC = () => {
   const [openStage, setOpenStage] = useState<OpenStage>('idle');
   const [opening, setOpening] = useState(false);
   const [prize, setPrize] = useState<(CaseItem & { price?: number; value?: number }) | null>(null);
+  const [wonInventoryId, setWonInventoryId] = useState<string | null>(null);
+  const [rewardResolved, setRewardResolved] = useState(false);
+  const [isSellingItem, setIsSellingItem] = useState(false);
   const [particles, setParticles] = useState<{ id: number; px: number; py: number; color: string }[]>([]);
   const particleIdRef = useRef(0);
   const [cardTilt, setCardTilt] = useState({ x: 0, y: 0 });
@@ -390,6 +400,8 @@ export const SlabPacks: React.FC = () => {
     setOpenTier(pendingTier);
     setOpenStage('idle');
     setPrize(null);
+    setWonInventoryId(null);
+    setRewardResolved(false);
     setPageView('open');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -406,6 +418,7 @@ export const SlabPacks: React.FC = () => {
 
     setOpening(true);
     setOpenStage('shaking');
+    setRewardResolved(false);
 
     const minShake = new Promise((resolve) => window.setTimeout(resolve, 650));
     const apiCall = authedFetch<OpenCaseResponse>('/api/open-case', {
@@ -416,6 +429,7 @@ export const SlabPacks: React.FC = () => {
     try {
       const [data] = await Promise.all([apiCall, minShake]);
       setPrize(data.prize);
+      setWonInventoryId(data.inventoryId ?? null);
       const nextBalance = typeof data.newCoinBalance === 'number' ? data.newCoinBalance : data.newCoins;
       if (typeof nextBalance === 'number') syncBalance(nextBalance);
 
@@ -436,21 +450,79 @@ export const SlabPacks: React.FC = () => {
     }
   };
 
+  const handleKeepPrize = () => {
+    if (rewardResolved) return;
+    setRewardResolved(true);
+  };
+
+  const handleSellPrize = async () => {
+    if (rewardResolved || isSellingItem) return;
+    if (!wonInventoryId) {
+      // Nothing to sell back yet (e.g. still mid-animation) -- just treat as keep.
+      setRewardResolved(true);
+      return;
+    }
+    if (prize?.redeemable === false) {
+      toast.error('This item is not redeemable and cannot be sold back.');
+      return;
+    }
+    setIsSellingItem(true);
+    try {
+      await sellItem(wonInventoryId);
+      setRewardResolved(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unable to sell this item. Please try again.';
+      toast.error(message);
+    } finally {
+      setIsSellingItem(false);
+    }
+  };
+
   const resetToOpen = () => {
+    if (!rewardResolved) {
+      toast.info('Keep or sell your card first.');
+      return;
+    }
     setOpenStage('idle');
     setPrize(null);
+    setWonInventoryId(null);
+    setRewardResolved(false);
   };
 
   const backToBrowse = () => {
+    if (openStage === 'revealed' && !rewardResolved) {
+      toast.info('Keep or sell your card first.');
+      return;
+    }
     setPageView('browse');
     setOpenStage('idle');
     setPrize(null);
+    setWonInventoryId(null);
+    setRewardResolved(false);
     setRemainingOpens(0);
     setQuantity(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const activeBox = selectedTier ? slabBoxes[selectedTier] : undefined;
+
+  const heroSwipeRef = useRef({ startX: 0, active: false });
+  const changeTierByOffset = (offset: number) => {
+    if (!selectedTier) return;
+    const idx = configuredTiers.indexOf(selectedTier);
+    const nextIdx = Math.max(0, Math.min(configuredTiers.length - 1, idx + offset));
+    if (nextIdx !== idx) setSelectedTier(configuredTiers[nextIdx]);
+  };
+  const onHeroPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    heroSwipeRef.current = { startX: e.clientX, active: true };
+  };
+  const onHeroPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!heroSwipeRef.current.active) return;
+    const dx = e.clientX - heroSwipeRef.current.startX;
+    heroSwipeRef.current.active = false;
+    if (Math.abs(dx) > 40) changeTierByOffset(dx < 0 ? 1 : -1);
+  };
+  const onHeroPointerCancel = () => { heroSwipeRef.current.active = false; };
 
   const oddsRows = useMemo(() => {
     if (!activeBox) return [];
@@ -492,6 +564,8 @@ export const SlabPacks: React.FC = () => {
   const prizeImage = prize?.image || cardImg;
   const prizeValue = prize ? (prize.value ?? prize.price ?? 0) : 0;
   const prizeRarityColor = prize ? (RARITY_COLOR[prize.rarity] ?? RARITY_COLOR.common) : RARITY_COLOR.common;
+  const sellBackRate = openBox?.sellBackRate ?? 0.8;
+  const sellBackAmount = prize ? getSellBackValue(prizeValue, sellBackRate) : 0;
 
   if (configuredTiers.length === 0) {
     return (
@@ -512,9 +586,14 @@ export const SlabPacks: React.FC = () => {
       <div className="sp-stage">
         {pageView === 'browse' && activeBox && selectedTier && (
         <div className="sp-view sp-browse-view">
-          <div className="sp-hero-pack">
+          <div
+            className="sp-hero-pack"
+            onPointerDown={onHeroPointerDown}
+            onPointerUp={onHeroPointerUp}
+            onPointerCancel={onHeroPointerCancel}
+          >
             <div className="sp-pack-glow" style={{ background: TIER_VISUALS[selectedTier].glow }} />
-            <img className="sp-hero-pack-img" src={packImg} alt={activeBox.name} style={{ filter: TIER_VISUALS[selectedTier].filter }} draggable={false} />
+            <img className="sp-hero-pack-img" src={packImg} alt={activeBox.name} style={{ filter: packImgFilter(TIER_VISUALS[selectedTier].filter, '0 22px 40px rgba(0,0,0,.55)') }} draggable={false} />
             <div className="sp-foil-shine" style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
           </div>
 
@@ -638,7 +717,7 @@ export const SlabPacks: React.FC = () => {
               aria-label="Open pack"
             >
               <div className="sp-pack-glow" />
-              <img className="sp-pack-img" src={packImg} alt={openBox?.name ?? 'Card pack'} style={{ filter: openVisuals.filter }} draggable={false} />
+              <img className="sp-pack-img" src={packImg} alt={openBox?.name ?? 'Card pack'} style={{ filter: packImgFilter(openVisuals.filter, '0 26px 42px rgba(0,0,0,.6)') }} draggable={false} />
               <div className={`sp-foil-shine${openStage === 'shaking' ? ' sp-fast' : ''}`} style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
               {(openStage === 'exploding') && <div className="sp-pack-flash-out" />}
             </div>
@@ -673,9 +752,23 @@ export const SlabPacks: React.FC = () => {
               <div className="sp-rarity-name" style={{ backgroundImage: `linear-gradient(90deg, ${prizeRarityColor}, var(--sp-holo-b), ${prizeRarityColor})` }}>{prize?.name ?? ''}</div>
               <div className="sp-rarity-sub">{prize ? `${fmtCoins(prizeValue)} coins \u00b7 ${prize.rarity}` : ''}</div>
             </div>
+
+            {openStage === 'revealed' && !rewardResolved && (
+              <div className="sp-keep-sell-row">
+                <button type="button" className="sp-keep-btn" onClick={handleKeepPrize}>
+                  Keep This Card
+                </button>
+                {prize?.redeemable !== false && (
+                  <button type="button" className="sp-sell-btn" onClick={handleSellPrize} disabled={isSellingItem}>
+                    {isSellingItem ? 'Selling\u2026' : `Sell for ${fmtCoins(sellBackAmount)} coins`}
+                  </button>
+                )}
+              </div>
+            )}
+
             <button
               type="button"
-              className={`sp-again-btn${openStage === 'revealed' ? ' sp-show' : ''}`}
+              className={`sp-again-btn${openStage === 'revealed' && rewardResolved ? ' sp-show' : ''}`}
               onClick={remainingOpens > 0 ? resetToOpen : backToBrowse}
             >
               {remainingOpens > 0 ? `Open Next Pack (${remainingOpens} left)` : 'Back to Packs'}
@@ -702,9 +795,10 @@ const SLAB_PACKS_CSS = `
 .sp-view-heading h1{ margin:0; font-size:clamp(24px,4.6vw,34px); font-weight:800; }
 .sp-view-heading p{ margin:9px 0 0; font-size:clamp(13px,2.4vw,15px); color:var(--sp-text-dim); }
 .sp-browse-view{ padding-top:clamp(24px,4vh,36px); }
-.sp-hero-pack{ position:relative; z-index:4; width:min(52vw,260px); margin:0 auto; }
-.sp-hero-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 22px 40px rgba(0,0,0,.55)); }
-.sp-detail-panel{ width:100%; max-width:560px; margin:clamp(20px,3.5vh,30px) auto 0; padding:0 clamp(18px,4vw,26px) clamp(24px,4vh,32px); }
+.sp-hero-pack{ position:relative; z-index:4; width:min(52vw,260px); margin:0 auto; touch-action:pan-y; cursor:grab; user-select:none; }
+.sp-hero-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; transition:filter .25s ease; }
+.sp-detail-panel{ width:100%; max-width:560px; margin:clamp(20px,3.5vh,30px) auto 0; padding:0 clamp(18px,4vw,26px) clamp(24px,4vh,32px); padding-bottom:calc(120px + var(--pullz-mobile-bottom-nav-height, 0px)); }
+@media (min-width:1024px){ .sp-detail-panel{ padding-bottom:110px; } }
 .sp-detail-title{ margin:0; text-align:center; font-size:clamp(22px,4.4vw,30px); font-weight:800; }
 .sp-detail-desc{ margin:10px 0 0; text-align:center; font-size:clamp(13px,2.4vw,15px); line-height:1.5; color:var(--sp-text-dim); }
 .sp-tier-tabs{ display:flex; gap:10px; margin-top:clamp(18px,3vh,26px); overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
@@ -721,7 +815,8 @@ const SLAB_PACKS_CSS = `
 .sp-hit-card-v2-img{ width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; }
 .sp-hit-card-v2-img img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
 .sp-hit-card-v2-price{ margin-top:8px; font-size:clamp(12.5px,2.4vw,14px); font-weight:800; color:#14121c; }
-.sp-buy-bar{ display:flex; align-items:center; gap:12px; margin-top:clamp(24px,4vh,32px); padding:clamp(14px,2.6vw,18px); border-radius:20px; background:rgba(255,255,255,.04); flex-wrap:wrap; }
+.sp-buy-bar{ position:fixed; left:50%; transform:translateX(-50%); width:min(calc(100% - 24px), 560px); bottom:0; z-index:60; display:flex; align-items:center; gap:12px; padding:clamp(14px,2.6vw,18px); border-radius:20px; background:rgba(20,17,31,.92); backdrop-filter:blur(14px); box-shadow:0 -8px 30px rgba(0,0,0,.4); flex-wrap:wrap; margin-bottom:clamp(12px,2.4vh,18px); }
+@media (max-width:1023px){ .sp-buy-bar{ bottom:var(--pullz-mobile-bottom-nav-height, 0px); } }
 .sp-buy-bar-price{ display:flex; align-items:center; gap:8px; font-size:clamp(16px,3vw,19px); font-weight:800; }
 .sp-qty-stepper{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.06); border-radius:999px; padding:6px 8px; }
 .sp-qty-stepper button{ width:28px; height:28px; border-radius:50%; border:none; background:rgba(255,255,255,.08); color:var(--sp-text); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
@@ -740,7 +835,7 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card{ position:absolute; top:0; left:50%; width:60vw; max-width:250px; display:flex; flex-direction:column; align-items:center; padding:0 14px; will-change:transform,opacity; }
 .sp-fan-card-art{ position:relative; width:100%; }
 .sp-fan-card-glow{ position:absolute; inset:-25%; filter:blur(30px); z-index:-1; opacity:.55; border-radius:50%; }
-.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 22px 34px rgba(0,0,0,.6)); }
+.sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; }
 .sp-foil-shine{ position:absolute; inset:0; pointer-events:none; z-index:2; background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,.05) 40%, rgba(255,255,255,.35) 48%, rgba(110,231,255,.3) 51%, rgba(192,132,252,.3) 54%, rgba(255,255,255,.05) 60%, transparent 75%); background-size:220% 220%; mix-blend-mode:overlay; animation:sp-foilSweep 5s ease-in-out infinite; -webkit-mask-size:100% 100%; -webkit-mask-repeat:no-repeat; mask-size:100% 100%; mask-repeat:no-repeat; }
 @keyframes sp-foilSweep{ 0%{background-position:15% 0%;} 50%{background-position:85% 100%;} 100%{background-position:15% 0%;} }
 .sp-foil-shine.sp-fast{ animation:sp-foilFlicker .5s ease-in-out 2; }
@@ -775,7 +870,7 @@ const SLAB_PACKS_CSS = `
 @keyframes sp-floatShake{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.15);} }
 .sp-pack-glow{ position:absolute; inset:-30%; background:radial-gradient(circle, rgba(192,132,252,.35), rgba(110,231,255,.15) 45%, transparent 70%); filter:blur(24px); z-index:-1; animation:sp-pulseGlow 2.6s ease-in-out infinite; }
 @keyframes sp-pulseGlow{ 0%,100%{opacity:.55; transform:scale(1);} 50%{opacity:1; transform:scale(1.08);} }
-.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 26px 42px rgba(0,0,0,.6)); }
+.sp-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; }
 .sp-pack-flash-out{ position:absolute; inset:0; z-index:2; border-radius:22px; background:#fff; animation:sp-packOut .5s cubic-bezier(.6,0,1,.4) forwards; }
 @keyframes sp-packOut{ 0%{opacity:0;} 35%{opacity:.9;} 100%{opacity:0; transform:scale(1.5);} }
 .sp-prompt{ margin-top:30px; text-align:center; z-index:4; transition:opacity .3s ease; }
@@ -819,6 +914,13 @@ const SLAB_PACKS_CSS = `
 .sp-again-btn{ margin-top:30px; padding:15px 34px; background:rgba(255,255,255,.06); color:var(--sp-text); font-size:13px; letter-spacing:.14em; text-transform:uppercase; border:none; border-radius:999px; cursor:pointer; opacity:0; transition:background .2s ease, opacity .4s ease .3s; }
 .sp-again-btn.sp-show{ opacity:1; }
 .sp-again-btn:hover{ background:rgba(192,132,252,.16); }
+.sp-keep-sell-row{ display:flex; gap:12px; margin-top:26px; width:min(90vw,360px); }
+.sp-keep-btn{ flex:1; padding:15px 0; border-radius:999px; border:none; background:linear-gradient(90deg, var(--sp-holo-a), var(--sp-holo-b)); color:#0c0a14; font-size:12.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; cursor:pointer; transition:transform .15s ease; }
+.sp-keep-btn:hover{ transform:translateY(-2px); }
+.sp-sell-btn{ flex:1; padding:15px 0; border-radius:999px; border:1px solid rgba(74,222,128,.4); background:rgba(74,222,128,.12); color:#bbf7d0; font-size:12.5px; font-weight:800; letter-spacing:.04em; cursor:pointer; transition:background .2s ease, transform .15s ease; }
+.sp-sell-btn:hover{ background:rgba(74,222,128,.2); transform:translateY(-2px); }
+.sp-sell-btn:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+@media (max-width:420px){ .sp-keep-sell-row{ flex-direction:column; width:min(84vw,320px); } }
 .sp-footer-note{ flex-shrink:0; text-align:center; padding:10px 0 14px; font-size:10px; letter-spacing:.2em; color:#4c4666; text-transform:uppercase; z-index:3; }
 `;
 
