@@ -687,12 +687,9 @@ export const SlabPacks: React.FC = () => {
                 {pendingTier && Array.from({ length: PICK_COPIES }).map((_, i) => {
                   const visuals = TIER_VISUALS[pendingTier];
                   return (
-                    <div key={i} className="sp-fan-card" ref={pickCF.setCardRef(i)}>
+                    <div key={i} className="sp-fan-card sp-fan-card-pick" ref={pickCF.setCardRef(i)}>
                       <FanCardArt visuals={visuals} alt={slabBoxes[pendingTier]?.name ?? 'Pack'} />
                       <FanCardReflect visuals={visuals} />
-                      <button type="button" className="sp-cta-btn" style={{ background: visuals.ctaGradient }} onClick={openPurchasedPack}>
-                        Open This Pack
-                      </button>
                     </div>
                   );
                 })}
@@ -700,6 +697,17 @@ export const SlabPacks: React.FC = () => {
             </div>
             <button type="button" className="sp-arrow sp-right" onClick={() => pickCF.goTo(pickCF.current() + 1)} aria-label="Next copy">&#8250;</button>
           </div>
+
+          {pendingTier && (
+            <button
+              type="button"
+              className="sp-cta-btn sp-cta-btn-solo"
+              style={{ background: TIER_VISUALS[pendingTier].ctaGradient }}
+              onClick={openPurchasedPack}
+            >
+              Open This Pack
+            </button>
+          )}
         </div>
         )}
 
@@ -846,6 +854,7 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card-sub{ margin-top:3px; font-size:12px; color:var(--sp-text-dim); letter-spacing:.06em; text-transform:uppercase; }
 .sp-price-row{ display:flex; align-items:center; gap:7px; margin-top:14px; font-size:clamp(17px,3.2vw,19px); font-weight:800; }
 .sp-cta-btn{ margin-top:18px; width:100%; max-width:220px; padding:15px 0; border-radius:999px; border:none; font-size:13px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; color:#0c0a14; box-shadow:0 10px 26px -8px rgba(192,132,252,.6); }
+.sp-cta-btn-solo{ position:relative; z-index:10; margin-top:clamp(20px,3.5vh,30px); width:min(80vw,260px); }
 .sp-arrow{ position:absolute; top:38%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%; border:none; background:rgba(20,17,31,.75); backdrop-filter:blur(6px); box-shadow:0 8px 24px -8px rgba(0,0,0,.6); color:var(--sp-text); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:19px; z-index:5; }
 .sp-arrow.sp-left{ left:clamp(2px,1vw,10px); } .sp-arrow.sp-right{ right:clamp(2px,1vw,10px); }
 @media (hover:none){ .sp-arrow{ display:none; } }
