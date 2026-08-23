@@ -461,6 +461,13 @@ export const SlabPacks: React.FC = () => {
       const [data] = await Promise.all([apiCall, minShake]);
       setPrize(data.prize);
       setWonInventoryId(data.inventoryId ?? null);
+      // Get a head start on downloading the real prize image during the
+      // burst animation, so it's as likely as possible to already be
+      // cached/decoded by the time the reveal actually makes it visible.
+      if (data.prize?.image) {
+        const preload = new window.Image();
+        preload.src = data.prize.image;
+      }
       const nextBalance = typeof data.newCoinBalance === 'number' ? data.newCoinBalance : data.newCoins;
       if (typeof nextBalance === 'number') syncBalance(nextBalance);
 
@@ -788,7 +795,7 @@ export const SlabPacks: React.FC = () => {
             <div className={`sp-card-wrap${openStage === 'revealed' ? ' sp-reveal' : ''}`}>
               <div className="sp-card-halo" />
               <div className="sp-card-inner" onMouseMove={handleCardMouseMove} onMouseLeave={() => setCardTilt({ x: 0, y: 0 })} style={{ transform: `rotateY(${cardTilt.x}deg) rotateX(${cardTilt.y}deg)` }}>
-                <img className="sp-card-img" src={prizeImage} alt={prize?.name ?? 'Card pulled'} draggable={false} />
+                {prize && <img className="sp-card-img" src={prizeImage} alt={prize.name} draggable={false} />}
                 <div className="sp-holo-sweep" />
               </div>
             </div>
