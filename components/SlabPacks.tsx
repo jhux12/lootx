@@ -891,8 +891,8 @@ const SLAB_PACKS_CSS = `
 .sp-fan-card-art{ position:relative; width:100%; }
 .sp-fan-card-glow{ position:absolute; inset:-25%; filter:blur(30px); z-index:-1; opacity:.55; border-radius:50%; }
 .sp-fan-card-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; object-fit:contain; }
-@keyframes sp-packRock{ 0%,100%{transform:rotate(-4deg);} 50%{transform:rotate(4deg);} }
-.sp-pack-rock{ animation:sp-packRock 3.2s ease-in-out infinite; transform-origin:50% 85%; }
+@keyframes sp-packRock{ 0%,100%{transform:perspective(900px) rotateY(-22deg);} 50%{transform:perspective(900px) rotateY(22deg);} }
+.sp-pack-rock{ animation:sp-packRock 3.2s ease-in-out infinite; }
 .sp-fan-card-reflect{ width:100%; height:56px; overflow:hidden; pointer-events:none; margin-top:2px; }
 .sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; object-fit:contain; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
 .sp-fan-card-name{ margin-top:18px; font-size:clamp(16px,3.1vw,18px); font-weight:700; }
@@ -918,7 +918,7 @@ const SLAB_PACKS_CSS = `
 .sp-reveal-stage > .sp-pack-wrap, .sp-reveal-stage > .sp-card-wrap{ grid-area:1/1; }
 .sp-pack-wrap{ position:relative; z-index:4; width:min(58vw,380px); cursor:pointer; animation:sp-float 3.4s ease-in-out infinite; transition:opacity .5s ease, transform .5s ease; }
 .sp-pack-wrap.sp-hidden-pack{ opacity:0; pointer-events:none; transform:scale(.4); }
-@keyframes sp-float{ 0%,100%{transform:translateY(0) rotate(-4deg);} 50%{transform:translateY(-16px) rotate(4deg);} }
+@keyframes sp-float{ 0%,100%{transform:translateY(0) perspective(900px) rotateY(-22deg);} 50%{transform:translateY(-16px) perspective(900px) rotateY(22deg);} }
 .sp-pack-wrap.sp-shaking{ animation:sp-shake .09s linear infinite, sp-floatShake 3s ease-in-out infinite; }
 @keyframes sp-shake{ 0%{transform:translate(0,0) rotate(0deg) scale(1);} 20%{transform:translate(-7px,3px) rotate(-2deg) scale(1.01,.99);} 40%{transform:translate(7px,-3px) rotate(2deg) scale(.99,1.01);} 60%{transform:translate(-6px,3px) rotate(-3deg) scale(1.015,.985);} 80%{transform:translate(6px,-2px) rotate(2deg) scale(.985,1.015);} 100%{transform:translate(0,0) rotate(0deg) scale(1);} }
 @keyframes sp-floatShake{ 0%,100%{filter:brightness(1);} 50%{filter:brightness(1.15);} }
