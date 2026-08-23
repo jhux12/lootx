@@ -96,6 +96,7 @@ interface OpenCaseResponse {
 
 interface CoverflowController {
   containerRef: React.RefObject<HTMLDivElement>;
+  setContainerRef: (el: HTMLDivElement | null) => void;
   setCardRef: (i: number) => (el: HTMLDivElement | null) => void;
   goTo: (i: number) => void;
   current: () => number;
@@ -183,10 +184,9 @@ function useCoverflow(count: number, onChange?: (index: number) => void): Coverf
     requestAnimationFrame(render);
   }, [count, clamp, render]);
 
-  useEffect(() => {
-    const viewport = containerRef.current;
-    if (!viewport) return;
+  const cleanupRef = useRef<(() => void) | null>(null);
 
+  const attachListeners = useCallback((viewport: HTMLDivElement) => {
     let dragging = false;
     let dragMoved = false;
     let dragStartX = 0;
@@ -276,11 +276,41 @@ function useCoverflow(count: number, onChange?: (index: number) => void): Coverf
       window.removeEventListener('resize', onResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count]);
+  }, [count, clamp, animateTo, render]);
+
+  // A plain useRef + a fixed-dependency useEffect isn't enough here: the
+  // Pick screen (and its coverflow viewport) only exists in the DOM while
+  // pageView === 'pick'. On first mount that DOM node doesn't exist yet, so
+  // an effect keyed on `count` (which never changes for a fixed PICK_COPIES)
+  // would attach nothing and then never run again. A ref *callback* instead
+  // fires exactly when React actually attaches/detaches the DOM node --
+  // i.e. every time the Pick screen mounts and unmounts -- so listeners get
+  // (re)attached correctly no matter how many times the user navigates
+  // to and from this screen.
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+    containerRef.current = node;
+    if (node) {
+      cleanupRef.current = attachListeners(node);
+      requestAnimationFrame(render);
+    }
+  }, [attachListeners, render]);
+
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+    };
+  }, []);
 
   const current = useCallback(() => reportedRef.current, []);
 
-  return { containerRef, setCardRef, goTo, current };
+  return { containerRef, setContainerRef, setCardRef, goTo, current };
 }
 
 // ---------------------------------------------------------------------------
@@ -707,7 +737,7 @@ export const SlabPacks: React.FC = () => {
           </div>
           <div className="sp-coverflow-outer">
             <button type="button" className="sp-arrow sp-left" onClick={() => pickCF.goTo(pickCF.current() - 1)} aria-label="Previous copy">&#8249;</button>
-            <div className="sp-coverflow-viewport" ref={pickCF.containerRef}>
+            <div className="sp-coverflow-viewport" ref={pickCF.setContainerRef}>
               <div className="sp-coverflow-track">
                 {pendingTier && Array.from({ length: PICK_COPIES }).map((_, i) => {
                   const visuals = TIER_VISUALS[pendingTier];
