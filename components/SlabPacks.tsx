@@ -61,6 +61,14 @@ const RARITY_COLOR: Record<string, string> = {
 };
 
 const fmtCoins = (n: number) => Math.round(n).toLocaleString('en-US');
+// Site economy: 100 coins = $1. Used only for display in the Odds table and
+// Potential Hits -- the actual pack price/balance stay in coins.
+const coinsToUsd = (coins: number) => coins / 100;
+const fmtUsd = (coins: number) =>
+  '$' + coinsToUsd(coins).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtUsdWhole = (coins: number) => '$' + Math.round(coinsToUsd(coins)).toLocaleString('en-US');
+
+const TIER_LABEL: Record<Tier, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold' };
 
 const PICK_COPIES = 5;
 
@@ -319,7 +327,9 @@ export const SlabPacks: React.FC = () => {
   const configuredTiers = TIER_ORDER.filter((t) => slabBoxes[t]);
 
   const [pageView, setPageView] = useState<PageView>('browse');
-  const [browseIndex, setBrowseIndex] = useState(0);
+  const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [remainingOpens, setRemainingOpens] = useState(0);
   const [pendingTier, setPendingTier] = useState<Tier | null>(null);
   const [openTier, setOpenTier] = useState<Tier | null>(null);
   const [openStage, setOpenStage] = useState<OpenStage>('idle');
@@ -329,16 +339,15 @@ export const SlabPacks: React.FC = () => {
   const particleIdRef = useRef(0);
   const [cardTilt, setCardTilt] = useState({ x: 0, y: 0 });
 
-  const browseCF = useCoverflow(configuredTiers.length, (i) => setBrowseIndex(i));
   const pickCF = useCoverflow(PICK_COPIES);
 
   useEffect(() => {
     if (configuredTiers.length === 0) return;
-    const startAt = Math.min(1, configuredTiers.length - 1);
-    browseCF.goTo(startAt);
-    setBrowseIndex(startAt);
+    if (selectedTier && configuredTiers.includes(selectedTier)) return;
+    const preferred: Tier = 'silver';
+    setSelectedTier(configuredTiers.includes(preferred) ? preferred : configuredTiers[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configuredTiers.length]);
+  }, [configuredTiers.join(',')]);
 
   const spawnParticles = useCallback((count: number, colors: string[], spread: [number, number], life: number) => {
     const batch = Array.from({ length: count }, () => {
@@ -358,17 +367,18 @@ export const SlabPacks: React.FC = () => {
     }, life);
   }, []);
 
-  const buyPack = (tier: Tier) => {
+  const buyPack = (tier: Tier, qty: number) => {
     if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
     const box = slabBoxes[tier];
     if (!box) return;
-    if (balance < box.price) {
-      toast.error("You don't have enough coins for this pack.");
+    if (balance < box.price * qty) {
+      toast.error("You don't have enough coins for this.");
       return;
     }
+    setRemainingOpens(qty);
     setPendingTier(tier);
     setPageView('pick');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -415,6 +425,7 @@ export const SlabPacks: React.FC = () => {
         setOpenStage('revealed');
         spawnParticles(46, ['#ffd166', '#ffe9a8', '#c084fc', '#6ee7ff', '#ffffff'], [60, 460], 1500);
       }, 260);
+      setRemainingOpens((r) => Math.max(0, r - 1));
     } catch (err) {
       await minShake;
       const message = err instanceof Error ? err.message : 'Unable to open this pack. Please try again.';
@@ -434,28 +445,39 @@ export const SlabPacks: React.FC = () => {
     setPageView('browse');
     setOpenStage('idle');
     setPrize(null);
+    setRemainingOpens(0);
+    setQuantity(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const activeBox = configuredTiers.length > 0 ? slabBoxes[configuredTiers[Math.min(browseIndex, configuredTiers.length - 1)]] : undefined;
+  const activeBox = selectedTier ? slabBoxes[selectedTier] : undefined;
 
   const oddsRows = useMemo(() => {
     if (!activeBox) return [];
-    const totals = new Map<string, number>();
+    const groups = new Map<string, { chance: number; min: number; max: number }>();
     activeBox.items.forEach((item) => {
-      totals.set(item.rarity, (totals.get(item.rarity) ?? 0) + item.chance);
+      const g = groups.get(item.rarity) ?? { chance: 0, min: Infinity, max: -Infinity };
+      g.chance += item.chance;
+      g.min = Math.min(g.min, item.price);
+      g.max = Math.max(g.max, item.price);
+      groups.set(item.rarity, g);
     });
     const order: CaseItem['rarity'][] = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
     return order
-      .filter((r) => totals.has(r))
-      .map((r) => ({ rarity: r, pct: totals.get(r) ?? 0 }));
+      .filter((r) => groups.has(r))
+      .map((r) => {
+        const g = groups.get(r)!;
+        return { rarity: r, pct: g.chance, min: g.min, max: g.max };
+      });
   }, [activeBox]);
 
   const expectedValue = useMemo(() => (activeBox ? calculateExpectedValue(activeBox.items) : 0), [activeBox]);
 
   const potentialHits = useMemo(() => {
     if (!activeBox) return [];
-    return [...activeBox.items].sort((a, b) => b.price - a.price).slice(0, 8);
+    return activeBox.items
+      .filter((item) => item.rarity === 'legendary')
+      .sort((a, b) => b.price - a.price);
   }, [activeBox]);
 
   const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -488,74 +510,84 @@ export const SlabPacks: React.FC = () => {
       <style>{SLAB_PACKS_CSS}</style>
 
       <div className="sp-stage">
-        {pageView === 'browse' && (
-        <div className="sp-view">
-          <div className="sp-view-heading">
-            <h1>Choose Your Pack</h1>
-            <p>Swipe to browse, then buy one to open</p>
+        {pageView === 'browse' && activeBox && selectedTier && (
+        <div className="sp-view sp-browse-view">
+          <div className="sp-hero-pack">
+            <div className="sp-pack-glow" style={{ background: TIER_VISUALS[selectedTier].glow }} />
+            <img className="sp-hero-pack-img" src={packImg} alt={activeBox.name} style={{ filter: TIER_VISUALS[selectedTier].filter }} draggable={false} />
+            <div className="sp-foil-shine" style={{ WebkitMaskImage: `url(${packImg})`, maskImage: `url(${packImg})` }} />
           </div>
 
-          <div className="sp-coverflow-outer">
-            <button type="button" className="sp-arrow sp-left" onClick={() => browseCF.goTo(browseCF.current() - 1)} aria-label="Previous pack">&#8249;</button>
-            <div className="sp-coverflow-viewport" ref={browseCF.containerRef}>
-              <div className="sp-coverflow-track">
-                {configuredTiers.map((tier, i) => {
-                  const box = slabBoxes[tier]!;
-                  const visuals = TIER_VISUALS[tier];
-                  return (
-                    <div key={tier} className="sp-fan-card" ref={browseCF.setCardRef(i)}>
-                      <div className="sp-tier-ribbon" style={{ color: visuals.ctaGradient.includes('9f6e') ? '#ff9f6e' : visuals.ctaGradient.includes('ffd166') ? '#ffd166' : '#c084fc', background: tier === 'bronze' ? 'rgba(255,159,110,.2)' : tier === 'gold' ? 'rgba(255,209,102,.2)' : 'rgba(192,132,252,.2)' }}>{visuals.ribbon}</div>
-                      <FanCardArt visuals={visuals} alt={box.name} />
-                      <FanCardReflect visuals={visuals} />
-                      <div className="sp-fan-card-name">{box.name}</div>
-                      <div className="sp-fan-card-sub">1 Graded Card</div>
-                      <div className="sp-price-row"><span className="sp-coin-icon" />{fmtCoins(box.price)}</div>
-                      <button type="button" className="sp-cta-btn" style={{ background: visuals.ctaGradient }} onClick={() => buyPack(tier)}>
-                        Buy Pack
-                      </button>
-                    </div>
-                  );
-                })}
+          <div className="sp-detail-panel">
+            <h1 className="sp-detail-title">{activeBox.name}</h1>
+            <p className="sp-detail-desc">
+              Open a {activeBox.name} and unlock a graded card &mdash; ready to keep, vault, or sell. Every pull holds real value.
+            </p>
+
+            <div className="sp-tier-tabs">
+              {configuredTiers.map((tier) => {
+                const box = slabBoxes[tier]!;
+                const visuals = TIER_VISUALS[tier];
+                const active = tier === selectedTier;
+                return (
+                  <button
+                    key={tier}
+                    type="button"
+                    className={`sp-tier-tab${active ? ' sp-tier-tab-active' : ''}`}
+                    onClick={() => setSelectedTier(tier)}
+                  >
+                    <img className="sp-tier-tab-thumb" src={packImg} alt="" style={{ filter: visuals.filter }} draggable={false} />
+                    <span className="sp-tier-tab-name">{TIER_LABEL[tier]}</span>
+                    <span className="sp-tier-tab-price"><span className="sp-coin-icon sp-coin-icon-sm" />{fmtCoins(box.price)}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="sp-info-section">
+              <div className="sp-info-section-head">
+                <h2>Odds <span className="sp-info-icon" title="Odds are computed live from this pack's real prize pool.">&#9432;</span></h2>
+                <div className="sp-ev">Expected Value: <b>{fmtUsd(expectedValue)}</b></div>
+              </div>
+              <div className="sp-odds-grid">
+                {oddsRows.map(({ rarity, pct, min, max }) => (
+                  <div className="sp-odds-row" key={rarity}>
+                    <span className="sp-range">{min === max ? fmtUsdWhole(min) : `${fmtUsdWhole(min)}-${fmtUsdWhole(max)}`}</span>
+                    <span className="sp-leader" />
+                    <span className="sp-pct">{pct.toFixed(pct < 1 ? 2 : 1)}%</span>
+                  </div>
+                ))}
+                {oddsRows.length === 0 && <p style={{ color: 'var(--sp-text-dim)', fontSize: 13 }}>No items configured for this pack yet.</p>}
               </div>
             </div>
-            <button type="button" className="sp-arrow sp-right" onClick={() => browseCF.goTo(browseCF.current() + 1)} aria-label="Next pack">&#8250;</button>
+
+            <div className="sp-info-section">
+              <div className="sp-info-section-head">
+                <h2>Potential Hits</h2>
+              </div>
+              <div className="sp-hits-grid-2col">
+                {potentialHits.map((item) => (
+                  <div className="sp-hit-card-v2" key={item.id}>
+                    <div className="sp-hit-card-v2-img"><img src={item.image || cardImg} alt={item.name} loading="lazy" /></div>
+                    <div className="sp-hit-card-v2-price">{fmtUsd(item.price)} est.</div>
+                  </div>
+                ))}
+                {potentialHits.length === 0 && <p style={{ color: 'var(--sp-text-dim)', fontSize: 13 }}>No legendary items configured for this pack yet.</p>}
+              </div>
+            </div>
+
+            <div className="sp-buy-bar">
+              <div className="sp-buy-bar-price"><span className="sp-coin-icon" />{fmtCoins(activeBox.price * quantity)}</div>
+              <div className="sp-qty-stepper">
+                <button type="button" onClick={() => setQuantity((q) => Math.max(1, q - 1))} aria-label="Decrease quantity">&minus;</button>
+                <span>{quantity}</span>
+                <button type="button" onClick={() => setQuantity((q) => Math.min(10, q + 1))} aria-label="Increase quantity">+</button>
+              </div>
+              <button type="button" className="sp-buy-now-btn" style={{ background: TIER_VISUALS[selectedTier].ctaGradient }} onClick={() => buyPack(selectedTier, quantity)}>
+                Buy Now
+              </button>
+            </div>
           </div>
-
-          {activeBox && (
-            <>
-              <div className="sp-info-section">
-                <div className="sp-info-section-head">
-                  <h2>Odds *</h2>
-                  <div className="sp-ev">Expected Value: <b>{fmtCoins(expectedValue)} coins</b></div>
-                </div>
-                <div className="sp-odds-grid">
-                  {oddsRows.map(({ rarity, pct }) => (
-                    <div className="sp-odds-row" key={rarity}>
-                      <span className="sp-range" style={{ textTransform: 'capitalize', color: RARITY_COLOR[rarity] }}>{rarity}</span>
-                      <span className="sp-leader" />
-                      <span className="sp-pct">{pct.toFixed(pct < 1 ? 2 : 1)}%</span>
-                    </div>
-                  ))}
-                  {oddsRows.length === 0 && <p style={{ color: 'var(--sp-text-dim)', fontSize: 13 }}>No items configured for this pack yet.</p>}
-                </div>
-              </div>
-
-              <div className="sp-info-section">
-                <div className="sp-info-section-head">
-                  <h2>Potential Hits</h2>
-                </div>
-                <div className="sp-hits-grid">
-                  {potentialHits.map((item) => (
-                    <div className="sp-hit-card" key={item.id}>
-                      <img src={item.image || cardImg} alt={item.name} loading="lazy" />
-                      <div className="sp-hit-price">{fmtCoins(item.price)} coins</div>
-                    </div>
-                  ))}
-                  {potentialHits.length === 0 && <p style={{ color: 'var(--sp-text-dim)', fontSize: 13 }}>No items configured for this pack yet.</p>}
-                </div>
-              </div>
-            </>
-          )}
         </div>
         )}
 
@@ -564,7 +596,10 @@ export const SlabPacks: React.FC = () => {
           <button type="button" className="sp-back-btn" onClick={backToBrowse}>&larr; Back to Packs</button>
           <div className="sp-view-heading">
             <h1>Pick a Pack</h1>
-            <p>{pendingTier ? slabBoxes[pendingTier]?.name : ''} purchased &mdash; every copy holds the same odds</p>
+            <p>
+              {pendingTier ? slabBoxes[pendingTier]?.name : ''} purchased &mdash; every copy holds the same odds
+              {remainingOpens > 1 ? ` (${remainingOpens} to open)` : ''}
+            </p>
           </div>
           <div className="sp-coverflow-outer">
             <button type="button" className="sp-arrow sp-left" onClick={() => pickCF.goTo(pickCF.current() - 1)} aria-label="Previous copy">&#8249;</button>
@@ -638,8 +673,12 @@ export const SlabPacks: React.FC = () => {
               <div className="sp-rarity-name" style={{ backgroundImage: `linear-gradient(90deg, ${prizeRarityColor}, var(--sp-holo-b), ${prizeRarityColor})` }}>{prize?.name ?? ''}</div>
               <div className="sp-rarity-sub">{prize ? `${fmtCoins(prizeValue)} coins \u00b7 ${prize.rarity}` : ''}</div>
             </div>
-            <button type="button" className={`sp-again-btn${openStage === 'revealed' ? ' sp-show' : ''}`} onClick={resetToOpen}>
-              Open Another Pack
+            <button
+              type="button"
+              className={`sp-again-btn${openStage === 'revealed' ? ' sp-show' : ''}`}
+              onClick={remainingOpens > 0 ? resetToOpen : backToBrowse}
+            >
+              {remainingOpens > 0 ? `Open Next Pack (${remainingOpens} left)` : 'Back to Packs'}
             </button>
           </div>
         </div>
@@ -662,6 +701,35 @@ const SLAB_PACKS_CSS = `
 .sp-view-heading{ text-align:center; margin-bottom:clamp(18px,2.6vh,26px); padding:0 20px; }
 .sp-view-heading h1{ margin:0; font-size:clamp(24px,4.6vw,34px); font-weight:800; }
 .sp-view-heading p{ margin:9px 0 0; font-size:clamp(13px,2.4vw,15px); color:var(--sp-text-dim); }
+.sp-browse-view{ padding-top:clamp(24px,4vh,36px); }
+.sp-hero-pack{ position:relative; z-index:4; width:min(52vw,260px); margin:0 auto; }
+.sp-hero-pack-img{ width:100%; display:block; position:relative; z-index:1; aspect-ratio:520/780; filter:drop-shadow(0 22px 40px rgba(0,0,0,.55)); }
+.sp-detail-panel{ width:100%; max-width:560px; margin:clamp(20px,3.5vh,30px) auto 0; padding:0 clamp(18px,4vw,26px) clamp(24px,4vh,32px); }
+.sp-detail-title{ margin:0; text-align:center; font-size:clamp(22px,4.4vw,30px); font-weight:800; }
+.sp-detail-desc{ margin:10px 0 0; text-align:center; font-size:clamp(13px,2.4vw,15px); line-height:1.5; color:var(--sp-text-dim); }
+.sp-tier-tabs{ display:flex; gap:10px; margin-top:clamp(18px,3vh,26px); overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.sp-tier-tabs::-webkit-scrollbar{ display:none; }
+.sp-tier-tab{ flex:1 0 auto; min-width:96px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 14px; border-radius:16px; border:1.5px solid transparent; background:rgba(255,255,255,.035); color:var(--sp-text-dim); cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease; }
+.sp-tier-tab-active{ border-color:var(--sp-holo-b); background:rgba(192,132,252,.12); color:var(--sp-text); }
+.sp-tier-tab-thumb{ width:34px; height:auto; aspect-ratio:520/780; display:block; }
+.sp-tier-tab-name{ font-size:12.5px; font-weight:700; }
+.sp-tier-tab-price{ display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:700; color:var(--sp-text-dim); }
+.sp-coin-icon-sm{ width:14px; height:14px; }
+.sp-info-icon{ font-size:13px; color:var(--sp-text-dim); cursor:help; vertical-align:middle; }
+.sp-hits-grid-2col{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(10px,2.4vw,14px); }
+.sp-hit-card-v2{ border-radius:16px; background:#f2f1f6; padding:10px 10px 12px; display:flex; flex-direction:column; align-items:center; }
+.sp-hit-card-v2-img{ width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; }
+.sp-hit-card-v2-img img{ max-width:100%; max-height:100%; object-fit:contain; display:block; }
+.sp-hit-card-v2-price{ margin-top:8px; font-size:clamp(12.5px,2.4vw,14px); font-weight:800; color:#14121c; }
+.sp-buy-bar{ display:flex; align-items:center; gap:12px; margin-top:clamp(24px,4vh,32px); padding:clamp(14px,2.6vw,18px); border-radius:20px; background:rgba(255,255,255,.04); flex-wrap:wrap; }
+.sp-buy-bar-price{ display:flex; align-items:center; gap:8px; font-size:clamp(16px,3vw,19px); font-weight:800; }
+.sp-qty-stepper{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.06); border-radius:999px; padding:6px 8px; }
+.sp-qty-stepper button{ width:28px; height:28px; border-radius:50%; border:none; background:rgba(255,255,255,.08); color:var(--sp-text); font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1; }
+.sp-qty-stepper button:hover{ background:rgba(255,255,255,.16); }
+.sp-qty-stepper span{ min-width:18px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; }
+.sp-buy-now-btn{ flex:1 1 160px; padding:15px 0; border-radius:999px; border:none; font-size:13.5px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#0c0a14; cursor:pointer; box-shadow:0 10px 26px -8px rgba(192,132,252,.6); transition:transform .15s ease; }
+.sp-buy-now-btn:hover{ transform:translateY(-2px); }
+.sp-buy-now-btn:active{ transform:translateY(0) scale(.98); }
 .sp-back-btn{ align-self:flex-start; margin:0 0 clamp(10px,2vh,18px) clamp(18px,4vw,32px); background:transparent; border:none; color:var(--sp-text-dim); font-size:13px; padding:8px 10px 8px 0; cursor:pointer; }
 .sp-back-btn:hover{ color:var(--sp-text); }
 .sp-coverflow-outer{ position:relative; width:100%; display:flex; align-items:center; justify-content:center; }
@@ -679,7 +747,6 @@ const SLAB_PACKS_CSS = `
 @keyframes sp-foilFlicker{ 0%{background-position:0% 0%;} 100%{background-position:100% 100%;} }
 .sp-fan-card-reflect{ width:100%; height:56px; overflow:hidden; pointer-events:none; margin-top:2px; }
 .sp-fan-card-reflect img{ display:block; width:100%; aspect-ratio:520/780; transform:scaleY(-1); -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); mask-image:linear-gradient(to bottom, rgba(0,0,0,.4), transparent 75%); opacity:.45; }
-.sp-tier-ribbon{ position:absolute; top:14px; left:14px; padding:5px 13px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; border-radius:999px; backdrop-filter:blur(4px); z-index:3; }
 .sp-fan-card-name{ margin-top:18px; font-size:clamp(16px,3.1vw,18px); font-weight:700; }
 .sp-fan-card-sub{ margin-top:3px; font-size:12px; color:var(--sp-text-dim); letter-spacing:.06em; text-transform:uppercase; }
 .sp-price-row{ display:flex; align-items:center; gap:7px; margin-top:14px; font-size:clamp(17px,3.2vw,19px); font-weight:800; }
@@ -687,7 +754,7 @@ const SLAB_PACKS_CSS = `
 .sp-arrow{ position:absolute; top:38%; transform:translateY(-50%); width:46px; height:46px; border-radius:50%; border:none; background:rgba(20,17,31,.75); backdrop-filter:blur(6px); box-shadow:0 8px 24px -8px rgba(0,0,0,.6); color:var(--sp-text); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:19px; z-index:5; }
 .sp-arrow.sp-left{ left:clamp(2px,1vw,10px); } .sp-arrow.sp-right{ right:clamp(2px,1vw,10px); }
 @media (hover:none){ .sp-arrow{ display:none; } }
-.sp-info-section{ width:min(94vw,560px); margin:clamp(22px,4vh,34px) auto 0; padding:clamp(18px,3.4vw,24px) clamp(18px,4vw,26px); border-radius:22px; background:rgba(255,255,255,.035); }
+.sp-info-section{ width:100%; margin:clamp(22px,4vh,34px) 0 0; padding:clamp(18px,3.4vw,24px) clamp(18px,4vw,26px); border-radius:22px; background:rgba(255,255,255,.035); }
 .sp-info-section-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:clamp(14px,2.6vh,20px); flex-wrap:wrap; }
 .sp-info-section-head h2{ margin:0; font-size:clamp(15px,2.8vw,17px); font-weight:800; }
 .sp-ev{ font-size:clamp(13px,2.4vw,14px); color:var(--sp-text-dim); white-space:nowrap; }
@@ -698,10 +765,6 @@ const SLAB_PACKS_CSS = `
 .sp-odds-row .sp-range{ white-space:nowrap; color:var(--sp-text); font-weight:600; }
 .sp-odds-row .sp-leader{ flex:1; min-width:10px; border-bottom:2px dotted rgba(255,255,255,.22); margin-bottom:4px; }
 .sp-odds-row .sp-pct{ white-space:nowrap; color:var(--sp-text-dim); font-weight:700; }
-.sp-hits-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(122px,1fr)); gap:clamp(10px,2.4vw,14px); }
-.sp-hit-card{ position:relative; border-radius:14px; overflow:hidden; background:rgba(255,255,255,.03); }
-.sp-hit-card img{ width:100%; display:block; aspect-ratio:1/1; object-fit:cover; }
-.sp-hit-price{ position:absolute; left:0; right:0; bottom:0; padding:20px 8px 8px; text-align:center; font-size:clamp(11.5px,2.4vw,12.5px); font-weight:800; color:#fff; background:linear-gradient(to top, rgba(0,0,0,.85) 20%, transparent 100%); }
 .sp-reveal-stage{ position:relative; display:grid; place-items:center; width:100%; }
 .sp-reveal-stage > .sp-pack-wrap, .sp-reveal-stage > .sp-card-wrap{ grid-area:1/1; }
 .sp-pack-wrap{ position:relative; z-index:4; width:min(58vw,380px); cursor:pointer; animation:sp-float 3.4s ease-in-out infinite; transition:opacity .5s ease, transform .5s ease; }
