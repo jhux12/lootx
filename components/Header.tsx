@@ -14,6 +14,7 @@ import {
   ChevronDown,
   HelpCircle,
   Facebook,
+  Gift,
   Instagram,
   LifeBuoy,
   LogIn,
@@ -581,8 +582,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         : desktopNavButtonClass
                     } gap-2`}
                   >
-                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                    <span>Daily Spin</span>
+                    <Gift className="h-4 w-4" aria-hidden="true" />
+                    <span>Rewards</span>
                     {showDailySpinReady ? (
                       <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#54f5b3] shadow-[0_0_12px_rgba(84,245,179,0.8)]" />
                     ) : null}
