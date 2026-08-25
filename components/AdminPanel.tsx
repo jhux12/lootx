@@ -4624,11 +4624,11 @@ export const AdminPanel: React.FC = () => {
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box
+                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box (First Deposit Required)
                                     </label>
                                 </div>
                                 <p className="text-[10px] text-gray-500">
-                                    Daily free boxes can be saved with a price of 0.
+                                    This box can be claimed free once every 24 hours after a user makes their first deposit. Daily free boxes can be saved with a price of 0.
                                 </p>
                                 <div className="mt-3 rounded-lg border border-purple-400/20 bg-purple-500/5 p-3">
                                     <div className="flex items-center gap-2">

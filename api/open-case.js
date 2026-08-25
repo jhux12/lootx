@@ -13,6 +13,7 @@ import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
+const DAILY_FREE_BOX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const normalizeSizes = (sizes = []) =>
   sizes
@@ -203,12 +204,20 @@ export default async function handler(req, res) {
 
       if (isFree) {
         if (boxData.isDaily !== true) {
-          fail(400, 'INVALID_REQUEST', 'Only the signup free box can be opened for free.', { caseId: boxId });
+          fail(400, 'INVALID_REQUEST', 'Only the configured daily box can be opened for free.', { caseId: boxId });
         }
-        if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0) {
-          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup box already claimed.', {
+        const hasMadeDeposit = toSafeNonNegativeNumber(userData.depositCount) > 0
+          || toSafeNonNegativeNumber(userData.totalDepositedCents) > 0
+          || toSafeNonNegativeNumber(userData.totalSpent) > 0;
+        if (!hasMadeDeposit) {
+          fail(403, 'DEPOSIT_REQUIRED', 'Make your first deposit to unlock the daily free box.', { caseId: boxId });
+        }
+        const nextFreeBoxClaimAt = existingFreeBoxClaim + DAILY_FREE_BOX_COOLDOWN_MS;
+        if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0 && nextFreeBoxClaimAt > Date.now()) {
+          fail(409, 'FREE_BOX_COOLDOWN', 'Your next daily free box is not ready yet.', {
             caseId: boxId,
-            claimedAt: existingFreeBoxClaim
+            claimedAt: existingFreeBoxClaim,
+            nextClaimAt: nextFreeBoxClaimAt
           });
         }
       }

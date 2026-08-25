@@ -1,25 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ChevronLeft, Crown, Gift, LockKeyhole, RefreshCw, Sparkles, Timer } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { CheckCircle2, ChevronLeft, Crown, Gift, LockKeyhole, PackageOpen, Sparkles, Timer } from "lucide-react";
 import { COIN_ICON } from "../constants";
-
-type SpinPrize = { id: number; amount: number; angle: number };
+import type { MysteryBox } from "../types";
 
 interface DailySpinPageProps {
   onBack?: () => void;
-  onSpinStart: () => Promise<{ amount: number; nextClaimAt?: number }>;
-  onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
-  onExploreBoxes: () => void;
-  canSpin: boolean;
   nextClaimAt: number;
   embedded?: boolean;
-  dailySpinOdds?: Record<string, number>;
+  dailyBox?: MysteryBox | null;
+  hasMadeDeposit?: boolean;
+  onOpenDailyBox?: () => void;
 }
-
-const DEFAULT_PRIZES = [50, 5, 10, 25, 100, 250];
-const getPrizes = (odds?: Record<string, number>): SpinPrize[] => {
-  const configured = Object.keys(odds ?? {}).map(Number).filter((n) => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
-  return Array.from(new Set([...configured, ...DEFAULT_PRIZES])).slice(0, 6).map((amount, index) => ({ id: index, amount, angle: index * 60 + 30 }));
-};
 
 const formatCountdown = (target: number) => {
   const seconds = Math.max(0, Math.floor((target - Date.now()) / 1000));
@@ -32,47 +23,15 @@ const milestones = [
   { amount: "$500", reward: "VIP + Early Access", icon: "vip" },
 ];
 
-export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStart, onSpinClaim, canSpin, nextClaimAt, embedded = false, dailySpinOdds }) => {
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
-  const [lastPrize, setLastPrize] = useState<number | null>(null);
-  const [error, setError] = useState("");
-  const [localNextClaimAt, setLocalNextClaimAt] = useState(nextClaimAt);
+export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, nextClaimAt, embedded = false, dailyBox, hasMadeDeposit = false, onOpenDailyBox }) => {
   const [now, setNow] = useState(Date.now());
-  const prizes = useMemo(() => getPrizes(dailySpinOdds), [dailySpinOdds]);
-  const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
-  const canSpinNow = canSpin && effectiveNextClaimAt <= now;
+  const effectiveNextClaimAt = nextClaimAt > 0 ? nextClaimAt : 0;
+  const isDailyBoxReady = hasMadeDeposit && effectiveNextClaimAt <= now;
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, []);
-
-  const handleSpin = async () => {
-    if (isSpinning || !canSpinNow) return;
-    setError("");
-    setIsSpinning(true);
-    try {
-      const started = await onSpinStart();
-      const winner = prizes.find((prize) => prize.amount === started.amount) ?? prizes[0];
-      if (started.nextClaimAt) setLocalNextClaimAt(started.nextClaimAt);
-      setRotation((value) => value + 1800 + (360 - winner.angle));
-      window.setTimeout(async () => {
-        try {
-          const claimed = await onSpinClaim();
-          setLocalNextClaimAt(claimed.nextClaimAt);
-          setLastPrize(claimed.amount || winner.amount);
-        } catch (claimError) {
-          setError((claimError as Error)?.message || "Unable to claim your reward.");
-        } finally {
-          setIsSpinning(false);
-        }
-      }, 5000);
-    } catch (spinError) {
-      setError((spinError as Error)?.message || "Unable to spin right now.");
-      setIsSpinning(false);
-    }
-  };
 
   return (
     <main className={`${embedded ? "min-h-[700px]" : "min-h-[calc(100vh-70px)]"} relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#050711] text-white`}>
@@ -100,14 +59,12 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, onSpinStar
           <p className="mt-4 text-xs text-slate-500 lg:text-center">Milestones are based on your lifetime deposits. Rewards are added automatically.</p>
         </section>
 
-        <section className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-[#11163a] to-[#090d20] p-5 sm:p-7">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-lg font-black sm:text-xl"><RefreshCw className="h-5 w-5 text-violet-300" /> DAILY REWARD</h2><p className="mt-1 text-xs text-slate-300 sm:text-sm">Spin once every 24 hours for free coins!</p></div><span className="flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-950/40 px-3 py-2 text-xs"><Timer className="h-4 w-4" /> {canSpinNow ? "Ready to spin" : `Resets in ${formatCountdown(effectiveNextClaimAt)}`}</span></div>
-          <div className="relative mx-auto mt-8 h-[290px] w-[290px] sm:h-[390px] sm:w-[390px]">
-            <div className="absolute left-1/2 top-[-12px] z-30 -translate-x-1/2 border-x-[24px] border-t-[42px] border-x-transparent border-t-violet-500 drop-shadow-[0_0_12px_#7c3aed]" />
-            <div className="absolute inset-0 rounded-full border-4 border-slate-600/70 bg-[repeating-conic-gradient(from_-30deg,#171c2d_0deg_59deg,#0d1220_59deg_60deg)] shadow-2xl transition-transform duration-[5000ms] ease-[cubic-bezier(.15,0,.15,1)]" style={{ transform: `rotate(${rotation}deg)` }}>{prizes.map((prize) => <div key={prize.id} className="absolute left-1/2 top-1/2" style={{ transform: `rotate(${prize.angle}deg) translateY(-${embedded ? 112 : 112}px)` }}><div className="flex -translate-x-1/2 -translate-y-1/2 flex-col items-center" style={{ transform: `rotate(-${prize.angle}deg)` }}><img src={COIN_ICON} alt="" className="h-8 w-8 sm:h-10 sm:w-10" /><b className="text-sm">{prize.amount}</b></div></div>)}</div>
-            <button onClick={handleSpin} disabled={isSpinning || !canSpinNow} className="absolute left-1/2 top-1/2 z-20 grid h-28 w-28 -translate-x-1/2 -translate-y-1/2 place-content-center rounded-full border-2 border-slate-700 bg-[#080b14] text-center shadow-xl transition hover:border-violet-500 disabled:cursor-not-allowed disabled:opacity-70 sm:h-36 sm:w-36"><span className="font-black">{isSpinning ? "SPINNING" : lastPrize ? `YOU WON ${lastPrize}` : canSpinNow ? "SPIN NOW" : "CLAIMED"}</span><span className="mt-1 text-[10px] text-slate-400">Free Daily Reward</span></button>
+        <section className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-[#11163a] to-[#090d20] p-5 sm:p-7 lg:p-9">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-lg font-black sm:text-xl"><PackageOpen className="h-5 w-5 text-violet-300" /> DAILY FREE BOX</h2><p className="mt-1 text-xs text-slate-300 sm:text-sm">Make your first deposit to unlock one free mystery box every 24 hours.</p></div>{hasMadeDeposit && <span className="flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-950/40 px-3 py-2 text-xs"><Timer className="h-4 w-4" /> {isDailyBoxReady ? "Ready to open" : `Resets in ${formatCountdown(effectiveNextClaimAt)}`}</span>}</div>
+          <div className="mx-auto mt-7 grid max-w-3xl items-center gap-6 rounded-2xl border border-white/10 bg-black/20 p-5 sm:grid-cols-[minmax(180px,280px)_1fr] sm:p-7">
+            <div className="relative mx-auto grid aspect-square w-full max-w-[250px] place-items-center overflow-hidden rounded-2xl bg-[radial-gradient(circle,rgba(124,58,237,.34),transparent_65%)]"><div className="absolute inset-4 rounded-full bg-violet-500/10 blur-2xl" />{dailyBox?.image ? <img src={dailyBox.image} alt={dailyBox.name} className="relative h-full w-full object-contain p-4 drop-shadow-[0_22px_32px_rgba(0,0,0,.5)]" /> : <Gift className="relative h-24 w-24 text-violet-400" />}{!hasMadeDeposit && <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#080b14]"><LockKeyhole className="h-5 w-5 text-slate-400" /></span>}</div>
+            <div className="text-center sm:text-left"><p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">Today&apos;s free reward</p><h3 className="mt-2 text-2xl font-black sm:text-3xl">{dailyBox?.name ?? "Daily Mystery Box"}</h3><p className="mt-3 text-sm leading-6 text-slate-300">{!hasMadeDeposit ? "Your daily box activates automatically after your first successful deposit." : isDailyBoxReady ? "Your free box is ready. Open it now and reveal today’s collectible reward." : "You claimed today’s box. Come back when the timer reaches zero for another free opening."}</p><button type="button" onClick={onOpenDailyBox} disabled={!dailyBox || !isDailyBoxReady} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3 text-sm font-black shadow-[0_12px_30px_rgba(90,67,255,.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none sm:w-auto">{!hasMadeDeposit ? <><LockKeyhole className="h-4 w-4" /> UNLOCK AFTER FIRST DEPOSIT</> : !dailyBox ? "DAILY BOX COMING SOON" : isDailyBoxReady ? <><PackageOpen className="h-4 w-4" /> OPEN FREE BOX</> : <><CheckCircle2 className="h-4 w-4" /> CLAIMED TODAY</>}</button></div>
           </div>
-          {!canSpinNow && <div className="mt-4 flex items-center justify-center gap-2 text-sm text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Daily reward claimed</div>}{error && <p className="mt-3 text-center text-sm text-red-400">{error}</p>}
         </section>
       </div>
     </main>

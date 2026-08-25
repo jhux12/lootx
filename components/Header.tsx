@@ -50,6 +50,7 @@ import {
 import { UserAvatar } from "./UserAvatar";
 import { resolveUserDisplayName } from "../utils/userIdentity";
 import { lockPageScroll } from "../utils/scrollLock";
+import { hasUserMadeDeposit } from "../utils/depositEligibility";
 
 const ActivityDrawer = lazy(() =>
   import("../src/ui/activity/ActivityDrawer").then((module) => ({
@@ -135,18 +136,18 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const unreadCount = useUnreadActivityCount();
-  const lastDailyClaim = useMemo(
+  const lastDailyBoxClaim = useMemo(
     () =>
-      Number.isFinite(user.lastDailyClaim ?? NaN)
-        ? Number(user.lastDailyClaim)
+      Number.isFinite(user.lastFreeBoxClaim ?? NaN)
+        ? Number(user.lastFreeBoxClaim)
         : 0,
-    [user.lastDailyClaim],
+    [user.lastFreeBoxClaim],
   );
-  const isDailySpinReady = useMemo(() => {
+  const isDailyBoxReady = useMemo(() => {
     const dailyCooldownMs = 24 * 60 * 60 * 1000;
-    return !lastDailyClaim || lastDailyClaim + dailyCooldownMs <= Date.now();
-  }, [lastDailyClaim]);
-  const showDailySpinReady = isAuthenticated && isDailySpinReady;
+    return !lastDailyBoxClaim || lastDailyBoxClaim + dailyCooldownMs <= Date.now();
+  }, [lastDailyBoxClaim]);
+  const showDailySpinReady = isAuthenticated && hasUserMadeDeposit(user) && isDailyBoxReady;
   const hasDailyBox = useMemo(() => boxes.some((box) => box.isDaily), [boxes]);
   const hasFreeSignupBox =
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;

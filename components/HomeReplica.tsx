@@ -11,6 +11,7 @@ import { useAuth, useUI } from '../context/GameContext';
 import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 type HomeReplicaProps = {
   demoBoxId?: string | null;
@@ -304,7 +305,11 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   }, []);
 
 
-  const showFreeBoxSlide = isAuthenticated && Boolean(freeSignupBox) && !user.lastFreeBoxClaim;
+  const lastDailyBoxClaim = Number(user.lastFreeBoxClaim ?? 0);
+  const showFreeBoxSlide = isAuthenticated
+    && hasUserMadeDeposit(user)
+    && Boolean(freeSignupBox)
+    && (!lastDailyBoxClaim || lastDailyBoxClaim + 24 * 60 * 60 * 1000 <= Date.now());
 
   useEffect(() => {
     if (showFreeBoxSlide || promoBox) setActiveHeroSlide(0);

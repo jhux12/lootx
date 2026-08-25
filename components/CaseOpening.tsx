@@ -27,6 +27,7 @@ import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 import { calculateCardCenteredTranslate, createLockedSpinState, getLockedWinningItem } from '../utils/spinnerSpinLock';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -501,7 +502,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const goldStageTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
-  const canFreeSpin = !user.lastFreeBoxClaim;
+  const dailyFreeBoxCooldownMs = 24 * 60 * 60 * 1000;
+  const hasMadeDeposit = hasUserMadeDeposit(user);
+  const canFreeSpin = hasMadeDeposit && (!user.lastFreeBoxClaim || user.lastFreeBoxClaim + dailyFreeBoxCooldownMs <= Date.now());
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
   const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
   const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
@@ -1637,7 +1640,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       if (!canFreeSpin) {
         spinRequestLockRef.current = false;
-        toast.info("Free signup box already claimed.");
+        toast.info(hasMadeDeposit ? "Your next daily free box is not ready yet." : "Make your first deposit to unlock the daily free box.");
         return;
       }
       if (!auth.currentUser?.phoneNumber) {
