@@ -1765,7 +1765,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         const analyticsPayload = { box_id: box.id, box_name: box.name, box_type: box.category ?? 'box', coin_price: Number(data.price ?? box.price ?? 0), usd_value: coinsToUsd(Number(data.price ?? box.price ?? 0), economySettings), is_free: Boolean(isFree), item_id: winner.id, item_name: winner.name, item_rarity: winner.rarity, item_value_coins: Number(winner.price ?? 0), item_value_usd: coinsToUsd(Number(winner.price ?? 0), economySettings), balance_before: Number(balance ?? 0), balance_after: Number(data.newCoinBalance ?? data.newCoins ?? balance ?? 0), open_id: data.openId, entry_point: 'case_opening' };
         trackBoxOpen(analyticsPayload, data.openId);
         trackItemWon({ ...analyticsPayload, inventory_instance_id: data.inventoryId }, data.openId);
-        if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
+        if (isFree && !isDailyRewardBox && Number.isFinite(data.freeBoxClaimedAt)) {
           await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
           trackEvent('free_spin_completed', {
             box_id: box.id,
@@ -1777,7 +1777,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
           syncBalance(updatedCoinBalance);
-          if (isFree) {
+          if (isFree && !isDailyRewardBox) {
             pendingPostFreeBoxFlowRef.current = true;
           }
           if (!isFree) {
