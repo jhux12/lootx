@@ -134,10 +134,10 @@ export const MobileBottomNav: React.FC = () => {
 
   const hasFreeSignupBox = useMemo(() => {
     const cooldownMs = 24 * 60 * 60 * 1000;
-    const lastClaim = Number(user.lastFreeBoxClaim ?? 0);
+    const lastClaim = Number(user.lastDailyRewardBoxClaim ?? 0);
     return isAuthenticated
       && hasUserMadeDeposit(user)
-      && boxes.some((box) => box.isDaily)
+      && boxes.some((box) => box.isDailyReward)
       && (!lastClaim || lastClaim + cooldownMs <= Date.now());
   }, [boxes, isAuthenticated, user]);
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;

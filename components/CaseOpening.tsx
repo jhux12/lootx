@@ -116,7 +116,7 @@ const mapBoxDetail = (id: string, data: Record<string, any>): MysteryBox => {
     const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
     return { id: item.id ?? `${id}-${index}`, name: item.name ?? 'Mystery Item', price: Number(item.value ?? item.price ?? 0), image: item.image ?? '', rarity, chance: Number(item.weight ?? item.chance ?? 0), color: item.color ?? '#9ca3af', brand: item.brand ?? '', category: item.category ?? '', tags: Array.isArray(item.tags) ? item.tags : [], sizes: Array.isArray(item.sizes) ? item.sizes : [], redeemable: item.redeemable !== false } as CaseItem;
   });
-  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
+  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isDailyReward: data.isDailyReward === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
 };
 
 const normalizeRarityKey = (rarity?: string) => {
@@ -411,7 +411,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const isAdmin = Boolean(user?.isAdmin);
   // Daily signup boxes are always free openings, including legacy URLs that may
   // not carry the explicit `isFree` route flag.
-  const isFreeOpening = Boolean(isFree || box?.isDaily);
+  const isFreeOpening = Boolean(isFree || box?.isDaily || box?.isDailyReward);
   const hideDropTableOdds = isFreeOpening;
   // Sort items high to low for display purposes
   const displayItems = useMemo(() => [...items].sort(
@@ -504,7 +504,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const topUpLockTimerRef = useRef<number | null>(null);
   const dailyFreeBoxCooldownMs = 24 * 60 * 60 * 1000;
   const hasMadeDeposit = hasUserMadeDeposit(user);
-  const canFreeSpin = hasMadeDeposit && (!user.lastFreeBoxClaim || user.lastFreeBoxClaim + dailyFreeBoxCooldownMs <= Date.now());
+  const isDailyRewardBox = box?.isDailyReward === true;
+  const canFreeSpin = isDailyRewardBox
+    ? hasMadeDeposit && (!user.lastDailyRewardBoxClaim || user.lastDailyRewardBoxClaim + dailyFreeBoxCooldownMs <= Date.now())
+    : !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
   const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
   const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
@@ -1640,7 +1643,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       if (!canFreeSpin) {
         spinRequestLockRef.current = false;
-        toast.info(hasMadeDeposit ? "Your next daily free box is not ready yet." : "Make your first deposit to unlock the daily free box.");
+        toast.info(isDailyRewardBox
+          ? (hasMadeDeposit ? "Your next daily free box is not ready yet." : "Make your first deposit to unlock the daily free box.")
+          : "Your signup free box has already been claimed.");
         return;
       }
       if (!auth.currentUser?.phoneNumber) {

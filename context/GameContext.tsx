@@ -674,6 +674,7 @@ type PersistUserData = Partial<{
   topPullsPublic: boolean;
   lastDailyClaim: number;
   lastFreeBoxClaim: number;
+  lastDailyRewardBoxClaim?: number;
   isAdmin: boolean;
 }>;
 
@@ -1024,6 +1025,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
+  const lastDailyRewardBoxClaim = data.lastDailyRewardBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyRewardBoxClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -1061,6 +1063,7 @@ const buildUserProfile = (firebaseUser: FirebaseUser, data: Record<string, any> 
     activePullPassBoxClaim: data.activePullPassBoxClaim ?? undefined,
     lastDailyClaim,
     lastFreeBoxClaim,
+    lastDailyRewardBoxClaim,
     totalSpent: normalizeNonNegativeNumber(data.totalSpent),
     totalDepositedCents: normalizeNonNegativeNumber(data.totalDepositedCents),
     depositCount: normalizeNonNegativeNumber(data.depositCount),
@@ -1097,6 +1100,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
   const xp = Number(data.xpBalance ?? data.xp ?? 0);
   const lastDailyClaim = data.lastDailyClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyClaim, 0);
   const lastFreeBoxClaim = data.lastFreeBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastFreeBoxClaim, 0);
+  const lastDailyRewardBoxClaim = data.lastDailyRewardBoxClaim === undefined ? undefined : normalizeTimestamp(data.lastDailyRewardBoxClaim, 0);
   const followerIds = Array.isArray(data.followers)
     ? data.followers
     : Array.isArray(data.friends)
@@ -1134,6 +1138,7 @@ const buildUserProfileFromDoc = (userId: string, data: Record<string, any> = {})
     activePullPassBoxClaim: data.activePullPassBoxClaim ?? undefined,
     lastDailyClaim,
     lastFreeBoxClaim,
+    lastDailyRewardBoxClaim,
     totalSpent: normalizeNonNegativeNumber(data.totalSpent),
     totalDepositedCents: normalizeNonNegativeNumber(data.totalDepositedCents),
     depositCount: normalizeNonNegativeNumber(data.depositCount),
@@ -2125,6 +2130,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             tag: data.tag as MysteryBox['tag'],
             tags: Array.isArray(data.tags) ? (data.tags as MysteryBox['tags']) : undefined,
             isDaily: data.isDaily ?? false,
+            isDailyReward: data.isDailyReward === true,
             isPullPassBox: data.isPullPassBox === true,
             pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,

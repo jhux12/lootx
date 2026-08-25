@@ -454,6 +454,7 @@ export const AdminPanel: React.FC = () => {
       spinnerBackgroundImage: '',
       accentColor: '#3b82f6',
       isDaily: false,
+      isDailyReward: false,
       isPullPassBox: false,
       pullPassBoxType: 'bronze',
       tags: [],
@@ -3110,7 +3111,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleSaveBox = async () => {
-      const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
+      const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isDailyReward || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
           alert("Please fill in box details");
           return;
@@ -3148,6 +3149,11 @@ export const AdminPanel: React.FC = () => {
               }
           });
       }
+      if (newBox.isDailyReward) {
+          boxes.forEach(b => {
+              if (b.isDailyReward && b.id !== (editingBoxId || '')) updateBox({ ...b, isDailyReward: false });
+          });
+      }
 
       const box: MysteryBox = buildEditableBoxPayload(boxItems);
 
@@ -3179,6 +3185,7 @@ export const AdminPanel: React.FC = () => {
           tag: box.tag,
           tags: normalizeBoxTagList(box.tags ?? (box.tag ? [box.tag] : [])),
           isDaily: box.isDaily,
+          isDailyReward: box.isDailyReward ?? false,
           isPullPassBox: box.isPullPassBox ?? false,
           pullPassBoxType: box.pullPassBoxType ?? 'bronze',
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
@@ -3287,7 +3294,8 @@ export const AdminPanel: React.FC = () => {
         image: 'https://picsum.photos/300',
         spinnerBackgroundImage: '',
         accentColor: '#3b82f6',
-        isDaily: false,
+          isDaily: false,
+          isDailyReward: false,
         tags: [],
         sellBackRate: 0.82
       });
@@ -3411,9 +3419,10 @@ export const AdminPanel: React.FC = () => {
       tag: newBox.tag,
       tags: normalizeBoxTagList(newBox.tags ?? []),
       isDaily: newBox.isDaily,
+      isDailyReward: newBox.isDailyReward === true,
       isPullPassBox: newBox.isPullPassBox === true,
       pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
-      sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
+      sellBackRate: newBox.sellBackRate ?? (newBox.isDaily || newBox.isDailyReward ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
       riskLevel: riskBalance
@@ -4620,16 +4629,20 @@ export const AdminPanel: React.FC = () => {
                                     <Checkbox
                                         id="daily-case"
                                         checked={newBox.isDaily || false}
-                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked})}
+                                        onChange={e => setNewBox({...newBox, isDaily: e.target.checked, ...(e.target.checked ? { isDailyReward: false } : {})})}
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box (First Deposit Required)
+                                        <Calendar className="w-3 h-3 text-emerald-400" /> Set as Signup Free Box
                                     </label>
                                 </div>
                                 <p className="text-[10px] text-gray-500">
-                                    This box can be claimed free once every 24 hours after a user makes their first deposit. Daily free boxes can be saved with a price of 0.
+                                    One-time free box for new users. This remains separate from the recurring daily reward.
                                 </p>
+                                <div className="mt-3 flex items-center gap-2 rounded-lg border border-violet-400/25 bg-violet-500/5 p-3">
+                                    <Checkbox id="daily-reward-case" checked={newBox.isDailyReward || false} onChange={e => setNewBox({...newBox, isDailyReward: e.target.checked, ...(e.target.checked ? { isDaily: false } : {})})} className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-violet-500 focus:ring-violet-500" />
+                                    <label htmlFor="daily-reward-case" className="text-sm text-gray-300"><span className="font-semibold text-violet-300">Set as Daily Reward Box</span><span className="mt-0.5 block text-[10px] text-gray-500">Recurring every 24 hours after the user&apos;s first deposit.</span></label>
+                                </div>
                                 <div className="mt-3 rounded-lg border border-purple-400/20 bg-purple-500/5 p-3">
                                     <div className="flex items-center gap-2">
                                         <Checkbox
@@ -4908,6 +4921,7 @@ export const AdminPanel: React.FC = () => {
                                                 <div className="text-white flex items-center gap-2">
                                                     {box.name}
                                                     {box.isDaily && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">DAILY</span>}
+                                                    {box.isDailyReward && <span className="text-[10px] bg-violet-500/20 text-violet-300 px-1 rounded">DAILY REWARD</span>}
                                                     {box.isPullPassBox && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1 rounded">PULL PASS {box.pullPassBoxType?.toUpperCase()}</span>}
                                                 </div>
                                             </div>

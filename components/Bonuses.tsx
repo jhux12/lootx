@@ -8,10 +8,10 @@ export const Bonuses: React.FC<{ embedded?: boolean }> = ({
 }) => {
   const { user, boxes, setView, isAuthenticated, openAuthModal } = useGame();
   const dailyCooldownMs = 24 * 60 * 60 * 1000;
-  const dailyBox = boxes.find((box) => box.isDaily) ?? null;
+  const dailyBox = boxes.find((box) => box.isDailyReward) ?? null;
   const hasMadeDeposit = hasUserMadeDeposit(user);
-  const lastDailyBoxClaim = Number.isFinite(user.lastFreeBoxClaim ?? NaN)
-    ? Number(user.lastFreeBoxClaim)
+  const lastDailyBoxClaim = Number.isFinite(user.lastDailyRewardBoxClaim ?? NaN)
+    ? Number(user.lastDailyRewardBoxClaim)
     : 0;
   const nextDailyBoxClaimAt = lastDailyBoxClaim
     ? lastDailyBoxClaim + dailyCooldownMs

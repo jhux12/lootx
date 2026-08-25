@@ -138,17 +138,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const unreadCount = useUnreadActivityCount();
   const lastDailyBoxClaim = useMemo(
     () =>
-      Number.isFinite(user.lastFreeBoxClaim ?? NaN)
-        ? Number(user.lastFreeBoxClaim)
+      Number.isFinite(user.lastDailyRewardBoxClaim ?? NaN)
+        ? Number(user.lastDailyRewardBoxClaim)
         : 0,
-    [user.lastFreeBoxClaim],
+    [user.lastDailyRewardBoxClaim],
   );
   const isDailyBoxReady = useMemo(() => {
     const dailyCooldownMs = 24 * 60 * 60 * 1000;
     return !lastDailyBoxClaim || lastDailyBoxClaim + dailyCooldownMs <= Date.now();
   }, [lastDailyBoxClaim]);
   const showDailySpinReady = isAuthenticated && hasUserMadeDeposit(user) && isDailyBoxReady;
-  const hasDailyBox = useMemo(() => boxes.some((box) => box.isDaily), [boxes]);
+  const hasDailyBox = useMemo(() => boxes.some((box) => box.isDailyReward), [boxes]);
   const hasFreeSignupBox =
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;

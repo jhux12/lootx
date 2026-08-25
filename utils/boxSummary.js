@@ -10,6 +10,7 @@ export const toBoxSummary = (id, source = {}) => ({
   ...(typeof source.tag === 'string' ? { tag: source.tag } : {}),
   ...(Array.isArray(source.tags) ? { tags: source.tags.filter((tag) => typeof tag === 'string') } : {}),
   isDaily: source.isDaily === true,
+  isDailyReward: source.isDailyReward === true,
   isPullPassBox: source.isPullPassBox === true,
   ...(source.pullPassBoxType ? { pullPassBoxType: source.pullPassBoxType } : {}),
   ...(source.sortOrder == null ? {} : { sortOrder: Number(source.sortOrder) }),

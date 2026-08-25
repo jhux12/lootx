@@ -56,6 +56,7 @@ export interface User {
   followers?: string[];
   lastDailyClaim?: number;
   lastFreeBoxClaim?: number;
+  lastDailyRewardBoxClaim?: number;
   totalSpent?: number;
   totalDepositedCents?: number;
   depositCount?: number;
@@ -277,6 +278,8 @@ export interface MysteryBox {
   riskLevel?: number;
   isUserCreated?: boolean;
   isDaily?: boolean;
+  /** Recurring deposit-gated reward box; separate from the one-time signup box. */
+  isDailyReward?: boolean;
   isPullPassBox?: boolean;
   pullPassBoxType?: 'bronze' | 'silver' | 'gold' | 'elite' | 'master' | 'collector';
   sellBackRate?: number;
