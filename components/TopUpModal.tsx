@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { X, Wallet, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+import { X, Wallet, Loader2, CheckCircle, Sparkles, Crown, Gift, Zap, ShieldCheck, Package, LockKeyhole } from 'lucide-react';
 import { getStripe } from '../utils/stripeClient';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { auth } from '../firebase';
-import { CoinAmount } from './CoinAmount';
 import { PaymentMethodIcons } from './PaymentMethodIcons';
 import { readCookieValue, trackMetaEvent } from '../utils/trackEvent';
 import { hasUserMadeDeposit } from '../utils/depositEligibility';
@@ -206,7 +205,8 @@ export const TopUpModal: React.FC = () => {
   const renderPackageCard = (pack: typeof displayedPackages[number]) => {
     const isSelected = selectedPackage?.id === pack.id;
     const bonusCoins = pack.bonusCoins ?? 0;
-    const bonusLabel = pack.firstTimeDepositOnly ? '' : getBonusLabel(pack);
+    const baseCoins = Math.max(0, Number(pack.coins ?? 0));
+    const bonusPercent = baseCoins > 0 ? Math.round((bonusCoins / baseCoins) * 100) : 0;
     const badgeText = pack.badge?.trim() ?? '';
 
     return (
@@ -232,21 +232,31 @@ export const TopUpModal: React.FC = () => {
           }, `${modalTrackingIdRef.current}:${pack.id}`);
           playSound('click');
         }}
-        className={`relative flex items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left transition-all duration-200 bg-[#1b2024] hover:bg-[#222a30]
-          ${isSelected ? 'border-[#f7b733] shadow-[inset_0_0_0_1px_rgba(247,183,51,0.75),0_0_18px_rgba(247,183,51,0.25)]' : 'border-white/10'}`}
+        aria-pressed={isSelected}
+        className={`relative flex min-h-[118px] w-full items-center gap-3 rounded-2xl border bg-[linear-gradient(105deg,rgba(255,255,255,.055),rgba(255,255,255,.012))] px-4 py-4 text-left transition-all duration-200 sm:min-h-[148px] sm:gap-5 sm:px-7 sm:py-5
+          ${isSelected ? 'border-[#ffc746] shadow-[inset_0_0_0_1px_rgba(255,199,70,.55),0_0_22px_rgba(255,185,40,.22)]' : 'border-white/20 hover:border-white/35 hover:bg-white/[.055]'}`}
       >
-        <div className="flex min-w-0 flex-col">
-          {badgeText && (
+        {badgeText && (
             <span
-              className={`mb-1 w-fit rounded-md px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide ${getBadgeClasses(pack.badge)}`}
+              className={`absolute left-4 top-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-wide sm:left-9 sm:top-5 sm:px-5 sm:text-xs ${isSelected ? 'bg-[#ffc746] text-[#17140c]' : getBadgeClasses(pack.badge)}`}
             >
-              {getBadgeLabel(badgeText)}
+              <Crown className="h-3 w-3" /> {badgeText}
+            </span>
+        )}
+        <img src={getPackageImage(pack)} alt="" className={`h-14 w-14 shrink-0 object-contain sm:h-[70px] sm:w-[70px] ${badgeText ? 'mt-5 sm:mt-6' : ''}`} />
+        <div className={`min-w-0 flex-1 ${badgeText ? 'mt-5 sm:mt-6' : ''}`}>
+          <div className="truncate text-xl font-black tracking-tight text-white sm:text-[34px]">{baseCoins.toLocaleString()} Coins</div>
+          {bonusCoins > 0 && <div className="mt-0.5 text-sm font-extrabold text-[#ffc746] sm:text-lg">+{bonusCoins.toLocaleString()} bonus</div>}
+          {bonusPercent > 0 && (
+            <span className="mt-2 hidden w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[.055] px-3 py-1 text-xs font-medium text-white/65 sm:flex">
+              <Gift className="h-4 w-4" /> Includes {bonusPercent}% bonus
             </span>
           )}
-          <CoinAmount amount={pack.coins} formatOptions={{ maximumFractionDigits: 0 }} className="text-lg font-bold text-white" iconClassName="h-4 w-4" />
-          {bonusCoins > 0 && bonusLabel && <span className="mt-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-200">{bonusLabel}</span>}
         </div>
-        <span className="shrink-0 text-base font-bold text-white">{pack.displayPrice}</span>
+        <span className={`shrink-0 text-xl font-black text-white sm:text-[32px] ${badgeText ? 'mt-5 sm:mt-6' : ''}`}>{pack.displayPrice.replace('.00', '')}</span>
+        <span className={`absolute right-4 top-3 h-6 w-6 rounded-full border-2 sm:right-5 sm:top-5 sm:h-8 sm:w-8 ${isSelected ? 'border-[#ffc746] shadow-[0_0_12px_rgba(255,199,70,.55)]' : 'border-white/30'}`}>
+          {isSelected && <CheckCircle className="-m-[2px] h-6 w-6 text-[#ffc746] sm:h-8 sm:w-8" />}
+        </span>
       </button>
     );
   };
@@ -415,13 +425,13 @@ export const TopUpModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-start justify-center overflow-y-auto overscroll-contain p-0 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4">
+    <div className="fixed inset-0 z-[220] flex items-end justify-center overflow-hidden sm:items-center sm:p-4">
       <div 
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in" 
         onClick={handleClose}
       ></div>
       
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[390px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[min(680px,calc(100dvh-2rem))] sm:rounded-[18px]">
+      <div className="relative flex max-h-[calc(100dvh-env(safe-area-inset-top))] min-h-0 w-full max-w-[760px] flex-col overflow-hidden rounded-t-[26px] border border-white/15 bg-[radial-gradient(circle_at_50%_25%,#1d2428_0%,#12181d_52%,#10161a_100%)] shadow-[0_24px_90px_rgba(0,0,0,.75)] animate-in zoom-in-95 sm:max-h-[min(900px,calc(100dvh-2rem))] sm:rounded-[28px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -431,24 +441,23 @@ export const TopUpModal: React.FC = () => {
             </div>
         ) : (
             <>
-                <div className="flex items-start justify-between border-b border-white/10 px-4 py-3.5 sm:px-5">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/10">
-                        <Wallet className="h-5 w-5 text-amber-300" />
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-4 sm:px-8 sm:py-6">
+                    <div className="flex items-center gap-3 sm:gap-5">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-400/15 sm:h-16 sm:w-16">
+                        <Wallet className="h-6 w-6 text-[#ffc746] sm:h-8 sm:w-8" />
                       </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">Add Coins</h2>
-                      </div>
+                      <h2 className="text-2xl font-black tracking-tight text-white sm:text-[34px]">Add Coins</h2>
                     </div>
                     <button 
                         onClick={handleClose} 
-                        className="rounded-lg border border-white/10 p-2 text-gray-500 transition-colors hover:text-white"
+                        aria-label="Close add coins"
+                        className="rounded-2xl border border-white/15 p-2.5 text-white/55 transition-colors hover:bg-white/5 hover:text-white sm:p-4"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="flex-1 min-h-0 px-4 py-3 sm:px-5">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [scrollbar-gutter:stable] [-webkit-overflow-scrolling:touch] [touch-action:pan-y] sm:px-8 sm:py-5">
                     {isPostFreeBoxFlow && (
                       <div className="mb-3 rounded-xl border border-white/10 bg-[linear-gradient(135deg,rgba(139,92,246,0.12),rgba(255,255,255,0.025))] p-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" aria-label="Real cards shipped to customers">
                         <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
@@ -473,7 +482,7 @@ export const TopUpModal: React.FC = () => {
                           autoSelectAppliedRef.current = false;
                           playSound('click');
                         }}
-                        className={`mb-3 flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-all ${
+                        className={`mb-5 flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition-all sm:px-5 sm:py-4 ${
                           showFirstDepositPackages
                             ? 'border-amber-300/60 bg-[linear-gradient(135deg,rgba(247,183,51,0.22),rgba(124,92,255,0.18))] shadow-[0_0_24px_rgba(247,183,51,0.16)]'
                             : 'border-white/10 bg-white/[0.04] hover:border-amber-300/35 hover:bg-white/[0.07]'
@@ -481,11 +490,11 @@ export const TopUpModal: React.FC = () => {
                         aria-pressed={showFirstDepositPackages}
                       >
                         <span className="flex min-w-0 items-center gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-300/15 text-amber-200">
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-300/10 text-[#ffd35d] sm:h-14 sm:w-14">
                             <Sparkles className="h-5 w-5" />
                           </span>
                           <span className="min-w-0">
-                            <span className="block text-sm font-extrabold text-white">First time deposit offers</span>
+                            <span className="block text-sm font-extrabold text-white sm:text-lg">First time deposit offers</span>
                           </span>
                         </span>
                         <span className={`relative h-7 w-12 shrink-0 rounded-full p-1 transition-colors ${showFirstDepositPackages ? 'bg-amber-300' : 'bg-slate-700'}`}>
@@ -494,9 +503,9 @@ export const TopUpModal: React.FC = () => {
                       </button>
                     )}
                     {/* Amount Selector */}
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-200">Select a pack</label>
-                    <div className="mb-3 max-h-[min(44dvh,320px)] overflow-y-auto overscroll-contain px-1 py-1 [-webkit-overflow-scrolling:touch]">
-                    <div className="flex flex-col gap-3">
+                    <label className="mb-3 block text-sm font-black uppercase tracking-wide text-slate-200 sm:text-lg">Select a pack</label>
+                    <div className="mb-4">
+                    <div className="flex flex-col gap-3 sm:gap-4">
                         {isInitialPackagesLoading ? (
                           <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-white/10 bg-[#0b0e14] px-4 py-8 text-center text-xs text-gray-400">
                             <Loader2 className="mb-2 h-6 w-6 animate-spin text-cyan-300" />
@@ -548,11 +557,11 @@ export const TopUpModal: React.FC = () => {
                     )}
 
                 </div>
-                <div className="sticky bottom-0 z-10 border-t border-white/10 bg-[#1b2024]/95 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:px-5">
+                <div className="shrink-0 border-t border-white/10 bg-[#11171b]/95 px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] backdrop-blur-xl sm:px-8 sm:py-5">
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || isInitialPackagesLoading || !selectedPackage}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[linear-gradient(100deg,#7547ff,#06dcea)] px-2 text-base font-black text-white shadow-[0_10px_30px_rgba(39,172,255,.18)] transition-all hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 sm:h-[70px] sm:text-[26px]"
                   >
                     {isLoading ? (
                       <>
@@ -564,8 +573,13 @@ export const TopUpModal: React.FC = () => {
                       </span>
                     )}
                   </button>
-                  <p className="mt-2 text-center text-[11px] text-white/60">Secure checkout • Instant delivery</p>
-                  <PaymentMethodIcons className="mt-2 gap-1.5 opacity-85" iconClassName="h-3.5 sm:h-4" />
+                  <div className="mt-3 flex items-center justify-center gap-2 text-[10px] text-white/75 sm:mt-4 sm:gap-4 sm:text-sm">
+                    <span className="flex items-center gap-1 text-nowrap"><Zap className="h-4 w-4 text-[#ffc746]" /> Use coins instantly</span><span className="text-[#ffc746]">•</span>
+                    <span className="flex items-center gap-1 text-nowrap"><ShieldCheck className="h-4 w-4 text-[#ffc746]" /> Keep or sell pulls</span><span className="hidden text-[#ffc746] sm:inline">•</span>
+                    <span className="hidden items-center gap-1 text-nowrap sm:flex"><Package className="h-4 w-4 text-[#ffc746]" /> Real items ship to you</span>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-white/[.035] px-2 py-2 sm:px-4"><PaymentMethodIcons className="gap-1.5 opacity-90 sm:flex-nowrap sm:gap-3" iconClassName="h-4 sm:h-8" /></div>
+                  <p className="mt-2 flex items-center justify-center gap-2 text-center text-[11px] text-white/50 sm:text-sm"><LockKeyhole className="h-3.5 w-3.5" /> Secure checkout <span>•</span> Instant delivery</p>
                 </div>
             </>
         )}
