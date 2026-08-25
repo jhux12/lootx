@@ -60,6 +60,9 @@ export interface User {
   totalSpent?: number;
   totalDepositedCents?: number;
   depositCount?: number;
+  depositMissionCycleStart?: number;
+  depositMissionDepositedCents?: number;
+  depositMissionClaims?: Record<string, number>;
   lastDepositAt?: any;
   rakebackBalance?: number;
   rakebackEarnedToday?: number;
