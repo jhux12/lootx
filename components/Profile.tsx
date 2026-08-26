@@ -602,6 +602,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     setShowShippingReview(false);
     setActiveTab('account');
     setActiveAccountPanel('settings');
+    setShowEditProfile(true);
   };
 
   const handleSaveAddress = async () => {
