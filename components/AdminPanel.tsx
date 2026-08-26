@@ -514,6 +514,7 @@ export const AdminPanel: React.FC = () => {
   );
   const [dashboardTransactions, setDashboardTransactions] = useState<DashboardTransaction[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
+  const [recentDeposits, setRecentDeposits] = useState<DashboardTransaction[]>([]);
 
   useEffect(() => {
       const currentIds = new Set(selectedItems.map((item) => item.id));
@@ -1113,11 +1114,48 @@ export const AdminPanel: React.FC = () => {
           });
 
           nextTransactions.sort((a, b) => b.createdAt - a.createdAt);
-          // Keep enough recent activity to find deposits even when other ledger events are busier.
-          setDashboardTransactions(nextTransactions.slice(0, 100));
+          setDashboardTransactions(nextTransactions.slice(0, 12));
           setDashboardUsers(nextUsers);
       }, (error) => {
           console.error('Dashboard users snapshot failed', error);
+      });
+
+      return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+      // Deposit recency is independent of signup recency. Querying lastDepositAt ensures an
+      // older account with a new deposit is not omitted from the dashboard.
+      // Fetch a small buffer so legacy profiles without a usable ledger entry do not leave gaps.
+      const recentDepositorsQuery = query(collection(db, 'users'), orderBy('lastDepositAt', 'desc'), limit(25));
+      const unsubscribe = onSnapshot(recentDepositorsQuery, (snapshot) => {
+          const deposits = snapshot.docs.flatMap((docSnap): DashboardTransaction[] => {
+              const data = docSnap.data() as Record<string, any>;
+              const latestDeposit = (Array.isArray(data.ledger) ? data.ledger : [])
+                  .filter((entry: any) => entry?.type === 'deposit' && Number(entry?.amount) > 0)
+                  .sort((a: any, b: any) => toMillis(b?.createdAt, 0) - toMillis(a?.createdAt, 0))[0];
+              if (!latestDeposit) return [];
+
+              const userLabel =
+                  typeof data.username === 'string' && data.username.trim()
+                      ? data.username.trim()
+                      : (typeof data.name === 'string' && data.name.trim() ? data.name.trim() : `User_${docSnap.id.slice(0, 6)}`);
+              const createdAt = toMillis(data.lastDepositAt, toMillis(latestDeposit.createdAt, 0));
+
+              return [{
+                  id: `${docSnap.id}-${String(latestDeposit.id ?? createdAt)}`,
+                  userId: docSnap.id,
+                  userLabel,
+                  type: 'deposit',
+                  amount: Number(latestDeposit.amount),
+                  createdAt
+              }];
+          });
+
+          deposits.sort((a, b) => b.createdAt - a.createdAt);
+          setRecentDeposits(deposits.slice(0, 8));
+      }, (error) => {
+          console.error('Recent deposits snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -1158,11 +1196,6 @@ export const AdminPanel: React.FC = () => {
 
   const liveTransactions = useMemo(
       () => dashboardTransactions.slice(0, 8),
-      [dashboardTransactions]
-  );
-
-  const recentDeposits = useMemo(
-      () => dashboardTransactions.filter((entry) => entry.type === 'deposit' && entry.amount > 0).slice(0, 8),
       [dashboardTransactions]
   );
 
