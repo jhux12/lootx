@@ -335,6 +335,7 @@ type AdminSentNotification = {
 
 type DashboardTransaction = {
     id: string;
+    userId: string;
     userLabel: string;
     type: LedgerEntryType;
     amount: number;
@@ -1102,6 +1103,7 @@ export const AdminPanel: React.FC = () => {
                   if (entry.amount === 0) return;
                   nextTransactions.push({
                       id: `${docSnap.id}-${entry.id ?? index}-${entry.createdAt}`,
+                      userId: docSnap.id,
                       userLabel,
                       type: entry.type,
                       amount: entry.amount,
@@ -1111,7 +1113,8 @@ export const AdminPanel: React.FC = () => {
           });
 
           nextTransactions.sort((a, b) => b.createdAt - a.createdAt);
-          setDashboardTransactions(nextTransactions.slice(0, 12));
+          // Keep enough recent activity to find deposits even when other ledger events are busier.
+          setDashboardTransactions(nextTransactions.slice(0, 100));
           setDashboardUsers(nextUsers);
       }, (error) => {
           console.error('Dashboard users snapshot failed', error);
@@ -1157,6 +1160,16 @@ export const AdminPanel: React.FC = () => {
       () => dashboardTransactions.slice(0, 8),
       [dashboardTransactions]
   );
+
+  const recentDeposits = useMemo(
+      () => dashboardTransactions.filter((entry) => entry.type === 'deposit' && entry.amount > 0).slice(0, 8),
+      [dashboardTransactions]
+  );
+
+  const openDashboardUser = (userId: string) => {
+      setSelectedUserId(userId);
+      setActiveTab('users');
+  };
 
   useEffect(() => {
       if (users.length === 0) return;
@@ -3890,8 +3903,44 @@ export const AdminPanel: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Recent Activity Mock */}
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                    <div className="mb-8 rounded-xl border border-emerald-500/20 bg-[#131720] p-4 sm:p-6">
+                        <div className="mb-5 flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Recent Deposits</h3>
+                                <p className="mt-1 text-xs text-gray-400">Select a depositor to open their account.</p>
+                            </div>
+                            <BadgeDollarSign className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {recentDeposits.map((entry) => (
+                                <button
+                                    key={entry.id}
+                                    type="button"
+                                    onClick={() => openDashboardUser(entry.userId)}
+                                    className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border border-gray-800 bg-[#0b0e14] p-3 text-left transition-colors hover:border-emerald-500/50 hover:bg-emerald-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                                    aria-label={`Open account for ${entry.userLabel}`}
+                                >
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-bold text-gray-100">{entry.userLabel}</div>
+                                        <div className="mt-1 text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
+                                    </div>
+                                    <CoinAmount
+                                      amount={entry.amount}
+                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                      showSign
+                                      className="shrink-0 text-sm font-bold text-emerald-400"
+                                      iconClassName="h-3.5 w-3.5"
+                                    />
+                                </button>
+                            ))}
+                            {recentDeposits.length === 0 && (
+                                <div className="text-sm text-gray-400 sm:col-span-2">No recent deposits yet.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
                         <div className="space-y-4">
                             {liveTransactions.map((entry) => (
