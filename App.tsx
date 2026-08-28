@@ -23,22 +23,8 @@ import { getCookieConsent, hasAnalyticsConsent } from './utils/cookieConsent';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
 import { clearPendingCheckout, getPendingCheckout } from './services/checkoutTracking';
 
-type TawkApi = {
-  hideWidget?: () => void;
-  showWidget?: () => void;
-  maximize?: () => void;
-  onLoad?: () => void;
-  onChatMinimized?: () => void;
-  onChatHidden?: () => void;
-};
-
-type PullzWindow = Window &
+type ClarityWindow = Window &
   typeof globalThis & {
-    Tawk_API?: TawkApi;
-    Tawk_LoadStart?: Date;
-  };
-
-type ClarityWindow = PullzWindow & {
     clarity?: (...args: unknown[]) => void;
     __pullzClarityInitialized?: boolean;
     __pullzClarityNavigationTrackingInstalled?: boolean;
@@ -140,102 +126,6 @@ const ProtectedPageLoading: React.FC = () => (
   </div>
 );
 
-
-const TAWK_SCRIPT_SRC = 'https://embed.tawk.to/6a4c4bec6f19351d47f86c36/1jst0h54s';
-const TAWK_SCRIPT_ID = 'pullz-tawk-script';
-
-const isAdminViewType = (viewType: string) => viewType === 'ADMIN' || viewType.startsWith('ADMIN_');
-
-const PullzSupportChat: React.FC<{ isAdminPage: boolean; isEnabled: boolean }> = ({ isAdminPage, isEnabled }) => {
-  const [isTabVisible, setIsTabVisible] = useState(!isAdminPage);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [hasLoadFailed, setHasLoadFailed] = useState(false);
-
-  useEffect(() => {
-    // Tawk is deliberately loaded only after an explicit Support interaction.
-    // Installing handlers alone is cheap; the third-party script is not.
-    if (!isEnabled || !isChatOpen || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
-    const pullzWindow = window as PullzWindow;
-    const showTab = () => { setIsChatOpen(false); setIsTabVisible(!isAdminPage); };
-    const hideDefaultWidget = () => pullzWindow.Tawk_API?.hideWidget?.();
-    pullzWindow.Tawk_API = pullzWindow.Tawk_API || {};
-    pullzWindow.Tawk_LoadStart = pullzWindow.Tawk_LoadStart || new Date();
-    pullzWindow.Tawk_API.onLoad = () => { setHasLoadFailed(false); pullzWindow.Tawk_API?.showWidget?.(); pullzWindow.Tawk_API?.maximize?.(); };
-    pullzWindow.Tawk_API.onChatMinimized = () => { hideDefaultWidget(); showTab(); };
-    pullzWindow.Tawk_API.onChatHidden = showTab;
-    let script = document.getElementById(TAWK_SCRIPT_ID) as HTMLScriptElement | null;
-    if (!script) {
-      script = document.createElement('script');
-      script.id = TAWK_SCRIPT_ID; script.async = true; script.src = TAWK_SCRIPT_SRC;
-      script.charset = 'UTF-8'; script.setAttribute('crossorigin', '*');
-      script.onerror = () => { setHasLoadFailed(true); showTab(); };
-      document.body.appendChild(script);
-    } else { pullzWindow.Tawk_API?.showWidget?.(); pullzWindow.Tawk_API?.maximize?.(); }
-    return () => {
-      if (pullzWindow.Tawk_API) { pullzWindow.Tawk_API.onLoad = undefined; pullzWindow.Tawk_API.onChatMinimized = undefined; pullzWindow.Tawk_API.onChatHidden = undefined; }
-    };
-  }, [isAdminPage, isChatOpen, isEnabled]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const pullzWindow = window as PullzWindow;
-
-    if (isAdminPage || !isEnabled) {
-      setIsTabVisible(false);
-      setIsChatOpen(false);
-      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
-        pullzWindow.Tawk_API.hideWidget();
-      }
-      return;
-    }
-
-    if (!isChatOpen) {
-      setIsTabVisible(true);
-      if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
-        pullzWindow.Tawk_API.hideWidget();
-      }
-    }
-  }, [isAdminPage, isChatOpen, isEnabled]);
-
-  const openSupportChat = () => {
-    if (isAdminPage || !isEnabled || typeof window === 'undefined') return;
-    if (hasLoadFailed) {
-      document.getElementById(TAWK_SCRIPT_ID)?.remove();
-      setHasLoadFailed(false);
-    }
-    // This state change mounts the lazy script effect. A loaded widget opens
-    // immediately; otherwise its onLoad handler opens it.
-    setIsChatOpen(true);
-    setIsTabVisible(false);
-    const tawkApi = (window as PullzWindow).Tawk_API;
-
-    if (typeof tawkApi?.showWidget === 'function') {
-      tawkApi.showWidget();
-    }
-    if (typeof tawkApi?.maximize === 'function') {
-      tawkApi.maximize();
-      setIsChatOpen(true);
-      setIsTabVisible(false);
-      return;
-    }
-
-  };
-
-  if (isAdminPage || !isEnabled || !isTabVisible) return null;
-
-  return (
-    <button
-      id="pullz-support-tab"
-      type="button"
-      aria-label={hasLoadFailed ? 'Support chat is unavailable' : 'Open support chat'}
-      aria-disabled={hasLoadFailed}
-      onClick={openSupportChat}
-      title={hasLoadFailed ? 'Support chat is temporarily unavailable' : 'Open support chat'}
-    >
-      Support
-    </button>
-  );
-};
 
 const DeferredAnalytics = React.memo(({ viewType }: { viewType: string }) => {
   const [AnalyticsComponent, setAnalyticsComponent] = useState<React.ComponentType | null>(null);
@@ -856,15 +746,6 @@ const AppShell = () => {
   const isAccountBanned = isAuthenticated && user.status === 'banned';
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
-  const [isSupportChatEnabled, setIsSupportChatEnabled] = useState<boolean | null>(null);
-
-  useEffect(() => onSnapshot(doc(db, 'settings', 'supportChat'), (snapshot) => {
-    setIsSupportChatEnabled(snapshot.data()?.enabled !== false);
-  }, (error) => {
-    console.error('Support chat settings snapshot failed', error);
-    setIsSupportChatEnabled(true);
-  }), []);
-
   useEffect(() => {
     // Keep native mobile zoom behavior enabled (pinch + browser-level accessibility zoom).
     // Do not register gesture/touch preventDefault handlers here.
@@ -906,9 +787,6 @@ const AppShell = () => {
         </div>
       ) : <AppLayout hasStickyHeader={shouldUseStickyHeader} hasBanBanner={isAccountBanned} />}
       <div className={isAccountBanned ? 'pointer-events-none grayscale opacity-40' : ''} aria-disabled={isAccountBanned || undefined}><MobileBottomNav /></div>
-      {isSupportChatEnabled !== null && (
-        <PullzSupportChat isAdminPage={isAdminViewType(view.type)} isEnabled={isSupportChatEnabled} />
-      )}
       <ResetPasswordModal />
     </div>
   );
