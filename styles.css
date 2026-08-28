@@ -198,3 +198,42 @@
 @media (prefers-reduced-motion: reduce) {
   .pullz-boxes-slab, .pullz-boxes-hero-orbit, .pullz-boxes-particle { animation: none; }
 }
+
+/* Homepage motion system: lightweight transforms make the compact mobile layout feel alive. */
+.pullz-home-stage { position: relative; isolation: isolate; overflow: hidden; }
+.pullz-home-stage > *:not(.pullz-home-aurora) { position: relative; z-index: 1; }
+.pullz-home-aurora { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.pullz-home-aurora i { position: absolute; width: 260px; aspect-ratio: 1; border-radius: 999px; opacity: .15; filter: blur(2px); background: radial-gradient(circle, #7648ff 0, transparent 68%); animation: pullz-aurora-drift 9s ease-in-out infinite alternate; }
+.pullz-home-aurora i:nth-child(1) { top: 90px; right: -150px; }
+.pullz-home-aurora i:nth-child(2) { top: 620px; left: -180px; animation-delay: -3s; animation-duration: 12s; }
+.pullz-home-aurora i:nth-child(3) { top: 1120px; right: -190px; animation-delay: -6s; animation-duration: 14s; }
+
+.pullz-home-hero { border: 1px solid rgba(255,255,255,.15); transform: translateZ(0); transition: transform .18s ease, box-shadow .3s ease; }
+.pullz-home-hero::after { content: ''; position: absolute; z-index: 30; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 24%, rgba(255,255,255,.14) 42%, transparent 58%); transform: translateX(-120%); animation: pullz-hero-sheen 6s ease-in-out infinite 1.2s; }
+.pullz-hero-dot { transition: width .35s ease, background-color .35s ease, box-shadow .35s ease; }
+.pullz-hero-dot.is-active { box-shadow: 0 0 14px rgba(139,92,246,.9); }
+.pullz-hero-energy-orb { position: absolute; z-index: 2; right: -12px; top: 50%; display: grid; width: 126px; aspect-ratio: 1; place-items: center; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; color: #fff; background: radial-gradient(circle at 35% 30%, #c4b5fd, #7c3aed 40%, #312e81 72%); box-shadow: 0 0 0 12px rgba(255,255,255,.06), 0 0 0 25px rgba(255,255,255,.035), 0 20px 48px rgba(30,20,100,.45); transform: translateY(-50%); animation: pullz-orb-breathe 3.4s ease-in-out infinite; }
+.pullz-hero-energy-orb span { font-size: 27px; font-weight: 1000; letter-spacing: -.07em; text-shadow: 0 3px 12px rgba(0,0,0,.28); }
+
+.pullz-mobile-live-rail { display: flex; min-height: 38px; align-items: center; gap: 8px; overflow: hidden; border: 1px solid rgba(139,92,246,.24); border-radius: 999px; padding: 0 12px; background: linear-gradient(90deg,rgba(28,22,58,.94),rgba(13,18,32,.94)); box-shadow: inset 0 1px rgba(255,255,255,.05), 0 10px 26px rgba(0,0,0,.18); color: #cbd5e1; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.pullz-mobile-live-rail strong { flex: none; color: #fff; font-size: 10px; }
+.pullz-mobile-live-rail div span { display: inline-block; min-width: max-content; animation: pullz-live-marquee 13s linear infinite; }
+.pullz-live-pulse { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #34d399; box-shadow: 0 0 0 0 rgba(52,211,153,.55); animation: pullz-live-ping 1.8s ease-out infinite; }
+.pullz-pop-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: linear-gradient(125deg, transparent 30%, rgba(255,255,255,.08), transparent 62%); transform: translateX(-130%); animation: pullz-card-glint 7s ease-in-out infinite var(--card-delay, 0s); }
+
+@keyframes pullz-hero-sheen { 0%, 70%, 100% { transform: translateX(-120%); } 84% { transform: translateX(120%); } }
+@keyframes pullz-orb-breathe { 0%, 100% { transform: translateY(-50%) scale(.96) rotate(-2deg); } 50% { transform: translateY(-53%) scale(1.025) rotate(2deg); } }
+@keyframes pullz-live-ping { 70%, 100% { box-shadow: 0 0 0 7px rgba(52,211,153,0); } }
+@keyframes pullz-live-marquee { from { transform: translateX(10%); } to { transform: translateX(-100%); } }
+@keyframes pullz-card-glint { 0%, 78%, 100% { transform: translateX(-130%); } 90% { transform: translateX(130%); } }
+@keyframes pullz-aurora-drift { from { transform: translate3d(-12px,-18px,0) scale(.9); } to { transform: translate3d(18px,34px,0) scale(1.18); } }
+
+@media (min-width: 640px) {
+  .pullz-hero-energy-orb { right: 7%; width: 158px; }
+  .pullz-hero-energy-orb span { font-size: 36px; }
+  .pullz-mobile-live-rail { max-width: 1120px; margin-inline: auto; min-height: 42px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pullz-home-aurora i, .pullz-home-hero::after, .pullz-hero-energy-orb, .pullz-mobile-live-rail div span, .pullz-live-pulse, .pullz-pop-card::after { animation: none; }
+}

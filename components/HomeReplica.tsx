@@ -499,14 +499,16 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="pullz-home-stage animate-in fade-in duration-500">
+      <div className="pullz-home-aurora" aria-hidden="true"><i /><i /><i /></div>
       <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[168px] w-full max-w-[1180px] overflow-hidden rounded-[1.45rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.985] sm:h-[184px] sm:rounded-[1.6rem] lg:h-[240px] lg:rounded-[2rem]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             {promoBox && <PromoBoxHeroSlide box={promoBox} />}
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
+              <div className="pullz-hero-energy-orb" aria-hidden="true"><span>+50%</span></div>
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
                   <Coins
@@ -521,9 +523,10 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
                   />
                 ))}
               </div> : null}
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
+              <div className="relative z-10 flex h-full max-w-[62%] flex-col items-start justify-center pl-1 text-left sm:max-w-[60%] sm:pl-3 lg:max-w-[64%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
+                <h1 className="mt-2 max-w-[220px] text-[23px] font-black uppercase leading-[0.91] tracking-[-.04em] text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[420px] sm:text-[36px] lg:max-w-[680px] lg:text-[58px]">Level Up Your First Drop</h1>
+                <span className="mt-2 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-[.08em] text-white/85 sm:text-xs">Tap to claim <ChevronRight className="h-3 w-3" /></span>
               </div>
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
@@ -546,9 +549,16 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
           <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showPromoBoxHero ? 'Open Promo Box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'promo-box' ? 'Promo Box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'promo-box' ? 'Promo Box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`pullz-hero-dot h-1.5 rounded-full ${index === activeHeroSlide ? 'is-active w-6 bg-[#8b5cf6]' : 'w-1.5 bg-slate-600'}`} />)}
         </div>
       </section>
+
+      <div className="pullz-mobile-live-rail mx-3 mt-4" aria-label="Pullz live activity">
+        <span className="pullz-live-pulse" aria-hidden="true" />
+        <strong>Live now</strong>
+        <div className="min-w-0 overflow-hidden"><span>Fresh pulls landing every minute&nbsp;&nbsp;•&nbsp;&nbsp; Real cards. Real wins.&nbsp;&nbsp;•&nbsp;&nbsp; Your next hit is waiting</span></div>
+        <Zap className="h-3.5 w-3.5 shrink-0 text-amber-300" aria-hidden="true" />
+      </div>
 
       <section className="pullz-home-trust-grid mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#070a12]/92 p-1.5 shadow-[inset_0_0_20px_rgba(255,255,255,0.025),0_12px_30px_rgba(0,0,0,0.28)] sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-white/10 sm:rounded-2xl sm:p-0">
@@ -592,7 +602,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.98] sm:h-[184px] lg:h-[204px]">
+            <button key={box.id} onClick={() => onOpenBox(box.id)} className="pullz-pop-card group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.97] sm:h-[184px] lg:h-[204px]" style={{ '--card-delay': `${index * 0.16}s` } as React.CSSProperties}>
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
               <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
               <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
