@@ -12,7 +12,8 @@ import { ToastProvider } from './src/ui/toast/ToastProvider';
 import { SeoHead } from './components/SeoHead';
 import { AdminGate } from './components/AdminGate';
 import { trackEvent, trackMetaEvent } from './utils/trackEvent';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { setPostSignupRedirect } from './utils/postSignupRedirect';
 import { subscribeHomepageConfig } from './utils/homepageShowcase';
 import { PerformanceModeProvider, usePerformanceMode } from './src/lib/performance';
@@ -145,7 +146,7 @@ const TAWK_SCRIPT_ID = 'pullz-tawk-script';
 
 const isAdminViewType = (viewType: string) => viewType === 'ADMIN' || viewType.startsWith('ADMIN_');
 
-const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) => {
+const PullzSupportChat: React.FC<{ isAdminPage: boolean; isEnabled: boolean }> = ({ isAdminPage, isEnabled }) => {
   const [isTabVisible, setIsTabVisible] = useState(!isAdminPage);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [hasLoadFailed, setHasLoadFailed] = useState(false);
@@ -153,7 +154,7 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
   useEffect(() => {
     // Tawk is deliberately loaded only after an explicit Support interaction.
     // Installing handlers alone is cheap; the third-party script is not.
-    if (!isChatOpen || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    if (!isEnabled || !isChatOpen || typeof window === 'undefined' || typeof document === 'undefined') return undefined;
     const pullzWindow = window as PullzWindow;
     const showTab = () => { setIsChatOpen(false); setIsTabVisible(!isAdminPage); };
     const hideDefaultWidget = () => pullzWindow.Tawk_API?.hideWidget?.();
@@ -173,13 +174,13 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
     return () => {
       if (pullzWindow.Tawk_API) { pullzWindow.Tawk_API.onLoad = undefined; pullzWindow.Tawk_API.onChatMinimized = undefined; pullzWindow.Tawk_API.onChatHidden = undefined; }
     };
-  }, [isAdminPage, isChatOpen]);
+  }, [isAdminPage, isChatOpen, isEnabled]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const pullzWindow = window as PullzWindow;
 
-    if (isAdminPage) {
+    if (isAdminPage || !isEnabled) {
       setIsTabVisible(false);
       setIsChatOpen(false);
       if (typeof pullzWindow.Tawk_API?.hideWidget === 'function') {
@@ -194,10 +195,10 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
         pullzWindow.Tawk_API.hideWidget();
       }
     }
-  }, [isAdminPage, isChatOpen]);
+  }, [isAdminPage, isChatOpen, isEnabled]);
 
   const openSupportChat = () => {
-    if (isAdminPage || typeof window === 'undefined') return;
+    if (isAdminPage || !isEnabled || typeof window === 'undefined') return;
     if (hasLoadFailed) {
       document.getElementById(TAWK_SCRIPT_ID)?.remove();
       setHasLoadFailed(false);
@@ -220,7 +221,7 @@ const PullzSupportChat: React.FC<{ isAdminPage: boolean }> = ({ isAdminPage }) =
 
   };
 
-  if (isAdminPage || !isTabVisible) return null;
+  if (isAdminPage || !isEnabled || !isTabVisible) return null;
 
   return (
     <button
@@ -855,6 +856,14 @@ const AppShell = () => {
   const isAccountBanned = isAuthenticated && user.status === 'banned';
   const navigationScrollKey = getNavigationScrollKey(view);
   const previousNavigationScrollKey = useRef(navigationScrollKey);
+  const [isSupportChatEnabled, setIsSupportChatEnabled] = useState<boolean | null>(null);
+
+  useEffect(() => onSnapshot(doc(db, 'settings', 'supportChat'), (snapshot) => {
+    setIsSupportChatEnabled(snapshot.data()?.enabled !== false);
+  }, (error) => {
+    console.error('Support chat settings snapshot failed', error);
+    setIsSupportChatEnabled(true);
+  }), []);
 
   useEffect(() => {
     // Keep native mobile zoom behavior enabled (pinch + browser-level accessibility zoom).
@@ -897,7 +906,9 @@ const AppShell = () => {
         </div>
       ) : <AppLayout hasStickyHeader={shouldUseStickyHeader} hasBanBanner={isAccountBanned} />}
       <div className={isAccountBanned ? 'pointer-events-none grayscale opacity-40' : ''} aria-disabled={isAccountBanned || undefined}><MobileBottomNav /></div>
-      <PullzSupportChat isAdminPage={isAdminViewType(view.type)} />
+      {isSupportChatEnabled !== null && (
+        <PullzSupportChat isAdminPage={isAdminViewType(view.type)} isEnabled={isSupportChatEnabled} />
+      )}
       <ResetPasswordModal />
     </div>
   );
