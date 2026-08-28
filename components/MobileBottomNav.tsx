@@ -4,6 +4,7 @@ import { Box, Home, Trophy, User, X } from 'lucide-react';
 import { useAuth, useBoxes, useUI } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
 import { UserAvatar } from './UserAvatar';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 type NavItem = {
   id: 'HOME' | 'BOXES' | 'LEADERBOARD' | 'PROFILE';
@@ -131,9 +132,14 @@ export const MobileBottomNav: React.FC = () => {
     return 'HOME';
   }, [view.type]);
 
-  const hasFreeSignupBox = useMemo(() => (
-    isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim
-  ), [boxes, isAuthenticated, user.lastFreeBoxClaim]);
+  const hasFreeSignupBox = useMemo(() => {
+    const cooldownMs = 24 * 60 * 60 * 1000;
+    const lastClaim = Number(user.lastDailyRewardBoxClaim ?? 0);
+    return isAuthenticated
+      && hasUserMadeDeposit(user)
+      && boxes.some((box) => box.isDailyReward)
+      && (!lastClaim || lastClaim + cooldownMs <= Date.now());
+  }, [boxes, isAuthenticated, user]);
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const iconClassName = 'h-5 w-5 [stroke-width:1.6]';
 

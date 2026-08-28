@@ -13,6 +13,7 @@ import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
 const DEFAULT_CLIENT_SEED = 'pullz-player';
 const DEFAULT_NEW_USER_COINS = 0;
+const DAILY_FREE_BOX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 const normalizeSizes = (sizes = []) =>
   sizes
@@ -199,17 +200,27 @@ export default async function handler(req, res) {
         fail(400, 'INVALID_REQUEST', 'This case does not have a valid coin price.', { caseId: boxId });
       }
 
-      const existingFreeBoxClaim = toFiniteNumber(userData.lastFreeBoxClaim, Number.NaN);
+      const isDailyRewardBox = boxData.isDailyReward === true;
+      const existingFreeBoxClaim = toFiniteNumber(
+        isDailyRewardBox ? userData.lastDailyRewardBoxClaim : userData.lastFreeBoxClaim,
+        Number.NaN
+      );
 
       if (isFree) {
-        if (boxData.isDaily !== true) {
-          fail(400, 'INVALID_REQUEST', 'Only the signup free box can be opened for free.', { caseId: boxId });
+        if (boxData.isDaily !== true && !isDailyRewardBox) {
+          fail(400, 'INVALID_REQUEST', 'Only a configured signup or daily reward box can be opened for free.', { caseId: boxId });
         }
-        if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0) {
-          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup box already claimed.', {
-            caseId: boxId,
-            claimedAt: existingFreeBoxClaim
-          });
+        if (isDailyRewardBox) {
+          const hasMadeDeposit = toSafeNonNegativeNumber(userData.depositCount) > 0
+            || toSafeNonNegativeNumber(userData.totalDepositedCents) > 0
+            || toSafeNonNegativeNumber(userData.totalSpent) > 0;
+          if (!hasMadeDeposit) fail(403, 'DEPOSIT_REQUIRED', 'Make your first deposit to unlock the daily free box.', { caseId: boxId });
+          const nextFreeBoxClaimAt = existingFreeBoxClaim + DAILY_FREE_BOX_COOLDOWN_MS;
+          if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0 && nextFreeBoxClaimAt > Date.now()) {
+            fail(409, 'FREE_BOX_COOLDOWN', 'Your next daily free box is not ready yet.', { caseId: boxId, claimedAt: existingFreeBoxClaim, nextClaimAt: nextFreeBoxClaimAt });
+          }
+        } else if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0) {
+          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup box already claimed.', { caseId: boxId, claimedAt: existingFreeBoxClaim });
         }
       }
 
@@ -332,7 +343,9 @@ export default async function handler(req, res) {
       const freeBoxClaimedAt = isFree ? Date.now() : null;
       const nextUserPatch = sanitizeForFirestore({
         ...(!userSnap.exists ? { createdAt: admin.firestore.FieldValue.serverTimestamp() } : {}),
-        ...(isFree ? { lastFreeBoxClaim: freeBoxClaimedAt } : {})
+        ...(isFree ? (isDailyRewardBox
+          ? { lastDailyRewardBoxClaim: freeBoxClaimedAt }
+          : { lastFreeBoxClaim: freeBoxClaimedAt }) : {})
       });
 
       if (coinCost > 0) {

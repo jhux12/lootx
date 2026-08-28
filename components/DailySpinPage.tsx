@@ -1,428 +1,103 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, ChevronLeft } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { CheckCircle2, ChevronLeft, Crown, Gift, LockKeyhole, PackageOpen, Sparkles, Timer } from "lucide-react";
 import { COIN_ICON } from "../constants";
-
-type SpinPrize = {
-  id: number;
-  amount: number;
-  image: string;
-  angle: number;
-};
+import type { MysteryBox } from "../types";
 
 interface DailySpinPageProps {
   onBack?: () => void;
-  onSpinStart: () => Promise<{ amount: number; nextClaimAt?: number }>;
-  onSpinClaim: () => Promise<{ amount: number; nextClaimAt: number }>;
-  onExploreBoxes: () => void;
-  canSpin: boolean;
   nextClaimAt: number;
   embedded?: boolean;
-  dailySpinOdds?: Record<string, number>;
+  dailyBox?: MysteryBox | null;
+  hasMadeDeposit?: boolean;
+  onOpenDailyBox?: () => void;
+  depositMissionCents?: number;
+  depositMissionCycleStart?: number;
+  depositMissionClaims?: Record<string, number>;
+  claimingMissionId?: string | null;
+  onClaimDepositMission?: (missionId: string) => void;
 }
 
-const WHEEL_HIDE_DELAY_MS = 900;
-
-const DEFAULT_PRIZE_AMOUNTS = [10, 25, 100, 500, 1000, 2500];
-const PRIZE_ANGLES = [30, 90, 150, 210, 270, 330];
-
-const getWheelPrizes = (dailySpinOdds?: Record<string, number>): SpinPrize[] => {
-  const configuredAmounts = Object.keys(dailySpinOdds ?? {})
-    .map((amount) => Math.floor(Number(amount)))
-    .filter((amount) => Number.isFinite(amount) && amount > 0)
-    .sort((a, b) => a - b);
-
-  const amounts = Array.from(new Set([...configuredAmounts, ...DEFAULT_PRIZE_AMOUNTS])).slice(0, PRIZE_ANGLES.length);
-
-  return amounts.map((amount, index) => ({
-    id: index + 1,
-    amount,
-    image: COIN_ICON,
-    angle: PRIZE_ANGLES[index],
-  }));
+const formatCountdown = (target: number) => {
+  const seconds = Math.max(0, Math.floor((target - Date.now()) / 1000));
+  return `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 };
 
-const BackgroundFloatingCoins = () => (
-  <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-    {[
-      { top: "5%", left: "5%", w: 60, delay: 0 },
-      { top: "15%", left: "85%", w: 80, delay: 2 },
-      { top: "40%", left: "90%", w: 50, delay: 4 },
-      { top: "60%", left: "5%", w: 70, delay: 1 },
-      { top: "80%", left: "80%", w: 90, delay: 3 },
-      { top: "85%", left: "15%", w: 55, delay: 5 },
-      { top: "25%", left: "20%", w: 40, delay: 1.5 },
-      { top: "35%", left: "75%", w: 45, delay: 3.5 },
-      { top: "55%", left: "50%", w: 100, delay: 0.5 },
-    ].map((coin, i) => (
-      <img
-        key={i}
-        src={COIN_ICON}
-        alt="floating coin"
-        className="absolute opacity-20 blur-[1px]"
-        loading="lazy"
-        decoding="async"
-        width={coin.w}
-        height={coin.w}
-        style={{
-          top: coin.top,
-          left: coin.left,
-          width: `${coin.w}px`,
-          animation: "float 8s ease-in-out infinite",
-          animationDelay: `${coin.delay}s`,
-        }}
-      />
-    ))}
-    <style>{`
-      @keyframes float {
-        0%, 100% { transform: translateY(0) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(5deg); }
-      }
-    `}</style>
-  </div>
-);
+const milestones = [
+  { id: "deposit_50", targetCents: 5000, amount: "$50", reward: "250 Coins", rewardCoins: 250 },
+  { id: "deposit_250", targetCents: 25000, amount: "$250", reward: "1,000 Coins", rewardCoins: 1000 },
+  { id: "deposit_500", targetCents: 50000, amount: "$500", reward: "2,500 Coins", rewardCoins: 2500 },
+];
 
-const formatCountdown = (targetTime: number) => {
-  const remainingMs = Math.max(0, targetTime - Date.now());
-  const totalSeconds = Math.floor(remainingMs / 1000);
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-};
-
-export const DailySpinPage: React.FC<DailySpinPageProps> = ({
-  onBack,
-  onSpinStart,
-  onSpinClaim,
-  onExploreBoxes,
-  canSpin,
-  nextClaimAt,
-  embedded = false,
-  dailySpinOdds,
-}) => {
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
-  const [lastPrize, setLastPrize] = useState<number | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [localNextClaimAt, setLocalNextClaimAt] = useState(nextClaimAt);
-  const [countdownNow, setCountdownNow] = useState(Date.now());
-  const [isWheelVisible, setIsWheelVisible] = useState(
-    () => canSpin || nextClaimAt <= Date.now(),
-  );
-
-  const prizes = useMemo(() => getWheelPrizes(dailySpinOdds), [dailySpinOdds]);
-  const effectiveNextClaimAt = Math.max(localNextClaimAt, nextClaimAt);
+export const DailySpinPage: React.FC<DailySpinPageProps> = ({ onBack, nextClaimAt, embedded = false, dailyBox, hasMadeDeposit = false, onOpenDailyBox, depositMissionCents = 0, depositMissionCycleStart = 0, depositMissionClaims = {}, claimingMissionId, onClaimDepositMission }) => {
+  const [now, setNow] = useState(Date.now());
+  const [isOpeningDailyBox, setIsOpeningDailyBox] = useState(false);
+  const effectiveNextClaimAt = nextClaimAt > 0 ? nextClaimAt : 0;
+  const isDailyBoxReady = hasMadeDeposit && effectiveNextClaimAt <= now;
+  const nextMission = milestones.find((mission) => depositMissionCents < mission.targetCents) ?? milestones[milestones.length - 1];
+  const missionProgress = Math.min(100, Math.round((depositMissionCents / nextMission.targetCents) * 100));
+  const missionResetAt = depositMissionCycleStart ? depositMissionCycleStart + 30 * 24 * 60 * 60 * 1000 : 0;
 
   useEffect(() => {
-    const interval = window.setInterval(
-      () => setCountdownNow(Date.now()),
-      1000,
-    );
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
   }, []);
 
-  const canSpinNow = canSpin && effectiveNextClaimAt <= countdownNow;
-  const hasClaimedDailyBonus =
-    !isSpinning && !canSpinNow && effectiveNextClaimAt > countdownNow;
-  const showClaimedCard = hasClaimedDailyBonus && !isWheelVisible;
-
-  const lockLabel = useMemo(() => {
-    if (canSpinNow && !isSpinning) return "";
-    return formatCountdown(effectiveNextClaimAt);
-  }, [canSpinNow, isSpinning, effectiveNextClaimAt, countdownNow]);
-
-  useEffect(() => {
-    if (!canSpinNow) return;
-    setIsWheelVisible(true);
-    setLastPrize(null);
-  }, [canSpinNow]);
-
-  useEffect(() => {
-    if (!hasClaimedDailyBonus) return undefined;
-
-    if (lastPrize === null) {
-      setIsWheelVisible(false);
-      return undefined;
-    }
-
-    const timeout = window.setTimeout(
-      () => setIsWheelVisible(false),
-      WHEEL_HIDE_DELAY_MS,
-    );
-    return () => window.clearTimeout(timeout);
-  }, [hasClaimedDailyBonus, lastPrize]);
-
-  const handleSpin = async () => {
-    if (isSpinning || !canSpinNow) return;
-
-    setErrorMessage("");
-    setIsWheelVisible(true);
-    setIsSpinning(true);
-
-    try {
-      const startResult = await onSpinStart();
-      if (Number.isFinite(startResult.nextClaimAt ?? NaN)) {
-        setLocalNextClaimAt(Number(startResult.nextClaimAt));
-      }
-      const winner =
-        prizes.find((prize) => prize.amount === startResult.amount) ??
-        prizes[0];
-
-      const extraSpins = 5;
-      const baseRotation = 360 * extraSpins;
-      const targetRotation = rotation + baseRotation + (360 - winner.angle);
-
-      setRotation(targetRotation);
-      window.setTimeout(async () => {
-        try {
-          const claimResult = await onSpinClaim();
-          setLocalNextClaimAt(claimResult.nextClaimAt);
-          setLastPrize(claimResult.amount || winner.amount);
-          setIsSpinning(false);
-        } catch (claimError) {
-          setIsSpinning(false);
-          setErrorMessage(
-            (claimError as Error)?.message ||
-              "Unable to claim your spin reward.",
-          );
-        }
-      }, 5000);
-    } catch (error) {
-      setIsSpinning(false);
-      setErrorMessage((error as Error)?.message || "Unable to spin right now.");
-    }
+  const handleOpenDailyBox = () => {
+    if (!dailyBox || !isDailyBoxReady || isOpeningDailyBox || !onOpenDailyBox) return;
+    setIsOpeningDailyBox(true);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(onOpenDailyBox, prefersReducedMotion ? 120 : 900);
   };
 
   return (
-    <div
-      className={`w-full flex flex-col items-center ${embedded ? "min-h-[560px]" : "min-h-[calc(100vh-70px)]"} bg-[#05060a] relative overflow-hidden rounded-2xl border border-white/10`}
-    >
-      <div className="absolute inset-0 z-0 bg-[#05060a]">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#05060a] via-[#05060a]/40 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem)]" />
-        <BackgroundFloatingCoins />
-      </div>
-
-      <div className="relative z-10 w-full flex flex-col items-center max-w-6xl mx-auto px-4 py-6 md:py-8">
-        {onBack ? (
-          <div className="mb-4 flex w-full justify-start">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span className="font-bold text-sm">Back</span>
-            </button>
+    <main className={`${embedded ? "min-h-[700px]" : "min-h-[calc(100vh-70px)]"} relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#050711] text-white`}>
+      {isOpeningDailyBox && dailyBox && (
+        <div className="fixed inset-0 z-[300] grid place-items-center overflow-hidden bg-[#04050b]/90 px-5 backdrop-blur-md" role="status" aria-live="polite">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(124,58,237,.35),transparent_45%)]" />
+          <div className="daily-box-burst absolute h-72 w-72 rounded-full border border-violet-300/40 sm:h-[430px] sm:w-[430px]" />
+          <div className="daily-box-burst absolute h-52 w-52 rounded-full border-2 border-blue-400/30 [animation-delay:120ms] sm:h-80 sm:w-80" />
+          {[...Array(10)].map((_, index) => <Sparkles key={index} className="daily-box-spark absolute h-5 w-5 text-violet-300" style={{ transform: `rotate(${index * 36}deg) translateY(-clamp(120px,28vw,240px))`, animationDelay: `${index * 45}ms` }} />)}
+          <div className="daily-box-launch relative flex flex-col items-center text-center">
+            <div className="absolute inset-0 scale-125 rounded-full bg-violet-500/30 blur-3xl" />
+            <img src={dailyBox.image} alt="" className="relative h-52 w-52 object-contain drop-shadow-[0_28px_45px_rgba(97,55,255,.7)] sm:h-80 sm:w-80" />
+            <p className="relative mt-4 text-xs font-black uppercase tracking-[.3em] text-violet-300">Opening your daily box</p>
+            <h2 className="relative mt-2 text-2xl font-black sm:text-4xl">{dailyBox.name}</h2>
           </div>
-        ) : null}
-
-        <div className="flex flex-col items-center mb-8 md:mb-12 text-center">
-          <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter text-white uppercase drop-shadow-2xl">
-            Daily{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#205DD7] to-sky-300">
-              Spin
-            </span>
-          </h1>
-          <p className="text-neutral-400 font-medium mt-2">
-            Spin for free coins every 24 hours!
-          </p>
+          <style>{`@keyframes dailyBoxLaunch{0%{opacity:0;transform:translateY(34vh) scale(.45) rotate(-8deg)}55%{opacity:1;transform:translateY(0) scale(1.12) rotate(2deg)}100%{transform:translateY(0) scale(1) rotate(0)}}@keyframes dailyBoxBurst{0%{opacity:0;transform:scale(.3)}70%{opacity:1}100%{opacity:0;transform:scale(1.35)}}@keyframes dailyBoxSpark{0%{opacity:0}45%{opacity:1}100%{opacity:0}}.daily-box-launch{animation:dailyBoxLaunch .82s cubic-bezier(.16,1,.3,1) both}.daily-box-burst{animation:dailyBoxBurst .9s ease-out both}.daily-box-spark{animation:dailyBoxSpark .75s ease-out both}@media(prefers-reduced-motion:reduce){.daily-box-launch,.daily-box-burst,.daily-box-spark{animation:none}}`}</style>
         </div>
+      )}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_20%,rgba(111,42,255,.13),transparent_28rem),radial-gradient(circle_at_25%_65%,rgba(35,91,255,.09),transparent_30rem)]" />
+      <div className="relative mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-10 lg:py-11">
+        {onBack && <button onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white"><ChevronLeft className="h-5 w-5" /> Back</button>}
 
-        {isWheelVisible && (
-          <div className="relative w-[340px] h-[340px] md:w-[510px] md:h-[510px] flex items-center justify-center max-w-full">
-            <svg
-              viewBox="0 0 400 400"
-              className="pointer-events-none absolute z-10 overflow-visible w-full h-full scale-[1.02]"
-            >
-              <path
-                d="M 179.13 133.46 Q 167.80 138.14 162.13 127.25 L 113.55 33.93 Q 107.88 23.04 118.93 17.71 A 199.5 199.5 0 0 1 281.06 17.71 Q 292.11 23.04 286.44 33.93 L 237.86 127.25 Q 232.19 138.14 220.86 133.46 A 69.73 69.73 0 0 0 179.13 133.46 Z"
-                className="fill-transparent stroke-[#205DD7]"
-                strokeWidth="5"
-              />
-            </svg>
-
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 -mt-2 md:-mt-4 drop-shadow-xl">
-              <svg
-                width="60"
-                height="60"
-                viewBox="0 0 60 60"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-[60px] md:w-[86px] h-auto"
-              >
-                <path d="M30 60L0 0H60L30 60Z" fill="#2f75ff" />
-                <path d="M30 50L10 10H50L30 50Z" fill="#4338ca" />
-              </svg>
-            </div>
-
-            <div
-              className="relative w-full h-full rounded-full transition-transform duration-[5000ms] cubic-bezier(0.15, 0, 0.15, 1) [--radius:110px] md:[--radius:172.125px]"
-              style={{ transform: `rotate(${rotation}deg)` }}
-            >
-              <div className="relative w-full h-full overflow-hidden rounded-full border-4 border-neutral-800 shadow-2xl bg-[#1a1a1a]">
-                <svg
-                  viewBox="0 0 400 400"
-                  className="absolute inset-0 w-full h-full"
-                >
-                  <path
-                    d="M 215.167 126.549 Q 203.271 125.071 203.794 113.082 L 207.982 17.174 Q 208.505 5.185 220.470 6.077 A 195 195 0 0 1 357.706 85.310 Q 364.461 95.226 354.340 101.674 L 273.375 153.254 Q 263.254 159.702 256.026 150.139 A 75 75 0 0 0 215.167 126.549 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 271.193 176.409 Q 266.525 165.368 277.169 159.827 L 362.322 115.500 Q 372.967 109.959 378.177 120.766 A 195 195 0 0 1 378.177 279.233 Q 372.967 290.040 362.322 284.499 L 277.169 240.172 Q 266.525 234.631 271.193 223.590 A 75 75 0 0 0 271.193 176.409 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 256.026 249.860 Q 263.254 240.297 273.375 246.745 L 354.340 298.325 Q 364.461 304.773 357.706 314.689 A 195 195 0 0 1 220.470 393.922 Q 208.505 394.814 207.982 382.825 L 203.794 286.917 Q 203.271 274.928 215.167 273.450 A 75 75 0 0 0 256.026 249.860 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 184.832 273.450 Q 196.728 274.928 196.205 286.917 L 192.017 382.825 Q 191.494 394.814 179.529 393.922 A 195 195 0 0 1 42.293 314.689 Q 35.538 304.773 45.659 298.325 L 126.624 246.745 Q 136.745 240.297 143.973 249.860 A 75 75 0 0 0 184.832 273.450 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 128.806 223.590 Q 133.474 234.631 122.830 240.172 L 37.677 284.499 Q 27.032 290.040 21.822 279.233 A 195 195 0 0 1 21.822 120.766 Q 27.032 109.959 37.677 115.500 L 122.830 159.827 Q 133.474 165.368 128.806 176.409 A 75 75 0 0 0 128.806 223.590 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                  <path
-                    d="M 143.973 150.139 Q 136.745 159.702 126.624 153.254 L 45.659 101.674 Q 35.538 95.226 42.293 85.310 A 195 195 0 0 1 179.529 6.077 Q 191.494 5.185 192.017 17.174 L 196.205 113.082 Q 196.728 125.071 184.832 126.549 A 75 75 0 0 0 143.973 150.139 Z"
-                    className="fill-white/5 stroke-neutral-800"
-                    strokeWidth="2"
-                  />
-                </svg>
-
-                {prizes.map((prize) => (
-                  <div
-                    key={prize.id}
-                    className="absolute top-1/2 left-1/2 w-[80px] h-[80px] md:w-[80.79px] md:h-[80.79px] flex items-center justify-center"
-                    style={{
-                      transform: `translate(-50%, -50%) rotate(${prize.angle}deg) translateY(calc(-1 * var(--radius)))`,
-                    }}
-                  >
-                    <div className="relative w-full h-full flex flex-col items-center justify-center">
-                      <img
-                        src={prize.image}
-                        alt={`${prize.amount}`}
-                        className="w-10 h-10 md:w-14 md:h-14 object-contain drop-shadow-[0_0_15px_rgba(32,93,215,0.5)] pb-4"
-                        loading="lazy"
-                        decoding="async"
-                        width={56}
-                        height={56}
-                      />
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-neutral-950 border border-white/10 rounded-2xl px-3.5 py-1.5 flex items-center justify-center gap-0.5 shadow-lg min-w-[60px]">
-                        <span className="text-sm font-bold text-white leading-none pt-0.5">
-                          {prize.amount}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120px] h-[120px] md:w-[175px] md:h-[175px] z-30 group">
-              <div
-                className="absolute inset-0 rounded-full opacity-0 blur-md transition-opacity duration-300 group-hover:opacity-100"
-                style={{
-                  background:
-                    "conic-gradient(from 0deg, #2f75ff, transparent 40%, transparent 60%, #2f75ff)",
-                }}
-              />
-
-              <button
-                onClick={handleSpin}
-                disabled={isSpinning || !canSpinNow}
-                className="relative w-full h-full rounded-full bg-[#131315] border-4 border-neutral-800 shadow-xl flex flex-col items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-transform active:scale-95 z-10"
-              >
-                {lastPrize ? (
-                  <>
-                    <span className="text-xs md:text-sm font-bold text-neutral-400 uppercase tracking-widest">
-                      YOU WON
-                    </span>
-                    <div className="flex items-center gap-1 md:gap-2 mt-1">
-                      <img
-                        src={COIN_ICON}
-                        alt="Coin"
-                        className="w-5 h-5 md:w-6 md:h-6 object-contain"
-                        loading="lazy"
-                        decoding="async"
-                        width={24}
-                        height={24}
-                      />
-                      <span className="text-xl md:text-3xl font-black text-white">
-                        {lastPrize}
-                      </span>
-                    </div>
-                    <span className="text-[10px] md:text-xs text-neutral-500 mt-2">
-                      Come back tomorrow!
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg md:text-xl font-black text-white uppercase italic tracking-tighter">
-                      SPIN NOW
-                    </span>
-                    <span className="text-[10px] md:text-xs text-blue-200 mt-1 font-medium">
-                      Free Daily Reward
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
-
+        <header className="mb-7 flex items-center justify-between lg:mb-9">
+          <div className="flex items-center gap-4">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-violet-950 shadow-[0_0_35px_rgba(139,62,255,.3)] ring-1 ring-violet-300/20 sm:h-16 sm:w-16"><Gift className="h-7 w-7 sm:h-8 sm:w-8" /></span>
+            <div><h1 className="text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">REWARDS</h1><p className="mt-1 text-sm text-slate-300 sm:text-base">Earn rewards the more you play.</p></div>
           </div>
-        )}
+          <button className="hidden rounded-xl border border-violet-400/20 bg-violet-950/40 px-4 py-2 text-sm font-semibold text-slate-200 sm:block">ⓘ &nbsp; How it works</button>
+        </header>
 
-        {showClaimedCard && (
-          <div className="mt-2 w-full max-w-md rounded-3xl border border-sky-300/20 bg-white/[0.06] p-4 text-center shadow-[0_18px_70px_rgba(32,93,215,0.18)] backdrop-blur-md sm:p-5">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20">
-              <CheckCircle2 className="h-6 w-6" />
-            </div>
-            <p className="text-xl font-black text-white sm:text-2xl">
-              Daily bonus claimed!
-            </p>
-            <p className="mt-2 text-sm text-neutral-300">
-              Your free reward is locked in. Explore more boxes while the next
-              spin gets ready.
-            </p>
-            <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-950/55 px-4 py-3">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-sky-200/80">
-                Next spin in
-              </p>
-              <p className="mt-1 font-mono text-2xl font-black text-white tabular-nums">
-                {lockLabel || formatCountdown(effectiveNextClaimAt)}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onExploreBoxes}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#205DD7] to-sky-400 px-5 py-3 text-sm font-black text-white shadow-[0_12px_30px_rgba(32,93,215,0.35)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
-            >
-              Explore Boxes
-              <ArrowRight className="h-4 w-4" />
-            </button>
+        <section className="relative mb-8 overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-[#141641] via-[#0d1230] to-[#160a2f] p-6 shadow-[0_20px_70px_rgba(0,0,0,.28)] sm:p-8 lg:p-10">
+          <div className="absolute right-[-15px] top-[-5px] opacity-20 blur-3xl"><div className="h-52 w-52 rounded-full bg-violet-500" /></div>
+          <div className="relative z-10 max-w-[70%] sm:max-w-[65%]"><p className="flex items-center gap-2 text-xs font-black sm:text-sm"><Sparkles className="h-4 w-4" /> 30-DAY DEPOSIT PROGRESS</p><p className="mt-3 text-4xl font-black text-violet-500 sm:text-6xl">${(depositMissionCents / 100).toFixed(0)} <span className="text-xl text-slate-300 sm:text-3xl">/ {nextMission.amount}</span></p><p className="mt-3 font-semibold text-slate-300"><span className="text-violet-400">${(Math.max(0, nextMission.targetCents - depositMissionCents) / 100).toFixed(0)}</span> until your next reward</p><p className="mt-2 flex items-center gap-2 font-bold"><img src={COIN_ICON} className="h-5 w-5" alt="" /> {nextMission.reward}</p></div>
+          <div className="absolute right-4 top-10 sm:right-10"><div className="relative h-24 w-28 sm:h-36 sm:w-44"><img src={COIN_ICON} alt="Bonus coins" className="absolute bottom-0 right-2 h-20 w-20 drop-shadow-[0_0_22px_rgba(255,183,0,.45)] sm:h-32 sm:w-32" /><img src={COIN_ICON} alt="" className="absolute bottom-3 left-0 h-12 w-12 opacity-80 sm:h-20 sm:w-20" /></div></div>
+          <div className="relative mt-5 h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 via-indigo-500 to-blue-400 shadow-[0_0_16px_rgba(90,100,255,.7)]" style={{ width: `${missionProgress}%` }} /></div><p className="mt-1 text-right text-xs font-bold text-violet-400">{missionProgress}%</p>
+        </section>
+
+        <section className="mb-8"><div className="mb-5 flex flex-wrap items-baseline gap-3"><h2 className="flex items-center gap-2 text-base font-black sm:text-lg"><Crown className="h-5 w-5 text-yellow-400" /> DEPOSIT MISSIONS</h2><p className="text-xs text-slate-400">Progress resets every 30 days{missionResetAt > now ? ` · ${formatCountdown(missionResetAt)} remaining` : ""}.</p></div>
+          <div className="grid gap-3 lg:grid-cols-3 lg:gap-8">{milestones.map((milestone, index) => { const ready = depositMissionCents >= milestone.targetCents; const claimed = depositMissionClaims[milestone.id] === depositMissionCycleStart; return <article key={milestone.id} className={`relative flex min-h-24 items-center rounded-xl border bg-gradient-to-br from-[#101629] to-[#090d17] p-4 lg:min-h-56 lg:flex-col lg:justify-center lg:text-center ${ready && !claimed ? "border-violet-500 shadow-[0_0_30px_rgba(124,58,237,.18)]" : "border-slate-700/60"}`}><span className="absolute left-3 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-slate-600 text-xs font-black lg:left-1/2 lg:top-[-12px] lg:-translate-x-1/2 lg:translate-y-0">{index + 1}</span><div className="ml-9 flex flex-1 items-center gap-3 lg:ml-0 lg:flex-col"><img src={COIN_ICON} alt="" className="h-11 w-11" /><div><p className="text-xl font-black text-violet-400">{milestone.amount}</p><p className="text-xs text-slate-300">Deposited this cycle</p></div></div><button type="button" disabled={!ready || claimed || claimingMissionId === milestone.id} onClick={() => onClaimDepositMission?.(milestone.id)} className={`rounded-full px-4 py-2 text-xs font-bold sm:text-sm ${ready && !claimed ? "bg-violet-600 text-white hover:bg-violet-500" : "bg-violet-900/50 text-slate-400"}`}>{claimed ? "Claimed" : claimingMissionId === milestone.id ? "Claiming..." : ready ? `Claim ${milestone.reward}` : milestone.reward}</button>{!ready && <LockKeyhole className="absolute right-2 top-2 h-4 w-4 text-slate-500" />}</article>; })}</div>
+          <p className="mt-4 text-xs text-slate-500 lg:text-center">Only completed, verified deposits count. Rewards must be claimed before the 30-day cycle resets.</p>
+        </section>
+
+        <section className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-br from-[#11163a] to-[#090d20] p-5 sm:p-7 lg:p-9">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="flex items-center gap-2 text-lg font-black sm:text-xl"><PackageOpen className="h-5 w-5 text-violet-300" /> DAILY FREE BOX</h2>{hasMadeDeposit ? <p className="mt-1 text-xs text-slate-300 sm:text-sm">One free mystery box every 24 hours.</p> : <div className="relative mt-2 inline-flex items-center overflow-hidden rounded-lg border border-white/10 bg-black/20 px-3 py-2"><p className="select-none text-xs text-slate-300 blur-[4px] sm:text-sm">Make your first deposit to unlock one free mystery box every 24 hours.</p><span className="absolute inset-0 flex items-center justify-center gap-2 text-xs font-bold text-slate-100"><LockKeyhole className="h-4 w-4 text-violet-300" /> Locked until first deposit</span></div>}</div>{hasMadeDeposit && <span className="flex items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-950/40 px-3 py-2 text-xs"><Timer className="h-4 w-4" /> {isDailyBoxReady ? "Ready to open" : `Resets in ${formatCountdown(effectiveNextClaimAt)}`}</span>}</div>
+          <div className="mx-auto mt-7 grid max-w-3xl items-center gap-6 rounded-2xl border border-white/10 bg-black/20 p-5 sm:grid-cols-[minmax(180px,280px)_1fr] sm:p-7">
+            <div className="relative mx-auto grid aspect-square w-full max-w-[250px] place-items-center overflow-hidden rounded-2xl bg-[radial-gradient(circle,rgba(124,58,237,.34),transparent_65%)]"><div className="absolute inset-4 rounded-full bg-violet-500/10 blur-2xl" />{dailyBox?.image ? <img src={dailyBox.image} alt={dailyBox.name} className="relative h-full w-full object-contain p-4 drop-shadow-[0_22px_32px_rgba(0,0,0,.5)]" /> : <Gift className="relative h-24 w-24 text-violet-400" />}{!hasMadeDeposit && <span className="absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-[#080b14]"><LockKeyhole className="h-5 w-5 text-slate-400" /></span>}</div>
+            <div className="text-center sm:text-left"><p className="text-xs font-black uppercase tracking-[.2em] text-violet-400">Today&apos;s free reward</p><h3 className="mt-2 text-2xl font-black sm:text-3xl">{dailyBox?.name ?? "Daily Mystery Box"}</h3><p className="mt-3 text-sm leading-6 text-slate-300">{!hasMadeDeposit ? "Your daily box activates automatically after your first successful deposit." : isDailyBoxReady ? "Your free box is ready. Open it as a full box opening and reveal exactly what you won." : "You claimed today’s box. Come back when the timer reaches zero for another free opening."}</p><button type="button" onClick={handleOpenDailyBox} disabled={!dailyBox || !isDailyBoxReady || isOpeningDailyBox} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-500 px-5 py-3 text-sm font-black shadow-[0_12px_30px_rgba(90,67,255,.3)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:shadow-none sm:w-auto">{!hasMadeDeposit ? <><LockKeyhole className="h-4 w-4" /> UNLOCK AFTER FIRST DEPOSIT</> : !dailyBox ? "DAILY BOX COMING SOON" : isOpeningDailyBox ? "OPENING..." : isDailyBoxReady ? <><PackageOpen className="h-4 w-4" /> OPEN &amp; REVEAL</> : <><CheckCircle2 className="h-4 w-4" /> CLAIMED TODAY</>}</button></div>
           </div>
-        )}
-
-        <p className="mt-6 text-neutral-500 font-bold text-sm md:text-base">
-          Resets every 24 hours
-        </p>
-        {!canSpinNow && !showClaimedCard && (
-          <p className="mt-2 text-xs md:text-sm text-neutral-400">
-            Next spin in {lockLabel || formatCountdown(effectiveNextClaimAt)}
-          </p>
-        )}
-        {!!errorMessage && (
-          <p className="mt-3 text-xs md:text-sm text-red-400 text-center">
-            {errorMessage}
-          </p>
-        )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 };

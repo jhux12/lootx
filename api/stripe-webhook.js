@@ -10,6 +10,10 @@ import { finalizeShippingPayment, releaseShippingPaymentAttempt } from './_lib/s
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const GA4_DELIVERY_LEASE_MS = 5 * 60 * 1000;
+const DEPOSIT_MISSION_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+const DEPOSIT_MISSION_EPOCH_MS = Date.UTC(2026, 7, 1);
+const getDepositMissionCycleStart = (now = Date.now()) => DEPOSIT_MISSION_EPOCH_MS
+  + Math.max(0, Math.floor((now - DEPOSIT_MISSION_EPOCH_MS) / DEPOSIT_MISSION_PERIOD_MS)) * DEPOSIT_MISSION_PERIOD_MS;
 
 const readRawBody = async (req) => {
   const chunks = [];
@@ -304,10 +308,15 @@ export default async function handler(req, res) {
         const creditedDepositCents = Number.isFinite(amountTotalCents)
           ? Math.max(0, Math.round(amountTotalCents))
           : 0;
+        const depositMissionCycleStart = getDepositMissionCycleStart();
+        const isCurrentDepositMissionCycle = Number(userData.depositMissionCycleStart ?? 0) === depositMissionCycleStart;
         transaction.set(userRef, {
           totalDepositedCents: admin.firestore.FieldValue.increment(creditedDepositCents),
           depositCount: admin.firestore.FieldValue.increment(1),
           lastDepositAt: admin.firestore.FieldValue.serverTimestamp(),
+          depositMissionCycleStart,
+          depositMissionDepositedCents: (isCurrentDepositMissionCycle ? Math.max(0, Number(userData.depositMissionDepositedCents ?? 0)) : 0) + creditedDepositCents,
+          depositMissionClaims: isCurrentDepositMissionCycle ? (userData.depositMissionClaims ?? {}) : {},
           ...(isFirstDeposit && bonusCoins > 0 ? {
             welcomeBonusClaimedAt: admin.firestore.FieldValue.serverTimestamp()
           } : {})

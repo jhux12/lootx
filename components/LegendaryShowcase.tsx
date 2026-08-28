@@ -28,7 +28,7 @@ export const LegendaryShowcase: React.FC = () => {
 
   const legendaryDrops = useMemo(() => {
     if (!boxes.length) return [];
-    const eligibleBoxes = boxes.filter((box) => !box.isDaily);
+    const eligibleBoxes = boxes.filter((box) => !box.isDaily && !box.isDailyReward);
     const legendaryItems = eligibleBoxes
       .flatMap((box) => box.items.map((item) => ({ item, box })))
       .filter(({ item }) => item.rarity === 'legendary');

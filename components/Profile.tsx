@@ -274,8 +274,11 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   }, [user.name, user.email]);
 
   const displayUsername = getProfileUsername(user);
-  const dailyFreeBox = useMemo(() => boxes.find((box) => box.isDaily) ?? null, [boxes]);
-  const hasDailyFreeBoxAvailable = Boolean(dailyFreeBox) && !user.lastFreeBoxClaim;
+  const dailyFreeBox = useMemo(() => boxes.find((box) => box.isDailyReward) ?? null, [boxes]);
+  const lastDailyFreeBoxClaim = Number(user.lastDailyRewardBoxClaim ?? 0);
+  const hasDailyFreeBoxAvailable = Boolean(dailyFreeBox)
+    && hasUserMadeDeposit(user)
+    && (!lastDailyFreeBoxClaim || lastDailyFreeBoxClaim + 24 * 60 * 60 * 1000 <= Date.now());
 
   const xpBoxIds = useMemo(
     () => new Set(boxes.filter((box) => box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0).map((box) => box.id)),

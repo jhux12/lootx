@@ -27,6 +27,7 @@ import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 import { calculateCardCenteredTranslate, createLockedSpinState, getLockedWinningItem } from '../utils/spinnerSpinLock';
+import { hasUserMadeDeposit } from '../utils/depositEligibility';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -115,7 +116,7 @@ const mapBoxDetail = (id: string, data: Record<string, any>): MysteryBox => {
     const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
     return { id: item.id ?? `${id}-${index}`, name: item.name ?? 'Mystery Item', price: Number(item.value ?? item.price ?? 0), image: item.image ?? '', rarity, chance: Number(item.weight ?? item.chance ?? 0), color: item.color ?? '#9ca3af', brand: item.brand ?? '', category: item.category ?? '', tags: Array.isArray(item.tags) ? item.tags : [], sizes: Array.isArray(item.sizes) ? item.sizes : [], redeemable: item.redeemable !== false } as CaseItem;
   });
-  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
+  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isDailyReward: data.isDailyReward === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
 };
 
 const normalizeRarityKey = (rarity?: string) => {
@@ -410,7 +411,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const isAdmin = Boolean(user?.isAdmin);
   // Daily signup boxes are always free openings, including legacy URLs that may
   // not carry the explicit `isFree` route flag.
-  const isFreeOpening = Boolean(isFree || box?.isDaily);
+  const isFreeOpening = Boolean(isFree || box?.isDaily || box?.isDailyReward);
   const hideDropTableOdds = isFreeOpening;
   // Sort items high to low for display purposes
   const displayItems = useMemo(() => [...items].sort(
@@ -501,7 +502,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const goldStageTimerRef = useRef<number | null>(null);
   const preloadedSpinnerImagesRef = useRef<Map<string, Promise<void>>>(new Map());
   const topUpLockTimerRef = useRef<number | null>(null);
-  const canFreeSpin = !user.lastFreeBoxClaim;
+  const dailyFreeBoxCooldownMs = 24 * 60 * 60 * 1000;
+  const hasMadeDeposit = hasUserMadeDeposit(user);
+  const isDailyRewardBox = box?.isDailyReward === true;
+  const canFreeSpin = isDailyRewardBox
+    ? hasMadeDeposit && (!user.lastDailyRewardBoxClaim || user.lastDailyRewardBoxClaim + dailyFreeBoxCooldownMs <= Date.now())
+    : !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
   const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
   const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
@@ -1637,7 +1643,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       if (!canFreeSpin) {
         spinRequestLockRef.current = false;
-        toast.info("Free signup box already claimed.");
+        toast.info(isDailyRewardBox
+          ? (hasMadeDeposit ? "Your next daily free box is not ready yet." : "Make your first deposit to unlock the daily free box.")
+          : "Your signup free box has already been claimed.");
         return;
       }
       if (!auth.currentUser?.phoneNumber) {
@@ -1757,7 +1765,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         const analyticsPayload = { box_id: box.id, box_name: box.name, box_type: box.category ?? 'box', coin_price: Number(data.price ?? box.price ?? 0), usd_value: coinsToUsd(Number(data.price ?? box.price ?? 0), economySettings), is_free: Boolean(isFree), item_id: winner.id, item_name: winner.name, item_rarity: winner.rarity, item_value_coins: Number(winner.price ?? 0), item_value_usd: coinsToUsd(Number(winner.price ?? 0), economySettings), balance_before: Number(balance ?? 0), balance_after: Number(data.newCoinBalance ?? data.newCoins ?? balance ?? 0), open_id: data.openId, entry_point: 'case_opening' };
         trackBoxOpen(analyticsPayload, data.openId);
         trackItemWon({ ...analyticsPayload, inventory_instance_id: data.inventoryId }, data.openId);
-        if (isFree && Number.isFinite(data.freeBoxClaimedAt)) {
+        if (isFree && !isDailyRewardBox && Number.isFinite(data.freeBoxClaimedAt)) {
           await claimFreeBox(data.freeBoxClaimedAt, { persist: false });
           trackEvent('free_spin_completed', {
             box_id: box.id,
@@ -1769,7 +1777,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         if ((data.currencyType ?? 'COIN') === 'COIN') {
           const updatedCoinBalance = Number(data.newCoinBalance ?? data.newCoins ?? 0);
           syncBalance(updatedCoinBalance);
-          if (isFree) {
+          if (isFree && !isDailyRewardBox) {
             pendingPostFreeBoxFlowRef.current = true;
           }
           if (!isFree) {

@@ -14,6 +14,7 @@ import {
   ChevronDown,
   HelpCircle,
   Facebook,
+  Gift,
   Instagram,
   LifeBuoy,
   LogIn,
@@ -49,6 +50,7 @@ import {
 import { UserAvatar } from "./UserAvatar";
 import { resolveUserDisplayName } from "../utils/userIdentity";
 import { lockPageScroll } from "../utils/scrollLock";
+import { hasUserMadeDeposit } from "../utils/depositEligibility";
 
 const ActivityDrawer = lazy(() =>
   import("../src/ui/activity/ActivityDrawer").then((module) => ({
@@ -134,19 +136,19 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const unreadCount = useUnreadActivityCount();
-  const lastDailyClaim = useMemo(
+  const lastDailyBoxClaim = useMemo(
     () =>
-      Number.isFinite(user.lastDailyClaim ?? NaN)
-        ? Number(user.lastDailyClaim)
+      Number.isFinite(user.lastDailyRewardBoxClaim ?? NaN)
+        ? Number(user.lastDailyRewardBoxClaim)
         : 0,
-    [user.lastDailyClaim],
+    [user.lastDailyRewardBoxClaim],
   );
-  const isDailySpinReady = useMemo(() => {
+  const isDailyBoxReady = useMemo(() => {
     const dailyCooldownMs = 24 * 60 * 60 * 1000;
-    return !lastDailyClaim || lastDailyClaim + dailyCooldownMs <= Date.now();
-  }, [lastDailyClaim]);
-  const showDailySpinReady = isAuthenticated && isDailySpinReady;
-  const hasDailyBox = useMemo(() => boxes.some((box) => box.isDaily), [boxes]);
+    return !lastDailyBoxClaim || lastDailyBoxClaim + dailyCooldownMs <= Date.now();
+  }, [lastDailyBoxClaim]);
+  const showDailySpinReady = isAuthenticated && hasUserMadeDeposit(user) && isDailyBoxReady;
+  const hasDailyBox = useMemo(() => boxes.some((box) => box.isDailyReward), [boxes]);
   const hasFreeSignupBox =
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
@@ -581,8 +583,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         : desktopNavButtonClass
                     } gap-2`}
                   >
-                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                    <span>Daily Spin</span>
+                    <Gift className="h-4 w-4" aria-hidden="true" />
+                    <span>Rewards</span>
                     {showDailySpinReady ? (
                       <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#54f5b3] shadow-[0_0_12px_rgba(84,245,179,0.8)]" />
                     ) : null}

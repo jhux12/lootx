@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CoinAmount } from './CoinAmount';
 import { MysteryBox } from '../types';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
@@ -17,6 +18,7 @@ type BoxCardProps = {
 const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size = 'default' }) => {
   const { boxes } = useGame();
   const [isDropping, setIsDropping] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
   const clickTimeoutRef = useRef<number | null>(null);
   const isCompact = size === 'compact';
   const boxMap = useMemo(() => new Map(boxes.map((entry) => [entry.id, entry])), [boxes]);
@@ -31,12 +33,14 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
   }, []);
 
   const handleSelect = () => {
-    if (isDropping) return;
+    if (isDropping || isLaunching) return;
 
     setIsDropping(true);
+    setIsLaunching(true);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     clickTimeoutRef.current = window.setTimeout(() => {
       onSelect(box.id);
-    }, 180);
+    }, reducedMotion ? 120 : 720);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -46,6 +50,19 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
   };
 
   return (
+    <>
+    {isLaunching && typeof document !== 'undefined' ? createPortal(
+      <div className="fixed inset-0 z-[300] grid place-items-center overflow-hidden bg-[#04050b]/85 px-5 backdrop-blur-md" aria-hidden="true">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(82,74,255,.32),transparent_46%)]" />
+        <div className="box-card-burst absolute h-64 w-64 rounded-full border border-violet-300/35 sm:h-[420px] sm:w-[420px]" />
+        <div className="box-card-burst absolute h-44 w-44 rounded-full border-2 border-sky-400/25 [animation-delay:100ms] sm:h-72 sm:w-72" />
+        <div className="box-card-launch relative">
+          <div className="absolute inset-0 scale-125 rounded-full bg-violet-500/25 blur-3xl" />
+          <img src={box.image} alt="" className="relative h-52 w-52 object-contain drop-shadow-[0_28px_45px_rgba(75,64,255,.65)] sm:h-80 sm:w-80" />
+        </div>
+        <style>{`@keyframes boxCardLaunch{0%{opacity:0;transform:translateY(30vh) scale(.42) rotate(-7deg)}58%{opacity:1;transform:translateY(0) scale(1.1) rotate(2deg)}100%{transform:scale(1) rotate(0)}}@keyframes boxCardBurst{0%{opacity:0;transform:scale(.25)}65%{opacity:1}100%{opacity:0;transform:scale(1.35)}}.box-card-launch{animation:boxCardLaunch .66s cubic-bezier(.16,1,.3,1) both}.box-card-burst{animation:boxCardBurst .72s ease-out both}@media(prefers-reduced-motion:reduce){.box-card-launch,.box-card-burst{animation:none}}`}</style>
+      </div>, document.body
+    ) : null}
     <div
       onClick={handleSelect}
       onMouseEnter={() => {
@@ -89,6 +106,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
         )}
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
@@ -98,17 +99,27 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   onOpen: (boxId: string) => void;
 }) => {
   const { box } = model;
+  const [isLaunching, setIsLaunching] = useState(false);
   const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
 
-  return (
+  const launch = () => {
+    if (isLaunching) return;
+    setIsLaunching(true);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.setTimeout(() => onOpen(box.id), reducedMotion ? 120 : 720);
+  };
+
+  return (<>
+    {isLaunching && typeof document !== 'undefined' ? createPortal(<div className="fixed inset-0 z-[300] grid place-items-center overflow-hidden bg-[#04050b]/85 px-5 backdrop-blur-md" aria-hidden="true"><div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(82,74,255,.32),transparent_46%)]" /><div className="catalog-box-burst absolute h-64 w-64 rounded-full border border-violet-300/35 sm:h-[420px] sm:w-[420px]" /><div className="catalog-box-launch relative"><div className="absolute inset-0 scale-125 rounded-full bg-violet-500/25 blur-3xl" /><img src={box.image} alt="" className="relative h-52 w-52 object-contain drop-shadow-[0_28px_45px_rgba(75,64,255,.65)] sm:h-80 sm:w-80" /></div><style>{`@keyframes catalogBoxLaunch{0%{opacity:0;transform:translateY(30vh) scale(.42) rotate(-7deg)}58%{opacity:1;transform:translateY(0) scale(1.1) rotate(2deg)}100%{transform:scale(1) rotate(0)}}@keyframes catalogBoxBurst{0%{opacity:0;transform:scale(.25)}65%{opacity:1}100%{opacity:0;transform:scale(1.35)}}.catalog-box-launch{animation:catalogBoxLaunch .66s cubic-bezier(.16,1,.3,1) both}.catalog-box-burst{animation:catalogBoxBurst .72s ease-out both}@media(prefers-reduced-motion:reduce){.catalog-box-launch,.catalog-box-burst{animation:none}}`}</style></div>, document.body) : null}
     <button
       type="button"
-      onClick={() => onOpen(box.id)}
+      onClick={launch}
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
       className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      disabled={isLaunching}
     >
       <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
@@ -133,7 +144,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
         <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
         <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
       </div>
-    </button>
+    </button></>
   );
 });
 CatalogBoxCard.displayName = 'CatalogBoxCard';
@@ -234,7 +245,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const catalogModels = useMemo(
     () => boxes
-      .filter((box) => !box.isDaily && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .filter((box) => !box.isDaily && !box.isDailyReward && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
       .map(createCatalogModel),
     [boxes]
   );
