@@ -652,9 +652,6 @@ export const AdminPanel: React.FC = () => {
   const dailySpinRows = useMemo(() => getDailySpinRows(bonusDraft.dailySpinOdds), [bonusDraft.dailySpinOdds]);
   const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
   const [economySaveNotice, setEconomySaveNotice] = useState(false);
-  const [supportChatEnabled, setSupportChatEnabled] = useState(true);
-  const [isSavingSupportChat, setIsSavingSupportChat] = useState(false);
-  const [supportChatSaveNotice, setSupportChatSaveNotice] = useState(false);
   const [xpShopItems, setXpShopItems] = useState<AdminXpShopItem[]>([]);
   const [xpRedemptions, setXpRedemptions] = useState<AdminXpRedemption[]>([]);
   const [editingXpShopItemId, setEditingXpShopItemId] = useState<string | null>(null);
@@ -1519,15 +1516,6 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
-  }, [activeTab]);
-
-  useEffect(() => {
-      if (activeTab !== 'settings') return;
-      return onSnapshot(doc(db, 'settings', 'supportChat'), (snapshot) => {
-          setSupportChatEnabled(snapshot.data()?.enabled !== false);
-      }, (error) => {
-          console.error('Support chat settings snapshot failed', error);
-      });
   }, [activeTab]);
 
   useEffect(() => {
@@ -3459,18 +3447,6 @@ export const AdminPanel: React.FC = () => {
       await setDoc(doc(db, 'settings', 'economy'), payload, { merge: true });
       setEconomySaveNotice(true);
       window.setTimeout(() => setEconomySaveNotice(false), 3000);
-  };
-
-  const handleSaveSupportChat = async () => {
-      setIsSavingSupportChat(true);
-      setSupportChatSaveNotice(false);
-      try {
-          await setDoc(doc(db, 'settings', 'supportChat'), { enabled: supportChatEnabled }, { merge: true });
-          setSupportChatSaveNotice(true);
-          window.setTimeout(() => setSupportChatSaveNotice(false), 3000);
-      } finally {
-          setIsSavingSupportChat(false);
-      }
   };
 
   const resetXpShopItemDraft = () => {
@@ -7251,38 +7227,6 @@ export const AdminPanel: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
                                 <Input type="text" value="pullz.gg" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
-                            </div>
-                            <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-bold text-white">Live support chat</p>
-                                        <p className="mt-1 text-xs leading-5 text-gray-400">Show the support chat tab and allow the chat provider to load for visitors.</p>
-                                    </div>
-                                    <label className="flex min-h-11 items-center justify-between gap-3 sm:justify-end">
-                                        <span className={`text-xs font-semibold ${supportChatEnabled ? 'text-emerald-300' : 'text-gray-400'}`}>
-                                            {supportChatEnabled ? 'Enabled' : 'Disabled'}
-                                        </span>
-                                        <Checkbox
-                                            aria-label="Enable live support chat"
-                                            checked={supportChatEnabled}
-                                            onChange={(event) => {
-                                                setSupportChatEnabled(event.target.checked);
-                                                setSupportChatSaveNotice(false);
-                                            }}
-                                        />
-                                    </label>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => { void handleSaveSupportChat(); }}
-                                    disabled={isSavingSupportChat}
-                                    className="mt-4 min-h-11 w-full rounded-lg border border-brand-blue/40 bg-brand-blue/20 px-4 text-sm font-bold text-brand-blue transition-colors hover:bg-brand-blue hover:text-white disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                                >
-                                    {isSavingSupportChat ? 'Saving…' : 'Save chat setting'}
-                                </button>
-                                {supportChatSaveNotice && (
-                                    <p className="mt-3 text-xs text-emerald-300" role="status">Live support chat setting saved.</p>
-                                )}
                             </div>
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>

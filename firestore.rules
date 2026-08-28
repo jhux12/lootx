@@ -181,7 +181,6 @@ service cloud.firestore {
         || docId == 'stripe'
         || docId == 'stripe-settings'
         || docId == 'economy'
-        || docId == 'supportChat'
         || docId == 'pullPass'
         || docId == 'upgrader';
       allow write: if isAdmin();
