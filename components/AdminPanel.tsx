@@ -6959,6 +6959,20 @@ export const AdminPanel: React.FC = () => {
                 <div className="space-y-6">
                     <HomepageShowcaseEditor />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
+                        <h3 className="text-lg font-bold text-white">Daily reward box tiers</h3>
+                        <p className="mt-1 text-sm text-gray-400">Set purchased-box spend missions and guaranteed daily rewards. The first tier should require 0 coins.</p>
+                        <div className="mt-5 space-y-3">
+                            {bonusDraft.dailyRewardTiers.map((tier, index) => (
+                                <div key={`daily-reward-${index}`} className="grid grid-cols-1 gap-3 rounded-xl border border-gray-700 bg-[#0b0e14] p-3 sm:grid-cols-3">
+                                    <label><span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Box name</span><Input value={tier.name} onChange={(event) => setBonusDraft((prev) => ({ ...prev, dailyRewardTiers: prev.dailyRewardTiers.map((item, i) => i === index ? { ...item, name: event.target.value } : item) }))} className="w-full rounded-lg border border-gray-700 bg-[#0f1521] px-3 py-2 text-sm text-white" /></label>
+                                    <label><span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Coins opened required</span><Input type="number" min={0} value={tier.spendRequired} onChange={(event) => setBonusDraft((prev) => ({ ...prev, dailyRewardTiers: prev.dailyRewardTiers.map((item, i) => i === index ? { ...item, spendRequired: Math.max(0, Number(event.target.value)) } : item) }))} className="w-full rounded-lg border border-gray-700 bg-[#0f1521] px-3 py-2 text-sm text-white" /></label>
+                                    <label><span className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Reward coins</span><Input type="number" min={1} value={tier.rewardCoins} onChange={(event) => setBonusDraft((prev) => ({ ...prev, dailyRewardTiers: prev.dailyRewardTiers.map((item, i) => i === index ? { ...item, rewardCoins: Math.max(1, Number(event.target.value)) } : item) }))} className="w-full rounded-lg border border-gray-700 bg-[#0f1521] px-3 py-2 text-sm text-white" /></label>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={() => setBonusDraft((prev) => ({ ...prev, dailyRewardTiers: [...prev.dailyRewardTiers, { name: `Tier ${prev.dailyRewardTiers.length + 1}`, spendRequired: 0, rewardCoins: 25 }] }))} className="rounded-lg border border-gray-600 px-4 py-2 text-sm font-bold text-gray-200">Add tier</button><button onClick={handleSaveBonusSettings} className="rounded-lg border border-brand-blue/40 bg-brand-blue/20 px-5 py-2 text-sm font-bold text-brand-blue">Save daily rewards</button></div>
+                    </div>
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Daily Spin Odds</h3>

@@ -238,6 +238,7 @@ interface BonusSettings {
   rakebackBonusCoins: number;
   rakebackDailyCapCoins: number;
   dailySpinOdds: Record<string, number>;
+  dailyRewardTiers: Array<{ name: string; spendRequired: number; rewardCoins: number }>;
 }
 
 const DEFAULT_BONUS_SETTINGS: BonusSettings = {
@@ -260,7 +261,13 @@ const DEFAULT_BONUS_SETTINGS: BonusSettings = {
     '500': 12,
     '1000': 9,
     '2500': 6
-  }
+  },
+  dailyRewardTiers: [
+    { name: 'Starter Box', spendRequired: 0, rewardCoins: 25 },
+    { name: 'Silver Box', spendRequired: 2500, rewardCoins: 50 },
+    { name: 'Gold Box', spendRequired: 10000, rewardCoins: 100 },
+    { name: 'Diamond Box', spendRequired: 50000, rewardCoins: 250 }
+  ]
 };
 
 const getStoredBonusSettings = (): BonusSettings => DEFAULT_BONUS_SETTINGS;
@@ -407,6 +414,15 @@ const normalizeBonusSettings = (settings: Partial<BonusSettings>): BonusSettings
 
     const next = Object.fromEntries(normalizedEntries);
     return Object.keys(next).length > 0 ? next : { ...DEFAULT_BONUS_SETTINGS.dailySpinOdds };
+  })(),
+  dailyRewardTiers: (() => {
+    const source = Array.isArray(settings.dailyRewardTiers) ? settings.dailyRewardTiers : DEFAULT_BONUS_SETTINGS.dailyRewardTiers;
+    const tiers = source.map((tier, index) => ({
+      name: typeof tier?.name === 'string' && tier.name.trim() ? tier.name.trim() : `Tier ${index + 1}`,
+      spendRequired: Math.max(0, Math.floor(Number(tier?.spendRequired) || 0)),
+      rewardCoins: Math.max(1, Math.floor(Number(tier?.rewardCoins) || 1))
+    })).sort((a, b) => a.spendRequired - b.spendRequired);
+    return tiers.length ? tiers : DEFAULT_BONUS_SETTINGS.dailyRewardTiers.map((tier) => ({ ...tier }));
   })()
 });
 
