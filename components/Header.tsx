@@ -582,7 +582,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     } gap-2`}
                   >
                     <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                    <span>Daily Spin</span>
+                    <span>Rewards</span>
                     {showDailySpinReady ? (
                       <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#54f5b3] shadow-[0_0_12px_rgba(84,245,179,0.8)]" />
                     ) : null}
@@ -859,7 +859,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
               >
                 <RefreshCw className="h-5 w-5 text-[#7dd3fc]" />
-                <span className="min-w-0 flex-1">Daily Spin</span>
+                <span className="min-w-0 flex-1">Rewards</span>
                 {showDailySpinReady ? (
                   <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#7dd3fc]">Ready</span>
                 ) : null}

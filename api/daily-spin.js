@@ -4,58 +4,28 @@ import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
 const BONUS_SETTINGS_DOC = 'bonus-settings';
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const PENDING_SPIN_TTL_MS = 10 * 60 * 1000;
-const DEFAULT_PRIZES = [10, 25, 100, 500, 1000, 2500];
-
-const sanitizeOdds = (input) => {
-  const base = {};
-
-  if (input && typeof input === 'object') {
-    for (const [key, value] of Object.entries(input)) {
-      const amount = Number(key);
-      if (!Number.isFinite(amount) || amount <= 0) continue;
-      const weight = Number(value);
-      if (!Number.isFinite(weight) || weight < 0) continue;
-      base[Math.floor(amount)] = weight;
-    }
-  }
-
-  for (const amount of DEFAULT_PRIZES) {
-    if (!(amount in base)) {
-      base[amount] = 1;
-    }
-  }
-
-  const entries = Object.entries(base)
-    .map(([amount, weight]) => ({ amount: Number(amount), weight: Number(weight) }))
-    .filter((entry) => Number.isFinite(entry.weight) && entry.weight > 0)
-    .sort((a, b) => a.amount - b.amount);
-
-  if (entries.length === 0) {
-    return DEFAULT_PRIZES.map((amount) => ({ amount, weight: 1 }));
-  }
-
-  return entries;
-};
-
-const pickWeightedPrize = (entries) => {
-  const totalWeight = entries.reduce((sum, entry) => sum + entry.weight, 0);
-  if (totalWeight <= 0) return entries[0]?.amount ?? DEFAULT_PRIZES[0];
-
-  let cursor = Math.random() * totalWeight;
-  for (const entry of entries) {
-    cursor -= entry.weight;
-    if (cursor <= 0) return entry.amount;
-  }
-
-  return entries[entries.length - 1].amount;
-};
+const DEFAULT_REWARD_TIERS = [
+  { name: 'Starter Box', spendRequired: 0, rewardCoins: 25 },
+  { name: 'Silver Box', spendRequired: 2500, rewardCoins: 50 },
+  { name: 'Gold Box', spendRequired: 10000, rewardCoins: 100 },
+  { name: 'Diamond Box', spendRequired: 50000, rewardCoins: 250 }
+];
 
 const extractBearerToken = (authorizationHeader) => {
   if (!authorizationHeader) return null;
   const [scheme, token] = authorizationHeader.split(' ');
   if (scheme !== 'Bearer' || !token) return null;
   return token;
+};
+
+const getRewardTier = (settings, totalSpent) => {
+  const source = Array.isArray(settings.dailyRewardTiers) ? settings.dailyRewardTiers : DEFAULT_REWARD_TIERS;
+  const tiers = source.map((tier, index) => ({
+    name: typeof tier?.name === 'string' && tier.name.trim() ? tier.name.trim() : `Tier ${index + 1}`,
+    spendRequired: Math.max(0, Math.floor(Number(tier?.spendRequired) || 0)),
+    rewardCoins: Math.max(1, Math.floor(Number(tier?.rewardCoins) || 1))
+  })).sort((a, b) => a.spendRequired - b.spendRequired);
+  return tiers.filter((tier) => totalSpent >= tier.spendRequired).at(-1) || tiers[0] || DEFAULT_REWARD_TIERS[0];
 };
 
 export default async function handler(req, res) {
@@ -65,7 +35,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    const action = req.body?.action === 'claim' ? 'claim' : 'spin';
     const token = extractBearerToken(req.headers.authorization || req.headers.Authorization);
     if (!token) {
       return res.status(401).json({ error: 'UNAUTHENTICATED', message: 'Missing authorization token.' });
@@ -87,88 +56,23 @@ export default async function handler(req, res) {
       const bonusSettings = bonusSettingsSnap.exists ? bonusSettingsSnap.data() || {} : {};
       const now = Date.now();
 
-      const pendingSpin =
-        userData.dailySpinPending && typeof userData.dailySpinPending === 'object'
-          ? {
-              amount: Math.floor(Number(userData.dailySpinPending.amount ?? 0)),
-              createdAt: Number(userData.dailySpinPending.createdAt ?? 0),
-              credited: userData.dailySpinPending.credited === true
-            }
-          : null;
-      const hasValidPendingSpin =
-        pendingSpin &&
-        Number.isFinite(pendingSpin.amount) &&
-        pendingSpin.amount > 0 &&
-        Number.isFinite(pendingSpin.createdAt) &&
-        pendingSpin.createdAt > 0 &&
-        now - pendingSpin.createdAt <= PENDING_SPIN_TTL_MS;
-
-      if (action === 'claim') {
-        if (!hasValidPendingSpin) {
-          throw Object.assign(new Error('No pending spin to claim.'), {
-            status: 409,
-            code: 'DAILY_SPIN_NOT_PENDING'
-          });
-        }
-
-        const prizeAmount = pendingSpin.amount;
-
-        if (!pendingSpin.credited) {
-          await recordBalanceChange({
-            transaction,
-            uid,
-            userRef,
-            userData,
-            currency: 'coins',
-            amount: prizeAmount,
-            reason: 'daily_spin_reward',
-            actorType: 'system',
-            actorUid: null,
-            source: 'api/daily-spin',
-            relatedId: null,
-            metadata: { action: 'claim' }
-          });
-        }
-        const claimTime = Number.isFinite(pendingSpin.createdAt) && pendingSpin.createdAt > 0 ? pendingSpin.createdAt : now;
-        transaction.set(
-          userRef,
-          {
-            lastDailyClaim: claimTime,
-            dailySpinPending: admin.firestore.FieldValue.delete(),
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-          },
-          { merge: true }
-        );
-
-        return {
-          prizeAmount,
-          lastDailyClaim: claimTime,
-          nextClaimAt: claimTime + SPIN_COOLDOWN_MS,
-          claimed: true
-        };
-      }
-
-      if (hasValidPendingSpin) {
-        return {
-          prizeAmount: pendingSpin.amount,
-          nextClaimAt: pendingSpin.createdAt + SPIN_COOLDOWN_MS,
-          pending: true
-        };
-      }
-
       const lastDailyClaim = Number(userData.lastDailyClaim ?? 0);
       const nextClaimAt = lastDailyClaim + SPIN_COOLDOWN_MS;
 
       if (Number.isFinite(lastDailyClaim) && lastDailyClaim > 0 && nextClaimAt > now) {
-        throw Object.assign(new Error('Daily spin cooldown active.'), {
+        throw Object.assign(new Error('Your daily free box is not ready yet.'), {
           status: 429,
-          code: 'DAILY_SPIN_COOLDOWN',
+          code: 'DAILY_REWARD_COOLDOWN',
           nextClaimAt
         });
       }
 
-      const entries = sanitizeOdds(bonusSettings.dailySpinOdds);
-      const prizeAmount = pickWeightedPrize(entries);
+      const hasDeposited = Number(userData.depositCount ?? 0) > 0 || Number(userData.totalDepositedCents ?? 0) > 0 || Number(userData.totalSpent ?? 0) > 0;
+      if (!hasDeposited) {
+        throw Object.assign(new Error('Make a deposit to unlock daily free boxes.'), { status: 403, code: 'DEPOSIT_REQUIRED' });
+      }
+      const tier = getRewardTier(bonusSettings, Math.max(0, Number(userData.totalSpent ?? 0)));
+      const prizeAmount = tier.rewardCoins;
 
       await recordBalanceChange({
         transaction,
@@ -177,22 +81,18 @@ export default async function handler(req, res) {
         userData,
         currency: 'coins',
         amount: prizeAmount,
-        reason: 'daily_spin_reward',
+        reason: 'daily_free_box_reward',
         actorType: 'system',
         actorUid: null,
         source: 'api/daily-spin',
         relatedId: null,
-        metadata: { action: 'spin' }
+        metadata: { action: 'open', tier: tier.name, spendRequired: tier.spendRequired }
       });
       transaction.set(
         userRef,
         {
           lastDailyClaim: now,
-          dailySpinPending: {
-            amount: prizeAmount,
-            createdAt: now,
-            credited: true
-          },
+          dailySpinPending: admin.firestore.FieldValue.delete(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         },
         { merge: true }
@@ -201,16 +101,16 @@ export default async function handler(req, res) {
       return {
         prizeAmount,
         nextClaimAt: now + SPIN_COOLDOWN_MS,
-        pending: true,
-        odds: entries
+        claimed: true,
+        tier
       };
     });
 
     return res.status(200).json(result);
   } catch (error) {
     const status = Number(error?.status) || 500;
-    const code = error?.code || 'DAILY_SPIN_FAILED';
-    const message = typeof error?.message === 'string' ? error.message : 'Unable to complete daily spin.';
+    const code = error?.code || 'DAILY_REWARD_FAILED';
+    const message = typeof error?.message === 'string' ? error.message : 'Unable to open daily reward box.';
     const payload = { error: code, message };
 
     if (error?.nextClaimAt) {
