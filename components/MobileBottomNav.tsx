@@ -151,15 +151,18 @@ export const MobileBottomNav: React.FC = () => {
 
   const nav = (
     <div
-      className={`pullz-mobile-bottom-nav fixed bottom-[var(--pullz-viewport-bottom-offset,0px)] left-0 right-0 top-auto z-[220] h-[var(--pullz-mobile-bottom-nav-height,70px)] w-full border-t border-white/10 bg-[#0b111d]/[.98] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 shadow-[0_-6px_18px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-[opacity,transform] duration-200 ease-out lg:hidden ${
+      className={`pullz-mobile-bottom-nav bet-mobile-nav fixed top-auto z-[220] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 transition-[opacity,transform] duration-200 ease-out lg:hidden ${
         isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
       }`}
       style={{
         height: 'calc(62px + max(env(safe-area-inset-bottom), 8px))',
-        bottom: 'var(--pullz-viewport-bottom-offset, 0px)',
+        bottom: 'calc(14px + var(--pullz-viewport-bottom-offset, 0px))',
+        left: '50%',
+        right: 'auto',
+        width: 'min(calc(100% - 28px), 560px)',
         paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-        transform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
-        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(0, 100%, 0)' : 'translate3d(0, 0, 0)',
+        transform: isSuppressed || showTopUpModal ? 'translate3d(-50%, 130%, 0)' : 'translate3d(-50%, 0, 0)',
+        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(-50%, 130%, 0)' : 'translate3d(-50%, 0, 0)',
         willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
       }}
       aria-label="Primary navigation"
@@ -191,7 +194,7 @@ export const MobileBottomNav: React.FC = () => {
                 type="button"
                 onClick={() => handleNav(item)}
                 className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-transparent px-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors duration-150 active:scale-[0.98] ${
-                  isActive ? 'border-blue-300/20 bg-[#13213a] text-[#7dd3fc]' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                  isActive ? 'text-white' : 'text-[#737373] hover:text-white'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
