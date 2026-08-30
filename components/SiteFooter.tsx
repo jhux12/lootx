@@ -32,7 +32,7 @@ export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
 
   return (
-    <footer className="mt-20 border-t border-violet-300/15 bg-[#05060a] py-10 text-sm text-slate-300">
+    <footer className="bet-site-footer mt-20 py-10 text-sm">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
