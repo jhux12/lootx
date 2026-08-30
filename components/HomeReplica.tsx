@@ -120,7 +120,7 @@ const MobileCustomerReviewSkeleton: React.FC = () => (
 );
 
 const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
-  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(120deg,#5525cf_0%,#5146dd_52%,#4275e8_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+  <div className="lootx-hero-slide relative h-full w-full shrink-0 overflow-hidden px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(255,255,255,.14),transparent_28%),radial-gradient(circle_at_88%_75%,rgba(152,90,255,.40),transparent_46%)]" />
     <div className="relative z-10 grid h-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:gap-6">
       <div className="min-w-0">
@@ -134,7 +134,7 @@ const FreeBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
 );
 
 const PromoBoxHeroSlide: React.FC<{ box: MysteryBox }> = ({ box }) => (
-  <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(118deg,#080a08_0%,#241b09_48%,#61400a_100%)] px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+  <div className="lootx-hero-slide lootx-hero-slide--dark relative h-full w-full shrink-0 overflow-hidden px-5 py-4 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_10%,rgba(255,188,35,.34),transparent_29%),radial-gradient(circle_at_88%_82%,rgba(190,255,37,.18),transparent_38%),linear-gradient(90deg,rgba(0,0,0,.58),transparent_48%)]" />
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-[linear-gradient(90deg,transparent,rgba(255,177,18,.78),transparent)] blur-md" />
     <div className="relative z-10 flex h-full items-center justify-center text-center">
@@ -505,7 +505,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             {promoBox && <PromoBoxHeroSlide box={promoBox} />}
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+            <div className="lootx-hero-slide relative h-full w-full shrink-0 overflow-hidden p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
@@ -527,7 +527,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
               </div>
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
+            <div className="lootx-hero-slide lootx-hero-slide--orange relative h-full w-full shrink-0 overflow-hidden p-3 sm:p-5 lg:p-8">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_24%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_48%_118%,rgba(139,92,246,0.22),transparent_36%)]" />
               <div className="relative z-10 flex h-full max-w-[55%] flex-col justify-center sm:max-w-[58%] lg:max-w-[56%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/25 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white sm:px-3 sm:text-[10px] lg:text-xs"><Flame className="h-3 w-3 lg:h-4 lg:w-4" />Trending boxes</div>
@@ -546,7 +546,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
           <span className="sr-only">{showFreeBoxHero ? 'Open your free box' : showPromoBoxHero ? 'Open Promo Box' : showDepositSlide ? 'Claim First deposit bonus offer' : 'View trending boxes'}</span>
         </button>
         <div className="mt-2 flex justify-center gap-1.5">
-          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'promo-box' ? 'Promo Box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#8b5cf6]' : 'bg-slate-600'}`} />)}
+          {heroSlides.map((slide, index) => <button key={slide} type="button" aria-label={`Show ${slide === 'free-box' ? 'free box' : slide === 'promo-box' ? 'Promo Box' : slide === 'deposit-match' ? 'First deposit bonus offer' : 'hot picks'} slide`} onClick={() => setActiveHeroSlide(index)} className={`h-1.5 w-1.5 rounded-full ${index === activeHeroSlide ? 'bg-[#ff4d55]' : 'bg-[#2d303d]'}`} />)}
         </div>
       </section>
 
@@ -559,7 +559,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
             { title: 'Keep or Sell', description: 'You’re always in control', icon: RefreshCw }
           ].map(({ title, description, icon: Icon }) => (
             <div key={title} className="flex min-h-[68px] min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#101827]/82 px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[72px] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-3 lg:px-4" aria-label={`${title}: ${description}`}>
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#a78bfa] shadow-[0_0_18px_rgba(139,92,246,0.18)] sm:h-9 sm:w-9">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#ff4d55]/30 bg-[#ff4d55]/10 text-[#ff4d55] shadow-[0_0_18px_rgba(255,77,85,0.12)] sm:h-9 sm:w-9">
                 <Icon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} aria-hidden="true" />
               </div>
               <div className="min-w-0 leading-none">
@@ -593,11 +593,11 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
             <button key={box.id} onClick={() => onOpenBox(box.id)} className="lootx-case-card group relative h-[172px] overflow-hidden p-2.5 text-left transition hover:-translate-y-1 active:scale-[0.98] sm:h-[184px] lg:h-[220px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,77,85,0.14),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
               <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
               <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
                 <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} className="shrink-0 text-[10px] font-black text-[#c4b5fd] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
+                <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} className="shrink-0 text-[10px] font-black text-[#2abd69] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
               </div>
             </button>
           ) : (
