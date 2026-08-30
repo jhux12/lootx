@@ -69,11 +69,11 @@ const drawerCardClass =
   "flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0";
 
 const desktopNavButtonBaseClass =
-  "group relative flex h-11 items-center justify-center rounded-[11px] border px-4 text-[14px] font-semibold xl:px-6 xl:text-[15px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]";
+  "group relative flex h-10 items-center justify-center rounded-lg border px-4 text-[13px] font-semibold xl:px-5 xl:text-[14px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13151d]";
 
-const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-white/78 hover:border-violet-300/20 hover:bg-violet-500/10 hover:text-white`;
+const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-[#7d8091] hover:border-[#2d303d] hover:bg-[#202431] hover:text-[#f6f4f9]`;
 
-const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-violet-300/25 bg-violet-500/15 text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_26px_rgba(0,0,0,0.22)]`;
+const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-[#2d303d] bg-[#202431] text-[#f6f4f9] shadow-[inset_3px_0_0_#ff4d55,inset_0_1px_0_rgba(255,255,255,0.035)]`;
 
 const desktopMenuPanelClass =
   'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#0b0e15]/[.98] p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_0_1px_rgba(124,60,255,0.16)] backdrop-blur-2xl transition-all duration-200 before:absolute before:-top-3 before:left-0 before:h-3 before:w-full before:content-[""]';
@@ -82,7 +82,7 @@ const desktopMenuItemClass =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white";
 
 const utilityButtonClass =
-  "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/[0.045] text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-violet-300/35 hover:bg-violet-500/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60";
+  "relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#2d303d] bg-[#202431] text-[#7d8091] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-200 hover:border-[#ff4d55]/45 hover:text-[#f6f4f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60";
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
