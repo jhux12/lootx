@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/* LootX visual foundation, translated from the supplied 1920px Figma system. */
+:root {
+  --lootx-canvas: #13151d;
+  --lootx-surface: #181c28;
+  --lootx-surface-raised: #202431;
+  --lootx-line: #2d303d;
+  --lootx-text: #f6f4f9;
+  --lootx-muted: #7d8091;
+  --lootx-red: #ff4d55;
+  --lootx-orange: #ff8d4d;
+  --lootx-green: #2abd69;
+  --lootx-blue: #02c5ff;
+  --lootx-content: 1900px;
+  --lootx-radius-sm: 8px;
+  --lootx-radius-md: 12px;
+  --lootx-radius-lg: 20px;
+}
+
+html { background: var(--lootx-canvas); }
+
+body {
+  background: var(--lootx-canvas);
+  color: var(--lootx-text);
+}
+
+.lootx-app-shell,
+.lootx-page-shell {
+  background:
+    radial-gradient(circle at 50% -12rem, rgba(255, 77, 85, 0.055), transparent 34rem),
+    var(--lootx-canvas);
+}
+
+.lootx-header {
+  border-bottom: 1px solid rgba(45, 48, 61, 0.88);
+  background: rgba(19, 21, 29, 0.96);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+}
+
+.lootx-header-nav {
+  border: 1px solid rgba(45, 48, 61, 0.9);
+  background: rgba(24, 28, 40, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 14px 42px rgba(0, 0, 0, 0.24);
+}
+
+.lootx-page-content { max-width: var(--lootx-content); }
+
+@media (max-width: 1023px) {
+  .lootx-header-nav { border-width: 0; }
+}
+
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   html.pullz-tab-hidden .ticker-animation,
   html.pullz-tab-hidden [class*="animate-"],
