@@ -658,9 +658,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
   const freeSignupBox = homepageBoxes.find((box) => box.isDaily) ?? null;
   const promoBox = boxes.find((box) => box.id === PROMO_BOX_ID) ?? null;
   return (
-    <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
+    <div className="pullz-home-shell lootx-page-shell min-h-screen text-white">
       {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
-      <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
+      <main className="lootx-page-content mx-auto w-full max-w-[1900px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-5 lg:pb-5">
         <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} promoBox={promoBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>
