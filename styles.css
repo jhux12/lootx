@@ -214,6 +214,27 @@ body {
 .bet-home-dock svg { width:24px; height:24px; stroke-width:2.7; }
 @media(max-width:720px){.bet-home{padding:34px 20px 124px}.bet-home-header span{font-size:17px}.bet-home-header h1{font-size:27px}.bet-home-header>button{width:48px;height:48px}.bet-home-search{height:58px;margin-top:28px}.bet-home h2{font-size:22px}.bet-home-tournaments{margin-top:38px}.bet-home-promos>button{flex-basis:88%;min-height:180px;padding:22px}.bet-home-promos strong{font-size:22px}.bet-home-events{margin-top:40px}.bet-home-event-list{grid-template-columns:1fr}.bet-case-card{padding:16px}.bet-home-dock{height:76px}}
 
+/* Shared betting-theme chrome */
+.bet-global-header { border-bottom:1px solid #e7e7e9; background:rgba(255,255,255,.97); box-shadow:0 8px 24px rgba(0,0,0,.06); }
+.bet-global-header-nav { color:#050505; background:#fff; }
+.bet-global-header-nav > span[aria-hidden="true"] { display:none; }
+.bet-global-header-nav button { color:#050505; }
+.bet-global-header-nav button:hover { background:#f2f2f4; }
+.bet-global-header-nav [class*="bg-[#0c121e]"] { border-color:#e2e2e4; background:#f2f2f4; }
+.bet-global-header-nav [class*="bg-[#121a28]"] { border-color:transparent; color:white; background:#ff4b0a; }
+.bet-global-header-nav [class*="text-white"] { color:#050505; }
+.bet-global-header-nav [class*="bg-[linear-gradient(135deg,#6225ef"] { color:white; background:#ff4b0a; box-shadow:none; }
+.bet-mobile-nav { overflow:visible; border:0; border-radius:22px; background:#050505; box-shadow:0 18px 44px rgba(0,0,0,.28); }
+.bet-mobile-nav nav > div button { background:transparent; }
+.bet-mobile-nav nav > div button[aria-current="page"] { color:#fff; }
+.bet-mobile-nav nav > div button[aria-current="page"] svg { color:#ff4b0a; fill:#ff4b0a; fill-opacity:.12; }
+.bet-site-footer { border-top:1px solid #e5e5e7; color:#737373; background:#fff; }
+.bet-site-footer [class*="text-white"],.bet-site-footer button:hover { color:#050505; }
+.bet-site-footer [class*="text-slate"] { color:#737373; }
+.bet-site-footer a { border-color:#e5e5e7; color:#050505; background:#f2f2f4; }
+.bet-site-footer a:hover { border-color:#ff4b0a; color:#fff; background:#ff4b0a; }
+.bet-site-footer button:focus-visible { --tw-ring-color:#ff4b0a; }
+
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   html.pullz-tab-hidden .ticker-animation,
   html.pullz-tab-hidden [class*="animate-"],
