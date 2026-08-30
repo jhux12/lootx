@@ -181,8 +181,6 @@ body {
 .bet-home-events { margin-top:50px; }
 .bet-home-events-title { display:flex; align-items:center; justify-content:space-between; }
 .bet-home-events-title span { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:1000; }
-.bet-home-events-title i { position:relative; width:50px; height:28px; border-radius:99px; background:var(--bet-orange); }
-.bet-home-events-title i:after { content:""; position:absolute; right:4px; top:4px; width:20px; height:20px; border-radius:50%; background:white; }
 .bet-home-categories { display:flex; gap:12px; margin-top:26px; overflow-x:auto; scrollbar-width:none; }
 .bet-home-categories button { display:inline-flex; flex:0 0 auto; align-items:center; gap:9px; min-height:52px; border-radius:12px; padding:0 18px; color:#a0a0a2; background:#f2f2f4; font-size:13px; font-weight:800; }
 .bet-home-categories button.is-active { color:white; background:#050505; }
@@ -388,3 +386,63 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pullz-boxes-slab, .pullz-boxes-hero-orbit, .pullz-boxes-particle { animation: none; }
 }
+
+/* Light/dark theme toggle. The betting-theme surfaces (header, homepage,
+   footer) ship light by default above; this block supplies their dark-mode
+   equivalents. Nothing here touches the still-dark legacy app shell, which
+   needs no override to look correct in dark mode. */
+:root[data-theme="dark"] .bet-home { background:#0b0d12; color:#f6f4f9; }
+:root[data-theme="dark"] .bet-home h2 { color:#7d8091; }
+:root[data-theme="dark"] .bet-home-search { background:#181c28; }
+:root[data-theme="dark"] .bet-home-search input { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-home-search input::placeholder { color:#7d8091; }
+:root[data-theme="dark"] .bet-home-categories button { color:#7d8091; background:#181c28; }
+:root[data-theme="dark"] .bet-home-categories button.is-active { color:#f6f4f9; background:var(--bet-orange,#ff4b0a); }
+:root[data-theme="dark"] .bet-box-tile { border-color:#2d303d; background:#181c28; }
+:root[data-theme="dark"] .bet-box-tile:hover { box-shadow:0 18px 34px rgba(0,0,0,.4); }
+:root[data-theme="dark"] .bet-box-tile > .inline-flex { color:#f6f4f9; background:#202431; }
+:root[data-theme="dark"] .bet-case-card { border-color:#2d303d; background:#181c28; }
+:root[data-theme="dark"] .bet-case-card-head { color:#7d8091; }
+:root[data-theme="dark"] .bet-case-card-head em { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-case-score small { color:#7d8091; }
+:root[data-theme="dark"] .bet-case-score span { color:#7d8091; }
+:root[data-theme="dark"] .bet-case-actions button { border-color:#2d303d; background:#202431; }
+:root[data-theme="dark"] .bet-case-actions span { color:#7d8091; }
+:root[data-theme="dark"] .bet-home-empty { border-color:#2d303d; color:#7d8091; }
+:root[data-theme="dark"] .bet-home-empty strong { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-home-toggle { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-home-toggle i { background:#2d303d; }
+:root[data-theme="dark"] .bet-home-toggle i.is-on { background:var(--bet-orange,#ff4b0a); }
+:root[data-theme="dark"] .bet-home-trustpilot { background:#181c28; border-color:#2d303d; }
+
+:root[data-theme="dark"] .bet-global-header { border-bottom-color:#2d303d; background:rgba(19,21,29,.96); box-shadow:0 12px 34px rgba(0,0,0,.28); }
+:root[data-theme="dark"] .bet-global-header-nav { color:#f6f4f9; background:transparent; }
+:root[data-theme="dark"] .bet-global-header-nav button:hover { background:rgba(255,255,255,.06); }
+
+:root[data-theme="dark"] .bet-site-footer { border-top-color:#2d303d; color:#7d8091; background:#0b0d12; }
+:root[data-theme="dark"] .bet-site-footer [class*="text-white"] { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-site-footer button:hover { color:#f6f4f9; }
+:root[data-theme="dark"] .bet-site-footer [class*="text-slate"] { color:#7d8091; }
+:root[data-theme="dark"] .bet-site-footer a { border-color:#2d303d; color:#f6f4f9; background:#181c28; }
+
+/* Enough-coins-to-open toggle (was a static, non-functional "LIVE" pill) */
+.bet-home-toggle { display:flex; align-items:center; gap:10px; color:#050505; background:none; }
+.bet-home-toggle span { font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; }
+.bet-home-toggle i { position:relative; width:50px; height:28px; border-radius:99px; background:#e5e5e7; transition:background .2s ease; }
+.bet-home-toggle i::after { content:""; position:absolute; left:4px; top:4px; width:20px; height:20px; border-radius:50%; background:#fff; transition:left .2s ease; }
+.bet-home-toggle i.is-on { background:var(--bet-orange,#ff4b0a); }
+.bet-home-toggle i.is-on::after { left:26px; }
+
+/* Category tab icon images (tag icons pulled from Stripe/box settings) */
+.bet-home-categories button img { width:20px; height:20px; object-fit:contain; }
+.bet-home-categories button i[class*="fa-"] { font-size:16px; }
+
+/* Trustpilot rating strip below the box list */
+.bet-home-trustpilot { display:flex; justify-content:center; align-items:center; margin-top:28px; padding:18px; border-radius:14px; background:#f7f7f8; }
+.bet-home-trustpilot img { height:28px; width:auto; }
+
+/* Coin-balance dock item (replaces the former wallet icon) */
+.bet-home-dock-balance { flex-direction:column; gap:2px; }
+.bet-home-dock-balance img { width:22px; height:22px; }
+.bet-home-dock-balance span { font-size:9px; font-weight:800; letter-spacing:.02em; }
+

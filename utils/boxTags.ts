@@ -33,6 +33,13 @@ export const getTagIconLabelFromClass = (iconClass: string) => {
     .join(' ');
 };
 
+export const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
+
+export const isCategoryIconUrl = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:image/');
+};
+
 export const getBoxTags = (box: MysteryBox) => {
   const tags = new Set<string>();
   if (box.tag) tags.add(normalizeBoxTag(box.tag));

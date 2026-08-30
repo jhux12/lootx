@@ -11,6 +11,8 @@ interface CoinAmountProps {
   formatter?: (value: number) => string;
   showSign?: boolean;
   animated?: boolean;
+  /** Render dashes instead of a number, e.g. for a signed-out balance display. */
+  placeholder?: boolean;
 }
 
 export const CoinAmount: React.FC<CoinAmountProps> = ({
@@ -21,10 +23,22 @@ export const CoinAmount: React.FC<CoinAmountProps> = ({
   formatOptions,
   formatter,
   showSign = false,
-  animated = true
+  animated = true,
+  placeholder = false
 }) => {
-  if (process.env.NODE_ENV !== 'production' && !Number.isInteger(amount)) {
+  if (!placeholder && process.env.NODE_ENV !== 'production' && !Number.isInteger(amount)) {
     console.warn('[CoinAmount] Non-integer coin amount provided:', amount);
+  }
+
+  if (placeholder) {
+    return (
+      <span className={`inline-flex items-center gap-1 ${className ?? ''}`}>
+        <img src={COIN_ICON} alt="Coin" className={`w-4 h-4 ${iconClassName ?? ''}`} loading="lazy" decoding="async" width={16} height={16} />
+        <span className={textClassName} aria-label="Sign in to see your balance">
+          &mdash;&mdash;
+        </span>
+      </span>
+    );
   }
 
   const absoluteAmount = showSign ? Math.abs(amount) : amount;

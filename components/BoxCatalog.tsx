@@ -6,7 +6,7 @@ import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
 import { getBoxSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
-import { getBoxTags, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { CATEGORY_ORDER, getBoxTags, isCategoryIconUrl, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
@@ -178,11 +178,6 @@ const toCategoryVariants = (value: string) => {
   return Array.from(variants);
 };
 
-const isCategoryIconUrl = (value: string) => {
-  const normalized = value.trim().toLowerCase();
-  return normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:image/');
-};
-
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { setView } = useUI();
   const { stripeSettings } = useBoxes();
@@ -223,7 +218,6 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => setCatalogError('Unable to load more boxes. Please retry.')).finally(() => setCatalogLoading(false));
   };
-  const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
   const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
 

@@ -47,6 +47,7 @@ import {
   normalizeQuestRules,
 } from "../src/lib/quests";
 import { UserAvatar } from "./UserAvatar";
+import { ThemeToggle } from "./ThemeToggle";
 import { resolveUserDisplayName } from "../utils/userIdentity";
 import { lockPageScroll } from "../utils/scrollLock";
 
@@ -710,8 +711,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   </div>
                 )}
 
+                <ThemeToggle
+                  className={`hidden lg:flex ${utilityButtonClass}`}
+                  iconClassName="h-4 w-4"
+                />
+
                 {authInitialized && !isAuthenticated && (
                   <div className="flex min-h-[44px] min-w-[174px] items-center justify-end gap-2 lg:hidden">
+                    <ThemeToggle
+                      className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.045] text-gray-200 transition-all duration-200 hover:border-violet-300/35 hover:text-white"
+                      iconClassName="h-4 w-4"
+                    />
                     {startPullingButton}
                     {mobileMenuButton}
                   </div>
@@ -719,6 +729,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
 
                 {authInitialized && isAuthenticated && (
                   <div className="flex min-h-[40px] min-w-0 items-center gap-1.5 lg:hidden">
+                    <ThemeToggle
+                      className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.045] text-gray-200 transition-all duration-200 hover:border-violet-300/35 hover:text-white"
+                      iconClassName="h-4 w-4"
+                    />
                     <div className="relative min-w-[110px] shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.045] sm:min-w-[126px]">
                       <span
                         aria-hidden="true"
