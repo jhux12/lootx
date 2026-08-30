@@ -512,23 +512,24 @@ body {
 .pullz-burger[data-open="true"] .pullz-burger-bar:nth-child(2) { opacity:0; }
 .pullz-burger[data-open="true"] .pullz-burger-bar:nth-child(3) { top:5.5px; transform:rotate(-45deg); }
 
-/* Mobile navigation menu — theme-aware to match the page's light/dark mode */
-.pullz-menu-backdrop { background:rgba(5,6,10,0.55); backdrop-filter:blur(2px); }
+/* Mobile navigation menu — expands from the header as a compact,
+   theme-aware dropdown that hugs its content instead of a full-height
+   sheet. */
+.pullz-menu-backdrop { background:rgba(5,6,10,0.45); backdrop-filter:blur(2px); }
+.pullz-mobile-menu-frame { will-change:grid-template-rows,opacity; }
 .pullz-mobile-menu {
   --bet-menu-bg:#ffffff; --bet-menu-line:#e5e5e7; --bet-menu-text:#050505; --bet-menu-muted:#6b6b70;
   --bet-menu-hover:rgba(5,5,5,0.05); --bet-menu-card-bg:#f2f2f4; --bet-menu-card-border:#e5e5e7;
   --bet-menu-active-bg:rgba(255,75,10,0.12); --bet-menu-active-text:#ff4b0a; --bet-menu-icon:#ff4b0a;
   background:var(--bet-menu-bg); border-top:1px solid var(--bet-menu-line); color:var(--bet-menu-text);
-  box-shadow:0 -24px 60px rgba(0,0,0,0.18);
+  box-shadow:0 20px 45px rgba(0,0,0,0.16);
 }
 :root[data-theme="dark"] .pullz-mobile-menu {
   --bet-menu-bg:#14161d; --bet-menu-line:#2d303d; --bet-menu-text:#f6f4f9; --bet-menu-muted:#9a9ca6;
   --bet-menu-hover:rgba(255,255,255,0.06); --bet-menu-card-bg:#1c1f28; --bet-menu-card-border:#2d303d;
   --bet-menu-active-bg:rgba(255,75,10,0.18); --bet-menu-active-text:#ff8a5c; --bet-menu-icon:#ff8a5c;
-  box-shadow:0 -24px 60px rgba(0,0,0,0.55);
+  box-shadow:0 20px 45px rgba(0,0,0,0.5);
 }
-.pullz-mobile-menu-glow { background:rgba(255,75,10,0.12); }
-.pullz-mobile-menu-glow--alt { background:rgba(255,141,77,0.10); }
 .pullz-mobile-menu [class*="border-white/10"] { border-color:var(--bet-menu-card-border); }
 .pullz-mobile-menu [class*="bg-white/[0.035]"] { background:var(--bet-menu-card-bg); }
 .pullz-mobile-menu [class*="hover:bg-white/[0.07]"]:hover { background:var(--bet-menu-hover); }

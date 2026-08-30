@@ -774,135 +774,136 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         />
 
         <div
-          className={`pullz-mobile-menu fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain px-4 pb-4 pt-3 backdrop-blur-2xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:hidden ${
+          className={`pullz-mobile-menu-frame fixed inset-x-0 z-[240] grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
-              ? "translate-y-0 scale-100 opacity-100"
-              : "pointer-events-none translate-y-3 scale-[0.98] opacity-0"
+              ? "grid-rows-[1fr] pointer-events-auto opacity-100"
+              : "grid-rows-[0fr] pointer-events-none opacity-0"
           }`}
           role="dialog"
           aria-modal="true"
+          aria-hidden={!isMobileMenuOpen}
           aria-label="Mobile navigation menu"
         >
-          <div className="relative flex min-h-full max-w-full flex-col overflow-x-hidden pb-4 pt-1">
-            <span aria-hidden="true" className="pullz-mobile-menu-glow pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full blur-3xl" />
-            <span aria-hidden="true" className="pullz-mobile-menu-glow pullz-mobile-menu-glow--alt pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full blur-3xl" />
-            <div className="mb-7 flex w-full items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => navigate("PROFILE")}
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-2 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:bg-white/[0.07]"
-              >
-                {isAuthenticated ? (
-                  <UserAvatar
-                    user={user}
-                    className="h-14 w-14 rounded-full object-cover ring-2 ring-blue-300/25"
-                    initialsClassName="text-base"
-                  />
-                ) : (
-                  <div className="grid h-14 w-14 place-items-center rounded-full border border-blue-300/20 bg-[#101827] text-base font-black text-blue-100">
-                    <UserIcon className="h-6 w-6" />
+          <div className="overflow-hidden">
+            <div className="pullz-mobile-menu max-h-[calc(100dvh-var(--pullz-header-height,72px)-24px)] overflow-y-auto overscroll-contain rounded-b-[22px] px-4 pb-4 pt-3 backdrop-blur-2xl">
+              <div className="mb-4 flex w-full items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => navigate("PROFILE")}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-2 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-colors hover:bg-white/[0.07]"
+                >
+                  {isAuthenticated ? (
+                    <UserAvatar
+                      user={user}
+                      className="h-11 w-11 rounded-full object-cover ring-2 ring-blue-300/25"
+                      initialsClassName="text-sm"
+                    />
+                  ) : (
+                    <div className="grid h-11 w-11 place-items-center rounded-full border border-blue-300/20 bg-[#101827] text-sm font-black text-blue-100">
+                      <UserIcon className="h-5 w-5" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-black text-white">
+                      {isAuthenticated
+                        ? resolvedDisplayName || "Pullz Player"
+                        : "Welcome to Pullz"}
+                    </p>
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="truncate text-lg font-black text-white">
-                    {isAuthenticated
-                      ? resolvedDisplayName || "Pullz Player"
-                      : "Welcome to Pullz"}
-                  </p>
-                </div>
-              </button>
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    playSound("click");
-                    setIsMobileMenuOpen(false);
-                    void logout();
-                  }}
-                  className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
-                >
-                  Sign out
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleSignIn}
-                  className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
-                >
-                  Sign in
-                </button>
-              )}
-            </div>
-
-            {view.type === 'SPIN' ? (
-              <nav className="relative z-10 space-y-2" aria-label="Spin page sections">
-                {[
-                  ['how', 'How It Works'], ['featured', 'Featured Pulls'], ['winners', 'Winners'], ['faq', 'FAQ']
-                ].map(([id, label]) => (
-                  <button key={id} type="button" onClick={() => scrollToSpinSection(id)} className="flex min-h-14 w-full items-center rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-violet-500/10 hover:text-white">
-                    {label}
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      playSound("click");
+                      setIsMobileMenuOpen(false);
+                      void logout();
+                    }}
+                    className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
+                  >
+                    Sign out
                   </button>
-                ))}
-              </nav>
-            ) : <nav className="relative z-10 space-y-2" aria-label="Mobile menu links">
-              <button
-                onClick={() => navigate("HOME")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "HOME" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
-              >
-                <HomeIcon className="h-5 w-5 text-[#7dd3fc]" />
-                Home
-              </button>
-              <button
-                onClick={() => navigate("BOXES")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
-              >
-                <Package className="h-5 w-5 text-[#7dd3fc]" />
-                Boxes
-              </button>
-              <button
-                onClick={() => navigate("LEADERBOARD")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
-              >
-                <Trophy className="h-5 w-5 text-[#7dd3fc]" />
-                Leaderboard
-              </button>
-              <button
-                onClick={() => navigate("BONUSES")}
-                className={`relative flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
-              >
-                <RefreshCw className="h-5 w-5 text-[#7dd3fc]" />
-                <span className="min-w-0 flex-1">Daily Spin</span>
-                {showDailySpinReady ? (
-                  <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#7dd3fc]">Ready</span>
-                ) : null}
-              </button>
-              <button
-                onClick={() => navigate("PROFILE")}
-                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
-              >
-                <UserIcon className="h-5 w-5 text-[#7dd3fc]" />
-                Profile
-              </button>
-            </nav>}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSignIn}
+                    className="shrink-0 rounded-xl border border-blue-300/20 bg-[#101827] px-3 py-2 text-xs font-black uppercase text-blue-100 transition-colors hover:bg-[#162237]"
+                  >
+                    Sign in
+                  </button>
+                )}
+              </div>
 
-            {view.type !== 'SPIN' && <div className="mt-auto space-y-2 border-t border-blue-300/15 pt-4">
-              <button
-                onClick={() => navigate("REFERRALS")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                <Users className="h-5 w-5 text-[#7dd3fc]" />
-                Refer a Friend
-              </button>
-              <button
-                onClick={() => navigate("CONTACT")}
-                className="flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                <LifeBuoy className="h-5 w-5 text-[#7dd3fc]" />
-                Support
-              </button>
-            </div>}
+              {view.type === 'SPIN' ? (
+                <nav className="relative z-10 space-y-1.5" aria-label="Spin page sections">
+                  {[
+                    ['how', 'How It Works'], ['featured', 'Featured Pulls'], ['winners', 'Winners'], ['faq', 'FAQ']
+                  ].map(([id, label]) => (
+                    <button key={id} type="button" onClick={() => scrollToSpinSection(id)} className="flex min-h-12 w-full items-center rounded-xl px-4 text-left text-sm font-extrabold text-slate-200 transition-colors hover:bg-violet-500/10 hover:text-white">
+                      {label}
+                    </button>
+                  ))}
+                </nav>
+              ) : <nav className="relative z-10 space-y-1.5" aria-label="Mobile menu links">
+                <button
+                  onClick={() => navigate("HOME")}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "HOME" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+                >
+                  <HomeIcon className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Home
+                </button>
+                <button
+                  onClick={() => navigate("BOXES")}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+                >
+                  <Package className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Boxes
+                </button>
+                <button
+                  onClick={() => navigate("LEADERBOARD")}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "LEADERBOARD" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+                >
+                  <Trophy className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Leaderboard
+                </button>
+                <button
+                  onClick={() => navigate("BONUSES")}
+                  className={`relative flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "BONUSES" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+                >
+                  <RefreshCw className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  <span className="min-w-0 flex-1">Daily Spin</span>
+                  {showDailySpinReady ? (
+                    <span className="rounded-full border border-[#54f5b3]/30 bg-[#54f5b3]/15 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-[#7dd3fc]">Ready</span>
+                  ) : null}
+                </button>
+                <button
+                  onClick={() => navigate("PROFILE")}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "PROFILE" || view.type === "INVENTORY" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+                >
+                  <UserIcon className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Profile
+                </button>
+              </nav>}
+
+              {view.type !== 'SPIN' && <div className="mt-3 space-y-1.5 border-t border-blue-300/15 pt-3">
+                <button
+                  onClick={() => navigate("REFERRALS")}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <Users className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Refer a Friend
+                </button>
+                <button
+                  onClick={() => navigate("CONTACT")}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white"
+                >
+                  <LifeBuoy className="h-[18px] w-[18px] text-[#7dd3fc]" />
+                  Support
+                </button>
+              </div>}
+            </div>
           </div>
         </div>
       </div>
