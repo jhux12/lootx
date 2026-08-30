@@ -11,6 +11,8 @@ type FigmaHomePageProps = {
   onViewAllBoxes: () => void;
 };
 
+// This page is the isolated Betting Mobile Figma homepage implementation.
+
 const categoryItems = [
   { id: 'all', label: 'All cases', icon: Boxes },
   { id: 'free', label: 'Free', icon: Gift },
