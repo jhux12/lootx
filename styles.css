@@ -55,6 +55,24 @@ body {
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.26);
 }
 
+.lootx-hero-slide {
+  background:
+    radial-gradient(circle at 18% 118%, rgba(255, 141, 77, 0.58), transparent 46%),
+    linear-gradient(120deg, #ff4d55 0%, #ff6456 54%, #ff8d4d 100%);
+}
+
+.lootx-hero-slide--orange {
+  background:
+    radial-gradient(circle at 84% 18%, rgba(255, 223, 52, 0.25), transparent 34%),
+    linear-gradient(120deg, #e83327 0%, #ff7134 58%, #ff8d4d 100%);
+}
+
+.lootx-hero-slide--dark {
+  background:
+    radial-gradient(circle at 74% 50%, rgba(255, 77, 85, 0.22), transparent 34%),
+    linear-gradient(120deg, #181c28 0%, #13151d 58%, #2d303d 100%);
+}
+
 .lootx-stat-grid {
   border: 1px solid var(--lootx-line);
   border-radius: var(--lootx-radius-sm);
