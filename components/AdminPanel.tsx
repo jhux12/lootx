@@ -404,7 +404,7 @@ export const AdminPanel: React.FC = () => {
     stripeSettings,
     updateStripeSettings
   } = useGame();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings' | 'seo' | 'items' | 'boxes' | 'slab-packs' | 'shipments' | 'shipping-origin' | 'shipping-profiles' | 'shipping-packages' | 'support' | 'bonuses' | 'packages' | 'fees' | 'case-lab' | 'homepage' | 'boxes-page' | 'footer-pages' | 'polls' | 'referrals' | 'market-pricing'>('dashboard');
   const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
   const loadShippingProfiles = async () => { const result = await authedFetch<{ profiles: ShippingProfile[] }>('/api/admin/shipping-profiles'); setShippingProfiles(result.profiles ?? []); };
   useEffect(() => { void loadShippingProfiles().catch((error) => console.error('Failed to load shipping profiles', error)); }, []);
@@ -456,6 +456,9 @@ export const AdminPanel: React.FC = () => {
       isDaily: false,
       isPullPassBox: false,
       pullPassBoxType: 'bronze',
+      isSlabPack: false,
+      slabPackTier: 'bronze',
+      slabPackOddsRanges: [],
       tags: [],
       sellBackRate: 0.82
   });
@@ -3103,6 +3106,9 @@ export const AdminPanel: React.FC = () => {
           isDaily: false,
           isPullPassBox: false,
           pullPassBoxType: 'bronze',
+          isSlabPack: activeTab === 'slab-packs',
+          slabPackTier: 'bronze',
+          slabPackOddsRanges: [],
           tags: [],
           sellBackRate: 0.82
       });
@@ -3181,6 +3187,9 @@ export const AdminPanel: React.FC = () => {
           isDaily: box.isDaily,
           isPullPassBox: box.isPullPassBox ?? false,
           pullPassBoxType: box.pullPassBoxType ?? 'bronze',
+          isSlabPack: box.isSlabPack ?? false,
+          slabPackTier: box.slabPackTier ?? 'bronze',
+          slabPackOddsRanges: box.slabPackOddsRanges ?? [],
           sellBackRate: box.sellBackRate ?? (box.isUserCreated ? 0.75 : 0.82)
       });
       setBoxTagInput('');
@@ -3288,6 +3297,9 @@ export const AdminPanel: React.FC = () => {
         spinnerBackgroundImage: '',
         accentColor: '#3b82f6',
         isDaily: false,
+        isSlabPack: activeTab === 'slab-packs',
+        slabPackTier: 'bronze',
+        slabPackOddsRanges: [],
         tags: [],
         sellBackRate: 0.82
       });
@@ -3297,6 +3309,14 @@ export const AdminPanel: React.FC = () => {
       setRiskBalance(50);
       setTargetEV(0.85);
   };
+
+  // Keep the create-new-box form's isSlabPack flag in sync with whichever
+  // tab (Boxes vs Slab Packs) is active, as long as the admin isn't mid-edit.
+  useEffect(() => {
+    if (editingBoxId) return;
+    if (activeTab !== 'boxes' && activeTab !== 'slab-packs') return;
+    setNewBox((prev) => ({ ...prev, isSlabPack: activeTab === 'slab-packs' }));
+  }, [activeTab, editingBoxId]);
 
   const toggleBoxTag = (tag: string) => {
       const normalized = tag.trim().toLowerCase();
@@ -3413,6 +3433,9 @@ export const AdminPanel: React.FC = () => {
       isDaily: newBox.isDaily,
       isPullPassBox: newBox.isPullPassBox === true,
       pullPassBoxType: newBox.isPullPassBox ? (newBox.pullPassBoxType ?? 'bronze') : undefined,
+      isSlabPack: newBox.isSlabPack === true,
+      slabPackTier: newBox.isSlabPack ? (newBox.slabPackTier ?? 'bronze') : undefined,
+      slabPackOddsRanges: newBox.isSlabPack && (newBox.slabPackOddsRanges ?? []).length > 0 ? newBox.slabPackOddsRanges : undefined,
       sellBackRate: newBox.sellBackRate ?? (newBox.isDaily ? 0.75 : 0.82),
       items,
       targetEV: clampedTargetEV,
@@ -3728,6 +3751,12 @@ export const AdminPanel: React.FC = () => {
                        <BoxIcon className="w-4 h-4" /> Manage Boxes
                    </button>
                    <button
+                     onClick={() => setActiveTab('slab-packs')}
+                     className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'slab-packs' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                   >
+                       <Sparkles className="w-4 h-4" /> Slab Packs
+                   </button>
+                   <button
                      onClick={() => setActiveTab('packages')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'packages' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
@@ -3837,6 +3866,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
                     {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'slab-packs' && 'Slab Pack Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
@@ -4314,13 +4344,13 @@ export const AdminPanel: React.FC = () => {
                 </div>
             )}
 
-            {/* TAB: BOXES */}
-            {activeTab === 'boxes' && (
+            {/* TAB: BOXES / SLAB PACKS (shared editor, scoped by tab) */}
+            {(activeTab === 'boxes' || activeTab === 'slab-packs') && (
                 <div className="space-y-8">
                     {/* Create/Edit Box Form */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-white">{editingBoxId ? 'Edit Box' : 'Create New Box'}</h3>
+                            <h3 className="text-lg font-bold text-white">{editingBoxId ? (activeTab === 'slab-packs' ? 'Edit Slab Pack' : 'Edit Box') : (activeTab === 'slab-packs' ? 'Create New Slab Pack' : 'Create New Box')}</h3>
                             {editingBoxId && <button onClick={resetBoxForm} className="text-xs text-red-400 hover:text-red-300">Cancel Edit</button>}
                         </div>
 
@@ -4616,6 +4646,8 @@ export const AdminPanel: React.FC = () => {
                                         {evOutOfBounds && <div>⚠ EV must stay within ±1% of target.</div>}
                                     </div>
                                 )}
+                                {activeTab === 'boxes' && (
+                                <>
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         id="daily-case"
@@ -4657,6 +4689,111 @@ export const AdminPanel: React.FC = () => {
                                         </label>
                                     )}
                                 </div>
+                                </>
+                                )}
+                                {activeTab === 'slab-packs' && (
+                                    <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3">
+                                        <p className="text-sm font-semibold text-cyan-200 flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4" /> Slab Pack
+                                        </p>
+                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Slab Pack tier
+                                            <Select
+                                                value={newBox.slabPackTier ?? 'bronze'}
+                                                onChange={(event) => setNewBox((prev) => ({ ...prev, slabPackTier: event.target.value as any }))}
+                                                className="mt-1 w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"
+                                            >
+                                                <option value="bronze">Bronze</option>
+                                                <option value="silver">Silver</option>
+                                                <option value="gold">Gold</option>
+                                            </Select>
+                                        </label>
+                                        <p className="mt-2 text-[10px] text-gray-500">
+                                            One Slab Pack per tier (Bronze/Silver/Gold) &mdash; the items you add below become that tier's real prize pool and odds on the "Slab Packs" page. This won't appear on the regular Boxes page.
+                                        </p>
+
+                                        <div className="mt-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-xs text-gray-500 uppercase font-bold">Custom Odds Ranges (optional)</p>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNewBox((prev) => ({
+                                                        ...prev,
+                                                        slabPackOddsRanges: [...(prev.slabPackOddsRanges ?? []), { min: 0, max: 0, chance: 0 }]
+                                                    }))}
+                                                    className="text-xs text-cyan-300 hover:text-cyan-200"
+                                                >
+                                                    + Add Range
+                                                </button>
+                                            </div>
+                                            {(newBox.slabPackOddsRanges ?? []).length === 0 && (
+                                                <p className="text-[10px] text-gray-500">
+                                                    No custom ranges set &mdash; the Odds table will fall back to auto-grouping by item rarity.
+                                                </p>
+                                            )}
+                                            {(newBox.slabPackOddsRanges ?? []).map((range, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 mt-2">
+                                                    <span className="text-gray-500 text-xs">$</span>
+                                                    <input
+                                                        type="number"
+                                                        value={range.min}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], min: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="Min"
+                                                    />
+                                                    <span className="text-gray-500 text-xs">&ndash;</span>
+                                                    <input
+                                                        type="number"
+                                                        value={range.max}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], max: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="Max"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={range.chance}
+                                                        onChange={(e) => setNewBox((prev) => {
+                                                            const next = [...(prev.slabPackOddsRanges ?? [])];
+                                                            next[idx] = { ...next[idx], chance: Number(e.target.value) };
+                                                            return { ...prev, slabPackOddsRanges: next };
+                                                        })}
+                                                        className="w-20 bg-[#0b0e14] border border-gray-700 rounded px-2 py-1 text-sm text-gray-200"
+                                                        placeholder="%"
+                                                    />
+                                                    <span className="text-gray-500 text-xs">%</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setNewBox((prev) => ({
+                                                            ...prev,
+                                                            slabPackOddsRanges: (prev.slabPackOddsRanges ?? []).filter((_, i) => i !== idx)
+                                                        }))}
+                                                        className="text-red-400 hover:text-red-300 text-xs ml-1"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {(newBox.slabPackOddsRanges ?? []).length > 0 && (() => {
+                                                const total = (newBox.slabPackOddsRanges ?? []).reduce((sum, r) => sum + (Number(r.chance) || 0), 0);
+                                                const rounded = Math.round(total * 100) / 100;
+                                                const isValid = Math.abs(rounded - 100) < 0.5;
+                                                return (
+                                                    <p className={`mt-2 text-[10px] ${isValid ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                                        Total: {rounded}% {isValid ? '' : '(should add up to 100%)'}
+                                                    </p>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -4884,7 +5021,7 @@ export const AdminPanel: React.FC = () => {
                             disabled={!canSaveBox}
                             className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                            {editingBoxId ? 'Update Box' : 'Create Box'}
+                            {editingBoxId ? (activeTab === 'slab-packs' ? 'Update Slab Pack' : 'Update Box') : (activeTab === 'slab-packs' ? 'Create Slab Pack' : 'Create Box')}
                         </button>
                     </div>
 
@@ -4893,14 +5030,14 @@ export const AdminPanel: React.FC = () => {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                 <tr>
-                                    <th className="px-4 py-3">Box</th>
+                                    <th className="px-4 py-3">{activeTab === 'slab-packs' ? 'Slab Pack' : 'Box'}</th>
                                     <th className="px-4 py-3">Items</th>
                                     <th className="px-4 py-3">Price</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-800">
-                                {boxes.map((box, i) => (
+                                {boxes.filter((box) => (activeTab === 'slab-packs' ? Boolean(box.isSlabPack) : !box.isSlabPack)).map((box, i) => (
                                     <tr key={i}>
                                         <td className="px-4 py-3 flex items-center gap-2">
                                             <img src={box.image} alt={box.name} className="w-8 h-8 object-contain" />
@@ -4909,6 +5046,7 @@ export const AdminPanel: React.FC = () => {
                                                     {box.name}
                                                     {box.isDaily && <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-1 rounded">DAILY</span>}
                                                     {box.isPullPassBox && <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1 rounded">PULL PASS {box.pullPassBoxType?.toUpperCase()}</span>}
+                                                    {box.isSlabPack && <span className="text-[10px] bg-cyan-500/20 text-cyan-300 px-1 rounded">SLAB PACK {box.slabPackTier?.toUpperCase()}</span>}
                                                 </div>
                                             </div>
                                         </td>

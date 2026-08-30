@@ -490,6 +490,10 @@ const getViewFromLocation = (pathname: string, search: string): ViewState => {
     return { type: 'BOXES' };
   }
 
+  if (primary === 'slab-packs') {
+    return { type: 'SLAB_PACKS' };
+  }
+
   if (primary === 'spin') {
     return { type: 'SPIN' };
   }
@@ -586,6 +590,8 @@ const getPathFromView = (view: ViewState): string => {
       return '/';
     case 'BOXES':
       return '/boxes';
+    case 'SLAB_PACKS':
+      return '/slab-packs';
     case 'SPIN':
       return '/spin';
     case 'PLINKO':
@@ -2060,7 +2066,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Firestore cannot field-project a document. Prefer the deployment-managed
         // summary collection; use a bounded legacy fallback while it is populated.
         const summarySnapshot = user.isAdmin
-          ? await getDocs(query(collection(db, 'boxes'), limit(100)))
+          ? await getDocs(query(collection(db, 'boxes'), limit(1000)))
           : await getDocs(query(collection(db, 'boxSummaries'), limit(48)));
         // A compatibility read is allowed only after a successful, confirmed-empty
         // migration collection. Network/permission/query failures stay errors.
@@ -2127,6 +2133,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isDaily: data.isDaily ?? false,
             isPullPassBox: data.isPullPassBox === true,
             pullPassBoxType: typeof data.pullPassBoxType === 'string' ? data.pullPassBoxType as MysteryBox['pullPassBoxType'] : undefined,
+            isSlabPack: data.isSlabPack === true,
+            slabPackTier: typeof data.slabPackTier === 'string' ? data.slabPackTier as MysteryBox['slabPackTier'] : undefined,
+            slabPackOddsRanges: Array.isArray(data.slabPackOddsRanges) ? data.slabPackOddsRanges : undefined,
             targetEV: data.targetEV !== undefined ? Number(data.targetEV) : undefined,
             riskLevel: data.riskLevel !== undefined ? Number(data.riskLevel) : undefined,
             items,

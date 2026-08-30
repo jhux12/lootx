@@ -279,6 +279,9 @@ export interface MysteryBox {
   isDaily?: boolean;
   isPullPassBox?: boolean;
   pullPassBoxType?: 'bronze' | 'silver' | 'gold' | 'elite' | 'master' | 'collector';
+  isSlabPack?: boolean;
+  slabPackTier?: 'bronze' | 'silver' | 'gold';
+  slabPackOddsRanges?: { min: number; max: number; chance: number }[];
   sellBackRate?: number;
   createdAt?: number;
   marketValueAudit?: BoxMarketValueAudit;
@@ -518,6 +521,7 @@ export type ViewState =
   | { type: 'HOME' }
   | { type: 'SPIN' }
   | { type: 'BOXES' }
+  | { type: 'SLAB_PACKS' }
   | { type: 'PROFILE'; userId?: string }
   | { type: 'INVENTORY' }
   | { type: 'BONUSES' }

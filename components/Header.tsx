@@ -28,6 +28,7 @@ import {
   Box,
   Clock3,
   ShieldCheck,
+  Sparkles,
   Trophy,
   Twitter,
   User as UserIcon,
@@ -151,10 +152,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     isAuthenticated && hasDailyBox && !user.lastFreeBoxClaim;
   const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
   const activeDesktopSection = useMemo<
-    "home" | "cases" | "leaderboard" | "dailySpin" | "rewards" | "profile" | null
+    "home" | "cases" | "slabPacks" | "leaderboard" | "dailySpin" | "rewards" | "profile" | null
   >(() => {
     if (view.type === "HOME") return "home";
     if (view.type === "BOXES" || view.type === "CASE_OPENING") return "cases";
+    if (view.type === "SLAB_PACKS") return "slabPacks";
     if (view.type === "LEADERBOARD") return "leaderboard";
     if (view.type === "BONUSES") return "dailySpin";
     if (
@@ -399,6 +401,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       type:
         | "HOME"
         | "BOXES"
+        | "SLAB_PACKS"
         | "SPIN"
         | "BONUSES"
         | "LEADERBOARD"
@@ -560,6 +563,17 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     }
                   >
                     Boxes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate("SLAB_PACKS")}
+                    className={
+                      activeDesktopSection === "slabPacks"
+                        ? desktopActiveNavButtonClass
+                        : desktopNavButtonClass
+                    }
+                  >
+                    Slab Packs
                   </button>
                   <button
                     type="button"
@@ -846,6 +860,13 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               >
                 <Package className="h-5 w-5 text-[#7dd3fc]" />
                 Boxes
+              </button>
+              <button
+                onClick={() => navigate("SLAB_PACKS")}
+                className={`flex min-h-14 w-full items-center gap-4 rounded-2xl px-4 text-left text-base font-extrabold transition-colors ${view.type === "SLAB_PACKS" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
+              >
+                <Sparkles className="h-5 w-5 text-[#7dd3fc]" />
+                Slab Packs
               </button>
               <button
                 onClick={() => navigate("LEADERBOARD")}
