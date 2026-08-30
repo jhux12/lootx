@@ -83,15 +83,19 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div ref={tickerRef} className="relative w-full h-16 sm:h-20 bg-[#0b0f17] overflow-hidden border border-white/5 rounded-2xl flex items-center">
+    <div ref={tickerRef} className="relative flex h-[88px] w-full items-center overflow-hidden rounded-xl border border-white/[0.07] bg-[#181c28] shadow-[0_8px_24px_rgba(0,0,0,0.18)] sm:h-[106px]">
+      <div className="absolute inset-y-0 left-0 z-20 flex w-12 flex-col items-center justify-center gap-1 border-r border-white/[0.06] bg-[#181c28] sm:w-14">
+        <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" aria-hidden="true" />
+        <span className="text-[8px] font-black uppercase tracking-[0.14em] text-slate-400 sm:text-[9px]">Live</span>
+      </div>
       {/* Gradient fade overlays */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
+      <div className="pointer-events-none absolute bottom-0 left-12 top-0 z-10 w-12 bg-gradient-to-r from-[#181c28] to-transparent sm:left-14"></div>
+      <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-16 bg-gradient-to-l from-[#181c28] to-transparent"></div>
 
-      <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
+      <div className="ticker-animation flex gap-2 whitespace-nowrap pl-16 pr-4 sm:gap-2.5 sm:pl-[72px]" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
         {drops.length === 0 ? (
           Array.from({ length: 6 }).map((_, idx) => (
-            <div key={`recent-skeleton-${idx}`} className="w-40 h-12">
+            <div key={`recent-skeleton-${idx}`} className="h-[68px] w-[148px] sm:h-[86px] sm:w-[170px]">
               <SkeletonTile compact className="h-full" />
             </div>
           ))
@@ -99,23 +103,25 @@ export const LiveTicker: React.FC = () => {
           <div 
             key={`${drop.id}-${idx}`} 
             className={`
-              group flex-shrink-0 w-40 h-12 rounded-xl flex items-center p-2 gap-3 min-w-0
-              border border-white/5 bg-[#101521] transition-all hover:scale-[1.02] hover:border-white/15 cursor-pointer
+              group relative flex h-[68px] w-[148px] flex-shrink-0 cursor-pointer items-center gap-2 overflow-hidden rounded-[10px]
+              border border-white/[0.06] bg-[#121620] p-2 transition-all hover:scale-[1.015] hover:border-white/15
+              sm:h-[86px] sm:w-[170px] sm:gap-2.5 sm:p-2.5
               ${getRarityColor(drop.rarity)}
             `}
           >
-            <div className="h-9 w-9 rounded bg-gray-900/60"><BlurImage src={drop.itemImage} alt={drop.itemName} className="w-9 h-9 object-contain rounded" /></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_36%,rgba(255,255,255,0.06),transparent_45%)]" aria-hidden="true" />
+            <div className="relative h-12 w-12 shrink-0 sm:h-16 sm:w-16"><BlurImage src={drop.itemImage} alt={drop.itemName} className="h-full w-full rounded object-contain drop-shadow-[0_10px_14px_rgba(0,0,0,0.45)]" /></div>
             <div className="flex flex-col overflow-hidden min-w-0">
-              <span className="text-[11px] font-semibold text-gray-300 truncate group-hover:text-white transition-colors">{drop.itemName}</span>
-              <span className="text-[10px] text-gray-500 truncate group-hover:text-gray-300 transition-colors">{drop.user.name}</span>
+              <span className="truncate text-[10px] font-bold text-gray-200 transition-colors group-hover:text-white sm:text-[11px]">{drop.itemName}</span>
+              <span className="mt-0.5 truncate text-[8px] text-gray-500 transition-colors group-hover:text-gray-300 sm:text-[9px]">{drop.user.name}</span>
+              <CoinAmount
+                amount={drop.value}
+                formatOptions={{ maximumFractionDigits: 0 }}
+                className="mt-1 justify-start text-[9px] font-bold text-violet-200 sm:text-[10px]"
+                iconClassName="h-3 w-3 flex-shrink-0"
+                textClassName="truncate"
+              />
             </div>
-            <CoinAmount
-              amount={drop.value}
-              formatOptions={{ maximumFractionDigits: 0 }}
-              className="ml-auto text-[11px] font-medium text-emerald-300/80 max-w-[72px] justify-end group-hover:text-emerald-200"
-              iconClassName="w-3.5 h-3.5 flex-shrink-0"
-              textClassName="truncate"
-            />
           </div>
         ))}
       </div>

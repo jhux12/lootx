@@ -69,11 +69,11 @@ const drawerCardClass =
   "flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0";
 
 const desktopNavButtonBaseClass =
-  "group relative flex h-11 items-center justify-center rounded-[11px] border px-4 text-[14px] font-semibold xl:px-6 xl:text-[15px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b12]";
+  "group relative flex h-9 items-center justify-center rounded-lg border px-3 text-[12px] font-semibold xl:px-4 xl:text-[13px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13151d]";
 
-const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-white/78 hover:border-violet-300/20 hover:bg-violet-500/10 hover:text-white`;
+const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-slate-400 hover:border-white/[0.07] hover:bg-white/[0.045] hover:text-white`;
 
-const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-violet-300/25 bg-violet-500/15 text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_26px_rgba(0,0,0,0.22)]`;
+const desktopActiveNavButtonClass = `${desktopNavButtonBaseClass} border-violet-300/20 bg-violet-400/[0.10] text-violet-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]`;
 
 const desktopMenuPanelClass =
   'absolute left-0 top-full z-50 mt-3 rounded-2xl border border-white/10 bg-[#0b0e15]/[.98] p-1.5 shadow-[0_24px_80px_rgba(0,0,0,0.65),0_0_0_1px_rgba(124,60,255,0.16)] backdrop-blur-2xl transition-all duration-200 before:absolute before:-top-3 before:left-0 before:h-3 before:w-full before:content-[""]';
@@ -82,7 +82,7 @@ const desktopMenuItemClass =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white";
 
 const utilityButtonClass =
-  "relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border border-white/10 bg-white/[0.045] text-gray-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:border-violet-300/35 hover:bg-violet-500/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60";
+  "relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.035] text-slate-300 transition-all duration-200 hover:border-violet-300/30 hover:bg-violet-400/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300/60";
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -517,11 +517,11 @@ const HeaderComponent: React.FC<HeaderProps> = ({
       >
         <header
           ref={headerRef}
-          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-violet-300/15 bg-[#05060a]/[.96] shadow-[0_12px_34px_rgba(0,0,0,0.4)] backdrop-blur-xl lg:border-b-0 lg:bg-transparent lg:px-4 lg:py-2`}
+          className={`${isSticky ? "pullz-mobile-header fixed inset-x-0 top-0" : "relative"} z-[120] border-b border-white/[0.07] bg-[#13151d]/[.97] shadow-[0_10px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl`}
         >
           <div className="pt-[env(safe-area-inset-top,0px)]">
-            <nav className="relative mx-auto flex h-[56px] max-w-7xl items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-4 lg:h-[72px] lg:max-w-none lg:rounded-[18px] lg:border lg:border-violet-300/15 lg:bg-[#0b0e15]/[.96] lg:px-5 lg:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_18px_58px_rgba(0,0,0,0.4),0_0_42px_rgba(124,60,255,0.16)] lg:backdrop-blur-xl xl:px-9">
-              <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(124,60,255,0.26),transparent_36%),radial-gradient(circle_at_92%_0%,rgba(77,141,255,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_58%)]" />
+            <nav className="relative mx-auto flex h-[56px] max-w-[1320px] items-center justify-between overflow-hidden px-3 sm:h-[60px] sm:px-5 lg:h-[64px]">
+              <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(167,139,250,0.25),transparent)]" />
               <div className="relative z-10 flex min-w-0 items-center gap-3 lg:gap-x-4 xl:gap-x-5">
                 <button
                   type="button"
@@ -531,7 +531,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 >
                   <BrandLockup
                     showText={false}
-                    logoClassName="h-8 w-auto sm:h-9 lg:h-[42px]"
+                    logoClassName="h-8 w-auto sm:h-9 lg:h-9"
                   />
                 </button>
 
