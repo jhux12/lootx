@@ -109,6 +109,10 @@ body {
 }
 
 /* Boxes catalog hero */
+.lootx-box-catalog {
+  background: var(--lootx-canvas);
+}
+
 .pullz-boxes-hero {
   position: relative;
   display: grid;
@@ -118,13 +122,13 @@ body {
   gap: 32px;
   overflow: hidden;
   padding: 42px 48px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 30px;
+  border: 1px solid var(--lootx-line);
+  border-radius: var(--lootx-radius-md);
   background:
-    linear-gradient(90deg, rgba(7, 9, 16, 0.96) 0%, rgba(7, 9, 16, 0.84) 43%, rgba(7, 9, 16, 0.2) 100%),
-    radial-gradient(circle at 74% 50%, rgba(124, 60, 255, 0.3), transparent 29%),
-    linear-gradient(135deg, #101423, #0a0c14 65%);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+    linear-gradient(90deg, rgba(19, 21, 29, 0.98) 0%, rgba(19, 21, 29, 0.86) 43%, rgba(19, 21, 29, 0.24) 100%),
+    radial-gradient(circle at 74% 50%, rgba(255, 77, 85, 0.24), transparent 29%),
+    linear-gradient(135deg, #181c28, #13151d 65%);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
 }
 
 .pullz-boxes-hero-copy {
@@ -143,7 +147,7 @@ body {
 }
 
 .pullz-boxes-hero-copy h1 span {
-  background: linear-gradient(135deg, #fff 10%, #b9a7ff 48%, #69a1ff 100%);
+  background: linear-gradient(135deg, #fff 10%, #ff8d4d 48%, #ff4d55 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -171,7 +175,7 @@ body {
   aspect-ratio: 1;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 50%;
-  box-shadow: inset 0 0 90px rgba(124, 60, 255, 0.08), 0 0 90px rgba(124, 60, 255, 0.14);
+  box-shadow: inset 0 0 90px rgba(255, 77, 85, 0.07), 0 0 90px rgba(255, 77, 85, 0.11);
   animation: pullz-boxes-orbit-pulse 5.5s ease-in-out infinite;
 }
 
@@ -193,7 +197,7 @@ body {
   width: 380px;
   height: 105px;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(119, 65, 255, 0.45), transparent 68%);
+  background: radial-gradient(ellipse, rgba(255, 77, 85, 0.38), transparent 68%);
   filter: blur(8px);
 }
 
