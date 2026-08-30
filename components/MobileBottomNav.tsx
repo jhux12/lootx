@@ -147,7 +147,7 @@ export const MobileBottomNav: React.FC = () => {
 
   // The spin campaign uses the section-based header navigation instead of the
   // application-wide bottom navigation.
-  if (view.type === 'SPIN') return null;
+  if (view.type === 'HOME' || view.type === 'SPIN') return null;
 
   const nav = (
     <div
