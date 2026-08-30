@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, HomeHeroSlide, Shipment, ShipmentStatus } from '../types';
 import { normalizeStoredShippingAddress } from '../src/lib/shippingAddress';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
@@ -284,9 +284,35 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
   boxTagIcons: {},
-  boxTagLabels: {}
+  boxTagLabels: {},
+  homeHeroSlides: []
 };
 
+
+const HEX_COLOR_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+const normalizeHomeHeroSlides = (slides: unknown): HomeHeroSlide[] => {
+  if (!Array.isArray(slides)) return [];
+
+  return slides
+    .map((slide, index) => {
+      if (!slide || typeof slide !== 'object') return null;
+      const source = slide as Partial<HomeHeroSlide>;
+      const backgroundColor = typeof source.backgroundColor === 'string' && HEX_COLOR_PATTERN.test(source.backgroundColor.trim())
+        ? source.backgroundColor.trim()
+        : '#050505';
+
+      return {
+        id: typeof source.id === 'string' && source.id.trim() ? source.id.trim() : `hero-${index}-${Date.now()}`,
+        backgroundColor,
+        image: typeof source.image === 'string' ? source.image.trim() : '',
+        link: typeof source.link === 'string' ? source.link.trim() : '',
+        text: typeof source.text === 'string' ? source.text.trim() : ''
+      };
+    })
+    .filter((slide): slide is HomeHeroSlide => Boolean(slide))
+    .slice(0, 6);
+};
 
 const normalizeEditableShippingTiers = (tiers: unknown, fallback: StripeSettings['shippingRateTiers']): StripeSettings['shippingRateTiers'] => {
   if (!Array.isArray(tiers)) return fallback;
@@ -378,7 +404,8 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
             .map(([tag, label]) => [tag.trim().toLowerCase(), label.trim()])
             .filter(([tag, label]) => tag.length > 0 && label.length > 0)
         )
-      : {}
+      : {},
+    homeHeroSlides: normalizeHomeHeroSlides(settings.homeHeroSlides)
   };
 };
 

@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { Boxes, ChevronRight, CircleEllipsis, Flame, Sparkles } from 'lucide-react';
-import type { MysteryBox } from '../../types';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Boxes, ChevronRight, Flame, Sparkles, X } from 'lucide-react';
+import type { HomeHeroSlide, MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
+import { COIN_ICON } from '../../constants';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 import { useAuth, useBoxes, useUI, useWallet } from '../../context/GameContext';
 import { CATEGORY_ORDER, getBoxTags, isCategoryIconUrl, normalizeBoxTag, sanitizeFontAwesomeClass } from '../../utils/boxTags';
@@ -33,9 +34,23 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   const { isAuthenticated, openAuthModal } = useAuth();
   const { balance } = useWallet();
   const { stripeSettings } = useBoxes();
-  const { setView } = useUI();
+  const { setView, setShowTopUpModal } = useUI();
   const [category, setCategory] = useState('all');
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // The header dispatches this whenever the shared mobile menu opens or
+  // closes (including via the backdrop or a nav link), so the dock's
+  // "More" button can reflect and control the same state.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleMenuState = (event: Event) => {
+      const detail = (event as CustomEvent<{ isOpen: boolean }>).detail;
+      setIsMobileMenuOpen(Boolean(detail?.isOpen));
+    };
+    window.addEventListener('pullz:mobile-menu-state', handleMenuState);
+    return () => window.removeEventListener('pullz:mobile-menu-state', handleMenuState);
+  }, []);
 
   // Same tag-derived category tabs shown on the Boxes page, so the two
   // surfaces stay in sync.
@@ -89,22 +104,66 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   }), [balance, category, showAffordableOnly, visibleBoxes]);
 
   const promoBoxes = visibleBoxes.slice(0, 3);
+  const heroSlides = stripeSettings.homeHeroSlides;
+  const hasCustomHeroSlides = heroSlides.length > 0;
 
-  const openMobileMenu = () => {
+  const handleHeroSlideClick = (slide: HomeHeroSlide) => {
+    const link = slide.link.trim();
+    if (!link) return;
+
+    const matchedBox = boxes.find((box) => box.id === link || box.name.toLowerCase() === link.toLowerCase());
+    if (matchedBox) {
+      onOpenBox(matchedBox.id);
+      return;
+    }
+    if (/^https?:\/\//i.test(link)) {
+      window.open(link, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    if (link === '/boxes' || link.toLowerCase() === 'boxes') {
+      onViewAllBoxes();
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = link;
+    }
+  };
+
+  const toggleMobileMenu = () => {
     if (typeof window === 'undefined') return;
-    window.dispatchEvent(new CustomEvent('pullz:open-mobile-menu'));
+    window.dispatchEvent(new CustomEvent('pullz:toggle-mobile-menu'));
+  };
+
+  const handleBalanceClick = () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setShowTopUpModal(true);
   };
 
   return (
     <main className="bet-home">
       <section className="bet-home-tournaments">
         <div className="bet-home-promos">
-          {promoBoxes.map((box, index) => (
-            <button type="button" key={box.id} className={index === 0 ? 'is-orange' : 'is-black'} onClick={() => onOpenBox(box.id)}>
-              <span><i><ChevronRight /></i><small>{index === 0 ? 'All boxes' : 'Hot boxes'}</small><strong>{box.name}</strong></span>
-              {box.image ? <img src={box.image} alt="" /> : null}
-            </button>
-          ))}
+          {hasCustomHeroSlides
+            ? heroSlides.map((slide) => (
+                <button
+                  type="button"
+                  key={slide.id}
+                  style={{ background: slide.backgroundColor, color: '#fff' }}
+                  onClick={() => handleHeroSlideClick(slide)}
+                >
+                  {slide.text ? <span><strong>{slide.text}</strong></span> : null}
+                  {slide.image ? <img src={slide.image} alt="" /> : null}
+                </button>
+              ))
+            : promoBoxes.map((box, index) => (
+                <button type="button" key={box.id} className={index === 0 ? 'is-orange' : 'is-black'} onClick={() => onOpenBox(box.id)}>
+                  <span><i><ChevronRight /></i><small>{index === 0 ? 'All boxes' : 'Hot boxes'}</small><strong>{box.name}</strong></span>
+                  {box.image ? <img src={box.image} alt="" /> : null}
+                </button>
+              ))}
         </div>
       </section>
       <BetLiveWinsTicker />
@@ -155,19 +214,16 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Boxes</span></button>
         <button
           type="button"
-          onClick={() => isAuthenticated ? setView({ type: 'PROFILE' }) : openAuthModal('login')}
-          aria-label={isAuthenticated ? 'View balance' : 'Sign in to see your balance'}
+          onClick={handleBalanceClick}
+          aria-label={isAuthenticated ? 'Add coins' : 'Sign in to add coins'}
         >
-          <CoinAmount
-            amount={balance}
-            placeholder={!isAuthenticated}
-            animated={false}
-            className="bet-home-dock-balance"
-            iconClassName="h-[22px] w-[22px]"
-          />
-          <span>Balance</span>
+          <img src={COIN_ICON} alt="" className="bet-home-dock-coin" />
+          <span>{isAuthenticated ? balance.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '——'}</span>
         </button>
-        <button type="button" onClick={openMobileMenu}><CircleEllipsis /><span>More</span></button>
+        <button type="button" onClick={toggleMobileMenu} aria-expanded={isMobileMenuOpen}>
+          {isMobileMenuOpen ? <X /> : <span className="bet-home-dock-more-dots" aria-hidden="true"><i /><i /><i /></span>}
+          <span>{isMobileMenuOpen ? 'Close' : 'More'}</span>
+        </button>
       </nav>
     </main>
   );

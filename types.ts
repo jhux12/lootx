@@ -314,6 +314,14 @@ export interface ShippingRateTierSetting {
   label: string;
 }
 
+export interface HomeHeroSlide {
+  id: string;
+  backgroundColor: string;
+  image: string;
+  link: string;
+  text: string;
+}
+
 export interface StripeSettings {
   boxCatalogHeroImageUrl: string;
   authPopupImageUrl: string;
@@ -334,6 +342,7 @@ export interface StripeSettings {
   caseLabVisibleBoxIds: string[];
   boxTagIcons: Record<string, string>;
   boxTagLabels: Record<string, string>;
+  homeHeroSlides: HomeHeroSlide[];
 }
 
 export interface InventoryItem extends CaseItem {

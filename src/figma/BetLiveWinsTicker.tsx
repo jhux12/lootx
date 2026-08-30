@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Crown, Package, Sparkles } from 'lucide-react';
+import { Crown, Package } from 'lucide-react';
 import { useRecentPulls } from '../lib/pulls/useRecentPulls';
 import { CASE_ITEMS } from '../../constants';
 
@@ -51,8 +51,8 @@ export const BetLiveWinsTicker: React.FC = () => {
   return (
     <div ref={tickerRef} className="bet-home-ticker" aria-label="Recently pulled items">
       <div className="bet-home-ticker-label">
-        <Sparkles aria-hidden="true" />
-        <span>Recent Pulls</span>
+        <span className="bet-home-ticker-live-dot" aria-hidden="true" />
+        <span>Live Pullz</span>
       </div>
       <div className="bet-home-ticker-viewport">
         <div className="bet-home-ticker-fade bet-home-ticker-fade-right" aria-hidden="true" />

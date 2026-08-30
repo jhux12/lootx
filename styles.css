@@ -446,9 +446,9 @@ body {
 .bet-home-trustpilot img { height:28px; width:auto; }
 
 /* Coin-balance dock item (replaces the former wallet icon) */
-.bet-home-dock-balance { flex-direction:column; gap:2px; }
-.bet-home-dock-balance img { width:22px; height:22px; }
-.bet-home-dock-balance span { font-size:9px; font-weight:800; letter-spacing:.02em; }
+.bet-home-dock-coin { width:24px; height:24px; object-fit:contain; }
+.bet-home-dock-more-dots { display:flex; align-items:center; justify-content:center; gap:3px; width:24px; height:24px; }
+.bet-home-dock-more-dots i { width:4.5px; height:4.5px; border-radius:50%; background:currentColor; }
 
 /* Recent pulls ticker — sits below the hero cards, shows real recent
    unboxings as card-art tiles bordered by rarity, matching the
@@ -469,6 +469,13 @@ body {
   font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; text-align:center;
 }
 .bet-home-ticker-label svg { width:20px; height:20px; color:var(--bet-orange,#ff4b0a); }
+.bet-home-ticker-live-dot { position:relative; display:flex; height:10px; width:10px; }
+.bet-home-ticker-live-dot::before,
+.bet-home-ticker-live-dot::after {
+  content:""; position:absolute; inset:0; border-radius:50%; background:#ff3b30;
+}
+.bet-home-ticker-live-dot::before { animation:bet-live-pulse 1.6s ease-out infinite; }
+@keyframes bet-live-pulse { 0% { transform:scale(1); opacity:.7; } 100% { transform:scale(2.6); opacity:0; } }
 .bet-home-ticker-viewport { position:relative; flex:1; min-width:0; overflow:hidden; }
 .bet-home-ticker-fade { position:absolute; top:0; bottom:0; z-index:2; width:48px; pointer-events:none; }
 .bet-home-ticker-fade-right { right:0; background:linear-gradient(270deg,var(--ticker-bg),transparent); }

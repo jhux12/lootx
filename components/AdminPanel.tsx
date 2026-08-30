@@ -11,6 +11,7 @@ import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { db } from '../firebase';
 import { storage } from '../firebaseStorage';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
+import { HomeHeroSlidesEditor } from './admin/HomeHeroSlidesEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { PollsAdminSection } from './admin/PollsAdminSection';
@@ -6957,6 +6958,7 @@ export const AdminPanel: React.FC = () => {
             {/* TAB: HOMEPAGE */}
             {activeTab === 'homepage' && (
                 <div className="space-y-6">
+                    <HomeHeroSlidesEditor />
                     <HomepageShowcaseEditor />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
