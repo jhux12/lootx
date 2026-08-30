@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { Boxes, ChevronRight, CircleEllipsis, Flame, Search, Sparkles } from 'lucide-react';
+import { Boxes, ChevronRight, CircleEllipsis, Flame, Sparkles } from 'lucide-react';
 import type { MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 import { useAuth, useBoxes, useUI, useWallet } from '../../context/GameContext';
 import { CATEGORY_ORDER, getBoxTags, isCategoryIconUrl, normalizeBoxTag, sanitizeFontAwesomeClass } from '../../utils/boxTags';
+import { BetLiveWinsTicker } from './BetLiveWinsTicker';
 
 type FigmaHomePageProps = {
   boxes: MysteryBox[];
@@ -28,7 +29,6 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   const { balance } = useWallet();
   const { stripeSettings } = useBoxes();
   const { setView } = useUI();
-  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [showAffordableOnly, setShowAffordableOnly] = useState(false);
 
@@ -69,11 +69,10 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   );
 
   const filteredBoxes = useMemo(() => boxes.filter((box) => {
-    if (query && !box.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
     if (showAffordableOnly && toCoins(box.price, PRICE_UNIT_MODE) > balance) return false;
     return true;
-  }), [balance, boxes, category, query, showAffordableOnly]);
+  }), [balance, boxes, category, showAffordableOnly]);
 
   const promoBoxes = boxes.slice(0, 3);
 
@@ -84,7 +83,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
 
   return (
     <main className="bet-home">
-      <label className="bet-home-search"><Search aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by boxes, items" /></label>
+      <BetLiveWinsTicker />
       <section className="bet-home-tournaments">
         <div className="bet-home-promos">
           {promoBoxes.map((box, index) => (
@@ -124,7 +123,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         </div>
         <div className="bet-home-event-list">
           {filteredBoxes.slice(0, 12).map((box) => <BoxTile key={box.id} box={box} onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))} />)}
-          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another search or category.</span></div> : null}
+          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another category.</span></div> : null}
         </div>
         <div className="bet-home-trustpilot">
           <img src={TRUSTPILOT_LOGO_URL} alt="Trustpilot" loading="lazy" decoding="async" />

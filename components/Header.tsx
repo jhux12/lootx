@@ -18,7 +18,6 @@ import {
   LifeBuoy,
   LogIn,
   LogOut,
-  Menu,
   Package,
   PenTool,
   Plus,
@@ -490,15 +489,16 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     <button
       type="button"
       onClick={() => setIsMobileMenuOpen((open) => !open)}
-      className="group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
+      className="pullz-burger group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
       aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
       aria-expanded={isMobileMenuOpen}
+      data-open={isMobileMenuOpen}
     >
-      {isMobileMenuOpen ? (
-        <X className="relative z-10 h-5 w-5" />
-      ) : (
-        <Menu className="relative z-10 h-5 w-5" />
-      )}
+      <span className="pullz-burger-bars" aria-hidden="true">
+        <span className="pullz-burger-bar" />
+        <span className="pullz-burger-bar" />
+        <span className="pullz-burger-bar" />
+      </span>
     </button>
   );
 
@@ -723,7 +723,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                       iconClassName="h-4 w-4"
                     />
                     {startPullingButton}
-                    {mobileMenuButton}
+                    {view.type !== "HOME" && mobileMenuButton}
                   </div>
                 )}
 
@@ -756,7 +756,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         </button>
                       </div>
                     </div>
-                    {mobileMenuButton}
+                    {view.type !== "HOME" && mobileMenuButton}
                   </div>
                 )}
               </div>
@@ -767,27 +767,27 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] bg-[#02050c]/82 backdrop-blur-sm transition-opacity duration-300 ease-out lg:hidden ${
+          className={`pullz-menu-backdrop fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain border-t border-violet-300/15 bg-[radial-gradient(circle_at_50%_15%,rgba(124,60,255,0.20),transparent_38%),radial-gradient(circle_at_10%_95%,rgba(77,141,255,0.13),transparent_42%),linear-gradient(rgba(5,6,10,0.98),rgba(5,6,10,0.98))] px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.62)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+          className={`pullz-mobile-menu fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain px-4 pb-4 pt-3 backdrop-blur-2xl transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
-              ? "translate-x-0 opacity-100"
-              : "pointer-events-none translate-x-full opacity-0"
+              ? "translate-y-0 scale-100 opacity-100"
+              : "pointer-events-none translate-y-3 scale-[0.98] opacity-0"
           }`}
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
           <div className="relative flex min-h-full max-w-full flex-col overflow-x-hidden pb-4 pt-1">
-            <span aria-hidden="true" className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl" />
-            <span aria-hidden="true" className="pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl" />
+            <span aria-hidden="true" className="pullz-mobile-menu-glow pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full blur-3xl" />
+            <span aria-hidden="true" className="pullz-mobile-menu-glow pullz-mobile-menu-glow--alt pointer-events-none absolute -left-24 bottom-12 h-56 w-56 rounded-full blur-3xl" />
             <div className="mb-7 flex w-full items-center justify-between gap-3">
               <button
                 type="button"
