@@ -156,6 +156,64 @@ body {
 @media (max-width: 1100px) { .lootx-figma-case-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } .lootx-figma-stage { min-height: 400px; padding: 40px; } }
 @media (max-width: 720px) { .lootx-figma-home { padding: 10px 12px 96px; } .lootx-figma-metrics { grid-template-columns: repeat(2,1fr); } .lootx-figma-metrics > div:nth-child(2) { border-right: 0; } .lootx-figma-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--lootx-line); } .lootx-figma-metrics > div { padding: 10px 12px; } .lootx-figma-live { height: 88px; } .lootx-figma-live-lead { flex-basis: 76px; } .lootx-figma-live-track button { flex-basis: 100px; } .lootx-figma-promo { margin: 18px auto; padding: 18px; } .lootx-figma-promo img { right: -5%; width: 130px; } .lootx-figma-stage { min-height: 360px; padding: 28px 22px; } .lootx-figma-stage-copy { max-width: 68%; } .lootx-figma-stage p { font-size: 12px; } .lootx-figma-stage > img { right: -8%; width: 44%; } .lootx-figma-case-grid,.lootx-figma-case-grid--four { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .lootx-figma-case { min-height: 230px; } .lootx-figma-case-art { height: 150px; } .lootx-figma-footer { grid-template-columns: repeat(2,1fr); gap: 32px 20px; margin-top: 64px; } .lootx-figma-footer-copy { grid-column: 1 / -1; } }
 
+/* Betting Mobile community homepage adaptation */
+.bet-home { --bet-orange:#ff4b0a; width:min(100%,1180px); min-height:100vh; margin:0 auto; padding:52px 42px 130px; border-radius:0 0 36px 36px; background:#fff; color:#050505; }
+.bet-home h1,.bet-home h2,.bet-home strong,.bet-home button { font-family:Inter,ui-sans-serif,sans-serif; }
+.bet-home-header { display:flex; align-items:center; justify-content:space-between; }
+.bet-home-header span { display:block; font-size:22px; font-weight:400; }
+.bet-home-header h1 { margin-top:2px; font-size:34px; font-weight:1000; letter-spacing:-.055em; text-transform:uppercase; }
+.bet-home-header > button { display:grid; width:54px; height:54px; place-items:center; border-radius:15px; color:white; background:var(--bet-orange); font-size:38px; font-weight:300; }
+.bet-home-search { display:flex; align-items:center; gap:16px; height:66px; margin-top:34px; border-radius:14px; padding:0 22px; background:#f2f2f4; }
+.bet-home-search svg { width:22px; stroke-width:3; }
+.bet-home-search input { width:100%; outline:0; background:transparent; font-size:17px; }
+.bet-home h2 { color:#a9a9ab; font-size:25px; font-weight:1000; letter-spacing:-.04em; }
+.bet-home-tournaments { margin-top:46px; }
+.bet-home-promos { display:flex; gap:18px; margin-top:24px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+.bet-home-promos > button { position:relative; flex:0 0 72%; min-height:220px; overflow:hidden; border-radius:15px; padding:30px; text-align:left; }
+.bet-home-promos .is-orange { background:var(--bet-orange); color:white; }
+.bet-home-promos .is-black { background:#050505; color:white; }
+.bet-home-promos span { position:relative; z-index:2; display:flex; height:100%; flex-direction:column; align-items:flex-start; }
+.bet-home-promos i { display:grid; width:38px; height:38px; place-items:center; border-radius:10px; color:#050505; background:white; }
+.bet-home-promos i svg { width:20px; stroke-width:4; }
+.bet-home-promos small { margin-top:-29px; margin-left:52px; font-size:13px; }
+.bet-home-promos strong { max-width:62%; margin-top:auto; font-size:28px; font-weight:1000; line-height:.98; text-transform:uppercase; }
+.bet-home-promos img { position:absolute; right:-2%; bottom:-8%; width:48%; height:98%; object-fit:contain; filter:drop-shadow(0 18px 20px rgba(0,0,0,.24)); }
+.bet-home-events { margin-top:50px; }
+.bet-home-events-title { display:flex; align-items:center; justify-content:space-between; }
+.bet-home-events-title span { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:1000; }
+.bet-home-events-title i { position:relative; width:50px; height:28px; border-radius:99px; background:var(--bet-orange); }
+.bet-home-events-title i:after { content:""; position:absolute; right:4px; top:4px; width:20px; height:20px; border-radius:50%; background:white; }
+.bet-home-categories { display:flex; gap:12px; margin-top:26px; overflow-x:auto; scrollbar-width:none; }
+.bet-home-categories button { display:inline-flex; flex:0 0 auto; align-items:center; gap:9px; min-height:52px; border-radius:12px; padding:0 18px; color:#a0a0a2; background:#f2f2f4; font-size:13px; font-weight:800; }
+.bet-home-categories button.is-active { color:white; background:#050505; }
+.bet-home-categories svg { width:20px; }
+.bet-home-event-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:28px; }
+.bet-case-card { border:1px solid #dedee0; border-radius:16px; padding:18px; background:#fff; }
+.bet-case-card-head { display:flex; justify-content:space-between; color:#949496; font-size:12px; }
+.bet-case-card-head em { display:flex; align-items:center; gap:6px; color:#050505; font-style:normal; font-weight:900; }
+.bet-case-card-head em i,.bet-case-score span i { width:7px; height:7px; border-radius:50%; background:var(--bet-orange); }
+.bet-case-matchup { display:grid; grid-template-columns:1fr 1.15fr 1fr; align-items:center; gap:12px; margin-top:14px; text-align:center; }
+.bet-case-matchup > div:not(.bet-case-score) { min-width:0; }
+.bet-case-matchup img { width:82px; height:82px; margin:auto; object-fit:contain; }
+.bet-case-matchup > div > strong { display:block; overflow:hidden; margin-top:5px; font-size:12px; white-space:nowrap; text-overflow:ellipsis; }
+.bet-case-score small { color:#969698; font-size:11px; }
+.bet-case-score strong { display:block; margin-top:5px; font-size:28px; letter-spacing:-.08em; }
+.bet-case-score span { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; color:#969698; font-size:10px; }
+.bet-case-actions { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:18px; }
+.bet-case-actions button { min-width:0; min-height:54px; border:1px solid #e5e5e7; border-radius:10px; padding:7px 9px; background:#f4f4f6; text-align:center; }
+.bet-case-actions span { display:block; color:#9a9a9c; font-size:9px; text-transform:uppercase; }
+.bet-case-actions strong,.bet-case-actions .inline-flex { justify-content:center; margin-top:3px; font-size:12px; font-weight:900; }
+.bet-case-actions .bet-case-open { border-color:var(--bet-orange); color:white; background:var(--bet-orange); font-weight:900; text-transform:uppercase; }
+.bet-home-empty { grid-column:1/-1; display:flex; min-height:240px; flex-direction:column; align-items:center; justify-content:center; border:1px dashed #ddd; border-radius:16px; color:#aaa; }
+.bet-home-empty svg { width:30px; }
+.bet-home-empty strong { margin-top:10px; color:#050505; }
+.bet-home-empty span { margin-top:5px; font-size:12px; }
+.bet-home-dock { position:fixed; z-index:80; left:50%; bottom:max(20px,env(safe-area-inset-bottom)); display:grid; width:min(calc(100% - 36px),740px); height:86px; grid-template-columns:repeat(4,1fr); transform:translateX(-50%); border-radius:22px; padding:10px 14px; background:#050505; box-shadow:0 18px 44px rgba(0,0,0,.26); }
+.bet-home-dock button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; color:#777; font-size:9px; }
+.bet-home-dock button.is-active { color:white; }
+.bet-home-dock svg { width:24px; height:24px; stroke-width:2.7; }
+@media(max-width:720px){.bet-home{padding:34px 20px 124px}.bet-home-header span{font-size:17px}.bet-home-header h1{font-size:27px}.bet-home-header>button{width:48px;height:48px}.bet-home-search{height:58px;margin-top:28px}.bet-home h2{font-size:22px}.bet-home-tournaments{margin-top:38px}.bet-home-promos>button{flex-basis:88%;min-height:180px;padding:22px}.bet-home-promos strong{font-size:22px}.bet-home-events{margin-top:40px}.bet-home-event-list{grid-template-columns:1fr}.bet-case-card{padding:16px}.bet-home-dock{height:76px}}
+
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   html.pullz-tab-hidden .ticker-animation,
   html.pullz-tab-hidden [class*="animate-"],
