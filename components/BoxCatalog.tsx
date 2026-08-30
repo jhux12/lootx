@@ -108,10 +108,11 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
-      className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className="group relative w-full overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#181c28] text-left shadow-[0_10px_26px_rgba(0,0,0,0.20)] transition hover:-translate-y-1 hover:border-violet-300/30 hover:bg-[#1b2030] hover:shadow-[0_18px_38px_rgba(0,0,0,0.30)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
     >
-      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-5 top-0 z-20 h-px bg-[linear-gradient(90deg,transparent,rgba(167,139,250,0.65),transparent)] opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_38%,rgba(139,92,246,0.13),transparent_54%)] px-3 pt-4 sm:h-[184px]">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.035),transparent_62%)]" />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
           <BlurImage
             src={box.image}
@@ -129,9 +130,9 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
           />
         </div>
       </div>
-      <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
-        <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
+      <div className="border-t border-white/[0.06] px-3 pb-3 pt-2.5">
+        <div className="line-clamp-1 text-[13px] font-bold text-white sm:text-sm">{box.name}</div>
+        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-2 w-fit justify-start rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-2.5 py-1 text-[12px] font-bold text-white" iconClassName="h-3.5 w-3.5" />
       </div>
     </button>
   );

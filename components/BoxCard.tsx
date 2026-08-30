@@ -57,25 +57,26 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
       }}
       onFocus={prefetchHandlers.onFocus}
       onKeyDown={handleKeyDown}
-      className={`pullz-stable-card group relative mx-auto flex h-full min-h-[19rem] w-full max-w-[18rem] sm:min-h-[22rem] cursor-pointer flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#11141a] text-center shadow-[0_12px_32px_-28px_rgba(0,0,0,0.75)] transition-all duration-300 ${isCompact ? 'p-3 sm:p-5' : 'p-4 sm:p-6'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-white/20'}`}
+      className={`pullz-stable-card group relative mx-auto flex h-full w-full max-w-[18rem] cursor-pointer flex-col overflow-hidden rounded-[14px] border border-white/[0.07] bg-[#181c28] text-center shadow-[0_10px_26px_rgba(0,0,0,0.20)] transition-all duration-300 ${isCompact ? 'min-h-[14.5rem] p-3 sm:min-h-[16rem] sm:p-4' : 'min-h-[19rem] p-4 sm:min-h-[21rem] sm:p-5'} ${isDropping ? 'translate-y-2 scale-[0.98]' : 'hover:-translate-y-1 hover:border-violet-300/30 hover:bg-[#1b2030] hover:shadow-[0_18px_38px_rgba(0,0,0,0.30)]'}`}
       tabIndex={0}
       role="button"
     >
-      <div className={`relative flex w-full flex-1 items-center justify-center ${isCompact ? 'mb-3 min-h-[8rem]' : 'mb-4 min-h-[10rem] sm:min-h-[11rem]'}`}>
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(167,139,250,0.65),transparent)] opacity-0 transition-opacity group-hover:opacity-100" />
+      <div className={`relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[11px] bg-[radial-gradient(circle_at_50%_38%,rgba(139,92,246,0.13),transparent_54%)] ${isCompact ? 'mb-3 min-h-[9rem]' : 'mb-4 min-h-[11rem] sm:min-h-[13rem]'}`}>
         <BlurImage
           src={box.image}
           alt={box.name}
-          ratioClassName={`shrink-0 ${isCompact ? 'h-28 w-28 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-44 sm:w-44'}`}
-          className="relative z-10 mx-auto object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.45)] transition-transform duration-300 group-hover:scale-105"
+          ratioClassName={`shrink-0 ${isCompact ? 'h-32 w-32 sm:h-36 sm:w-36' : 'h-40 w-40 sm:h-48 sm:w-48'}`}
+          className="relative z-10 mx-auto object-contain drop-shadow-[0_18px_24px_rgba(0,0,0,0.48)] transition-transform duration-300 group-hover:scale-[1.06]"
           width={176}
           height={176}
         />
       </div>
 
-      <div className="flex w-full flex-col items-center gap-2 pb-1">
-        <h4 className={`min-h-[2.5rem] overflow-hidden font-semibold text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-base' : 'text-sm sm:text-base'}`}>{box.name}</h4>
+      <div className="flex w-full flex-col items-center gap-2 pb-0.5">
+        <h4 className={`line-clamp-2 min-h-[2.25rem] overflow-hidden font-bold leading-tight text-gray-100 transition-colors duration-300 group-hover:text-white ${isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>{box.name}</h4>
         {box.currencyType === 'XP' ? (
-          <div className={`flex items-center justify-center gap-1 font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}>
+          <div className={`flex items-center justify-center gap-1 rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-2.5 py-1 font-bold text-white ${isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}>
             <img src={XP_ICON} alt="XP" loading="lazy" decoding="async" width={16} height={16} className="h-4 w-4 object-contain" />
             <span>{Math.max(0, Math.floor(Number(box.priceXP ?? 0))).toLocaleString()}</span>
           </div>
@@ -83,7 +84,7 @@ const BoxCardComponent: React.FC<BoxCardProps> = ({ box, onSelect, onHover, size
           <CoinAmount
             amount={toCoins(box.price, PRICE_UNIT_MODE)}
             formatOptions={{ maximumFractionDigits: 0 }}
-            className={`justify-center font-semibold text-white sm:text-lg ${isCompact ? 'text-sm' : 'text-base'}`}
+            className={`justify-center rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-2.5 py-1 font-bold text-white ${isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base'}`}
             iconClassName="w-4 h-4"
           />
         )}

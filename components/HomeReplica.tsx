@@ -1,23 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, CreditCard, Flame, Gift, RefreshCw, ShieldCheck, Sparkles, Truck, Zap } from 'lucide-react';
+import { Box, CheckCircle2, ChevronLeft, ChevronRight, Coins, Flame, Sparkles } from 'lucide-react';
 import { HowItWorksSection } from './HowItWorksSection';
 import { HomepageFaqSection } from './HomepageFaqSection';
 import { Timestamp, addDoc, collection, limit, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CaseItem, MysteryBox } from '../types';
-import { CoinAmount } from './CoinAmount';
 import { COIN_ICON } from '../constants';
 import { useAuth, useUI } from '../context/GameContext';
 import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
-import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { BoxCard } from './BoxCard';
+import { HomeCaseNavigation } from './HomeCaseNavigation';
+import { HomeStatsBar } from './HomeStatsBar';
+import { LiveTicker } from './LiveTicker';
 
 type HomeReplicaProps = {
   demoBoxId?: string | null;
   trendingBoxIds?: string[];
   isChatCollapsed: boolean;
   onOpenBox: (boxId: string, isFree?: boolean) => void;
-  onViewAllBoxes: () => void;
+  onViewAllBoxes: (query?: string) => void;
   onSignUp: () => void;
 };
 
@@ -200,7 +202,7 @@ const MobileLiveWins = React.memo(({ wins, isLoading, onOpenBox }: { wins: Mobil
 });
 MobileLiveWins.displayName = 'MobileLiveWins';
 
-const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; promoBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: () => void }) => {
+const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onOpenBox, onViewAllBoxes }: { boxes: MysteryBox[]; freeSignupBox?: MysteryBox | null; promoBox?: MysteryBox | null; trendingBoxIds: string[]; onOpenBox: (boxId: string, isFree?: boolean) => void; onViewAllBoxes: (query?: string) => void }) => {
   const { isAuthenticated, openAuthModal, user } = useAuth();
   const { setShowTopUpModal, setTopUpModalIntent } = useUI();
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
@@ -500,13 +502,20 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
 
   return (
     <div className="animate-in fade-in duration-500">
-      <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
+      <div className="space-y-2 px-3 pt-3 sm:space-y-3 sm:px-0 sm:pt-0">
+        <HomeStatsBar />
+        <section aria-label="Recent live pulls">
+          <LiveTicker />
+        </section>
+      </div>
+
+      <section ref={heroSectionRef} className="mt-4 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-0">
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[220px] w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-[#181c28] text-left shadow-[0_18px_44px_rgba(0,0,0,0.30)] active:scale-[0.995] sm:h-[224px] lg:h-[272px]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             {promoBox && <PromoBoxHeroSlide box={promoBox} />}
-            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.20),transparent_32%),radial-gradient(circle_at_50%_118%,rgba(139,92,246,0.22),transparent_38%)]" />
+            <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(112deg,#4722bd_0%,#5b45dd_48%,#3e74df_100%)] p-5 sm:p-7 lg:p-10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_12%,rgba(255,255,255,0.18),transparent_30%),radial-gradient(circle_at_88%_78%,rgba(85,255,226,0.14),transparent_38%)]" />
               {showDepositSlide && isHeroVisible && !performanceMode.isHidden && !performanceMode.prefersReducedMotion && !performanceMode.isLowPower && !performanceMode.isMobile ? <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
                 {[0, 1, 2, 3, 4, 5].map((coinIndex) => (
                   <Coins
@@ -521,10 +530,12 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
                   />
                 ))}
               </div> : null}
-              <div className="relative z-10 flex h-full flex-col items-center justify-center text-center">
+              <div className="relative z-10 flex h-full max-w-[68%] flex-col items-start justify-center text-left sm:max-w-[60%]">
                 <div className="inline-flex w-fit items-center gap-1.5 rounded-full bg-black/30 px-2.5 py-1 text-[8px] font-black uppercase tracking-wide text-white shadow-[0_10px_24px_rgba(0,0,0,0.20)] sm:px-3 sm:text-[10px] lg:text-xs"><Sparkles className="h-3 w-3 lg:h-4 lg:w-4" />50% deposit match</div>
-                <h1 className="mt-2 max-w-[270px] text-[21px] font-black uppercase leading-[0.95] tracking-tight text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[560px] sm:text-[34px] lg:max-w-[880px] lg:text-[58px]">Get a 50% Bonus on Your First Deposit</h1>
+                <h1 className="mt-3 max-w-[310px] text-[24px] font-black uppercase leading-[0.92] tracking-[-0.04em] text-white drop-shadow-[0_8px_18px_rgba(0,0,0,0.26)] sm:max-w-[540px] sm:text-[42px] lg:text-[60px]">Get a 50% Bonus on Your First Deposit</h1>
+                <span className="mt-4 inline-flex rounded-lg border border-white/45 bg-white/15 px-4 py-2 text-[10px] font-black uppercase tracking-wide text-white backdrop-blur sm:text-xs">Claim bonus</span>
               </div>
+              <img src={COIN_ICON} alt="" aria-hidden="true" className="pointer-events-none absolute -right-5 top-1/2 h-[150px] w-[150px] -translate-y-1/2 object-contain opacity-90 drop-shadow-[0_24px_36px_rgba(0,0,0,0.35)] sm:right-8 sm:h-[210px] sm:w-[210px] lg:right-16 lg:h-[250px] lg:w-[250px]" />
               <style>{`@keyframes hero-coin-rain { 0% { transform: translate3d(0,-140%,0) rotate(0deg); opacity: 0; } 12% { opacity: .9; } 82% { opacity: .78; } 100% { transform: translate3d(18px,260px,0) rotate(320deg); opacity: 0; } }`}</style>
             </div>
             <div className="relative h-full w-full shrink-0 overflow-hidden bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] p-3 sm:p-5 lg:p-8">
@@ -550,26 +561,9 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         </div>
       </section>
 
-      <section className="pullz-home-trust-grid mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#070a12]/92 p-1.5 shadow-[inset_0_0_20px_rgba(255,255,255,0.025),0_12px_30px_rgba(0,0,0,0.28)] sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-white/10 sm:rounded-2xl sm:p-0">
-          {[
-            { title: 'First Pull Free', description: 'No deposit required', icon: Gift },
-            { title: 'Real Cards', description: 'Shipped to your door', icon: Truck },
-            { title: 'Provably Fair', description: 'Every pull verifiable', icon: ShieldCheck },
-            { title: 'Keep or Sell', description: 'You’re always in control', icon: RefreshCw }
-          ].map(({ title, description, icon: Icon }) => (
-            <div key={title} className="flex min-h-[68px] min-w-0 items-center gap-2 rounded-lg border border-white/10 bg-[#101827]/82 px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:min-h-[72px] sm:rounded-none sm:border-0 sm:bg-transparent sm:px-3 lg:px-4" aria-label={`${title}: ${description}`}>
-              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#8b5cf6]/35 bg-[#8b5cf6]/10 text-[#a78bfa] shadow-[0_0_18px_rgba(139,92,246,0.18)] sm:h-9 sm:w-9">
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} aria-hidden="true" />
-              </div>
-              <div className="min-w-0 leading-none">
-                <span className="block text-[11px] font-black uppercase leading-tight tracking-tight text-white sm:text-[13px] lg:text-[15px]">{title}</span>
-                <span className="mt-1 block text-[8px] font-black uppercase leading-tight tracking-[0.06em] text-slate-400 sm:text-[9px] lg:text-[10px]">{description}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <HomeCaseNavigation onNavigate={onViewAllBoxes} />
+      </div>
 
       <section id="mobile-customer-reviews" className="pullz-home-reviews scroll-mt-4 mt-4 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -592,16 +586,9 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.98] sm:h-[184px] lg:h-[204px]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
-              <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
-              <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-[10px] font-black uppercase text-white sm:text-xs">{box.name}</span>
-                <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} className="shrink-0 text-[10px] font-black text-[#c4b5fd] sm:text-xs" iconClassName="h-3 w-3" animated={false} />
-              </div>
-            </button>
+            <BoxCard key={box.id} box={box} onSelect={(boxId) => onOpenBox(boxId)} size="compact" />
           ) : (
-            <div key={`trending-loading-${index}`} className="h-[158px] animate-pulse rounded-xl bg-[#242b31] sm:h-[170px] lg:h-[188px]" aria-hidden="true" />
+            <div key={`trending-loading-${index}`} className="h-[230px] animate-pulse rounded-xl bg-[#181c28]" aria-hidden="true" />
           ))}
         </div>
       </section>
@@ -658,9 +645,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
   const freeSignupBox = homepageBoxes.find((box) => box.isDaily) ?? null;
   const promoBox = boxes.find((box) => box.id === PROMO_BOX_ID) ?? null;
   return (
-    <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
+    <div className="pullz-home-shell min-h-screen bg-[radial-gradient(circle_at_70%_6%,rgba(91,69,221,0.11),transparent_30rem),#0f1118] text-white">
       {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
-      <main className="mx-auto max-w-[1250px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-4 lg:pb-5">
+      <main className="mx-auto max-w-[1320px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-5 sm:py-5 lg:pb-5">
         <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} promoBox={promoBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
       </main>
     </div>

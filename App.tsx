@@ -503,10 +503,10 @@ const MainContent: React.FC<MainContentProps> = ({ isChatCollapsed }) => {
             playSound('click');
             setView({ type: 'CASE_OPENING', boxId, isFree });
           }}
-          onViewAllBoxes={() => {
+          onViewAllBoxes={(query) => {
             playSound('click');
             setView({ type: 'BOXES' });
-            window.history.replaceState({}, '', '/boxes');
+            window.history.replaceState({}, '', `/boxes${query ?? ''}`);
           }}
           onSignUp={() => {
             playSound('click');
@@ -760,7 +760,7 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white font-sans selection:bg-violet-500 selection:text-white flex flex-col">
+    <div className="flex min-h-[100dvh] flex-col bg-[radial-gradient(circle_at_70%_6%,rgba(91,69,221,0.11),transparent_30rem),#0f1118] font-sans text-white selection:bg-violet-500 selection:text-white">
       <SeoHead view={view} />
       <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
       {isAccountBanned && (
