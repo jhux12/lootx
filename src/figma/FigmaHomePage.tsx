@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Boxes, ChevronRight, CircleEllipsis, Flame, Gift, Search, Sparkles, Trophy, WalletCards } from 'lucide-react';
+import { Boxes, ChevronRight, Flame, Gift, Search, Sparkles, Trophy } from 'lucide-react';
 import type { MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
@@ -77,12 +77,6 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No cases found</strong><span>Try another search or category.</span></div> : null}
         </div>
       </section>
-      <nav className="bet-home-dock" aria-label="Homepage navigation">
-        <button type="button" className="is-active"><Flame /><span>Home</span></button>
-        <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Cases</span></button>
-        <button type="button"><WalletCards /><span>Wallet</span></button>
-        <button type="button"><CircleEllipsis /><span>More</span></button>
-      </nav>
     </main>
   );
 };
