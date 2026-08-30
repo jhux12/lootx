@@ -98,6 +98,45 @@ body {
   .lootx-header-nav { border-width: 0; }
 }
 
+/* New Figma frontend. These selectors intentionally do not inherit the legacy
+   homepage component tree; existing application data and actions enter through props. */
+.lootx-figma-home { width: min(100%, 1900px); margin: 0 auto; padding: 18px 20px 64px; }
+.lootx-figma-metrics { display: grid; grid-template-columns: repeat(4, 1fr); min-height: 64px; border: 1px solid var(--lootx-line); border-radius: 8px; background: var(--lootx-surface); }
+.lootx-figma-metrics > div { display: grid; grid-template-columns: 32px auto 1fr; align-items: center; gap: 4px 10px; padding: 10px 28px; border-right: 1px solid var(--lootx-line); }
+.lootx-figma-metrics > div:last-child { border-right: 0; }
+.lootx-figma-metrics svg { grid-row: 1 / 3; width: 18px; color: var(--lootx-red); }
+.lootx-figma-metrics strong { font-size: 14px; }
+.lootx-figma-metrics span { color: var(--lootx-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.lootx-figma-promo { position: relative; display: flex; align-items: center; width: min(100%, 1440px); min-height: 128px; margin: 38px auto; overflow: hidden; border-radius: 12px; padding: 22px 34px; text-align: left; color: white; background: linear-gradient(118deg,#ff4d55,#ff7134 58%,#ff8d4d); }
+.lootx-figma-promo span { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; }
+.lootx-figma-promo small { opacity: .82; text-transform: uppercase; letter-spacing: .08em; }
+.lootx-figma-promo strong { margin-top: 4px; font-size: clamp(22px,3vw,42px); text-transform: uppercase; line-height: .95; }
+.lootx-figma-promo em { margin-top: 12px; border: 1px solid rgba(255,255,255,.65); border-radius: 5px; padding: 6px 14px; font-size: 11px; font-style: normal; font-weight: 800; text-transform: uppercase; }
+.lootx-figma-promo img { position: absolute; right: 10%; width: 220px; height: 180px; object-fit: contain; filter: drop-shadow(0 24px 24px rgba(0,0,0,.3)); }
+.lootx-figma-promo > svg { margin-left: auto; }
+.lootx-figma-stage { position: relative; display: flex; min-height: 480px; overflow: hidden; border: 1px solid var(--lootx-line); border-radius: 12px; padding: 64px; background: radial-gradient(circle at 74% 50%,rgba(255,77,85,.24),transparent 28%),linear-gradient(110deg,#181c28,#13151d); }
+.lootx-figma-stage-copy { position: relative; z-index: 2; max-width: 640px; align-self: center; }
+.lootx-figma-stage-copy small,.lootx-figma-section-title span { color: var(--lootx-red); font-weight: 800; text-transform: uppercase; letter-spacing: .14em; }
+.lootx-figma-stage h1 { margin-top: 12px; font-size: clamp(40px,5vw,76px); line-height: .94; letter-spacing: -.055em; text-transform: uppercase; }
+.lootx-figma-stage p { max-width: 560px; margin-top: 22px; color: var(--lootx-muted); line-height: 1.7; }
+.lootx-figma-stage-copy button,.lootx-figma-view-all { display: inline-flex; align-items: center; gap: 8px; margin-top: 28px; border-radius: 7px; padding: 12px 18px; color: white; background: var(--lootx-red); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.lootx-figma-stage > img { position: absolute; right: 6%; top: 50%; width: min(42%,580px); height: 80%; transform: translateY(-50%); object-fit: contain; filter: drop-shadow(0 32px 40px rgba(0,0,0,.48)); }
+.lootx-figma-case-section { padding: 72px 0 0; }
+.lootx-figma-section-title { text-align: center; }
+.lootx-figma-section-title h2 { margin-top: 6px; font-size: 22px; text-transform: uppercase; }
+.lootx-figma-case-grid { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 18px; margin-top: 30px; }
+.lootx-figma-case-grid--four { grid-template-columns: repeat(4,minmax(0,1fr)); max-width: 1180px; margin-inline: auto; }
+.lootx-figma-case { position: relative; min-height: 300px; overflow: hidden; border: 1px solid var(--lootx-line); border-radius: 8px; padding: 18px 14px 16px; background: radial-gradient(circle at 50% 30%,rgba(255,77,85,.13),transparent 42%),var(--lootx-surface); text-align: center; transition: transform .2s,border-color .2s; }
+.lootx-figma-case:hover { transform: translateY(-5px); border-color: rgba(255,77,85,.55); }
+.lootx-figma-case-badge { position: absolute; right: 10px; top: 10px; z-index: 2; border-radius: 4px; padding: 4px 8px; background: var(--lootx-red); font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.lootx-figma-case-art { height: 210px; }
+.lootx-figma-case-art img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 20px 20px rgba(0,0,0,.36)); }
+.lootx-figma-case strong { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; }
+.lootx-figma-price { display: inline-flex; margin-top: 14px; border: 1px solid rgba(42,189,105,.75); border-radius: 5px; padding: 6px 12px; color: var(--lootx-green); font-size: 11px; font-weight: 800; }
+.lootx-figma-view-all { margin-inline: auto; }
+@media (max-width: 1100px) { .lootx-figma-case-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } .lootx-figma-stage { min-height: 400px; padding: 40px; } }
+@media (max-width: 720px) { .lootx-figma-home { padding: 10px 12px 96px; } .lootx-figma-metrics { grid-template-columns: repeat(2,1fr); } .lootx-figma-metrics > div:nth-child(2) { border-right: 0; } .lootx-figma-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--lootx-line); } .lootx-figma-metrics > div { padding: 10px 12px; } .lootx-figma-promo { margin: 18px auto; padding: 18px; } .lootx-figma-promo img { right: -5%; width: 130px; } .lootx-figma-stage { min-height: 360px; padding: 28px 22px; } .lootx-figma-stage-copy { max-width: 68%; } .lootx-figma-stage p { font-size: 12px; } .lootx-figma-stage > img { right: -8%; width: 44%; } .lootx-figma-case-grid,.lootx-figma-case-grid--four { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .lootx-figma-case { min-height: 230px; } .lootx-figma-case-art { height: 150px; } }
+
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   html.pullz-tab-hidden .ticker-animation,
   html.pullz-tab-hidden [class*="animate-"],
