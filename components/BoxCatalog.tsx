@@ -49,6 +49,7 @@ type CatalogBoxModel = {
   featuredScore: number;
   trendingScore: number;
   topItemPreviews: CatalogItemPreview[];
+  isFreeSignupBox: boolean;
 };
 
 const getTopItemPreviews = (items: CaseItem[]): CatalogItemPreview[] =>
@@ -87,6 +88,7 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
     createdAt: box.createdAt,
     tags,
     topItemPreviews: getTopItemPreviews(box.items),
+    isFreeSignupBox: Boolean(box.isDaily),
     ...scores
   };
 };
@@ -100,6 +102,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   const { box } = model;
   const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
+  const isFreeSignupBox = model.isFreeSignupBox;
 
   return (
     <button
@@ -108,8 +111,17 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
-      className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className={`group relative w-full overflow-hidden rounded-[22px] border text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 [content-visibility:auto] [contain-intrinsic-size:260px] ${
+        isFreeSignupBox
+          ? 'border-[#2abd69]/60 bg-[#0d1f16] hover:border-[#2abd69] focus-visible:ring-[#2abd69]'
+          : 'border-white/10 bg-[#121318] hover:border-violet-300/50 focus-visible:ring-violet-400'
+      }`}
     >
+      {isFreeSignupBox && (
+        <span className="absolute left-0 top-0 z-10 rounded-br-[14px] rounded-tl-[22px] bg-[#2abd69] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#04140a]">
+          Sign-Up Bonus
+        </span>
+      )}
       <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
@@ -131,7 +143,11 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       </div>
       <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
         <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
+        {isFreeSignupBox ? (
+          <span className="mt-1 inline-flex items-center text-[13px] font-black uppercase tracking-wide text-[#2abd69]">Free</span>
+        ) : (
+          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
+        )}
       </div>
     </button>
   );
@@ -228,9 +244,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
 
   const catalogModels = useMemo(
     () => boxes
-      .filter((box) => !box.isDaily && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .filter((box) => (!box.isDaily || !isAuthenticated) && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
       .map(createCatalogModel),
-    [boxes]
+    [boxes, isAuthenticated]
   );
 
   const isLoadingBoxes = catalogLoading && boxes.length === 0;

@@ -17,10 +17,15 @@ type FigmaHomePageProps = {
 
 const TRUSTPILOT_LOGO_URL = 'https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png';
 
-const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void }> = ({ box, onOpen }) => (
-  <button type="button" className="bet-box-tile" onClick={onOpen} aria-label={`Open ${box.name}`}>
+const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?: boolean }> = ({ box, onOpen, isFreeSignupBox }) => (
+  <button type="button" className={`bet-box-tile${isFreeSignupBox ? ' is-free-signup' : ''}`} onClick={onOpen} aria-label={`Open ${box.name}`}>
+    {isFreeSignupBox && <span className="bet-box-tile-badge">Sign-Up Bonus</span>}
     <img src={box.image} alt="" loading="lazy" decoding="async" />
-    <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} animated={false} iconClassName="h-4 w-4" />
+    {isFreeSignupBox ? (
+      <span className="bet-box-tile-free">Free</span>
+    ) : (
+      <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} animated={false} iconClassName="h-4 w-4" />
+    )}
   </button>
 );
 
@@ -68,13 +73,22 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
     [categories],
   );
 
-  const filteredBoxes = useMemo(() => boxes.filter((box) => {
-    if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
-    if (showAffordableOnly && toCoins(box.price, PRICE_UNIT_MODE) > balance) return false;
-    return true;
-  }), [balance, boxes, category, showAffordableOnly]);
+  // Signed-in users already have their own claim flows for the free
+  // sign-up box (header tooltip, profile, etc.) — keep it out of the
+  // general list once they're logged in. Signed-out visitors still see
+  // it here, called out as a sign-up bonus rather than a regular box.
+  const visibleBoxes = useMemo(
+    () => (isAuthenticated ? boxes.filter((box) => !box.isDaily) : boxes),
+    [boxes, isAuthenticated],
+  );
 
-  const promoBoxes = boxes.slice(0, 3);
+  const filteredBoxes = useMemo(() => visibleBoxes.filter((box) => {
+    if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
+    if (showAffordableOnly && !box.isDaily && toCoins(box.price, PRICE_UNIT_MODE) > balance) return false;
+    return true;
+  }), [balance, category, showAffordableOnly, visibleBoxes]);
+
+  const promoBoxes = visibleBoxes.slice(0, 3);
 
   const openMobileMenu = () => {
     if (typeof window === 'undefined') return;
@@ -122,7 +136,14 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
         </div>
         <div className="bet-home-event-list">
-          {filteredBoxes.slice(0, 12).map((box) => <BoxTile key={box.id} box={box} onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))} />)}
+          {filteredBoxes.slice(0, 12).map((box) => (
+            <BoxTile
+              key={box.id}
+              box={box}
+              isFreeSignupBox={Boolean(box.isDaily)}
+              onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))}
+            />
+          ))}
           {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another category.</span></div> : null}
         </div>
         <div className="bet-home-trustpilot">
