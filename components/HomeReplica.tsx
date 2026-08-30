@@ -11,6 +11,7 @@ import { useAuth, useUI } from '../context/GameContext';
 import { getBoxDetail, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
+import { FigmaHomePage } from '../src/figma/FigmaHomePage';
 
 type HomeReplicaProps = {
   demoBoxId?: string | null;
@@ -658,11 +659,9 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ trendingBoxIds = [], o
   const freeSignupBox = homepageBoxes.find((box) => box.isDaily) ?? null;
   const promoBox = boxes.find((box) => box.id === PROMO_BOX_ID) ?? null;
   return (
-    <div className="pullz-home-shell lootx-page-shell min-h-screen text-white">
+    <div className="lootx-page-shell min-h-screen text-white">
       {summaryError && <div className="mx-auto mt-3 max-w-xl px-3 text-center text-sm text-red-100">Featured boxes are temporarily unavailable. <button type="button" className="underline" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div>}
-      <main className="lootx-page-content mx-auto w-full max-w-[1900px] space-y-7 px-0 py-0 pb-24 sm:space-y-8 sm:px-6 sm:py-6 lg:px-5 lg:pb-5">
-        <MobileHomePreview boxes={boxes} freeSignupBox={freeSignupBox} promoBox={promoBox} trendingBoxIds={trendingBoxIds} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
-      </main>
+      <FigmaHomePage boxes={boxes} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
     </div>
   );
 };
