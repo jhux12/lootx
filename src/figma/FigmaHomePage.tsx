@@ -1,8 +1,9 @@
-import React from 'react';
-import { ChevronRight, CircleDollarSign, Gamepad2, Gift, Headphones, ShieldCheck, Sparkles, Swords, Users } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Boxes, ChevronRight, CircleEllipsis, Flame, Gift, Search, Sparkles, Trophy, WalletCards } from 'lucide-react';
 import type { MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
+import { useAuth } from '../../context/GameContext';
 
 type FigmaHomePageProps = {
   boxes: MysteryBox[];
@@ -10,122 +11,76 @@ type FigmaHomePageProps = {
   onViewAllBoxes: () => void;
 };
 
-const SectionTitle: React.FC<{ eyebrow?: string; children: React.ReactNode }> = ({ eyebrow, children }) => (
-  <div className="lootx-figma-section-title">
-    {eyebrow ? <span>{eyebrow}</span> : null}
-    <h2>{children}</h2>
-  </div>
-);
+const categoryItems = [
+  { id: 'all', label: 'All cases', icon: Boxes },
+  { id: 'free', label: 'Free', icon: Gift },
+  { id: 'popular', label: 'Popular', icon: Flame },
+  { id: 'premium', label: 'Premium', icon: Trophy },
+] as const;
 
-const CaseTile: React.FC<{ box: MysteryBox; onOpen: () => void; badge?: string }> = ({ box, onOpen, badge }) => (
-  <button type="button" className="lootx-figma-case" onClick={onOpen}>
-    {badge ? <span className="lootx-figma-case-badge">{badge}</span> : null}
-    <div className="lootx-figma-case-art">
-      {box.image ? <img src={box.image} alt="" loading="lazy" decoding="async" /> : null}
+const CaseEventCard: React.FC<{ box: MysteryBox; onOpen: () => void; live?: boolean }> = ({ box, onOpen, live }) => (
+  <article className="bet-case-card">
+    <div className="bet-case-card-head"><span>{live ? 'Live case' : 'Featured case'}</span>{live ? <em><i /> LIVE</em> : null}</div>
+    <div className="bet-case-matchup">
+      <div><img src={box.image} alt="" loading="lazy" decoding="async" /><strong>Open</strong></div>
+      <div className="bet-case-score"><small>LootX</small><strong>1 : 1</strong><span><i /> Ready now</span></div>
+      <div><img src={box.image} alt="" loading="lazy" decoding="async" /><strong>Win</strong></div>
     </div>
-    <strong>{box.name}</strong>
-    <span className="lootx-figma-price">
-      <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} animated={false} iconClassName="h-3.5 w-3.5" />
-    </span>
-  </button>
+    <div className="bet-case-actions">
+      <button type="button" onClick={onOpen}><span>Price</span><CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} animated={false} iconClassName="h-3.5 w-3.5" /></button>
+      <button type="button" onClick={onOpen}><span>Items</span><strong>{box.items?.length ?? 0}</strong></button>
+      <button type="button" className="bet-case-open" onClick={onOpen}>Open</button>
+    </div>
+  </article>
 );
 
 export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, onViewAllBoxes }) => {
-  const freeCases = boxes.filter((box) => box.isDaily).slice(0, 4);
-  const featuredCases = boxes.filter((box) => !box.isDaily).slice(0, 6);
-  const moreCases = boxes.filter((box) => !box.isDaily).slice(6, 12);
-  const heroBox = featuredCases[0] ?? boxes[0];
+  const { user, isAuthenticated } = useAuth();
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState<(typeof categoryItems)[number]['id']>('all');
+  const displayName = isAuthenticated ? (user.username || user.displayName || user.name || 'Player') : 'Player';
+  const filteredBoxes = useMemo(() => boxes.filter((box) => {
+    if (query && !box.name.toLowerCase().includes(query.toLowerCase())) return false;
+    if (category === 'free') return Boolean(box.isDaily);
+    if (category === 'premium') return Number(box.price) >= Math.max(...boxes.map((entry) => Number(entry.price) || 0)) * 0.6;
+    return true;
+  }), [boxes, category, query]);
+  const promoBoxes = boxes.slice(0, 3);
 
   return (
-    <main className="lootx-figma-home">
-      <section className="lootx-figma-metrics" aria-label="Site activity">
-        {[
-          [Users, '12,654', 'Players'],
-          [Sparkles, '300', 'Online'],
-          [Gift, '2,174', 'Cases opened'],
-          [ShieldCheck, 'Provably fair', 'Verified results'],
-        ].map(([Icon, value, label]) => {
-          const MetricIcon = Icon as typeof Users;
-          return <div key={String(label)}><MetricIcon aria-hidden="true" /><strong>{String(value)}</strong><span>{String(label)}</span></div>;
-        })}
-      </section>
-
-      <section className="lootx-figma-live" aria-label="Live drops">
-        <button type="button" className="lootx-figma-live-lead" onClick={onViewAllBoxes}><Sparkles aria-hidden="true" /><span>Live<br />drops</span></button>
-        <div className="lootx-figma-live-track">
-          {boxes.slice(0, 9).map((box) => (
-            <button type="button" key={`live-${box.id}`} onClick={() => onOpenBox(box.id)}>
-              {box.image ? <img src={box.image} alt="" loading="lazy" decoding="async" /> : null}
-              <span>{box.name}</span>
+    <main className="bet-home">
+      <header className="bet-home-header">
+        <div><span>Hello,</span><h1>{displayName}</h1></div>
+        <button type="button" onClick={onViewAllBoxes} aria-label="Browse all cases">+</button>
+      </header>
+      <label className="bet-home-search"><Search aria-hidden="true" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by cases, items" /></label>
+      <section className="bet-home-tournaments">
+        <h2>Collections</h2>
+        <div className="bet-home-promos">
+          {promoBoxes.map((box, index) => (
+            <button type="button" key={box.id} className={index === 0 ? 'is-orange' : 'is-black'} onClick={() => onOpenBox(box.id)}>
+              <span><i><ChevronRight /></i><small>{index === 0 ? 'All cases' : 'Hot collection'}</small><strong>{box.name}</strong></span>
+              {box.image ? <img src={box.image} alt="" /> : null}
             </button>
           ))}
         </div>
       </section>
-
-      <button type="button" className="lootx-figma-promo" onClick={() => heroBox && onOpenBox(heroBox.id)}>
-        <span><small>Weekly reward</small><strong>Get your free case</strong><em>Open now</em></span>
-        {heroBox?.image ? <img src={heroBox.image} alt="" /> : null}
-        <ChevronRight aria-hidden="true" />
-      </button>
-
-      <section className="lootx-figma-stage">
-        <div className="lootx-figma-stage-copy">
-          <small>LootX cases</small>
-          <h1>Open cases.<br />Win real collectibles.</h1>
-          <p>Choose a case, reveal your item, then keep it or sell it back using the existing LootX system.</p>
-          <button type="button" onClick={onViewAllBoxes}>Explore cases <ChevronRight aria-hidden="true" /></button>
+      <section className="bet-home-events">
+        <div className="bet-home-events-title"><h2>Top Cases</h2><span>LIVE <i /></span></div>
+        <div className="bet-home-categories">
+          {categoryItems.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={category === id ? 'is-active' : ''} onClick={() => setCategory(id)}><Icon aria-hidden="true" />{label}</button>)}
         </div>
-        {heroBox?.image ? <img src={heroBox.image} alt={heroBox.name} /> : null}
+        <div className="bet-home-event-list">
+          {filteredBoxes.slice(0, 8).map((box, index) => <CaseEventCard key={box.id} box={box} live={index < 2} onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))} />)}
+          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No cases found</strong><span>Try another search or category.</span></div> : null}
+        </div>
       </section>
-
-      <nav className="lootx-figma-category-strip" aria-label="Case categories">
-        {[
-          [Gift, 'Free cases'],
-          [Sparkles, 'Rarity cases'],
-          [Swords, 'Weapon cases'],
-          [Gamepad2, 'Game cases'],
-          [CircleDollarSign, 'Farm cases'],
-        ].map(([Icon, label]) => {
-          const CategoryIcon = Icon as typeof Gift;
-          return <button type="button" key={String(label)} onClick={onViewAllBoxes}><CategoryIcon aria-hidden="true" />{String(label)}</button>;
-        })}
+      <nav className="bet-home-dock" aria-label="Homepage navigation">
+        <button type="button" className="is-active"><Flame /><span>Home</span></button>
+        <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Cases</span></button>
+        <button type="button"><WalletCards /><span>Wallet</span></button>
+        <button type="button"><CircleEllipsis /><span>More</span></button>
       </nav>
-
-      {freeCases.length ? (
-        <section className="lootx-figma-case-section">
-          <SectionTitle eyebrow="Free">Free cases</SectionTitle>
-          <div className="lootx-figma-case-grid lootx-figma-case-grid--four">
-            {freeCases.map((box, index) => <CaseTile key={box.id} box={box} badge={index === 0 ? 'Free' : undefined} onOpen={() => onOpenBox(box.id, true)} />)}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="lootx-figma-case-section">
-        <SectionTitle eyebrow="Popular">Featured cases</SectionTitle>
-        <div className="lootx-figma-case-grid">
-          {featuredCases.map((box, index) => <CaseTile key={box.id} box={box} badge={index === 0 ? 'Top' : index === 2 ? 'New' : undefined} onOpen={() => onOpenBox(box.id)} />)}
-        </div>
-        <button type="button" className="lootx-figma-view-all" onClick={onViewAllBoxes}>View all cases <ChevronRight aria-hidden="true" /></button>
-      </section>
-
-      {moreCases.length ? (
-        <section className="lootx-figma-case-section">
-          <SectionTitle eyebrow="More chances">More cases</SectionTitle>
-          <div className="lootx-figma-case-grid">
-            {moreCases.map((box) => <CaseTile key={box.id} box={box} onOpen={() => onOpenBox(box.id)} />)}
-          </div>
-        </section>
-      ) : null}
-
-      <footer className="lootx-figma-footer">
-        <div className="lootx-figma-footer-copy">
-          <strong>LOOTX</strong>
-          <p>Open cases and manage real collectible rewards through your existing LootX account.</p>
-        </div>
-        <div><strong>Information</strong><button type="button">FAQ</button><button type="button">Terms of service</button><button type="button">Privacy policy</button></div>
-        <div><strong>Account</strong><button type="button" onClick={onViewAllBoxes}>All cases</button><button type="button">Bonuses</button><button type="button">Profile</button></div>
-        <div><strong>Support</strong><span><Headphones aria-hidden="true" />Customer support</span><small>Available through your LootX account</small></div>
-      </footer>
     </main>
   );
 };
