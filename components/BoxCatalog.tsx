@@ -431,7 +431,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="w-full bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] pb-20 text-white">
+    <div className="lootx-box-catalog w-full pb-20 text-white">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -532,14 +532,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </section>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#24242c] bg-[#0a0a0d]/95 backdrop-blur">
-        <div className="mx-auto max-w-[1320px] px-4 py-4 sm:px-5">
+      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#2d303d] bg-[#13151d]/95 backdrop-blur">
+        <div className="mx-auto max-w-[1900px] px-4 py-4 sm:px-5 lg:px-8">
           <div className="relative mb-3">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7a7a88]" />
             <input
               type="search"
               placeholder="Search Charizard, Base Set, ETB..."
-              className="h-[50px] w-full rounded-[14px] border border-[#24242c] bg-[#131318] py-3 pl-11 pr-11 text-base text-[#f2f2f5] placeholder:text-[#7a7a88] outline-none transition focus:border-[#5b6bf5] focus:ring-1 focus:ring-[#5b6bf5]"
+              className="h-[50px] w-full rounded-lg border border-[#2d303d] bg-[#181c28] py-3 pl-11 pr-11 text-base text-[#f6f4f9] placeholder:text-[#7d8091] outline-none transition focus:border-[#ff4d55] focus:ring-1 focus:ring-[#ff4d55]"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -567,8 +567,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   onClick={() => setActiveCategory(cat.id)}
                   className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
-                      ? 'border-[#5b6bf5] bg-[#5b6bf5] text-[#f5f6ff]'
-                      : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44] hover:text-[#f2f2f5]'
+                      ? 'border-[#ff4d55] bg-[#ff4d55] text-[#f6f4f9]'
+                      : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[#ff4d55]/50 hover:text-[#f6f4f9]'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -617,7 +617,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       )}
 
-      <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-3 py-4 sm:px-5 sm:py-5">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[1900px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
         <div className="flex flex-col gap-6">
           {isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
