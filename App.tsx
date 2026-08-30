@@ -760,7 +760,7 @@ const AppShell = () => {
   }, [navigationScrollKey]);
 
   return (
-    <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white font-sans selection:bg-violet-500 selection:text-white flex flex-col">
+    <div className="lootx-app-shell min-h-[100dvh] text-white font-sans selection:bg-red-500 selection:text-white flex flex-col">
       <SeoHead view={view} />
       <Header onOpenInbox={() => undefined} isSticky={shouldUseStickyHeader} />
       {isAccountBanned && (
