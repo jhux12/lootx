@@ -71,7 +71,7 @@ export const BetLiveWinsTicker: React.FC = () => {
       <div className="bet-home-ticker-fade bet-home-ticker-fade-left" aria-hidden="true" />
       <div className="bet-home-ticker-fade bet-home-ticker-fade-right" aria-hidden="true" />
       <div
-        className="bet-home-ticker-track"
+        className="bet-home-ticker-track ticker-animation live-wins-ticker"
         style={{ animationPlayState: isVisible ? 'running' : 'paused' }}
       >
         {drops.length === 0
