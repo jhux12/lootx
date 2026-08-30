@@ -243,9 +243,9 @@ body {
 .bet-site-footer button:focus-visible { --tw-ring-color:#ff4b0a; }
 
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
-  html.pullz-tab-hidden .ticker-animation,
+  html.pullz-tab-hidden .ticker-animation:not(.live-wins-ticker),
   html.pullz-tab-hidden [class*="animate-"],
-  html.pullz-mobile-optimized .ticker-animation { animation-play-state: paused !important; }
+  html.pullz-mobile-optimized .ticker-animation:not(.live-wins-ticker) { animation-play-state: paused !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -450,30 +450,56 @@ body {
 .bet-home-dock-balance img { width:22px; height:22px; }
 .bet-home-dock-balance span { font-size:9px; font-weight:800; letter-spacing:.02em; }
 
-/* Live wins ticker (replaces the old search bar at the top of the homepage) */
-.bet-home-ticker { position:relative; height:96px; margin-top:8px; overflow:hidden; border-radius:16px; background:#f2f2f4; }
-.bet-home-ticker-fade { position:absolute; top:0; bottom:0; z-index:2; width:56px; pointer-events:none; }
-.bet-home-ticker-fade-left { left:0; background:linear-gradient(90deg,#f2f2f4,transparent); }
-.bet-home-ticker-fade-right { right:0; background:linear-gradient(270deg,#f2f2f4,transparent); }
-.bet-home-ticker-track { display:flex; align-items:center; gap:12px; height:100%; width:max-content; padding:0 16px; will-change:transform; }
-.bet-home-ticker-item { display:flex; flex:0 0 auto; align-items:center; gap:10px; width:180px; height:72px; overflow:hidden; border-radius:12px; padding:10px; background:#fff; box-shadow:0 6px 16px rgba(0,0,0,.06); }
-.bet-home-ticker-item.is-loading { background:#e9e9eb; animation:bet-ticker-pulse 1.4s ease-in-out infinite; }
-.bet-home-ticker-item img { width:44px; height:44px; flex:0 0 auto; object-fit:contain; filter:drop-shadow(0 6px 8px rgba(0,0,0,.16)); }
-.bet-home-ticker-meta { display:flex; min-width:0; flex-direction:column; gap:2px; }
-.bet-home-ticker-meta strong { overflow:hidden; font-size:11px; font-weight:900; text-overflow:ellipsis; white-space:nowrap; color:#050505; }
-.bet-home-ticker-meta span { overflow:hidden; font-size:10px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; color:#8b8b90; }
-.bet-home-ticker-value { margin-left:auto; font-size:11px; font-weight:800; color:#2abd69; }
+/* Recent pulls ticker — sits below the hero cards, shows real recent
+   unboxings as card-art tiles bordered by rarity, matching the
+   provided reference design. Theme-aware for light/dark. */
+.bet-home-ticker {
+  --ticker-bg:#f2f2f4; --ticker-card-bg:#fff; --ticker-card-border:#e2e2e4;
+  --ticker-label-bg:#111318; --ticker-label-text:#fff;
+  display:flex; align-items:stretch; gap:0; margin-top:28px; overflow:hidden;
+  border-radius:16px; background:var(--ticker-bg);
+}
+:root[data-theme="dark"] .bet-home-ticker {
+  --ticker-bg:#12141c; --ticker-card-bg:#181c28; --ticker-card-border:#2d303d;
+  --ticker-label-bg:#0b0d12; --ticker-label-text:#f6f4f9;
+}
+.bet-home-ticker-label {
+  display:flex; flex:0 0 auto; flex-direction:column; align-items:center; justify-content:center;
+  gap:6px; width:88px; padding:10px 8px; color:var(--ticker-label-text); background:var(--ticker-label-bg);
+  font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; text-align:center;
+}
+.bet-home-ticker-label svg { width:20px; height:20px; color:var(--bet-orange,#ff4b0a); }
+.bet-home-ticker-viewport { position:relative; flex:1; min-width:0; overflow:hidden; }
+.bet-home-ticker-fade { position:absolute; top:0; bottom:0; z-index:2; width:48px; pointer-events:none; }
+.bet-home-ticker-fade-right { right:0; background:linear-gradient(270deg,var(--ticker-bg),transparent); }
+.bet-home-ticker-track { display:flex; align-items:center; gap:10px; height:100%; width:max-content; padding:10px; will-change:transform; }
+.bet-home-ticker-item {
+  position:relative; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+  width:96px; height:128px; overflow:hidden; border-radius:10px; border:2px solid var(--ticker-card-border);
+  background:var(--ticker-card-bg);
+}
+.bet-home-ticker-item.is-loading { background:var(--ticker-card-border); animation:bet-ticker-pulse 1.4s ease-in-out infinite; }
+.bet-home-ticker-item img { width:100%; height:100%; object-fit:cover; }
+.bet-home-ticker-badge {
+  position:absolute; left:4px; top:4px; z-index:2; display:flex; height:20px; width:20px; align-items:center;
+  justify-content:center; border-radius:999px; background:var(--ticker-card-border); color:var(--ticker-label-text);
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
+}
+.bet-home-ticker-badge svg { width:11px; height:11px; }
+.bet-home-ticker-item.rarity-common { border-color:#9a9ca6; }
+.bet-home-ticker-item.rarity-common .bet-home-ticker-badge { background:#9a9ca6; color:#0b0d12; }
+.bet-home-ticker-item.rarity-uncommon { border-color:#2abd69; }
+.bet-home-ticker-item.rarity-uncommon .bet-home-ticker-badge { background:#2abd69; color:#04140a; }
+.bet-home-ticker-item.rarity-rare { border-color:#3b82f6; }
+.bet-home-ticker-item.rarity-rare .bet-home-ticker-badge { background:#3b82f6; color:#eef4ff; }
+.bet-home-ticker-item.rarity-epic { border-color:#8b5cf6; box-shadow:0 0 0 1px rgba(139,92,246,.35); }
+.bet-home-ticker-item.rarity-epic .bet-home-ticker-badge { background:#8b5cf6; color:#f5f0ff; }
+.bet-home-ticker-item.rarity-legendary { border-color:#f5b83d; box-shadow:0 0 14px rgba(245,184,61,.35); }
+.bet-home-ticker-item.rarity-legendary .bet-home-ticker-badge { background:#f5b83d; color:#241a02; }
 @keyframes bet-ticker-pulse { 0%,100% { opacity:1; } 50% { opacity:.6; } }
-:root[data-theme="dark"] .bet-home-ticker { background:#181c28; }
-:root[data-theme="dark"] .bet-home-ticker-fade-left { background:linear-gradient(90deg,#181c28,transparent); }
-:root[data-theme="dark"] .bet-home-ticker-fade-right { background:linear-gradient(270deg,#181c28,transparent); }
-:root[data-theme="dark"] .bet-home-ticker-item { background:#202431; box-shadow:0 6px 16px rgba(0,0,0,.3); }
-:root[data-theme="dark"] .bet-home-ticker-item.is-loading { background:#2d303d; }
-:root[data-theme="dark"] .bet-home-ticker-meta strong { color:#f6f4f9; }
-:root[data-theme="dark"] .bet-home-ticker-meta span { color:#7d8091; }
 @media (max-width:720px) {
-  .bet-home-ticker { height:84px; }
-  .bet-home-ticker-item { width:156px; height:64px; }
+  .bet-home-ticker-label { width:72px; font-size:10px; }
+  .bet-home-ticker-item { width:80px; height:106px; }
 }
 
 /* Mobile hamburger -> X morph */

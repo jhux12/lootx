@@ -97,7 +97,6 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
 
   return (
     <main className="bet-home">
-      <BetLiveWinsTicker />
       <section className="bet-home-tournaments">
         <div className="bet-home-promos">
           {promoBoxes.map((box, index) => (
@@ -108,6 +107,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
         </div>
       </section>
+      <BetLiveWinsTicker />
       <section className="bet-home-events">
         <div className="bet-home-events-title">
           <h2>Top Boxes</h2>
