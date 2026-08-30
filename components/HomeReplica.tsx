@@ -501,7 +501,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
   return (
     <div className="animate-in fade-in duration-500">
       <section ref={heroSectionRef} className="px-3 pt-3 animate-in fade-in slide-in-from-bottom-2 duration-500 sm:px-4 lg:px-6">
-        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero relative mx-auto h-[132px] w-full max-w-[1180px] overflow-hidden rounded-[1.28rem] text-left shadow-[0_18px_34px_rgba(0,0,0,0.24)] active:scale-[0.99] sm:h-[164px] sm:rounded-[1.6rem] lg:h-[220px] lg:rounded-[2rem]">
+        <button type="button" onClick={handleHeroAction} onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd} className="pullz-home-hero lootx-hero relative mx-auto h-[132px] w-full overflow-hidden text-left active:scale-[0.99] sm:h-[164px] lg:h-[260px]">
           <div className="flex h-full transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ transform: `translate3d(-${activeHeroSlide * 100}%,0,0)` }}>
             {showFreeBoxSlide && freeSignupBox && <FreeBoxHeroSlide box={freeSignupBox} />}
             {promoBox && <PromoBoxHeroSlide box={promoBox} />}
@@ -551,7 +551,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
       </section>
 
       <section className="pullz-home-trust-grid mt-5 px-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#070a12]/92 p-1.5 shadow-[inset_0_0_20px_rgba(255,255,255,0.025),0_12px_30px_rgba(0,0,0,0.28)] sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-white/10 sm:rounded-2xl sm:p-0">
+        <div className="lootx-stat-grid grid grid-cols-2 gap-2 p-1.5 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-[#2d303d] sm:p-0">
           {[
             { title: 'First Pull Free', description: 'No deposit required', icon: Gift },
             { title: 'Real Cards', description: 'Shipped to your door', icon: Truck },
@@ -592,7 +592,7 @@ const MobileHomePreview = ({ boxes, freeSignupBox, promoBox, trendingBoxIds, onO
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {(trendingBoxes.length ? trendingBoxes.slice(0, 6) : Array.from({ length: 6 }) as MysteryBox[]).map((box, index) => box ? (
-            <button key={box.id} onClick={() => onOpenBox(box.id)} className="group relative h-[172px] overflow-hidden rounded-[20px] border border-white/10 bg-[#121318] p-2.5 text-left shadow-[0_12px_26px_rgba(0,0,0,0.28)] transition hover:-translate-y-1 hover:border-violet-300/50 active:scale-[0.98] sm:h-[184px] lg:h-[204px]">
+            <button key={box.id} onClick={() => onOpenBox(box.id)} className="lootx-case-card group relative h-[172px] overflow-hidden p-2.5 text-left transition hover:-translate-y-1 active:scale-[0.98] sm:h-[184px] lg:h-[220px]">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(139,92,246,0.16),transparent_42%),linear-gradient(180deg,transparent_52%,rgba(0,0,0,0.46))]" />
               <div className="relative z-10 h-[112px] sm:h-[122px] lg:h-[138px]"><img src={box.image} alt={box.name} width={160} height={160} loading={index < 2 ? 'eager' : 'lazy'} decoding="async" className="h-full w-full object-contain transition-transform duration-200 group-hover:scale-105" /></div>
               <div className="absolute inset-x-2.5 bottom-2.5 z-20 flex items-center justify-between gap-2">
