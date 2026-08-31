@@ -108,7 +108,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
-      className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className="bet-catalog-card group relative w-full overflow-hidden rounded-[22px] text-left transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 [content-visibility:auto] [contain-intrinsic-size:260px]"
     >
       <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
@@ -431,7 +431,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="lootx-box-catalog w-full pb-20 text-white">
+    <div className="lootx-box-catalog bet-boxes-page w-full pb-20">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -532,14 +532,14 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </section>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#2d303d] bg-[#13151d]/95 backdrop-blur">
+      <div className="bet-boxes-filterbar sticky top-[var(--pullz-header-height,70px)] z-40 w-full backdrop-blur">
         <div className="mx-auto max-w-[1900px] px-4 py-4 sm:px-5 lg:px-8">
           <div className="relative mb-3">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7a7a88]" />
             <input
               type="search"
               placeholder="Search Charizard, Base Set, ETB..."
-              className="h-[50px] w-full rounded-lg border border-[#2d303d] bg-[#181c28] py-3 pl-11 pr-11 text-base text-[#f6f4f9] placeholder:text-[#7d8091] outline-none transition focus:border-[#ff4d55] focus:ring-1 focus:ring-[#ff4d55]"
+              className="bet-boxes-search h-[50px] w-full rounded-xl py-3 pl-11 pr-11 text-base outline-none transition"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -549,7 +549,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
           <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button type="button" onClick={() => setIsSortOpen(true)} className="flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border border-[#24242c] bg-[#131318] p-1.5 text-center text-[#c8c8d2] transition hover:border-[#3a3a44] hover:text-[#f2f2f5] sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+            <button type="button" onClick={() => setIsSortOpen(true)} className="bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl p-1.5 text-center transition sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
               <ListFilter className="h-6 w-6 text-[#9a9aa8] sm:h-7 sm:w-7" aria-hidden="true" />
               <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
                 {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
@@ -565,10 +565,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
+                  className={`bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
-                      ? 'border-[#ff4d55] bg-[#ff4d55] text-[#f6f4f9]'
-                      : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[#ff4d55]/50 hover:text-[#f6f4f9]'
+                      ? 'is-active'
+                      : ''
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
