@@ -163,18 +163,19 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   };
 
   const getHeroSlideStyle = (slide: HomeHeroSlide): React.CSSProperties => {
+    const color = slide.textColor || '#ffffff';
     if (slide.backgroundType === 'gradient') {
-      return { background: `linear-gradient(135deg, ${slide.backgroundGradientFrom}, ${slide.backgroundGradientTo})`, color: '#fff' };
+      return { background: `linear-gradient(135deg, ${slide.backgroundGradientFrom}, ${slide.backgroundGradientTo})`, color };
     }
     if (slide.backgroundType === 'image' && slide.backgroundImage) {
       return {
         backgroundImage: `url(${slide.backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        color: '#fff'
+        color
       };
     }
-    return { background: slide.backgroundColor, color: '#fff' };
+    return { background: slide.backgroundColor, color };
   };
 
   return (

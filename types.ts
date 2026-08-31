@@ -324,6 +324,7 @@ export interface HomeHeroSlide {
   image: string;
   link: string;
   text: string;
+  textColor: string;
   shopNowText: string;
 }
 

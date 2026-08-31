@@ -14,6 +14,7 @@ const createDraftSlide = (): HomeHeroSlide => ({
   image: '',
   link: '',
   text: '',
+  textColor: '#ffffff',
   shopNowText: 'Shop now'
 });
 
@@ -246,16 +247,36 @@ export const HomeHeroSlidesEditor: React.FC = () => {
                     className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Text color</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={isValidHexColor(slide.textColor) ? slide.textColor : '#ffffff'}
+                      onChange={(event) => updateSlide(slide.id, { textColor: event.target.value })}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-gray-700 bg-transparent p-0.5"
+                      aria-label={`Slide ${index + 1} text color`}
+                    />
+                    <Input
+                      type="text"
+                      value={slide.textColor}
+                      onChange={(event) => updateSlide(slide.id, { textColor: event.target.value })}
+                      placeholder="#ffffff"
+                      className="min-w-0 flex-1 bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
+                    />
+                  </div>
+                  {!isValidHexColor(slide.textColor) && <p className="mt-1 text-[10px] text-amber-400">Enter a valid hex color, e.g. #ffffff</p>}
+                </div>
               </div>
 
               <div
                 className="mt-3 flex h-28 items-center gap-3 overflow-hidden rounded-lg p-3"
-                style={{ background: getPreviewBackground(slide) }}
+                style={{ background: getPreviewBackground(slide), color: isValidHexColor(slide.textColor) ? slide.textColor : '#ffffff' }}
               >
                 {slide.image && <img src={slide.image} alt="" className="h-full w-auto object-contain" />}
                 <div className="min-w-0">
-                  <span className="block text-[10px] font-bold uppercase tracking-wide text-white/80">{slide.shopNowText}</span>
-                  {slide.text && <span className="block truncate text-sm font-black uppercase text-white">{slide.text}</span>}
+                  <span className="block text-[10px] font-bold uppercase tracking-wide opacity-80">{slide.shopNowText}</span>
+                  {slide.text && <span className="block truncate text-sm font-black uppercase">{slide.text}</span>}
                 </div>
               </div>
             </div>

@@ -313,6 +313,7 @@ const normalizeHomeHeroSlides = (slides: unknown): HomeHeroSlide[] => {
         image: typeof source.image === 'string' ? source.image.trim() : '',
         link: typeof source.link === 'string' ? source.link.trim() : '',
         text: typeof source.text === 'string' ? source.text.trim() : '',
+        textColor: normalizeHexColor(source.textColor, '#ffffff'),
         shopNowText: typeof source.shopNowText === 'string' && source.shopNowText.trim() ? source.shopNowText.trim() : 'Shop now'
       };
     })
