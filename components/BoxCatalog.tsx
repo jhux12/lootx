@@ -223,6 +223,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => setCatalogError('Unable to load more boxes. Please retry.')).finally(() => setCatalogLoading(false));
   };
+  // Categories are filtered client-side from whatever pages have been
+  // fetched so far, so a category could look incomplete (or empty) just
+  // because later Firestore pages haven't loaded yet. Once a specific
+  // category is selected, keep auto-fetching pages in the background
+  // until every matching box has actually loaded, instead of making the
+  // visitor repeatedly click "Load more boxes" themselves.
+  useEffect(() => {
+    if (activeCategory === 'all') return;
+    if (catalogLoading || catalogEnd || !catalogCursor) return;
+    loadMoreCatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, catalogLoading, catalogEnd, catalogCursor]);
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
   const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
 
@@ -282,7 +294,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const staticCatalogImages = performanceMode.isMobile || performanceMode.isLowPower;
 
   useEffect(() => {
-    setVisibleBoxCount(performanceMode.isMobile ? 12 : 30);
+    // Once a specific category is selected, show everything that matches
+    // instead of capping the client-side render to the default page size
+    // — combined with the auto-fetch effect above, this means selecting a
+    // category always reveals its full set without any "load more" click.
+    setVisibleBoxCount(activeCategory !== 'all' ? Number.MAX_SAFE_INTEGER : (performanceMode.isMobile ? 12 : 30));
   }, [activeCategory, normalizedSearchQuery, performanceMode.isMobile, showAffordableOnly, sortOption]);
 
   useEffect(() => {

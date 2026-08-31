@@ -2875,7 +2875,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <button
                   type="button"
                   onClick={() => setVisibleDropItemCount((count) => count + (performanceMode.isMobile ? 12 : 24))}
-                  className="min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
+                  className="bet-case-load-more min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
                 >
                   Load more items
                 </button>

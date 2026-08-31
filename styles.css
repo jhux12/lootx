@@ -731,3 +731,16 @@ body {
 :root[data-theme="light"] .bet-case-modal-bar [class*="border-white/10"] { border-color:#e5e5e7 !important; }
 :root[data-theme="light"] .bet-case-modal-bar [class*="bg-white/5"] { background:#e5e5e7 !important; }
 
+/* Drop-table "Load more items" button — was near-invisible white-on-white
+   (faint white bg + white text) even in dark mode, and fully invisible
+   once the page background flips to light. */
+.bet-case-load-more { border-color:rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#fff; }
+.bet-case-load-more:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.2); }
+:root[data-theme="light"] .bet-case-load-more { border-color:#e5e5e7 !important; background:#f2f2f4 !important; color:#050505 !important; }
+:root[data-theme="light"] .bet-case-load-more:hover { background:#e5e5e7 !important; border-color:#d4d4d8 !important; }
+
+/* "Sell for X coins" button text was a very pale emerald, illegible
+   against the pale emerald-tinted background once the page is light. */
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-100"],
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-50"] { color:#047857 !important; }
+
