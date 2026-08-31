@@ -235,6 +235,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         <div className="bet-home-trustpilot">
           <img src={TRUSTPILOT_LOGO_URL} alt="Trustpilot" loading="lazy" decoding="async" />
         </div>
+        <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
       <nav className="bet-home-dock" aria-label="Homepage navigation">
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>

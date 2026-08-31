@@ -305,7 +305,7 @@ export const LoginModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex touch-pan-y touch-manipulation items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
+      className="bet-auth-modal fixed inset-0 z-[300] flex touch-pan-y touch-manipulation items-start justify-center overflow-y-auto overscroll-contain p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:items-center sm:overflow-hidden sm:p-4"
     >
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-md"

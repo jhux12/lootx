@@ -28,6 +28,7 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
+  Sun,
   Twitter,
   User as UserIcon,
   Users,
@@ -120,6 +121,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const { theme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
+  const [colorTheme, setColorTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    const saved = window.localStorage.getItem('pullz:color-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
   const [questReadyCount, setQuestReadyCount] = useState(0);
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
   const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<
@@ -136,6 +143,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const unreadCount = useUnreadActivityCount();
+  useEffect(() => {
+    document.documentElement.dataset.siteTheme = colorTheme;
+    window.localStorage.setItem('pullz:color-theme', colorTheme);
+  }, [colorTheme]);
   const lastDailyClaim = useMemo(
     () =>
       Number.isFinite(user.lastDailyClaim ?? NaN)
