@@ -18,7 +18,6 @@ import {
   LifeBuoy,
   LogIn,
   LogOut,
-  Menu,
   Moon,
   Package,
   PenTool,
@@ -497,23 +496,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
 
 
-  const mobileMenuButton = (
-    <button
-      type="button"
-      onClick={() => setIsMobileMenuOpen((open) => !open)}
-      className="group relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-blue-300/20 bg-[#111a2a]/90 text-blue-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_24px_rgba(0,0,0,0.28)] transition-all duration-200 hover:border-cyan-200/40 hover:bg-[#162237] hover:text-white active:scale-95 lg:hidden"
-      aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-      aria-expanded={isMobileMenuOpen}
-    >
-      {isMobileMenuOpen ? (
-        <X className="relative z-10 h-5 w-5" />
-      ) : (
-        <Menu className="relative z-10 h-5 w-5" />
-      )}
-    </button>
-  );
-
-
   const dismissFreeBoxTooltip = useCallback(() => {
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem("pullz:free-box-tooltip-dismissed", "1");
@@ -726,9 +708,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 )}
 
                 {authInitialized && !isAuthenticated && (
-                  <div className="flex min-h-[44px] min-w-[174px] items-center justify-end gap-2 lg:hidden">
+                  <div className="flex min-h-[44px] items-center justify-end gap-2 lg:hidden">
                     {startPullingButton}
-                    {mobileMenuButton}
                   </div>
                 )}
 
@@ -757,7 +738,6 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         </button>
                       </div>
                     </div>
-                    {mobileMenuButton}
                   </div>
                 )}
               </div>
@@ -775,12 +755,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         />
 
         <div
-          className={`fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[240] w-full max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain border-t border-violet-300/15 bg-[radial-gradient(circle_at_50%_15%,rgba(124,60,255,0.20),transparent_38%),radial-gradient(circle_at_10%_95%,rgba(77,141,255,0.13),transparent_42%),linear-gradient(rgba(5,6,10,0.98),rgba(5,6,10,0.98))] px-4 pb-4 pt-3 shadow-[0_-24px_70px_rgba(0,0,0,0.62)] backdrop-blur-2xl transition-all duration-300 ease-out lg:hidden ${
+          className={`bet-mobile-drawer fixed inset-x-0 z-[240] w-full max-h-[calc(100dvh-var(--pullz-header-height)-var(--pullz-mobile-bottom-nav-height,72px))] max-w-[100vw] overflow-y-auto overflow-x-hidden overscroll-x-none overscroll-y-contain rounded-b-[28px] px-4 pb-4 pt-3 backdrop-blur-2xl transition-[transform,opacity] duration-300 ease-[cubic-bezier(.22,1,.36,1)] lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${
             isMobileMenuOpen
-              ? "translate-x-0 opacity-100"
-              : "pointer-events-none translate-x-full opacity-0"
+              ? "translate-y-0 opacity-100"
+              : "pointer-events-none -translate-y-8 opacity-0"
           }`}
           role="dialog"
           aria-modal="true"
