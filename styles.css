@@ -208,25 +208,19 @@ body {
    the whole tile plus a brighter blurred glow behind the artwork,
    using the box's highest-rarity item (same palette as the live-pulls
    ticker). Kept subtle so it reads as polish, not noise. */
-.bet-box-tile.rarity-glow-common { background:linear-gradient(160deg,#fff 0%,#fff 55%,#eef0f2 100%); }
-.bet-box-tile.rarity-glow-uncommon { background:linear-gradient(160deg,#fff 0%,#fff 50%,rgba(42,189,105,.10) 100%); }
-.bet-box-tile.rarity-glow-rare { background:linear-gradient(160deg,#fff 0%,#fff 50%,rgba(59,130,246,.10) 100%); }
-.bet-box-tile.rarity-glow-epic { background:linear-gradient(160deg,#fff 0%,#fff 48%,rgba(139,92,246,.12) 100%); }
-.bet-box-tile.rarity-glow-legendary { background:linear-gradient(160deg,#fff 0%,#fff 45%,rgba(245,184,61,.16) 100%); }
-:root[data-theme="dark"] .bet-box-tile.rarity-glow-common { background:linear-gradient(160deg,#181c28 0%,#181c28 55%,#1e2330 100%); }
-:root[data-theme="dark"] .bet-box-tile.rarity-glow-uncommon { background:linear-gradient(160deg,#181c28 0%,#181c28 50%,rgba(42,189,105,.14) 100%); }
-:root[data-theme="dark"] .bet-box-tile.rarity-glow-rare { background:linear-gradient(160deg,#181c28 0%,#181c28 50%,rgba(59,130,246,.14) 100%); }
-:root[data-theme="dark"] .bet-box-tile.rarity-glow-epic { background:linear-gradient(160deg,#181c28 0%,#181c28 48%,rgba(139,92,246,.18) 100%); }
-:root[data-theme="dark"] .bet-box-tile.rarity-glow-legendary { background:linear-gradient(160deg,#181c28 0%,#181c28 45%,rgba(245,184,61,.22) 100%); }
+/* Purple-to-blue glow behind every box's artwork — one consistent
+   accent color (matching the site's Open Free Box gradient) rather
+   than per-rarity tinting, made large/bright enough to actually read
+   as a glow instead of a barely-visible wash. */
 .bet-box-tile-glow {
-  position:absolute; top:8%; left:50%; width:78%; aspect-ratio:1; transform:translateX(-50%);
-  border-radius:50%; filter:blur(28px); opacity:.55; pointer-events:none; z-index:0;
+  position:absolute; top:4px; left:50%; width:200px; height:200px; max-width:88%;
+  transform:translateX(-50%); border-radius:50%; filter:blur(30px); opacity:.65; pointer-events:none; z-index:0;
+  background:radial-gradient(circle,#6225ef 0%,#4f7ff4 55%,transparent 75%);
+  transition:opacity .2s ease;
 }
-.bet-box-tile.rarity-glow-common .bet-box-tile-glow { background:radial-gradient(circle,#9a9ca6,transparent 70%); }
-.bet-box-tile.rarity-glow-uncommon .bet-box-tile-glow { background:radial-gradient(circle,#2abd69,transparent 70%); }
-.bet-box-tile.rarity-glow-rare .bet-box-tile-glow { background:radial-gradient(circle,#3b82f6,transparent 70%); }
-.bet-box-tile.rarity-glow-epic .bet-box-tile-glow { background:radial-gradient(circle,#8b5cf6,transparent 70%); }
-.bet-box-tile.rarity-glow-legendary .bet-box-tile-glow { background:radial-gradient(circle,#f5b83d,transparent 70%); opacity:.65; }
+.bet-box-tile:hover .bet-box-tile-glow { opacity:.85; }
+:root[data-theme="dark"] .bet-box-tile-glow { opacity:.8; }
+:root[data-theme="dark"] .bet-box-tile:hover .bet-box-tile-glow { opacity:1; }
 .bet-case-card { border:1px solid #dedee0; border-radius:16px; padding:18px; background:#fff; }
 .bet-case-card-head { display:flex; justify-content:space-between; color:#949496; font-size:12px; }
 .bet-case-card-head em { display:flex; align-items:center; gap:6px; color:#050505; font-style:normal; font-weight:900; }
@@ -819,6 +813,13 @@ body {
 .pullz-dark-chip [class*="bg-[#1b2024]"] { background-color:rgba(27,32,36,.7) !important; }
 .pullz-dark-chip [class*="text-[#79a7ff]"] { color:#79a7ff !important; }
 .pullz-dark-chip [class*="text-white/45"] { color:rgba(255,255,255,.45) !important; }
+/* Rarity-styled inventory cards on the Profile page keep their own
+   rich, always-dark gradient backgrounds (slate/emerald/sky/violet/
+   yellow) regardless of theme — the item name/price text on top of
+   them needs to stay white for the same reason. */
+.pullz-dark-chip .text-white,
+.pullz-dark-chip[class*="text-white"] { color:#fff !important; }
+.pullz-dark-chip [class*="text-gray-200"] { color:#e5e7eb !important; }
 
 /* "Refer a Friend" — always white with an animated blue gradient
    border, regardless of theme, so it reads as a distinct standout CTA

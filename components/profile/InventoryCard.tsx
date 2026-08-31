@@ -113,7 +113,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
+      className={`pullz-dark-chip group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
         selected ? selectedCardClass : 'hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
       style={{ boxShadow: cardBoxShadow }}
