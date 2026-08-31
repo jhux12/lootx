@@ -18,17 +18,24 @@ type FigmaHomePageProps = {
 
 const TRUSTPILOT_LOGO_URL = 'https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png';
 
-const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?: boolean }> = ({ box, onOpen, isFreeSignupBox }) => (
+const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?: boolean; isPriority?: boolean }> = React.memo(({ box, onOpen, isFreeSignupBox, isPriority }) => (
   <button type="button" className={`bet-box-tile${isFreeSignupBox ? ' is-free-signup' : ''}`} onClick={onOpen} aria-label={`Open ${box.name}`}>
     {isFreeSignupBox && <span className="bet-box-tile-badge">Sign-Up Bonus</span>}
-    <img src={box.image} alt="" loading="lazy" decoding="async" />
+    <img
+      src={box.image}
+      alt=""
+      loading={isPriority ? 'eager' : 'lazy'}
+      fetchPriority={isPriority ? 'high' : 'low'}
+      decoding="async"
+    />
     {isFreeSignupBox ? (
       <span className="bet-box-tile-free">Free</span>
     ) : (
       <CoinAmount amount={toCoins(box.price, PRICE_UNIT_MODE)} animated={false} iconClassName="h-4 w-4" />
     )}
   </button>
-);
+));
+BoxTile.displayName = 'BoxTile';
 
 export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, onViewAllBoxes }) => {
   const { isAuthenticated, openAuthModal } = useAuth();
@@ -147,7 +154,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
       <section className="bet-home-tournaments">
         <div className="bet-home-promos">
           {hasCustomHeroSlides
-            ? heroSlides.map((slide) => (
+            ? heroSlides.map((slide, index) => (
                 <button
                   type="button"
                   key={slide.id}
@@ -155,13 +162,15 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
                   onClick={() => handleHeroSlideClick(slide)}
                 >
                   {slide.text ? <span><strong>{slide.text}</strong></span> : null}
-                  {slide.image ? <img src={slide.image} alt="" /> : null}
+                  {slide.image ? (
+                    <img src={slide.image} alt="" loading="eager" fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" />
+                  ) : null}
                 </button>
               ))
             : promoBoxes.map((box, index) => (
                 <button type="button" key={box.id} className={index === 0 ? 'is-orange' : 'is-black'} onClick={() => onOpenBox(box.id)}>
                   <span><i><ChevronRight /></i><small>{index === 0 ? 'All boxes' : 'Hot boxes'}</small><strong>{box.name}</strong></span>
-                  {box.image ? <img src={box.image} alt="" /> : null}
+                  {box.image ? <img src={box.image} alt="" loading="eager" fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" /> : null}
                 </button>
               ))}
         </div>
@@ -195,11 +204,12 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
         </div>
         <div className="bet-home-event-list">
-          {filteredBoxes.slice(0, 12).map((box) => (
+          {filteredBoxes.slice(0, 12).map((box, index) => (
             <BoxTile
               key={box.id}
               box={box}
               isFreeSignupBox={Boolean(box.isDaily)}
+              isPriority={index < 4}
               onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))}
             />
           ))}

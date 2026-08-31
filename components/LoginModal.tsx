@@ -312,7 +312,7 @@ export const LoginModal: React.FC = () => {
         onClick={() => setShowLoginModal(false)}
       />
 
-      <div className="pullz-stable-modal relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
+      <div className="bet-auth-modal pullz-stable-modal relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-white/10 bg-[#18181b] shadow-2xl sm:max-h-[95dvh]">
         <button
           onClick={() => setShowLoginModal(false)}
           className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-800/80 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
@@ -332,7 +332,7 @@ export const LoginModal: React.FC = () => {
               </button>
               <button
                 onClick={() => mode !== 'register' && toggleMode()}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'register' ? 'bg-[#205DD7] text-white shadow-md shadow-blue-900/20' : 'text-neutral-500 hover:text-neutral-300'}`}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-bold transition-all ${mode === 'register' ? 'bg-[var(--bet-orange)] text-[#fff] shadow-md' : 'text-neutral-500 hover:text-neutral-300'}`}
                 type="button"
               >
                 Register
@@ -462,7 +462,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl bg-[var(--bet-orange)] py-3.5 text-sm font-bold text-[#fff] transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Linking...' : 'Link Google'}
               </button>
@@ -575,7 +575,7 @@ export const LoginModal: React.FC = () => {
                 type={showEmailConfirmationNotice ? 'button' : 'submit'}
                 onClick={showEmailConfirmationNotice ? remindEmailConfirmation : undefined}
                 disabled={isLoading || (mode === 'register' && !signupConsent)}
-                className="mt-2 w-full rounded-xl bg-[#205DD7] py-3.5 text-sm font-bold text-white transition-all hover:bg-[#1f6bea] hover:shadow-lg hover:shadow-blue-900/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2 w-full rounded-xl bg-[var(--bet-orange)] py-3.5 text-sm font-bold text-[#fff] transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Please wait...' : showEmailConfirmationNotice ? 'Please check your email to confirm' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
               </button>

@@ -114,7 +114,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       className={`group relative w-full overflow-hidden rounded-[22px] border text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 [content-visibility:auto] [contain-intrinsic-size:260px] ${
         isFreeSignupBox
           ? 'border-[#2abd69]/60 bg-[#0d1f16] hover:border-[#2abd69] focus-visible:ring-[#2abd69]'
-          : 'border-white/10 bg-[#121318] hover:border-violet-300/50 focus-visible:ring-violet-400'
+          : 'border-white/10 bg-[#121318] hover:border-[var(--bet-orange)]/50 focus-visible:ring-[var(--bet-orange)]'
       }`}
     >
       {isFreeSignupBox && (
@@ -122,7 +122,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
           Sign-Up Bonus
         </span>
       )}
-      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
+      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(255,75,10,0.14),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
         <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
           <BlurImage
@@ -146,7 +146,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
         {isFreeSignupBox ? (
           <span className="mt-1 inline-flex items-center text-[13px] font-black uppercase tracking-wide text-[#2abd69]">Free</span>
         ) : (
-          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
+          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[var(--bet-orange)]" iconClassName="h-3.5 w-3.5" />
         )}
       </div>
     </button>
@@ -441,7 +441,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="lootx-box-catalog w-full pb-20 text-white">
+    <div className="lootx-box-catalog bet-boxes-page w-full pb-20 text-white">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -522,23 +522,23 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="pullz-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
-        <section className="pullz-boxes-hero" aria-labelledby="boxes-hero-title">
-          <div className="pullz-boxes-hero-copy">
-            <h1 id="boxes-hero-title">Open. Pull.<br /><span>Collect.</span></h1>
+      <div className="bet-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
+        <section className="bet-boxes-hero" aria-labelledby="boxes-hero-title">
+          <div className="bet-boxes-hero-copy">
+            <p className="bet-boxes-hero-eyebrow">Pullz Boxes</p>
+            <h1 id="boxes-hero-title">Open. Pull. Collect.</h1>
+            <p className="bet-boxes-hero-sub">Every box is provably fair. Keep what you pull, or sell it back instantly.</p>
           </div>
-
-          <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
-            <div className="pullz-boxes-hero-orbit" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="eager" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="eager" decoding="async" />
-            <div className="pullz-boxes-hero-platform" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-1" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-2" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-3" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-4" />
-          </div>
+          <img
+            className="bet-boxes-hero-art"
+            src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294"
+            alt="Featured graded collectible card"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            width={220}
+            height={220}
+          />
         </section>
       </div>
 
@@ -549,7 +549,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <input
               type="search"
               placeholder="Search Charizard, Base Set, ETB..."
-              className="h-[50px] w-full rounded-lg border border-[#2d303d] bg-[#181c28] py-3 pl-11 pr-11 text-base text-[#f6f4f9] placeholder:text-[#7d8091] outline-none transition focus:border-[#ff4d55] focus:ring-1 focus:ring-[#ff4d55]"
+              className="h-[50px] w-full rounded-lg border border-[#2d303d] bg-[#181c28] py-3 pl-11 pr-11 text-base text-[#f6f4f9] placeholder:text-[#7d8091] outline-none transition focus:border-[var(--bet-orange)] focus:ring-1 focus:ring-[var(--bet-orange)]"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -577,8 +577,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   onClick={() => setActiveCategory(cat.id)}
                   className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
-                      ? 'border-[#ff4d55] bg-[#ff4d55] text-[#f6f4f9]'
-                      : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[#ff4d55]/50 hover:text-[#f6f4f9]'
+                      ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)] text-white'
+                      : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[var(--bet-orange)]/50 hover:text-[#f6f4f9]'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -603,8 +603,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             })}
             </div>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
-            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[13.5px] font-bold transition ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]/15 text-[#f2f2f5]' : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44]'}`}>
-              <span className={`flex h-4 w-4 items-center justify-center rounded-[5px] border-[1.5px] ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]' : 'border-[#3a3a44]'}`}>{showAffordableOnly && <Check className="h-3 w-3 stroke-[3] text-[#0a0a0d]" />}</span>
+            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[13.5px] font-bold transition ${showAffordableOnly ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)]/15 text-[#f2f2f5]' : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44]'}`}>
+              <span className={`flex h-4 w-4 items-center justify-center rounded-[5px] border-[1.5px] ${showAffordableOnly ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)]' : 'border-[#3a3a44]'}`}>{showAffordableOnly && <Check className="h-3 w-3 stroke-[3] text-white" />}</span>
               Enough coins
             </button>
           </div>
@@ -618,7 +618,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <h2 id="sort-options-title" className="px-3 pb-3 text-[15px] font-bold text-[#f2f2f5]">Sort by</h2>
             {SORT_OPTIONS.map((option) => {
               const active = option.id === sortOption;
-              return <button key={option.id} type="button" onClick={() => { setSortOption(option.id); setIsSortOpen(false); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3.5 text-left text-[15px] ${active ? 'bg-white/[0.06] font-bold text-[#5b6bf5]' : 'font-medium text-[#c8c8d2] hover:bg-white/[0.04]'}`}>
+              return <button key={option.id} type="button" onClick={() => { setSortOption(option.id); setIsSortOpen(false); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3.5 text-left text-[15px] ${active ? 'bg-white/[0.06] font-bold text-[var(--bet-orange)]' : 'font-medium text-[#c8c8d2] hover:bg-white/[0.04]'}`}>
                 {option.label}
                 {active && <Check className="h-4 w-4 stroke-[3]" />}
               </button>;
@@ -664,7 +664,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
-                <Search className="h-6 w-6 text-blue-300" />
+                <Search className="h-6 w-6 text-[var(--bet-orange)]" />
               </div>
               <h2 className="mb-2 text-2xl font-bold text-white">No boxes match this view yet</h2>
               <p className="mx-auto mb-6 max-w-xl text-sm text-neutral-400 sm:text-base">
@@ -672,7 +672,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {hasActiveFilters && (
-                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-[#205DD7] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#1f6bea] sm:w-auto">
+                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-[var(--bet-orange)] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110 sm:w-auto">
                     Clear filters
                   </button>
                 )}

@@ -73,7 +73,17 @@ export const BetLiveWinsTicker: React.FC = () => {
                   <span className="bet-home-ticker-badge" aria-hidden="true">
                     {drop.rarity === 'legendary' ? <Crown /> : <Package />}
                   </span>
-                  <img src={drop.itemImage} alt={drop.itemName} loading="lazy" decoding="async" />
+                  <img
+                    src={drop.itemImage}
+                    alt={drop.itemName}
+                    loading="lazy"
+                    decoding="async"
+                    // A broken/expired image URL shouldn't leave a blank
+                    // gap in the strip — hide just that one tile.
+                    onError={(event) => {
+                      event.currentTarget.parentElement?.classList.add('is-broken-image');
+                    }}
+                  />
                 </div>
               ))}
         </div>

@@ -32,6 +32,12 @@ const toMillis = (value: Timestamp | undefined) =>
  * the top-level `opens` collection that api/open-case.js writes to on every
  * unboxing. This is real activity across all players (not just the signed-in
  * user), and works whether or not the visitor is signed in.
+ *
+ * Mobile connections drop and reconnect more often than desktop, and a
+ * reconnect can briefly hand back an empty or from-cache snapshot before the
+ * real one arrives. To avoid the ticker flickering to "no pulls" every time
+ * that happens, we only ever replace known-good data with a non-empty
+ * snapshot, and never clear it out on a transient listener error.
  */
 export const useRecentPulls = (pullLimit = 30) => {
   const [pulls, setPulls] = useState<RecentPull[]>([]);
@@ -61,12 +67,16 @@ export const useRecentPulls = (pullLimit = 30) => {
           })
           .filter((entry): entry is RecentPull => Boolean(entry));
 
-        setPulls(next);
+        // A momentary empty/from-cache snapshot shouldn't wipe out pulls we
+        // already loaded successfully — only accept it if we have nothing
+        // yet, or it actually has data.
+        setPulls((previous) => (next.length > 0 || previous.length === 0 ? next : previous));
         setIsLoading(false);
       },
       (error) => {
         console.error('Failed to subscribe to recent pulls', error);
-        setPulls([]);
+        // Keep whatever we already have rather than clearing it on a
+        // transient network error — the listener will keep retrying.
         setIsLoading(false);
       },
     );

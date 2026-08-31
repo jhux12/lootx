@@ -18,6 +18,10 @@
   --lootx-radius-sm: 8px;
   --lootx-radius-md: 12px;
   --lootx-radius-lg: 20px;
+  /* Single source of truth for the site's orange accent — same shade
+     used on the "Open Free Box" CTA, active filter pills, and active
+     menu items, so it reads as one consistent brand color everywhere. */
+  --bet-orange: #ff4b0a;
 }
 
 html { background: var(--lootx-canvas); }
@@ -252,144 +256,95 @@ body {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
 
-/* Boxes catalog hero */
+/* Boxes page — reskinned to match the new bet-home direction. Light is
+   the default (mirroring the homepage/header), dark restores the
+   original app-wide dark palette via the data-theme override below. */
 .lootx-box-catalog {
   background: var(--lootx-canvas);
 }
 
-.pullz-boxes-hero {
+.bet-boxes-hero {
   position: relative;
-  display: grid;
-  min-height: 410px;
-  grid-template-columns: minmax(0, 0.9fr) minmax(460px, 1.1fr);
+  display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 180px;
   overflow: hidden;
-  padding: 42px 48px;
-  border: 1px solid var(--lootx-line);
+  padding: 32px 36px;
   border-radius: var(--lootx-radius-md);
-  background:
-    linear-gradient(90deg, rgba(19, 21, 29, 0.98) 0%, rgba(19, 21, 29, 0.86) 43%, rgba(19, 21, 29, 0.24) 100%),
-    radial-gradient(circle at 74% 50%, rgba(255, 77, 85, 0.24), transparent 29%),
-    linear-gradient(135deg, #181c28, #13151d 65%);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+  background: linear-gradient(120deg, #181c28, #13151d 65%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
 }
 
-.pullz-boxes-hero-copy {
-  position: relative;
-  z-index: 3;
-  max-width: 650px;
-}
-
-.pullz-boxes-hero-copy h1 {
-  margin: 0 0 18px;
-  font-size: clamp(44px, 4vw, 68px);
+.bet-boxes-hero-eyebrow {
+  margin: 0 0 6px;
+  color: var(--bet-orange);
+  font-size: 12px;
   font-weight: 800;
-  line-height: 0.94;
-  letter-spacing: -0.06em;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.bet-boxes-hero-copy h1 {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 3.4vw, 42px);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
   color: #f7f8fc;
 }
 
-.pullz-boxes-hero-copy h1 span {
-  background: linear-gradient(135deg, #fff 10%, #ff8d4d 48%, #ff4d55 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.pullz-boxes-hero-copy p {
-  max-width: 610px;
+.bet-boxes-hero-sub {
+  max-width: 480px;
   margin: 0;
   color: #9aa2b4;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.55;
 }
 
-.pullz-boxes-hero-art {
-  position: relative;
-  display: grid;
-  min-height: 320px;
-  place-items: center;
-  isolation: isolate;
-}
-
-.pullz-boxes-hero-orbit {
-  position: absolute;
-  width: min(68vw, 460px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-  box-shadow: inset 0 0 90px rgba(255, 77, 85, 0.07), 0 0 90px rgba(255, 77, 85, 0.11);
-  animation: pullz-boxes-orbit-pulse 5.5s ease-in-out infinite;
-}
-
-.pullz-boxes-slab {
-  position: absolute;
+.bet-boxes-hero-art {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 120px;
   object-fit: contain;
-  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
-  will-change: transform;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, 0.4));
 }
 
-.pullz-boxes-slab-left { left: 4%; top: 18%; z-index: 1; width: min(32%, 175px); animation: pullz-boxes-float-left 5.4s ease-in-out infinite; }
-.pullz-boxes-slab-center { z-index: 3; width: min(40%, 220px); animation: pullz-boxes-float-center 5s ease-in-out infinite; }
-.pullz-boxes-slab-right { right: 3%; top: 14%; z-index: 2; width: min(32%, 175px); animation: pullz-boxes-float-right 5.8s ease-in-out infinite; }
-
-.pullz-boxes-hero-platform {
-  position: absolute;
-  z-index: 0;
-  bottom: 1%;
-  width: 380px;
-  height: 105px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(255, 77, 85, 0.38), transparent 68%);
-  filter: blur(8px);
+@media (max-width: 720px) {
+  .bet-boxes-hero { flex-direction: column; align-items: flex-start; gap: 16px; padding: 24px 20px; text-align: left; }
+  .bet-boxes-hero-art { width: 88px; height: 88px; align-self: center; }
 }
 
-.pullz-boxes-particle {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+/* Light theme (default): mirrors the homepage's white/black palette */
+:root[data-theme="light"] .bet-boxes-page,
+:root[data-theme="light"] .bet-boxes-page.lootx-box-catalog {
   background: #fff;
-  box-shadow: 0 0 16px rgba(124, 60, 255, 0.9);
-  opacity: 0.6;
-  animation: pullz-boxes-particle 5.5s ease-in-out infinite;
 }
-
-.pullz-boxes-particle-1 { left: 16%; top: 15%; }
-.pullz-boxes-particle-2 { right: 15%; top: 25%; animation-delay: -1.8s; }
-.pullz-boxes-particle-3 { bottom: 15%; left: 23%; animation-delay: -3.2s; }
-.pullz-boxes-particle-4 { right: 23%; bottom: 19%; animation-delay: -4.1s; }
-
-@keyframes pullz-boxes-float-left { 0%, 100% { transform: translateY(0) rotate(-12deg); } 50% { transform: translateY(-10px) rotate(-10deg); } }
-@keyframes pullz-boxes-float-center { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-14px) scale(1.015); } }
-@keyframes pullz-boxes-float-right { 0%, 100% { transform: translateY(0) rotate(11deg); } 50% { transform: translateY(-9px) rotate(9deg); } }
-@keyframes pullz-boxes-orbit-pulse { 0%, 100% { transform: scale(0.98); opacity: 0.74; } 50% { transform: scale(1.02); opacity: 1; } }
-@keyframes pullz-boxes-particle { 0%, 100% { transform: translateY(0); opacity: 0.35; } 50% { transform: translateY(-14px); opacity: 0.9; } }
-
-@media (max-width: 1050px) {
-  .pullz-boxes-hero { grid-template-columns: 1fr; gap: 12px; padding: 28px 30px 32px; text-align: center; }
-  .pullz-boxes-hero-copy, .pullz-boxes-hero-copy p { margin-inline: auto; }
-  .pullz-boxes-hero-art { order: -1; min-height: 280px; }
-  .pullz-boxes-slab-left { left: 10%; }
-  .pullz-boxes-slab-right { right: 10%; }
+:root[data-theme="light"] .bet-boxes-hero {
+  background: linear-gradient(120deg, #16181c, #050505 70%);
 }
-
-@media (max-width: 640px) {
-  .pullz-boxes-hero { min-height: auto; gap: 8px; padding: 14px 14px 22px; border-radius: 22px; }
-  .pullz-boxes-hero-art { min-height: 210px; }
-  .pullz-boxes-hero-orbit { width: 220px; }
-  .pullz-boxes-slab-left { top: 23%; left: 0; width: 88px; }
-  .pullz-boxes-slab-center { width: 112px; }
-  .pullz-boxes-slab-right { top: 18%; right: 0; width: 88px; }
-  .pullz-boxes-hero-platform { width: 230px; height: 68px; }
-  .pullz-boxes-hero-copy h1 { margin-bottom: 10px; font-size: 38px; letter-spacing: -0.061em; }
-  .pullz-boxes-hero-copy p { font-size: 14px; line-height: 1.5; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pullz-boxes-slab, .pullz-boxes-hero-orbit, .pullz-boxes-particle { animation: none; }
-}
+:root[data-theme="light"] .bet-boxes-page [class*="border-[#2d303d]"],
+:root[data-theme="light"] .bet-boxes-page [class*="border-[#24242c]"] { border-color: #e5e5e7 !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#13151d]"],
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#181c28]"],
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#131318]"],
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#121318]"],
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#24242c]"] { background: #f2f2f4 !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#f6f4f9]"],
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#f2f2f5]"] { color: #050505 !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#c8c8d2]"],
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#7d8091]"],
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#7a7a88]"],
+:root[data-theme="light"] .bet-boxes-page [class*="text-[#9a9aa8]"] { color: #6b6b70 !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="placeholder:text-[#7d8091]"]::placeholder { color: #9a9a9c !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="bg-[#2c2c34]"] { background: #dedee0 !important; }
+:root[data-theme="light"] .bet-boxes-page .border-white\/10 { border-color: #e5e5e7 !important; }
+:root[data-theme="light"] .bet-boxes-page [class*="bg-white/[0.04]"],
+:root[data-theme="light"] .bet-boxes-page [class*="bg-white/[0.03]"] { background: #f2f2f4 !important; }
+:root[data-theme="light"] .bet-boxes-page .text-white { color: #050505 !important; }
+:root[data-theme="light"] .bet-boxes-page .bg-neutral-950\/70 { background: #f7f7f8 !important; }
+:root[data-theme="light"] .bet-boxes-page .border-dashed { border-color: #dedee0 !important; }
 
 /* Light/dark theme toggle. The betting-theme surfaces (header, homepage,
    footer) ship light by default above; this block supplies their dark-mode
@@ -486,6 +441,7 @@ body {
   background:var(--ticker-card-bg);
 }
 .bet-home-ticker-item.is-loading { background:var(--ticker-card-border); animation:bet-ticker-pulse 1.4s ease-in-out infinite; }
+.bet-home-ticker-item.is-broken-image { display:none; }
 .bet-home-ticker-item img { width:100%; height:100%; object-fit:cover; }
 .bet-home-ticker-badge {
   position:absolute; left:4px; top:4px; z-index:2; display:flex; height:20px; width:20px; align-items:center;
@@ -553,3 +509,30 @@ body {
 .pullz-mobile-menu [class*="bg-[linear-gradient(135deg,rgba(32,93,215"] { background:var(--bet-menu-active-bg); color:var(--bet-menu-active-text); box-shadow:none; }
 .pullz-mobile-menu [class*="border-blue-300/15"] { border-color:var(--bet-menu-line); }
 
+/* Login / signup modal chrome — themed like the mobile menu (CSS vars
+   swapped by data-theme). The shared Input component keeps its own
+   dark styling everywhere in the app, including here, since it's used
+   app-wide and re-theming it is a much bigger change than this modal. */
+.bet-auth-modal {
+  --bet-auth-bg:#ffffff; --bet-auth-line:#e5e5e7; --bet-auth-text:#050505; --bet-auth-muted:#6b6b70;
+  --bet-auth-soft:#8a8a8f; --bet-auth-surface:#f2f2f4; --bet-auth-surface-strong:#e5e5e7;
+  background:var(--bet-auth-bg); border-color:var(--bet-auth-line);
+}
+:root[data-theme="dark"] .bet-auth-modal {
+  --bet-auth-bg:#18181b; --bet-auth-line:#2d303d; --bet-auth-text:#f6f4f9; --bet-auth-muted:#9a9ca6;
+  --bet-auth-soft:#7d8091; --bet-auth-surface:#202431; --bet-auth-surface-strong:#262a35;
+}
+.bet-auth-modal [class*="bg-[#18181b]"],
+.bet-auth-modal [class*="bg-[#141417]"] { background:var(--bet-auth-bg) !important; }
+.bet-auth-modal [class*="bg-[#27272a]"],
+.bet-auth-modal [class*="bg-[#323237]"] { background:var(--bet-auth-surface) !important; }
+.bet-auth-modal [class*="bg-neutral-800"],
+.bet-auth-modal [class*="bg-neutral-700"] { background:var(--bet-auth-surface-strong) !important; }
+.bet-auth-modal [class*="bg-white/[0.03]"] { background:var(--bet-auth-surface) !important; }
+.bet-auth-modal [class*="border-white/10"],
+.bet-auth-modal [class*="border-white/5"] { border-color:var(--bet-auth-line) !important; }
+.bet-auth-modal .text-white { color:var(--bet-auth-text) !important; }
+.bet-auth-modal [class*="text-neutral-400"],
+.bet-auth-modal [class*="text-neutral-500"] { color:var(--bet-auth-muted) !important; }
+.bet-auth-modal [class*="text-neutral-300"],
+.bet-auth-modal [class*="text-neutral-200"] { color:var(--bet-auth-soft) !important; }
