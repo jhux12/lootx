@@ -14,20 +14,12 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { usePerformanceMode } from '../src/lib/performance';
 import { useIntentPrefetch } from '../src/lib/prefetch/useIntentPrefetch';
 import type { CaseItem, MysteryBox } from '../types';
+import { BOX_SORT_OPTIONS as SORT_OPTIONS } from '../src/lib/boxSort';
+import type { BoxSortOption as SortOption } from '../src/lib/boxSort';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
-
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'newest' | 'trending';
-
-const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
-  { id: 'featured', label: 'Featured' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'price-asc', label: 'Price: Low to High' },
-  { id: 'price-desc', label: 'Price: High to Low' }
-];
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
