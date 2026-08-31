@@ -16,8 +16,6 @@ type FigmaHomePageProps = {
 
 // This page is the isolated Betting Mobile Figma homepage implementation.
 
-const TRUSTPILOT_LOGO_URL = 'https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png';
-
 const RARITY_ORDER: CaseItem['rarity'][] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
 const getBoxRarity = (box: MysteryBox): CaseItem['rarity'] => {
@@ -225,9 +223,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
           {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another category.</span></div> : null}
         </div>
-        <div className="bet-home-trustpilot">
-          <img src={TRUSTPILOT_LOGO_URL} alt="Trustpilot" loading="lazy" decoding="async" />
-        </div>
+        <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
       <nav className="bet-home-dock" aria-label="Homepage navigation">
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>

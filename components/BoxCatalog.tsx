@@ -14,20 +14,12 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { usePerformanceMode } from '../src/lib/performance';
 import { useIntentPrefetch } from '../src/lib/prefetch/useIntentPrefetch';
 import type { CaseItem, MysteryBox } from '../types';
+import { BOX_SORT_OPTIONS as SORT_OPTIONS } from '../src/lib/boxSort';
+import type { BoxSortOption as SortOption } from '../src/lib/boxSort';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
-
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'newest' | 'trending';
-
-const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
-  { id: 'featured', label: 'Featured' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'price-asc', label: 'Price: Low to High' },
-  { id: 'price-desc', label: 'Price: High to Low' }
-];
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
@@ -544,7 +536,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </section>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#2d303d] bg-[#13151d]/95 backdrop-blur">
+      <div className="bet-boxes-filterbar sticky top-[var(--pullz-header-height,70px)] z-40 w-full backdrop-blur">
         <div className="mx-auto max-w-[1900px] px-4 py-4 sm:px-5 lg:px-8">
           <div className="relative mb-3">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7a7a88]" />
@@ -561,7 +553,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
           <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button type="button" onClick={() => setIsSortOpen(true)} className="flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border border-[#24242c] bg-[#131318] p-1.5 text-center text-[#c8c8d2] transition hover:border-[#3a3a44] hover:text-[#f2f2f5] sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+            <button type="button" onClick={() => setIsSortOpen(true)} className="bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl p-1.5 text-center transition sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
               <ListFilter className="h-6 w-6 text-[#9a9aa8] sm:h-7 sm:w-7" aria-hidden="true" />
               <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
                 {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
@@ -577,7 +569,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
+                  className={`bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
                       ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)] text-white'
                       : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[var(--bet-orange)]/50 hover:text-[#f6f4f9]'

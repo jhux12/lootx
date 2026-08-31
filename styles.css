@@ -495,7 +495,7 @@ body {
 :root[data-theme="dark"] .bet-home-toggle { color:#f6f4f9; }
 :root[data-theme="dark"] .bet-home-toggle i { background:#2d303d; }
 :root[data-theme="dark"] .bet-home-toggle i.is-on { background:var(--bet-orange,#ff4b0a); }
-:root[data-theme="dark"] .bet-home-trustpilot { background:#181c28; border-color:#2d303d; }
+:root[data-theme="dark"] .bet-trustpilot { background:#181c28; border-color:#2d303d; }
 
 :root[data-theme="dark"] .bet-global-header { border-bottom-color:#2d303d; background:rgba(19,21,29,.96); box-shadow:0 12px 34px rgba(0,0,0,.28); }
 :root[data-theme="dark"] .bet-global-header-nav { color:#f6f4f9; background:transparent; }
@@ -520,8 +520,8 @@ body {
 .bet-home-categories button i[class*="fa-"] { font-size:16px; }
 
 /* Trustpilot rating strip below the box list */
-.bet-home-trustpilot { display:flex; justify-content:center; align-items:center; margin-top:28px; padding:12px; border-radius:14px; background:#f7f7f8; }
-.bet-home-trustpilot img { height:18px; width:auto; }
+.bet-trustpilot { display:flex; justify-content:center; align-items:center; margin-top:28px; padding:14px; border-radius:14px; background:#f7f7f8; }
+.bet-trustpilot img { height:26px; width:auto; }
 .bet-home-view-all { display:flex; align-items:center; gap:4px; color:#050505; background:none; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; }
 .bet-home-view-all svg { width:16px; height:16px; stroke-width:3; }
 :root[data-theme="dark"] .bet-home-view-all { color:#f6f4f9; }
