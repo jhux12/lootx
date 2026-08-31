@@ -40,6 +40,7 @@ const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?:
       fetchPriority={isPriority ? 'high' : 'low'}
       decoding="async"
     />
+    <span className="bet-box-tile-name">{box.name}</span>
     {isFreeSignupBox ? (
       <span className="bet-box-tile-free">Free</span>
     ) : (
@@ -177,7 +178,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
                   style={{ background: slide.backgroundColor, color: '#fff' }}
                   onClick={() => handleHeroSlideClick(slide)}
                 >
-                  {slide.text ? <span><strong>{slide.text}</strong></span> : null}
+                  <span><i><ChevronRight /></i><small>Shop now</small>{slide.text ? <strong>{slide.text}</strong> : null}</span>
                   {slide.image ? (
                     <img src={slide.image} alt="" loading="eager" fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" />
                   ) : null}

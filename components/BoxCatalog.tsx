@@ -524,6 +524,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       )}
       <div className="bet-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
         <section className="bet-boxes-hero" aria-labelledby="boxes-hero-title">
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-1" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-2" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-3" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-4" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-5" aria-hidden="true" />
           <div className="bet-boxes-hero-copy">
             <p className="bet-boxes-hero-eyebrow">Pullz Boxes</p>
             <h1 id="boxes-hero-title">Open. Pull. Collect.</h1>
