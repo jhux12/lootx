@@ -18,10 +18,12 @@
   --lootx-radius-sm: 8px;
   --lootx-radius-md: 12px;
   --lootx-radius-lg: 20px;
-  /* Single source of truth for the site's orange accent — same shade
-     used on the "Open Free Box" CTA, active filter pills, and active
-     menu items, so it reads as one consistent brand color everywhere. */
-  --bet-orange: #ff4b0a;
+  /* Single source of truth for the site's accent color — matches the
+     blue used in the header's "Open Free Box" CTA gradient, applied
+     consistently across active filter pills, active menu items, and
+     primary buttons site-wide. (Named --bet-orange for historical
+     reasons; the value itself is the blue accent.) */
+  --bet-orange: #4f7ff4;
 }
 
 html { background: var(--lootx-canvas); }
@@ -161,7 +163,7 @@ body {
 @media (max-width: 720px) { .lootx-figma-home { padding: 10px 12px 96px; } .lootx-figma-metrics { grid-template-columns: repeat(2,1fr); } .lootx-figma-metrics > div:nth-child(2) { border-right: 0; } .lootx-figma-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--lootx-line); } .lootx-figma-metrics > div { padding: 10px 12px; } .lootx-figma-live { height: 88px; } .lootx-figma-live-lead { flex-basis: 76px; } .lootx-figma-live-track button { flex-basis: 100px; } .lootx-figma-promo { margin: 18px auto; padding: 18px; } .lootx-figma-promo img { right: -5%; width: 130px; } .lootx-figma-stage { min-height: 360px; padding: 28px 22px; } .lootx-figma-stage-copy { max-width: 68%; } .lootx-figma-stage p { font-size: 12px; } .lootx-figma-stage > img { right: -8%; width: 44%; } .lootx-figma-case-grid,.lootx-figma-case-grid--four { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; } .lootx-figma-case { min-height: 230px; } .lootx-figma-case-art { height: 150px; } .lootx-figma-footer { grid-template-columns: repeat(2,1fr); gap: 32px 20px; margin-top: 64px; } .lootx-figma-footer-copy { grid-column: 1 / -1; } }
 
 /* Betting Mobile community homepage adaptation */
-.bet-home { --bet-orange:#ff4b0a; width:min(100%,1180px); min-height:100vh; margin:0 auto; padding:52px 42px 130px; border-radius:0 0 36px 36px; background:#fff; color:#050505; }
+.bet-home { width:min(100%,1180px); min-height:100vh; margin:0 auto; padding:52px 42px 130px; border-radius:0 0 36px 36px; background:#fff; color:#050505; }
 .bet-home h1,.bet-home h2,.bet-home strong,.bet-home button { font-family:Inter,ui-sans-serif,sans-serif; }
 .bet-home-header { display:flex; align-items:center; justify-content:space-between; }
 .bet-home-header span { display:block; font-size:22px; font-weight:400; }
@@ -195,9 +197,21 @@ body {
 .bet-box-tile.is-free-signup { border-color:#2abd69; box-shadow:0 0 0 1px rgba(42,189,105,.35); }
 .bet-box-tile.is-free-signup:hover { border-color:#2abd69; box-shadow:0 18px 34px rgba(42,189,105,.2); }
 .bet-box-tile-badge { position:absolute; left:0; top:0; z-index:2; border-radius:0 14px 10px 0; padding:5px 10px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; color:#04140a; background:#2abd69; }
-.bet-box-tile-free { display:inline-flex; border-radius:9px; padding:8px 14px; font-size:13px; font-weight:1000; text-transform:uppercase; letter-spacing:.02em; color:#04140a; background:#2abd69; }
-.bet-box-tile > img { width:100%; height:190px; object-fit:contain; filter:drop-shadow(0 18px 18px rgba(0,0,0,.16)); }
-.bet-box-tile > .inline-flex { justify-content:center; border-radius:9px; padding:8px 14px; color:#050505; background:#f2f2f4; font-size:13px; font-weight:1000; }
+.bet-box-tile-free { display:inline-flex; border-radius:9px; padding:8px 14px; font-size:13px; font-weight:1000; text-transform:uppercase; letter-spacing:.02em; color:#04140a; background:#2abd69; position:relative; z-index:1; }
+.bet-box-tile > img { width:100%; height:190px; object-fit:contain; filter:drop-shadow(0 18px 18px rgba(0,0,0,.16)); position:relative; z-index:1; }
+.bet-box-tile > .inline-flex { justify-content:center; border-radius:9px; padding:8px 14px; color:#050505; background:#f2f2f4; font-size:13px; font-weight:1000; position:relative; z-index:1; }
+
+/* Rarity-colored glow behind each box's artwork, using the box's
+   highest-rarity item — same palette as the live-pulls ticker. */
+.bet-box-tile-glow {
+  position:absolute; top:8%; left:50%; width:78%; aspect-ratio:1; transform:translateX(-50%);
+  border-radius:50%; filter:blur(28px); opacity:.55; pointer-events:none; z-index:0;
+}
+.bet-box-tile.rarity-glow-common .bet-box-tile-glow { background:radial-gradient(circle,#9a9ca6,transparent 70%); }
+.bet-box-tile.rarity-glow-uncommon .bet-box-tile-glow { background:radial-gradient(circle,#2abd69,transparent 70%); }
+.bet-box-tile.rarity-glow-rare .bet-box-tile-glow { background:radial-gradient(circle,#3b82f6,transparent 70%); }
+.bet-box-tile.rarity-glow-epic .bet-box-tile-glow { background:radial-gradient(circle,#8b5cf6,transparent 70%); }
+.bet-box-tile.rarity-glow-legendary .bet-box-tile-glow { background:radial-gradient(circle,#f5b83d,transparent 70%); opacity:.65; }
 .bet-case-card { border:1px solid #dedee0; border-radius:16px; padding:18px; background:#fff; }
 .bet-case-card-head { display:flex; justify-content:space-between; color:#949496; font-size:12px; }
 .bet-case-card-head em { display:flex; align-items:center; gap:6px; color:#050505; font-style:normal; font-weight:900; }
@@ -232,19 +246,42 @@ body {
 :root[data-theme="light"] .bet-global-header-nav button { color:#050505; }
 :root[data-theme="light"] .bet-global-header-nav button:hover { background:#f2f2f4; }
 :root[data-theme="light"] .bet-global-header-nav [class*="bg-[#0c121e]"] { border-color:#e2e2e4; background:#f2f2f4; }
-:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#121a28]"] { border-color:transparent; color:white; background:#ff4b0a; }
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#121a28]"] { border-color:transparent; color:white; background:var(--bet-orange); }
 :root[data-theme="light"] .bet-global-header-nav [class*="text-white"] { color:#050505; }
-:root[data-theme="light"] .bet-global-header-nav [class*="bg-[linear-gradient(135deg,#6225ef"] { color:white; background:#ff4b0a; box-shadow:none; }
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[linear-gradient(135deg,#6225ef"] { color:white; background:var(--bet-orange); box-shadow:none; }
+/* Sign-in button, dark-mode toggle, and the selected desktop nav tab
+   all reused the same dark surface tokens — none had a light override. */
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#202431]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#101827]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#263046]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#111a2a]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#182337]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#0f1517]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-[#0b0e15]"] { background:#f2f2f4 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="border-[#2d303d]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="border-[#263046]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="border-blue-300/20"] { border-color:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="text-[#7d8091]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="text-[#f6f4f9]"] { color:#050505 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="text-[#7dd3fc]"],
+:root[data-theme="light"] .bet-global-header-nav [class*="text-blue-100"] { color:var(--bet-orange) !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="hover:bg-[#162237]"]:hover,
+:root[data-theme="light"] .bet-global-header-nav [class*="hover:bg-[#27272a]"]:hover { background:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="border-white/10"] { border-color:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="bg-white/[0.045]"] { background:#f2f2f4 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="text-gray-200"] { color:#050505 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="hover:text-white"]:hover { color:#050505 !important; }
+:root[data-theme="light"] .bet-global-header-nav [class*="shadow-[inset_3px_0_0_#ff4d55"] { box-shadow:inset 3px 0 0 var(--bet-orange),inset 0 1px 0 rgba(0,0,0,0.03) !important; }
 .bet-mobile-nav { overflow:visible; border:0; border-radius:22px; background:#050505; box-shadow:0 18px 44px rgba(0,0,0,.28); }
 .bet-mobile-nav nav > div button { background:transparent; }
 .bet-mobile-nav nav > div button[aria-current="page"] { color:#fff; }
-.bet-mobile-nav nav > div button[aria-current="page"] svg { color:#ff4b0a; fill:#ff4b0a; fill-opacity:.12; }
+.bet-mobile-nav nav > div button[aria-current="page"] svg { color:var(--bet-orange); fill:var(--bet-orange); fill-opacity:.12; }
 .bet-site-footer { border-top:1px solid #e5e5e7; color:#737373; background:#fff; }
 .bet-site-footer [class*="text-white"],.bet-site-footer button:hover { color:#050505; }
 .bet-site-footer [class*="text-slate"] { color:#737373; }
 .bet-site-footer a { border-color:#e5e5e7; color:#050505; background:#f2f2f4; }
-.bet-site-footer a:hover { border-color:#ff4b0a; color:#fff; background:#ff4b0a; }
-.bet-site-footer button:focus-visible { --tw-ring-color:#ff4b0a; }
+.bet-site-footer a:hover { border-color:var(--bet-orange); color:#fff; background:var(--bet-orange); }
+.bet-site-footer button:focus-visible { --tw-ring-color:var(--bet-orange); }
 
 @media (max-width: 768px), (prefers-reduced-motion: reduce) {
   html.pullz-tab-hidden .ticker-animation:not(.live-wins-ticker),
@@ -483,14 +520,14 @@ body {
 .pullz-mobile-menu {
   --bet-menu-bg:#ffffff; --bet-menu-line:#e5e5e7; --bet-menu-text:#050505; --bet-menu-muted:#6b6b70;
   --bet-menu-hover:rgba(5,5,5,0.05); --bet-menu-card-bg:#f2f2f4; --bet-menu-card-border:#e5e5e7;
-  --bet-menu-active-bg:rgba(255,75,10,0.12); --bet-menu-active-text:#ff4b0a; --bet-menu-icon:#ff4b0a;
+  --bet-menu-active-bg:rgba(79,127,244,0.14); --bet-menu-active-text:var(--bet-orange); --bet-menu-icon:var(--bet-orange);
   background:var(--bet-menu-bg); border-top:1px solid var(--bet-menu-line); color:var(--bet-menu-text);
   box-shadow:0 20px 45px rgba(0,0,0,0.16);
 }
 :root[data-theme="dark"] .pullz-mobile-menu {
   --bet-menu-bg:#14161d; --bet-menu-line:#2d303d; --bet-menu-text:#f6f4f9; --bet-menu-muted:#9a9ca6;
   --bet-menu-hover:rgba(255,255,255,0.06); --bet-menu-card-bg:#1c1f28; --bet-menu-card-border:#2d303d;
-  --bet-menu-active-bg:rgba(255,75,10,0.18); --bet-menu-active-text:#ff8a5c; --bet-menu-icon:#ff8a5c;
+  --bet-menu-active-bg:rgba(79,127,244,0.22); --bet-menu-active-text:#8db2ff; --bet-menu-icon:#8db2ff;
   box-shadow:0 20px 45px rgba(0,0,0,0.5);
 }
 .pullz-mobile-menu [class*="border-white/10"] { border-color:var(--bet-menu-card-border); }
@@ -536,3 +573,14 @@ body {
 .bet-auth-modal [class*="text-neutral-500"] { color:var(--bet-auth-muted) !important; }
 .bet-auth-modal [class*="text-neutral-300"],
 .bet-auth-modal [class*="text-neutral-200"] { color:var(--bet-auth-soft) !important; }
+/* The shared Input component hardcodes dark text/background with
+   !important flags (used app-wide). Element selectors here have
+   higher specificity than its single-class utility rules, so this
+   safely overrides just the auth modal without touching Input.tsx
+   or any other page that uses it. This was the actual cause of
+   "can't see what I'm typing" in light mode — white-on-white text. */
+.bet-auth-modal input,
+.bet-auth-modal textarea { color:var(--bet-auth-text) !important; background:var(--bet-auth-surface) !important; border-color:var(--bet-auth-line) !important; }
+.bet-auth-modal input::placeholder,
+.bet-auth-modal textarea::placeholder { color:var(--bet-auth-muted) !important; opacity:1; }
+.bet-auth-modal input:read-only { color:var(--bet-auth-muted) !important; background:var(--bet-auth-surface) !important; }

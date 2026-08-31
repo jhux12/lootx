@@ -47,6 +47,7 @@ import {
 } from "../src/lib/quests";
 import { UserAvatar } from "./UserAvatar";
 import { ThemeToggle } from "./ThemeToggle";
+import { useTheme } from "../src/lib/theme/useTheme";
 import { resolveUserDisplayName } from "../utils/userIdentity";
 import { lockPageScroll } from "../utils/scrollLock";
 
@@ -69,7 +70,7 @@ const drawerCardClass =
   "flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-cyan-300/25 hover:bg-white/[0.075] active:translate-y-0";
 
 const desktopNavButtonBaseClass =
-  "group relative flex h-10 items-center justify-center rounded-lg border px-4 text-[13px] font-semibold xl:px-5 xl:text-[14px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13151d]";
+  "group relative flex h-9 items-center justify-center rounded-lg border px-3 text-[13px] font-semibold xl:px-3.5 xl:text-[14px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#13151d]";
 
 const desktopNavButtonClass = `${desktopNavButtonBaseClass} border-transparent text-[#7d8091] hover:border-[#2d303d] hover:bg-[#202431] hover:text-[#f6f4f9]`;
 
@@ -82,7 +83,7 @@ const desktopMenuItemClass =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-white/80 transition-all duration-200 hover:bg-white/[0.07] hover:text-white";
 
 const utilityButtonClass =
-  "relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[#2d303d] bg-[#202431] text-[#7d8091] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-200 hover:border-[#ff4d55]/45 hover:text-[#f6f4f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60";
+  "relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#2d303d] bg-[#202431] text-[#7d8091] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)] transition-all duration-200 hover:border-[#ff4d55]/45 hover:text-[#f6f4f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff4d55]/60";
 
 type RewardsSettingsData = Record<string, unknown> | undefined;
 
@@ -116,6 +117,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
     boxes,
   } = useGame();
   const { playSound } = useSound();
+  const { theme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
   const [questReadyCount, setQuestReadyCount] = useState(0);
@@ -532,6 +534,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 >
                   <BrandLockup
                     showText={false}
+                    variant={theme === "light" ? "light" : "dark"}
                     logoClassName="h-8 w-auto sm:h-9 lg:h-[42px]"
                   />
                 </button>
@@ -539,7 +542,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 {view.type === 'SPIN' && <div className="hidden items-center gap-2 lg:flex xl:gap-3">{[
                   ['how', 'How It Works'], ['featured', 'Featured Pulls'], ['winners', 'Winners'], ['faq', 'FAQ']
                 ].map(([id, label]) => <button key={id} type="button" onClick={() => scrollToSpinSection(id)} className={desktopNavButtonClass}>{label}</button>)}</div>}
-                <div className={`${view.type === 'SPIN' ? 'hidden' : 'hidden items-center gap-2 lg:flex xl:gap-3'}`}>
+                <div className={`${view.type === 'SPIN' ? 'hidden' : 'hidden items-center gap-1 lg:flex xl:gap-1.5'}`}>
                   <button
                     type="button"
                     onClick={() => navigate("HOME")}
@@ -591,34 +594,34 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                 </div>
               </div>
 
-              <div className="relative z-10 flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[360px]">
+              <div className="relative z-10 flex min-h-[38px] min-w-[132px] shrink-0 items-center justify-end gap-1.5 sm:min-w-[148px] sm:gap-2 lg:min-w-0 xl:min-w-[320px]">
                 {!authInitialized ? (
                   <HeaderSkeleton />
                 ) : isAuthenticated ? (
                   <>
-                    <div className="hidden items-center gap-2 lg:flex xl:gap-3">
+                    <div className="hidden items-center gap-2 lg:flex">
                       <div
-                        className={`relative min-w-[126px] xl:min-w-[142px] shrink-0 overflow-hidden rounded-[12px] border border-[#263046]/80 bg-[#0c121e]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === "up" ? "ring-1 ring-emerald-400/35" : balanceTone === "down" ? "ring-1 ring-red-400/35" : ""}`}
+                        className={`relative min-w-[112px] xl:min-w-[126px] shrink-0 overflow-hidden rounded-[10px] border border-[#263046]/80 bg-[#0c121e]/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${balanceTone === "up" ? "ring-1 ring-emerald-400/35" : balanceTone === "down" ? "ring-1 ring-red-400/35" : ""}`}
                       >
                         <span
                           aria-hidden="true"
                           className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(99,102,241,0.12),rgba(59,130,246,0.08),rgba(255,255,255,0.015))]"
                         />
-                        <div className="relative z-10 flex h-11 items-center justify-between gap-2 px-3 pr-2 xl:gap-3 xl:px-4">
+                        <div className="relative z-10 flex h-9 items-center justify-between gap-2 px-2.5 pr-1.5 xl:gap-2.5 xl:px-3">
                           <CoinAmount
                             amount={balance}
-                            className="min-w-[76px] text-[14px] xl:min-w-[90px] xl:text-[15px] font-semibold leading-none tracking-tight text-white"
-                            iconClassName="h-5 w-5"
-                            textClassName="min-w-[52px] xl:min-w-[62px] text-right tabular-nums"
+                            className="min-w-[64px] text-[13px] xl:min-w-[76px] xl:text-[14px] font-semibold leading-none tracking-tight text-white"
+                            iconClassName="h-4 w-4"
+                            textClassName="min-w-[46px] xl:min-w-[54px] text-right tabular-nums"
                             formatOptions={{ maximumFractionDigits: 0 }}
                           />
                           <button
                             type="button"
                             onClick={openTopUp}
-                            className="flex h-8 w-8 items-center justify-center rounded-[10px] border border-white/10 bg-[#121a28] text-white shadow-sm transition-all duration-200 hover:bg-[#182337] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                            className="flex h-7 w-7 items-center justify-center rounded-[8px] border border-white/10 bg-[#121a28] text-white shadow-sm transition-all duration-200 hover:bg-[#182337] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                             aria-label="Top up"
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
@@ -638,36 +641,36 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                       </button>
                     </div>
 
-                    <div className="hidden items-center gap-2 lg:flex xl:gap-3">
+                    <div className="hidden items-center gap-1.5 lg:flex xl:gap-2">
                       {user.isAdmin && (
                         <button
                           onClick={() => navigate("ADMIN")}
-                          className="hidden h-10 items-center gap-2 rounded-[12px] border border-blue-400/20 bg-blue-500/10 px-3 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white xl:flex"
+                          className="hidden h-9 items-center gap-1.5 rounded-[10px] border border-blue-400/20 bg-blue-500/10 px-2.5 text-xs font-bold uppercase tracking-wide text-blue-200 transition-all duration-200 hover:border-blue-300/40 hover:bg-[#205DD7] hover:text-white xl:flex"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
                           Admin
                         </button>
                       )}
                       <span
-                        className="h-10 w-px bg-[#263046]/85"
+                        className="h-8 w-px bg-[#263046]/85"
                         aria-hidden="true"
                       />
                       <div className="relative flex items-center">
                         <button
                           type="button"
                           onClick={() => navigate("PROFILE")}
-                          className="flex h-11 items-center gap-2 rounded-[12px] px-1.5 pr-2 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
+                          className="flex h-9 items-center gap-1.5 rounded-[10px] px-1 pr-1.5 transition-all duration-200 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/60"
                         >
                           <UserAvatar
                             user={user}
-                            className="h-9 w-9 rounded-full object-cover"
-                            initialsClassName="text-sm"
+                            className="h-7 w-7 rounded-full object-cover"
+                            initialsClassName="text-xs"
                           />
-                          <span className="hidden max-w-[82px] truncate text-[15px] font-semibold text-white/92 xl:inline xl:max-w-[120px]">
+                          <span className="hidden max-w-[72px] truncate text-[14px] font-semibold text-white/92 xl:inline xl:max-w-[100px]">
                             {resolvedDisplayName}
                           </span>
                           <ChevronDown
-                            className="hidden h-4 w-4 text-white/68 xl:block"
+                            className="hidden h-3.5 w-3.5 text-white/68 xl:block"
                             aria-hidden="true"
                           />
                         </button>
@@ -697,7 +700,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                     </div>
                   </>
                 ) : (
-                  <div className="hidden items-center gap-2 lg:flex">
+                  <div className="hidden items-center gap-1.5 lg:flex">
                     <button
                       type="button"
                       onClick={handleSignIn}
@@ -767,7 +770,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`pullz-menu-backdrop fixed inset-x-0 bottom-[calc(var(--pullz-mobile-bottom-nav-height,72px)+var(--pullz-viewport-bottom-offset,0px))] z-[230] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
+          className={`pullz-menu-backdrop fixed inset-x-0 bottom-0 z-[230] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
             isSticky ? "top-[var(--pullz-header-height)]" : "top-0"
           } ${isMobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`}
           aria-label="Close menu overlay"
@@ -787,7 +790,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           aria-label="Mobile navigation menu"
         >
           <div className="overflow-hidden">
-            <div className="pullz-mobile-menu max-h-[calc(100dvh-var(--pullz-header-height,72px)-24px)] overflow-y-auto overscroll-contain rounded-b-[22px] px-4 pb-4 pt-3 backdrop-blur-2xl">
+            <div className="pullz-mobile-menu max-h-[calc(100dvh-var(--pullz-header-height,72px)-16px)] overflow-y-auto overscroll-contain rounded-b-[22px] px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl">
               <div className="mb-4 flex w-full items-center justify-between gap-3">
                 <button
                   type="button"

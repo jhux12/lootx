@@ -95,7 +95,7 @@ export const HomeHeroSlidesEditor: React.FC = () => {
                       className="min-w-0 flex-1 bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                     />
                   </div>
-                  {!hasValidColor && <p className="mt-1 text-[10px] text-amber-400">Enter a valid hex color, e.g. #ff4b0a</p>}
+                  {!hasValidColor && <p className="mt-1 text-[10px] text-amber-400">Enter a valid hex color, e.g. #4f7ff4</p>}
                 </div>
                 <div>
                   <label className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Image URL</label>

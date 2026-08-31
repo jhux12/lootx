@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Boxes, ChevronRight, Flame, Sparkles, X } from 'lucide-react';
-import type { HomeHeroSlide, MysteryBox } from '../../types';
+import type { CaseItem, HomeHeroSlide, MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { COIN_ICON } from '../../constants';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
@@ -18,9 +18,21 @@ type FigmaHomePageProps = {
 
 const TRUSTPILOT_LOGO_URL = 'https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png';
 
+const RARITY_ORDER: CaseItem['rarity'][] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+const getBoxRarity = (box: MysteryBox): CaseItem['rarity'] => {
+  if (!box.items?.length) return 'common';
+  return box.items.reduce<CaseItem['rarity']>((highest, item) => {
+    const itemRank = RARITY_ORDER.indexOf(item.rarity);
+    const highestRank = RARITY_ORDER.indexOf(highest);
+    return itemRank > highestRank ? item.rarity : highest;
+  }, 'common');
+};
+
 const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?: boolean; isPriority?: boolean }> = React.memo(({ box, onOpen, isFreeSignupBox, isPriority }) => (
-  <button type="button" className={`bet-box-tile${isFreeSignupBox ? ' is-free-signup' : ''}`} onClick={onOpen} aria-label={`Open ${box.name}`}>
+  <button type={'button'} className={`bet-box-tile rarity-glow-${getBoxRarity(box)}${isFreeSignupBox ? ' is-free-signup' : ''}`} onClick={onOpen} aria-label={`Open ${box.name}`}>
     {isFreeSignupBox && <span className="bet-box-tile-badge">Sign-Up Bonus</span>}
+    <span className="bet-box-tile-glow" aria-hidden="true" />
     <img
       src={box.image}
       alt=""
@@ -98,11 +110,15 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   // Signed-in users already have their own claim flows for the free
   // sign-up box (header tooltip, profile, etc.) — keep it out of the
   // general list once they're logged in. Signed-out visitors still see
-  // it here, called out as a sign-up bonus rather than a regular box.
-  const visibleBoxes = useMemo(
-    () => (isAuthenticated ? boxes.filter((box) => !box.isDaily) : boxes),
-    [boxes, isAuthenticated],
-  );
+  // it here, called out as a sign-up bonus, and pinned first so it's
+  // the first thing a new visitor notices.
+  const nonDailyBoxes = useMemo(() => boxes.filter((box) => !box.isDaily), [boxes]);
+
+  const visibleBoxes = useMemo(() => {
+    if (isAuthenticated) return nonDailyBoxes;
+    const freeBox = boxes.find((box) => box.isDaily);
+    return freeBox ? [freeBox, ...nonDailyBoxes] : boxes;
+  }, [boxes, isAuthenticated, nonDailyBoxes]);
 
   const filteredBoxes = useMemo(() => visibleBoxes.filter((box) => {
     if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
@@ -110,7 +126,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
     return true;
   }), [balance, category, showAffordableOnly, visibleBoxes]);
 
-  const promoBoxes = visibleBoxes.slice(0, 3);
+  const promoBoxes = nonDailyBoxes.slice(0, 3);
   const heroSlides = stripeSettings.homeHeroSlides;
   const hasCustomHeroSlides = heroSlides.length > 0;
 
