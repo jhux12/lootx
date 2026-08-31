@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Boxes, ChevronRight, CircleEllipsis, Flame, Search, Sparkles, WalletCards } from 'lucide-react';
+import { Boxes, ChevronRight, CircleEllipsis, Flame, ListFilter, Search, Sparkles, WalletCards } from 'lucide-react';
 import type { MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
 import { useAuth, useBoxes, useUI, useWallet } from '../../context/GameContext';
 import { getBoxTags, normalizeBoxTag } from '../../utils/boxTags';
+import { LiveTicker } from '../../components/LiveTicker';
+import { BOX_SORT_OPTIONS, BoxSortOption, sortBoxes } from '../lib/boxSort';
 
 type FigmaHomePageProps = {
   boxes: MysteryBox[];
@@ -29,6 +31,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [affordableOnly, setAffordableOnly] = useState(false);
+  const [sortOption, setSortOption] = useState<BoxSortOption>('featured');
   const categoryItems = useMemo(() => {
     const counts = new Map<string, number>();
     boxes.forEach((box) => getBoxTags(box).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
@@ -39,12 +42,12 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         label: stripeSettings.boxTagLabels[id] || id.split(/[-_\s]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
       }))];
   }, [boxes, stripeSettings.boxTagLabels]);
-  const filteredBoxes = useMemo(() => boxes.filter((box) => {
+  const filteredBoxes = useMemo(() => sortBoxes(boxes.filter((box) => {
     if (query && !box.name.toLowerCase().includes(query.toLowerCase())) return false;
     if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
     if (affordableOnly && (!isAuthenticated || toCoins(box.price, PRICE_UNIT_MODE) > balance)) return false;
     return true;
-  }), [affordableOnly, balance, boxes, category, isAuthenticated, query]);
+  }), sortOption), [affordableOnly, balance, boxes, category, isAuthenticated, query, sortOption]);
   const promoBoxes = boxes.slice(0, 3);
 
   return (
@@ -60,9 +63,11 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
         </div>
       </section>
+      <section className="bet-home-live" aria-label="Recent live pulls"><LiveTicker /></section>
       <section className="bet-home-events">
         <div className="bet-home-events-title"><h2>Top Boxes</h2><button type="button" className={affordableOnly ? 'is-enabled' : ''} onClick={() => setAffordableOnly((value) => !value)} aria-pressed={affordableOnly}><span>Enough coins to open</span><i /></button></div>
         <div className="bet-home-categories">
+          <label className="bet-home-sort"><ListFilter aria-hidden="true" /><span>{BOX_SORT_OPTIONS.find((option) => option.id === sortOption)?.label}</span><select value={sortOption} onChange={(event) => setSortOption(event.target.value as BoxSortOption)} aria-label="Sort boxes">{BOX_SORT_OPTIONS.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label>
           {categoryItems.map(({ id, label }) => <button type="button" key={id} className={category === id ? 'is-active' : ''} onClick={() => setCategory(id)}><Boxes aria-hidden="true" />{label}</button>)}
         </div>
         <div className="bet-home-event-list">
@@ -75,7 +80,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>
         <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Boxes</span></button>
         <button type="button" onClick={() => isAuthenticated ? setView({ type: 'PROFILE' }) : openAuthModal('login')}><WalletCards /><span>{isAuthenticated ? <CoinAmount amount={balance} animated={false} formatOptions={{ maximumFractionDigits: 0 }} iconClassName="h-3 w-3" /> : '— —'}</span></button>
-        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('pullz:open-mobile-menu'))}><CircleEllipsis /><span>More</span></button>
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('pullz:toggle-mobile-menu'))}><CircleEllipsis /><span>More</span></button>
       </nav>
     </main>
   );
