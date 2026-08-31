@@ -216,7 +216,7 @@ export const ReferralsPage: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <div className="pullz-legacy-theme mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="rounded-3xl border border-white/10 bg-[#161b1f] p-8 text-center sm:p-12">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">{settings.heroBadge}</p>
           <h1 className="mb-3 flex flex-wrap items-center justify-center gap-3 text-3xl font-black text-white sm:text-5xl">
@@ -238,7 +238,7 @@ export const ReferralsPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="pullz-legacy-theme mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <button
         type="button"
         onClick={() => window.history.back()}

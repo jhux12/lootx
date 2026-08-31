@@ -720,6 +720,9 @@ body {
 .pullz-legacy-theme [class*="bg-[#1b2228]"],
 .pullz-legacy-theme [class*="bg-[#101827]"],
 .pullz-legacy-theme [class*="bg-[#0f1522]"],
+.pullz-legacy-theme [class*="bg-[#080c16]"],
+.pullz-legacy-theme [class*="bg-[#131825]"],
+.pullz-legacy-theme [class*="bg-[#101520]"],
 .pullz-legacy-theme[class*="#05060a"] { background:var(--pullz-legacy-surface) !important; }
 .pullz-legacy-theme [class*="bg-[#202830]"],
 .pullz-legacy-theme [class*="bg-[#20262b]"] { background:var(--pullz-legacy-surface-strong) !important; }
