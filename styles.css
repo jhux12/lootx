@@ -821,9 +821,10 @@ body {
 .pullz-dark-chip[class*="text-white"] { color:#fff !important; }
 .pullz-dark-chip [class*="text-gray-200"] { color:#e5e7eb !important; }
 
-/* "Refer a Friend" — always white with an animated blue gradient
-   border, regardless of theme, so it reads as a distinct standout CTA
-   on both light and dark. */
+/* "Refer a Friend" — white with an animated blue gradient border in
+   light mode, inverted to a dark card with the same animated border
+   in dark mode, so it always reads as a standout CTA that still fits
+   the page it's on. */
 .pullz-refer-friend-btn { position:relative; isolation:isolate; background:#fff; color:#0b1220; border-radius:12px; }
 .pullz-refer-friend-btn::before {
   content:""; position:absolute; inset:0; z-index:-1; border-radius:12px;
@@ -833,6 +834,13 @@ body {
 .pullz-refer-friend-btn::after { content:""; position:absolute; inset:2px; z-index:-1; border-radius:10px; background:#fff; }
 @keyframes pullz-refer-border-flow { to { background-position:300% 50%; } }
 @media (prefers-reduced-motion: reduce) { .pullz-refer-friend-btn::before { animation:none; } }
+
+:root[data-theme="dark"] .pullz-refer-friend-btn { color:#f6f4f9; }
+:root[data-theme="dark"] .pullz-refer-friend-btn::after { background:#14161d; }
+:root[data-theme="dark"] .pullz-refer-friend-btn [class*="text-[#0b1220]"] { color:#f6f4f9 !important; }
+:root[data-theme="dark"] .pullz-refer-friend-btn [class*="text-[#5b6472]"] { color:#9a9ca6 !important; }
+:root[data-theme="dark"] .pullz-refer-friend-btn [class*="bg-blue-50"] { background:#1c2536 !important; }
+:root[data-theme="dark"] .pullz-refer-friend-btn [class*="border-blue-200/40"] { border-color:rgba(125,211,252,.35) !important; }
 
 /* Case-opening page: the spinner reel and prize-reveal card stay
    intentionally dark in both themes (a deliberate "spotlight" moment,
