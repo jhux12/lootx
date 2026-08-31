@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Boxes, ChevronRight, CircleEllipsis, Flame, Gift, Search, Sparkles, Trophy, WalletCards } from 'lucide-react';
+import { Boxes, ChevronRight, CircleEllipsis, Flame, Search, Sparkles, WalletCards } from 'lucide-react';
 import type { MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { PRICE_UNIT_MODE, toCoins } from '../../utils/coins';
-import { useAuth, useUI } from '../../context/GameContext';
+import { useAuth, useBoxes, useUI, useWallet } from '../../context/GameContext';
+import { getBoxTags, normalizeBoxTag } from '../../utils/boxTags';
 
 type FigmaHomePageProps = {
   boxes: MysteryBox[];
@@ -12,13 +13,6 @@ type FigmaHomePageProps = {
 };
 
 // This page is the isolated Betting Mobile Figma homepage implementation.
-
-const categoryItems = [
-  { id: 'all', label: 'All boxes', icon: Boxes },
-  { id: 'free', label: 'Free', icon: Gift },
-  { id: 'popular', label: 'Popular', icon: Flame },
-  { id: 'premium', label: 'Premium', icon: Trophy },
-] as const;
 
 const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void }> = ({ box, onOpen }) => (
   <button type="button" className="bet-box-tile" onClick={onOpen} aria-label={`Open ${box.name}`}>
@@ -29,15 +23,28 @@ const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void }> = ({ box, onOpe
 
 export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, onViewAllBoxes }) => {
   const { isAuthenticated, openAuthModal } = useAuth();
+  const { stripeSettings } = useBoxes();
+  const { balance } = useWallet();
   const { setView } = useUI();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<(typeof categoryItems)[number]['id']>('all');
+  const [category, setCategory] = useState('all');
+  const [affordableOnly, setAffordableOnly] = useState(false);
+  const categoryItems = useMemo(() => {
+    const counts = new Map<string, number>();
+    boxes.forEach((box) => getBoxTags(box).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
+    return [{ id: 'all', label: 'All boxes' }, ...Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => ({
+        id,
+        label: stripeSettings.boxTagLabels[id] || id.split(/[-_\s]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+      }))];
+  }, [boxes, stripeSettings.boxTagLabels]);
   const filteredBoxes = useMemo(() => boxes.filter((box) => {
     if (query && !box.name.toLowerCase().includes(query.toLowerCase())) return false;
-    if (category === 'free') return Boolean(box.isDaily);
-    if (category === 'premium') return Number(box.price) >= Math.max(...boxes.map((entry) => Number(entry.price) || 0)) * 0.6;
+    if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
+    if (affordableOnly && (!isAuthenticated || toCoins(box.price, PRICE_UNIT_MODE) > balance)) return false;
     return true;
-  }), [boxes, category, query]);
+  }), [affordableOnly, balance, boxes, category, isAuthenticated, query]);
   const promoBoxes = boxes.slice(0, 3);
 
   return (
@@ -54,20 +61,21 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
         </div>
       </section>
       <section className="bet-home-events">
-        <div className="bet-home-events-title"><h2>Top Boxes</h2><span>LIVE <i /></span></div>
+        <div className="bet-home-events-title"><h2>Top Boxes</h2><button type="button" className={affordableOnly ? 'is-enabled' : ''} onClick={() => setAffordableOnly((value) => !value)} aria-pressed={affordableOnly}><span>Enough coins to open</span><i /></button></div>
         <div className="bet-home-categories">
-          {categoryItems.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={category === id ? 'is-active' : ''} onClick={() => setCategory(id)}><Icon aria-hidden="true" />{label}</button>)}
+          {categoryItems.map(({ id, label }) => <button type="button" key={id} className={category === id ? 'is-active' : ''} onClick={() => setCategory(id)}><Boxes aria-hidden="true" />{label}</button>)}
         </div>
         <div className="bet-home-event-list">
           {filteredBoxes.slice(0, 12).map((box) => <BoxTile key={box.id} box={box} onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))} />)}
           {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another search or category.</span></div> : null}
         </div>
+        <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
       <nav className="bet-home-dock" aria-label="Homepage navigation">
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>
         <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Boxes</span></button>
-        <button type="button" onClick={() => isAuthenticated ? setView({ type: 'PROFILE' }) : openAuthModal('login')}><WalletCards /><span>Wallet</span></button>
-        <button type="button" onClick={() => setView({ type: 'BONUSES' })}><CircleEllipsis /><span>More</span></button>
+        <button type="button" onClick={() => isAuthenticated ? setView({ type: 'PROFILE' }) : openAuthModal('login')}><WalletCards /><span>{isAuthenticated ? <CoinAmount amount={balance} animated={false} formatOptions={{ maximumFractionDigits: 0 }} iconClassName="h-3 w-3" /> : '— —'}</span></button>
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('pullz:open-mobile-menu'))}><CircleEllipsis /><span>More</span></button>
       </nav>
     </main>
   );
