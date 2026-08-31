@@ -11,6 +11,7 @@ export const LiveTicker: React.FC = () => {
   const { items, users } = useGame();
   const tickerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const lastDropsRef = useRef<LiveDrop[]>([]);
 
   useEffect(() => {
     const node = tickerRef.current;
@@ -69,7 +70,14 @@ export const LiveTicker: React.FC = () => {
             rarity: item.rarity
           }));
 
-    return mapped.length ? [...mapped, ...mapped, ...mapped] : [];
+    if (mapped.length) {
+      const repeated = [...mapped, ...mapped, ...mapped];
+      lastDropsRef.current = repeated;
+      return repeated;
+    }
+    // Mobile auth/network reconnects can briefly emit an empty snapshot.
+    // Keep the last successful rail instead of flashing back to an empty state.
+    return lastDropsRef.current;
   }, [items, users]);
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
@@ -83,10 +91,10 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div ref={tickerRef} className="relative w-full h-16 sm:h-20 bg-[#0b0f17] overflow-hidden border border-white/5 rounded-2xl flex items-center">
+    <div ref={tickerRef} className="live-pulls-ticker relative w-full h-16 sm:h-20 overflow-hidden rounded-2xl flex items-center" aria-live="off">
       {/* Gradient fade overlays */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
+      <div className="live-pulls-fade live-pulls-fade-left" />
+      <div className="live-pulls-fade live-pulls-fade-right" />
 
       <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
         {drops.length === 0 ? (
@@ -100,7 +108,7 @@ export const LiveTicker: React.FC = () => {
             key={`${drop.id}-${idx}`} 
             className={`
               group flex-shrink-0 w-40 h-12 rounded-xl flex items-center p-2 gap-3 min-w-0
-              border border-white/5 bg-[#101521] transition-all hover:scale-[1.02] hover:border-white/15 cursor-pointer
+              live-pulls-card transition-all hover:scale-[1.02] cursor-pointer
               ${getRarityColor(drop.rarity)}
             `}
           >
