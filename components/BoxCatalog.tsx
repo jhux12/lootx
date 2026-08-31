@@ -243,11 +243,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     searchQuery.trim().length > 0 ||
     showAffordableOnly;
 
+  const hasUnclaimedFreeBox = !isAuthenticated || !user.lastFreeBoxClaim;
+
   const catalogModels = useMemo(
     () => boxes
-      .filter((box) => (!box.isDaily || !isAuthenticated) && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .filter((box) => (!box.isDaily || hasUnclaimedFreeBox) && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
       .map(createCatalogModel),
-    [boxes, isAuthenticated]
+    [boxes, hasUnclaimedFreeBox]
   );
 
   const isLoadingBoxes = catalogLoading && boxes.length === 0;
@@ -286,7 +288,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     });
   }, [activeCategory, balance, catalogModels, normalizedSearchQuery, showAffordableOnly]);
 
-  const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
+  const sortedFilteredBoxes = useMemo(() => {
+    const sorted = getSortedBoxes(filteredBoxes, sortOption);
+    if (!hasUnclaimedFreeBox) return sorted;
+    // Pin the free sign-up box to the front regardless of sort order,
+    // as long as it's still unclaimed and matches the active filters.
+    const freeBoxIndex = sorted.findIndex((model) => model.box.isDaily);
+    if (freeBoxIndex <= 0) return sorted;
+    const freeBoxModel = sorted[freeBoxIndex];
+    return [freeBoxModel, ...sorted.slice(0, freeBoxIndex), ...sorted.slice(freeBoxIndex + 1)];
+  }, [filteredBoxes, hasUnclaimedFreeBox, sortOption]);
 
   const groupedBoxes = useMemo(() => sortedFilteredBoxes, [sortedFilteredBoxes]);
   const visibleBoxes = useMemo(() => groupedBoxes.slice(0, visibleBoxCount), [groupedBoxes, visibleBoxCount]);

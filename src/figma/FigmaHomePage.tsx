@@ -49,7 +49,7 @@ const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?:
 BoxTile.displayName = 'BoxTile';
 
 export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, onViewAllBoxes }) => {
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isAuthenticated, openAuthModal, user } = useAuth();
   const { balance } = useWallet();
   const { stripeSettings } = useBoxes();
   const { setView, setShowTopUpModal } = useUI();
@@ -105,18 +105,18 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
     [categories],
   );
 
-  // Signed-in users already have their own claim flows for the free
-  // sign-up box (header tooltip, profile, etc.) — keep it out of the
-  // general list once they're logged in. Signed-out visitors still see
-  // it here, called out as a sign-up bonus, and pinned first so it's
-  // the first thing a new visitor notices.
+  // Show the free sign-up box pinned first whenever it's actually still
+  // available to claim — for signed-out visitors (as a sign-up bonus
+  // pitch) and for signed-in users who haven't opened it yet. Once a
+  // signed-in user has claimed it, it drops out of the list entirely.
   const nonDailyBoxes = useMemo(() => boxes.filter((box) => !box.isDaily), [boxes]);
+  const hasUnclaimedFreeBox = !isAuthenticated || !user.lastFreeBoxClaim;
 
   const visibleBoxes = useMemo(() => {
-    if (isAuthenticated) return nonDailyBoxes;
+    if (!hasUnclaimedFreeBox) return nonDailyBoxes;
     const freeBox = boxes.find((box) => box.isDaily);
     return freeBox ? [freeBox, ...nonDailyBoxes] : boxes;
-  }, [boxes, isAuthenticated, nonDailyBoxes]);
+  }, [boxes, hasUnclaimedFreeBox, nonDailyBoxes]);
 
   const filteredBoxes = useMemo(() => visibleBoxes.filter((box) => {
     if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
