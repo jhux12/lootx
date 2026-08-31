@@ -480,3 +480,24 @@ body { background:var(--bet-canvas); color:var(--bet-text); transition:backgroun
   .pullz-boxes-hero-art { min-height:160px; }
   .pullz-boxes-hero-copy h1 { font-size:34px; }
 }
+
+/* Header-anchored mobile drawer */
+.bet-mobile-drawer { border:1px solid var(--bet-line); border-top:0; background:color-mix(in srgb,var(--bet-surface) 97%,transparent); color:var(--bet-text); box-shadow:0 24px 60px rgba(0,0,0,.24); }
+.bet-mobile-drawer [class*="text-white"],.bet-mobile-drawer [class*="text-slate"] { color:var(--bet-text); }
+.bet-mobile-drawer [class*="bg-white"] { background:var(--bet-surface-2); }
+.bet-mobile-drawer nav button { color:var(--bet-text); }
+.bet-mobile-drawer nav button:hover { background:var(--bet-surface-2); }
+.bet-mobile-drawer nav button[class*="bg-[linear-gradient"] { background:color-mix(in srgb,var(--bet-accent) 14%,var(--bet-surface)); color:var(--bet-accent); box-shadow:inset 3px 0 0 var(--bet-accent); }
+.bet-mobile-drawer nav button svg { color:var(--bet-accent); }
+
+/* Compact, real-user live pulls rail */
+.bet-home-live { margin-top:22px; }
+.live-pulls-label { position:relative; z-index:12; display:flex; width:64px; height:100%; flex:0 0 64px; flex-direction:column; align-items:center; justify-content:center; gap:4px; border-right:1px solid var(--bet-line); background:var(--bet-surface); color:var(--bet-text); font-size:9px; line-height:1.05; text-align:center; }
+.live-pulls-label i { width:11px; height:11px; border-radius:50%; background:#ff314f; box-shadow:0 0 12px rgba(255,49,79,.75); }
+.live-pulls-track { min-width:max-content; }
+.live-pulls-card { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bet-accent) 18%,transparent); }
+html.pullz-mobile-optimized:not(.pullz-tab-hidden) .live-pulls-track { animation-play-state:running!important; }
+
+.bet-home-sort { position:relative; display:inline-flex; min-height:52px; flex:0 0 auto; align-items:center; gap:9px; border:1px solid var(--bet-line); border-radius:12px; padding:0 18px; background:var(--bet-surface-2); color:var(--bet-text); font-size:13px; font-weight:800; }
+.bet-home-sort svg { width:20px; }
+.bet-home-sort select { position:absolute; inset:0; cursor:pointer; opacity:0; }
