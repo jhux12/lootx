@@ -691,7 +691,10 @@ body {
 .bet-topup-modal [class*="bg-[#0d1118]"] { background:var(--bet-topup-surface) !important; }
 .bet-topup-modal .text-white { color:var(--bet-topup-text) !important; }
 .bet-topup-modal [class*="text-gray-400"],
-.bet-topup-modal [class*="text-gray-500"] { color:var(--bet-topup-muted) !important; }
+.bet-topup-modal [class*="text-gray-500"],
+.bet-topup-modal [class*="text-slate-200"],
+.bet-topup-modal [class*="text-slate-300"],
+.bet-topup-modal [class*="text-slate-400"] { color:var(--bet-topup-muted) !important; }
 .bet-topup-modal [class*="hover:text-white"]:hover { color:var(--bet-topup-text) !important; }
 /* A few light-on-dark accent colors (amber/emerald badges) are too pale
    to read against a white background once the surrounding chrome flips
@@ -723,12 +726,20 @@ body {
 .pullz-legacy-theme [class*="bg-[#080c16]"],
 .pullz-legacy-theme [class*="bg-[#131825]"],
 .pullz-legacy-theme [class*="bg-[#101520]"],
+.pullz-legacy-theme [class*="bg-[#0a1322]"],
+.pullz-legacy-theme [class*="bg-[#0b101c]"],
 .pullz-legacy-theme [class*="bg-[#08080a]"],
 .pullz-legacy-theme [class*="bg-[#09090c]"],
 .pullz-legacy-theme [class*="bg-[#090a0e]"],
 .pullz-legacy-theme[class*="bg-[#090a0e]"],
 .pullz-legacy-theme [class*="bg-[#19191d]"],
 .pullz-legacy-theme [class*="bg-[#1a1a1e]"],
+.pullz-legacy-theme [class*="bg-[#111720]"],
+.pullz-legacy-theme [class*="bg-[#111824]"],
+.pullz-legacy-theme [class*="bg-[#111114]"],
+.pullz-legacy-theme [class*="bg-[#0d121b]"],
+.pullz-legacy-theme [class*="bg-[#090e16]"],
+.pullz-legacy-theme [class*="bg-[#080d14]"],
 .pullz-legacy-theme[class*="#05060a"] { background:var(--pullz-legacy-surface) !important; }
 .pullz-legacy-theme [class*="bg-[#202830]"],
 .pullz-legacy-theme [class*="bg-[#20262b]"],
@@ -737,6 +748,7 @@ body {
 .pullz-legacy-theme [class*="bg-[#171d24]"],
 .pullz-legacy-theme [class*="bg-[#1f252c]"],
 .pullz-legacy-theme [class*="bg-[#24242a]"],
+.pullz-legacy-theme [class*="bg-[#242429]"],
 .pullz-legacy-theme [class*="bg-[#262d35]"],
 .pullz-legacy-theme [class*="bg-[#2d3540]"],
 .pullz-legacy-theme [class*="bg-[#0d1b34]"] { background:var(--pullz-legacy-surface-strong) !important; }
@@ -752,6 +764,7 @@ body {
 .pullz-legacy-theme [class*="bg-white/[0.035]"] { background:var(--pullz-legacy-surface) !important; }
 .pullz-legacy-theme .text-white,
 .pullz-legacy-theme[class*="text-white"] { color:var(--pullz-legacy-text) !important; }
+.pullz-legacy-theme [class*="text-white/"] { color:var(--pullz-legacy-muted) !important; }
 .pullz-legacy-theme [class*="text-gray-200"],
 .pullz-legacy-theme [class*="text-gray-300"],
 .pullz-legacy-theme [class*="text-slate-200"],
@@ -770,6 +783,7 @@ body {
 .pullz-legacy-theme [class*="text-[#aaaab0]"],
 .pullz-legacy-theme [class*="text-[#929299]"],
 .pullz-legacy-theme [class*="text-[#77777e]"],
+.pullz-legacy-theme [class*="text-[#b8b8be]"],
 .pullz-legacy-theme [class*="text-[#71717a]"],
 .pullz-legacy-theme [class*="text-[#68686f]"],
 .pullz-legacy-theme [class*="text-[#66666d]"],
@@ -779,7 +793,20 @@ body {
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-100"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-200"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-300"] { color:#0e7490 !important; }
+:root[data-theme="light"] .pullz-legacy-theme [class*="text-blue-100"],
+:root[data-theme="light"] .pullz-legacy-theme [class*="text-blue-200"],
+:root[data-theme="light"] .pullz-legacy-theme [class*="text-blue-300"] { color:#1d4ed8 !important; }
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-[#79a7ff]"] { color:#1d4ed8 !important; }
+
+/* Certain small dark accent chips (e.g. the leaderboard countdown
+   timer) are meant to stay dark and high-contrast regardless of page
+   theme — same idea as the live-pulls ticker or the case-opening
+   reveal card. Opt them out of the general light-mode overrides
+   above (higher specificity + later in source order wins). */
+.pullz-dark-chip[class*="bg-[#20262b]"] { background-color:rgba(32,38,43,.72) !important; }
+.pullz-dark-chip [class*="bg-[#1b2024]"] { background-color:rgba(27,32,36,.7) !important; }
+.pullz-dark-chip [class*="text-[#79a7ff]"] { color:#79a7ff !important; }
+.pullz-dark-chip [class*="text-white/45"] { color:rgba(255,255,255,.45) !important; }
 
 /* Case-opening page: the spinner reel and prize-reveal card stay
    intentionally dark in both themes (a deliberate "spotlight" moment,

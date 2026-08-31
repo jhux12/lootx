@@ -298,7 +298,7 @@ export const Leaderboard: React.FC = () => {
         ) : (
           <div className="mt-5">
             {timeLeft && (
-              <section className="mx-5 mb-5 rounded-2xl bg-[#20262b]/72 p-3 sm:mx-8">
+              <section className="pullz-dark-chip mx-5 mb-5 rounded-2xl bg-[#20262b]/72 p-3 sm:mx-8">
                 <div className="grid grid-cols-4 gap-2 text-center">
                   {[['DAYS', timeLeft.days], ['HRS', timeLeft.hours], ['MIN', timeLeft.minutes], ['SEC', timeLeft.seconds]].map(([label, value]) => (
                     <div key={String(label)} className="rounded-xl bg-[#1b2024]/70 px-2 py-2">

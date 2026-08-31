@@ -951,7 +951,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setView({ type: 'REFERRALS' })}
-            className="group flex min-h-14 w-full items-center gap-3 rounded-xl border border-amber-300/15 bg-gradient-to-r from-amber-300/[0.09] via-[#171719] to-[#111115] px-4 py-3 text-left shadow-[0_10px_28px_rgba(0,0,0,0.2)] transition hover:border-amber-300/30 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-amber-300/40 sm:px-5"
+            className="pullz-dark-chip group flex min-h-14 w-full items-center gap-3 rounded-xl border border-amber-300/15 bg-gradient-to-r from-amber-300/[0.09] via-[#171719] to-[#111115] px-4 py-3 text-left shadow-[0_10px_28px_rgba(0,0,0,0.2)] transition hover:border-amber-300/30 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-amber-300/40 sm:px-5"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200/15 bg-black/25 shadow-inner shadow-black/30">
               <img src={COIN_ICON} alt="" className="h-6 w-6 object-contain" width={24} height={24} />
