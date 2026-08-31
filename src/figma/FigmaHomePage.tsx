@@ -162,6 +162,21 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
     setShowTopUpModal(true);
   };
 
+  const getHeroSlideStyle = (slide: HomeHeroSlide): React.CSSProperties => {
+    if (slide.backgroundType === 'gradient') {
+      return { background: `linear-gradient(135deg, ${slide.backgroundGradientFrom}, ${slide.backgroundGradientTo})`, color: '#fff' };
+    }
+    if (slide.backgroundType === 'image' && slide.backgroundImage) {
+      return {
+        backgroundImage: `url(${slide.backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        color: '#fff'
+      };
+    }
+    return { background: slide.backgroundColor, color: '#fff' };
+  };
+
   return (
     <main className="bet-home">
       <section className="bet-home-tournaments">
@@ -171,10 +186,10 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
                 <button
                   type="button"
                   key={slide.id}
-                  style={{ background: slide.backgroundColor, color: '#fff' }}
+                  style={getHeroSlideStyle(slide)}
                   onClick={() => handleHeroSlideClick(slide)}
                 >
-                  <span><i><ChevronRight /></i><small>Shop now</small>{slide.text ? <strong>{slide.text}</strong> : null}</span>
+                  <span><i><ChevronRight /></i><small>{slide.shopNowText || 'Shop now'}</small>{slide.text ? <strong>{slide.text}</strong> : null}</span>
                   {slide.image ? (
                     <img src={slide.image} alt="" loading="eager" fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" />
                   ) : null}

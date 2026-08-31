@@ -290,6 +290,8 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
 
 
 const HEX_COLOR_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const normalizeHexColor = (value: unknown, fallback: string) =>
+  typeof value === 'string' && HEX_COLOR_PATTERN.test(value.trim()) ? value.trim() : fallback;
 
 const normalizeHomeHeroSlides = (slides: unknown): HomeHeroSlide[] => {
   if (!Array.isArray(slides)) return [];
@@ -298,16 +300,20 @@ const normalizeHomeHeroSlides = (slides: unknown): HomeHeroSlide[] => {
     .map((slide, index) => {
       if (!slide || typeof slide !== 'object') return null;
       const source = slide as Partial<HomeHeroSlide>;
-      const backgroundColor = typeof source.backgroundColor === 'string' && HEX_COLOR_PATTERN.test(source.backgroundColor.trim())
-        ? source.backgroundColor.trim()
-        : '#050505';
+      const backgroundType: HomeHeroSlide['backgroundType'] =
+        source.backgroundType === 'gradient' || source.backgroundType === 'image' ? source.backgroundType : 'color';
 
       return {
         id: typeof source.id === 'string' && source.id.trim() ? source.id.trim() : `hero-${index}-${Date.now()}`,
-        backgroundColor,
+        backgroundType,
+        backgroundColor: normalizeHexColor(source.backgroundColor, '#050505'),
+        backgroundGradientFrom: normalizeHexColor(source.backgroundGradientFrom, '#6225ef'),
+        backgroundGradientTo: normalizeHexColor(source.backgroundGradientTo, '#4f7ff4'),
+        backgroundImage: typeof source.backgroundImage === 'string' ? source.backgroundImage.trim() : '',
         image: typeof source.image === 'string' ? source.image.trim() : '',
         link: typeof source.link === 'string' ? source.link.trim() : '',
-        text: typeof source.text === 'string' ? source.text.trim() : ''
+        text: typeof source.text === 'string' ? source.text.trim() : '',
+        shopNowText: typeof source.shopNowText === 'string' && source.shopNowText.trim() ? source.shopNowText.trim() : 'Shop now'
       };
     })
     .filter((slide): slide is HomeHeroSlide => Boolean(slide))

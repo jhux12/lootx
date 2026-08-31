@@ -316,10 +316,15 @@ export interface ShippingRateTierSetting {
 
 export interface HomeHeroSlide {
   id: string;
+  backgroundType: 'color' | 'gradient' | 'image';
   backgroundColor: string;
+  backgroundGradientFrom: string;
+  backgroundGradientTo: string;
+  backgroundImage: string;
   image: string;
   link: string;
   text: string;
+  shopNowText: string;
 }
 
 export interface StripeSettings {
