@@ -1,32 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Box, Home, Trophy, User, X } from 'lucide-react';
-import { useAuth, useBoxes, useUI } from '../context/GameContext';
+import { Boxes, Flame, X } from 'lucide-react';
+import { useAuth, useUI, useWallet } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
-import { UserAvatar } from './UserAvatar';
+import { COIN_ICON } from '../constants';
 
-type NavItem = {
-  id: 'HOME' | 'BOXES' | 'LEADERBOARD' | 'PROFILE';
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  iconClassName?: string;
-  requiresAuth?: boolean;
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { id: 'HOME', label: 'Home', icon: Home },
-  { id: 'BOXES', label: 'Boxes', icon: Box },
-  { id: 'LEADERBOARD', label: 'Leaders', icon: Trophy },
-  { id: 'PROFILE', label: 'Profile', requiresAuth: true }
-];
-
+/**
+ * The same bottom dock shown on the homepage (Home / Boxes / Balance / More),
+ * for every other page. Keeping one shared design here means any visual or
+ * behavioral change to the dock only needs to happen in one place — this
+ * component mirrors src/figma/FigmaHomePage.tsx's dock markup and classes.
+ */
 export const MobileBottomNav: React.FC = () => {
-  const { view, setView, showTopUpModal } = useUI();
-  const { isAuthenticated, openAuthModal, user } = useAuth();
-  const { boxes } = useBoxes();
+  const { view, setView, showTopUpModal, setShowTopUpModal } = useUI();
+  const { isAuthenticated, openAuthModal } = useAuth();
+  const { balance } = useWallet();
   const { playSound } = useSound();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isFreeBoxTooltipDismissed, setIsFreeBoxTooltipDismissed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSuppressed, setIsSuppressed] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
@@ -34,7 +24,7 @@ export const MobileBottomNav: React.FC = () => {
     if (typeof document === 'undefined') return undefined;
 
     const root = document.documentElement;
-    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(62px + max(env(safe-area-inset-bottom), 8px))');
+    root.style.setProperty('--pullz-mobile-bottom-nav-height', 'calc(86px + max(env(safe-area-inset-bottom), 8px))');
     return () => {
       root.style.removeProperty('--pullz-mobile-bottom-nav-height');
     };
@@ -50,7 +40,7 @@ export const MobileBottomNav: React.FC = () => {
 
     const handleMenuState = (event: Event) => {
       const detail = (event as CustomEvent<{ isOpen: boolean }>).detail;
-      setIsMenuOpen(Boolean(detail?.isOpen));
+      setIsMobileMenuOpen(Boolean(detail?.isOpen));
     };
 
     const handleBottomNavSuppressed = (event: Event) => {
@@ -66,12 +56,6 @@ export const MobileBottomNav: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setIsFreeBoxTooltipDismissed(window.sessionStorage.getItem('pullz:free-box-tooltip-dismissed') === '1');
-  }, []);
-
-
   // Track the visual viewport offset to keep fixed mobile chrome pinned during browser toolbar changes.
   // We also listen to window 'scroll' and 'pageshow' because scroll-lock release calls
   // window.scrollTo() which can change the visual viewport position without triggering
@@ -85,7 +69,6 @@ export const MobileBottomNav: React.FC = () => {
       const offset = Math.max(0, window.innerHeight - vv.offsetTop - vv.height);
       document.documentElement.style.setProperty('--pullz-viewport-bottom-offset', `${offset}px`);
     };
-    // Deferred update via rAF so that DOM layout has settled after programmatic scrolls
     const deferredUpdate = () => {
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(update);
@@ -94,9 +77,7 @@ export const MobileBottomNav: React.FC = () => {
     update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
-    // window scroll fires after window.scrollTo() from scroll-lock release
     window.addEventListener('scroll', deferredUpdate, { passive: true });
-    // pageshow fires when the page is restored from bfcache
     window.addEventListener('pageshow', deferredUpdate);
     return () => {
       cancelAnimationFrame(rafId);
@@ -108,124 +89,66 @@ export const MobileBottomNav: React.FC = () => {
     };
   }, []);
 
-  const handleNav = (item: NavItem) => {
-    playSound('click');
+  const isHidden = isSuppressed || showTopUpModal;
 
-    if (item.requiresAuth && !isAuthenticated) {
+  const navigate = (target: 'HOME' | 'BOXES') => {
+    playSound('click');
+    if (isMobileMenuOpen && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('pullz:close-mobile-menu'));
+    }
+    setView({ type: target });
+  };
+
+  const toggleMobileMenu = () => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('pullz:toggle-mobile-menu'));
+  };
+
+  const handleBalanceClick = () => {
+    if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
-
-    if (isMenuOpen && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('pullz:close-mobile-menu'));
-    }
-
-    setView({ type: item.id });
+    setShowTopUpModal(true);
   };
 
-  const activeId = useMemo<NavItem['id']>(() => {
-    if (view.type === 'CASE_OPENING') return 'BOXES';
-    if (view.type === 'INVENTORY' || view.type === 'PROFILE') return 'PROFILE';
-    if (view.type === 'LEADERBOARD') return 'LEADERBOARD';
-    if (view.type === 'BOXES') return 'BOXES';
-    return 'HOME';
-  }, [view.type]);
-
-  const hasFreeSignupBox = useMemo(() => (
-    isAuthenticated && boxes.some((box) => box.isDaily) && !user.lastFreeBoxClaim
-  ), [boxes, isAuthenticated, user.lastFreeBoxClaim]);
-  const showFreeBoxTooltip = hasFreeSignupBox && !isFreeBoxTooltipDismissed;
-  const iconClassName = 'h-5 w-5 [stroke-width:1.6]';
-
-  const dismissFreeBoxTooltip = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    if (typeof window !== 'undefined') {
-      window.sessionStorage.setItem('pullz:free-box-tooltip-dismissed', '1');
-    }
-    setIsFreeBoxTooltipDismissed(true);
-  };
-
-  // The spin campaign uses the section-based header navigation instead of the
-  // application-wide bottom navigation.
+  // The homepage renders its own copy of this dock directly (and it's
+  // desktop-hidden via CSS); the spin campaign uses section-based header
+  // navigation instead.
   if (view.type === 'HOME' || view.type === 'SPIN') return null;
 
   const nav = (
-    <div
-      className={`pullz-mobile-bottom-nav bet-mobile-nav fixed top-auto z-[220] px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-1.5 transition-[opacity,transform] duration-200 ease-out lg:hidden ${
-        isSuppressed || showTopUpModal ? 'pointer-events-none opacity-0' : 'opacity-100'
-      }`}
+    <nav
+      className="bet-home-dock lg:hidden"
       style={{
-        height: 'calc(62px + max(env(safe-area-inset-bottom), 8px))',
-        bottom: 'calc(14px + var(--pullz-viewport-bottom-offset, 0px))',
-        left: '50%',
-        right: 'auto',
-        width: 'min(calc(100% - 28px), 560px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 8px)',
-        transform: isSuppressed || showTopUpModal ? 'translate3d(-50%, 130%, 0)' : 'translate3d(-50%, 0, 0)',
-        WebkitTransform: isSuppressed || showTopUpModal ? 'translate3d(-50%, 130%, 0)' : 'translate3d(-50%, 0, 0)',
-        willChange: isSuppressed || showTopUpModal ? 'transform' : 'auto'
+        bottom: `calc(max(20px, env(safe-area-inset-bottom)) + var(--pullz-viewport-bottom-offset, 0px))`,
+        transition: 'opacity 0.2s ease-out, transform 0.2s ease-out',
+        opacity: isHidden ? 0 : 1,
+        pointerEvents: isHidden ? 'none' : 'auto',
+        transform: isHidden ? 'translate3d(-50%, 130%, 0)' : 'translate3d(-50%, 0, 0)',
       }}
       aria-label="Primary navigation"
-      aria-hidden={isSuppressed || showTopUpModal}
+      aria-hidden={isHidden}
     >
-      <nav className="grid h-full grid-cols-4 items-center gap-1">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeId === item.id;
-          const isProfile = item.id === 'PROFILE';
-          return (
-            <div key={item.id} className="relative flex justify-center">
-              {item.id === 'PROFILE' && showFreeBoxTooltip ? (
-                <div className="absolute bottom-full left-1/2 z-20 mb-2 w-max -translate-x-1/2 rounded-lg border border-emerald-300/25 bg-[#101827]/95 px-2 py-1 text-[10px] font-semibold text-emerald-100 shadow-lg backdrop-blur-md">
-                  <div className="flex items-center gap-1.5">
-                    <span>Free box available</span>
-                    <button
-                      type="button"
-                      onClick={dismissFreeBoxTooltip}
-                      className="rounded p-0.5 text-emerald-100/80 transition-colors hover:bg-white/10 hover:text-white"
-                      aria-label="Dismiss free box tooltip"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => handleNav(item)}
-                className={`flex min-h-11 w-full min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-transparent px-1 py-1 text-[9px] font-bold uppercase tracking-wide transition-colors duration-150 active:scale-[0.98] ${
-                  isActive ? 'text-white' : 'text-[#737373] hover:text-white'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                {isProfile ? (
-                  <span className="relative">
-                    {isAuthenticated ? (
-                      <UserAvatar user={user} className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10" initialsClassName="text-[10px]" />
-                    ) : (
-                      <span className="grid h-6 w-6 place-items-center rounded-full border border-slate-600 text-slate-400">
-                        <User className="h-4 w-4 [stroke-width:1.7]" />
-                      </span>
-                    )}
-                    {isAuthenticated && (
-                      <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#7dd3fc] ring-1 ring-[#070b13]" aria-hidden="true" />
-                    )}
-                    {hasFreeSignupBox && (
-                      <span className="absolute -left-0.5 -top-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 ring-1 ring-[#070b13]" aria-hidden="true" />
-                    )}
-                  </span>
-                ) : Icon ? (
-                  <span className="relative">
-                    <Icon className={item.iconClassName ?? iconClassName} />
-                  </span>
-                ) : null}
-                <span>{item.label}</span>
-              </button>
-            </div>
-          );
-        })}
-      </nav>
-    </div>
+      <button type="button" className={view.type === 'BOXES' || view.type === 'CASE_OPENING' ? '' : undefined} onClick={() => navigate('HOME')}>
+        <Flame /><span>Home</span>
+      </button>
+      <button type="button" className={view.type === 'BOXES' || view.type === 'CASE_OPENING' ? 'is-active' : ''} onClick={() => navigate('BOXES')}>
+        <Boxes /><span>Boxes</span>
+      </button>
+      <button
+        type="button"
+        onClick={handleBalanceClick}
+        aria-label={isAuthenticated ? 'Add coins' : 'Sign in to add coins'}
+      >
+        <img src={COIN_ICON} alt="" className="bet-home-dock-coin" />
+        <span>{isAuthenticated ? balance.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '——'}</span>
+      </button>
+      <button type="button" onClick={toggleMobileMenu} aria-expanded={isMobileMenuOpen}>
+        {isMobileMenuOpen ? <X /> : <span className="bet-home-dock-more-dots" aria-hidden="true"><i /><i /><i /></span>}
+        <span>{isMobileMenuOpen ? 'Close' : 'More'}</span>
+      </button>
+    </nav>
   );
 
   return portalTarget ? createPortal(nav, portalTarget) : nav;
