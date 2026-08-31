@@ -151,7 +151,7 @@ export const TopUpModal: React.FC = () => {
     if (normalizedBadge.includes('popular')) {
       return 'bg-[#6652ff] text-[#e8e6ff]';
     }
-    return 'bg-white/15 text-white';
+    return 'bg-white/15 text-[#fff]';
   };
   const getCardAccentClasses = (badge?: string, isSelected?: boolean) => {
     const normalizedBadge = badge?.toLowerCase() ?? '';
@@ -421,7 +421,7 @@ export const TopUpModal: React.FC = () => {
         onClick={handleClose}
       ></div>
       
-      <div className="relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[390px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[min(680px,calc(100dvh-2rem))] sm:rounded-[18px]">
+      <div className="bet-topup-modal relative my-auto flex max-h-[calc(100dvh-1rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-0 w-full max-w-[390px] flex-col overflow-hidden rounded-t-[18px] border border-[rgba(124,92,255,0.2)] bg-[#1b2024] shadow-[0_0_40px_rgba(124,92,255,0.15)] animate-in zoom-in-95 sm:max-h-[min(680px,calc(100dvh-2rem))] sm:rounded-[18px]">
         
         {success ? (
             <div className="p-12 flex flex-col items-center justify-center text-center">
@@ -552,7 +552,7 @@ export const TopUpModal: React.FC = () => {
                   <button
                     onClick={handleDeposit}
                     disabled={isLoading || isInitialPackagesLoading || !selectedPackage}
-                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-white transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(90deg,#7C5CFF,#00E5FF)] text-base font-semibold text-[#fff] transition-all hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isLoading ? (
                       <>

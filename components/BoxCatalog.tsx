@@ -93,6 +93,17 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
   };
 };
 
+const RARITY_ORDER: CaseItem['rarity'][] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+const getBoxRarity = (box: MysteryBox): CaseItem['rarity'] => {
+  if (!box.items?.length) return 'common';
+  return box.items.reduce<CaseItem['rarity']>((highest, item) => {
+    const itemRank = RARITY_ORDER.indexOf(item.rarity);
+    const highestRank = RARITY_ORDER.indexOf(highest);
+    return itemRank > highestRank ? item.rarity : highest;
+  }, 'common');
+};
+
 const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   model: CatalogBoxModel;
   index: number;
@@ -111,44 +122,30 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
-      className={`group relative w-full overflow-hidden rounded-[22px] border text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 [content-visibility:auto] [contain-intrinsic-size:260px] ${
-        isFreeSignupBox
-          ? 'border-[#2abd69]/60 bg-[#0d1f16] hover:border-[#2abd69] focus-visible:ring-[#2abd69]'
-          : 'border-white/10 bg-[#121318] hover:border-[var(--bet-orange)]/50 focus-visible:ring-[var(--bet-orange)]'
-      }`}
+      className={`bet-box-tile rarity-glow-${getBoxRarity(box)} [content-visibility:auto] [contain-intrinsic-size:260px]${isFreeSignupBox ? ' is-free-signup' : ''}`}
     >
-      {isFreeSignupBox && (
-        <span className="absolute left-0 top-0 z-10 rounded-br-[14px] rounded-tl-[22px] bg-[#2abd69] px-3 py-1 text-[10px] font-black uppercase tracking-wide text-[#04140a]">
-          Sign-Up Bonus
-        </span>
+      {isFreeSignupBox && <span className="bet-box-tile-badge">Sign-Up Bonus</span>}
+      <span className="bet-box-tile-glow" aria-hidden="true" />
+      <BlurImage
+        src={box.image}
+        fallbackSrc="/assets/favicon/android-chrome-512.png"
+        alt=""
+        loading={isPriority ? 'eager' : 'lazy'}
+        fetchPriority={isPriority ? 'high' : 'low'}
+        decoding="async"
+        width={360}
+        height={230}
+        ratioClassName="h-[132px] w-full sm:h-[148px]"
+        className="relative z-[1] h-full w-full object-contain transition duration-300 group-hover:scale-105"
+        staticRender={staticImages}
+        retryOnError={!staticImages}
+      />
+      <span className="bet-box-tile-name">{box.name}</span>
+      {isFreeSignupBox ? (
+        <span className="bet-box-tile-free">Free</span>
+      ) : (
+        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} iconClassName="h-3.5 w-3.5" />
       )}
-      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(255,75,10,0.14),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
-          <BlurImage
-            src={box.image}
-            fallbackSrc="/assets/favicon/android-chrome-512.png"
-            alt={box.name}
-            loading={isPriority ? 'eager' : 'lazy'}
-            fetchPriority={isPriority ? 'high' : 'low'}
-            decoding="async"
-            width={360}
-            height={230}
-            ratioClassName="h-[132px] w-full sm:h-[148px]"
-            className="h-full w-full object-contain drop-shadow-[0_16px_20px_rgba(0,0,0,0.55)] transition duration-300 group-hover:scale-105"
-            staticRender={staticImages}
-            retryOnError={!staticImages}
-          />
-        </div>
-      </div>
-      <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
-        <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
-        {isFreeSignupBox ? (
-          <span className="mt-1 inline-flex items-center text-[13px] font-black uppercase tracking-wide text-[#2abd69]">Free</span>
-        ) : (
-          <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[var(--bet-orange)]" iconClassName="h-3.5 w-3.5" />
-        )}
-      </div>
     </button>
   );
 });
@@ -608,9 +605,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             })}
             </div>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
-            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[13.5px] font-bold transition ${showAffordableOnly ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)]/15 text-[#f2f2f5]' : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44]'}`}>
-              <span className={`flex h-4 w-4 items-center justify-center rounded-[5px] border-[1.5px] ${showAffordableOnly ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)]' : 'border-[#3a3a44]'}`}>{showAffordableOnly && <Check className="h-3 w-3 stroke-[3] text-white" />}</span>
-              Enough coins
+            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className="bet-home-toggle">
+              <span>Enough coins to buy</span>
+              <i className={showAffordableOnly ? 'is-on' : ''} />
             </button>
           </div>
         </div>

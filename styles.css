@@ -199,6 +199,7 @@ body {
 .bet-box-tile-badge { position:absolute; left:0; top:0; z-index:2; border-radius:0 14px 10px 0; padding:5px 10px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; color:#04140a; background:#2abd69; }
 .bet-box-tile-free { display:inline-flex; border-radius:9px; padding:8px 14px; font-size:13px; font-weight:1000; text-transform:uppercase; letter-spacing:.02em; color:#04140a; background:#2abd69; position:relative; z-index:1; }
 .bet-box-tile > img { width:100%; height:190px; object-fit:contain; filter:drop-shadow(0 18px 18px rgba(0,0,0,.16)); position:relative; z-index:1; }
+.bet-box-tile .pullz-blur-wrap { width:100%; height:190px; position:relative; z-index:1; filter:drop-shadow(0 18px 18px rgba(0,0,0,.16)); }
 .bet-box-tile > .inline-flex { justify-content:center; border-radius:9px; padding:8px 14px; color:#050505; background:#f2f2f4; font-size:13px; font-weight:1000; position:relative; z-index:1; }
 .bet-box-tile-name { position:relative; z-index:1; max-width:100%; overflow:hidden; color:#050505; font-size:13px; font-weight:900; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 :root[data-theme="dark"] .bet-box-tile-name { color:#f6f4f9; }
@@ -243,7 +244,7 @@ body {
 /* The bottom dock duplicates the shared header's desktop nav (Home,
    Boxes, Leaderboard, etc.) — only needed below the desktop breakpoint. */
 @media(min-width:1024px){.bet-home-dock{display:none}.bet-home{padding-bottom:64px}}
-@media(max-width:720px){.bet-home{padding:24px 20px 124px}.bet-home-search{height:58px;margin-top:0}.bet-home h2{font-size:22px}.bet-home-tournaments{margin-top:28px}.bet-home-promos>button{flex-basis:88%;min-height:180px;padding:22px}.bet-home-promos strong{font-size:22px}.bet-home-events{margin-top:40px}.bet-home-event-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bet-box-tile{min-height:205px;padding:12px}.bet-box-tile>img{height:150px}.bet-home-dock{height:76px}}
+@media(max-width:720px){.bet-home{padding:24px 20px 124px}.bet-home-search{height:58px;margin-top:0}.bet-home h2{font-size:22px}.bet-home-tournaments{margin-top:28px}.bet-home-promos>button{flex-basis:88%;min-height:180px;padding:22px}.bet-home-promos strong{font-size:22px}.bet-home-events{margin-top:40px}.bet-home-event-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bet-box-tile{min-height:205px;padding:12px}.bet-box-tile>img,.bet-box-tile .pullz-blur-wrap{height:150px}.bet-home-dock{height:76px}}
 
 /* Shared betting-theme chrome */
 :root[data-theme="light"] .bet-global-header { border-bottom:1px solid #e7e7e9; background:rgba(255,255,255,.97); box-shadow:0 8px 24px rgba(0,0,0,.06); }
@@ -519,8 +520,11 @@ body {
 .bet-home-categories button i[class*="fa-"] { font-size:16px; }
 
 /* Trustpilot rating strip below the box list */
-.bet-home-trustpilot { display:flex; justify-content:center; align-items:center; margin-top:28px; padding:18px; border-radius:14px; background:#f7f7f8; }
-.bet-home-trustpilot img { height:28px; width:auto; }
+.bet-home-trustpilot { display:flex; justify-content:center; align-items:center; margin-top:28px; padding:12px; border-radius:14px; background:#f7f7f8; }
+.bet-home-trustpilot img { height:18px; width:auto; }
+.bet-home-view-all { display:flex; align-items:center; gap:4px; color:#050505; background:none; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.02em; }
+.bet-home-view-all svg { width:16px; height:16px; stroke-width:3; }
+:root[data-theme="dark"] .bet-home-view-all { color:#f6f4f9; }
 
 /* Coin-balance dock item (replaces the former wallet icon) */
 .bet-home-dock-coin { width:24px; height:24px; object-fit:contain; }
@@ -669,3 +673,30 @@ body {
 .bet-auth-modal input::placeholder,
 .bet-auth-modal textarea::placeholder { color:var(--bet-auth-muted) !important; opacity:1; }
 .bet-auth-modal input:read-only { color:var(--bet-auth-muted) !important; background:var(--bet-auth-surface) !important; }
+
+/* Top-up modal chrome */
+.bet-topup-modal {
+  --bet-topup-bg:#ffffff; --bet-topup-line:#e5e5e7; --bet-topup-text:#050505; --bet-topup-muted:#6b6b70;
+  --bet-topup-surface:#f2f2f4; --bet-topup-surface-hover:#e9e9eb; --bet-topup-outer-border:#e5e5e7;
+  background:var(--bet-topup-bg) !important; border-color:var(--bet-topup-outer-border) !important;
+}
+:root[data-theme="dark"] .bet-topup-modal {
+  --bet-topup-bg:#1b2024; --bet-topup-line:#2d303d; --bet-topup-text:#f6f4f9; --bet-topup-muted:#9a9ca6;
+  --bet-topup-surface:#222a30; --bet-topup-surface-hover:#293138; --bet-topup-outer-border:rgba(124,92,255,0.2);
+}
+.bet-topup-modal [class*="border-white/10"] { border-color:var(--bet-topup-line) !important; }
+.bet-topup-modal [class*="bg-[#1b2024]"] { background:var(--bet-topup-bg) !important; }
+.bet-topup-modal [class*="hover:bg-[#222a30]"]:hover { background:var(--bet-topup-surface-hover) !important; }
+.bet-topup-modal [class*="bg-[#0b0e14]"],
+.bet-topup-modal [class*="bg-[#0d1118]"] { background:var(--bet-topup-surface) !important; }
+.bet-topup-modal .text-white { color:var(--bet-topup-text) !important; }
+.bet-topup-modal [class*="text-gray-400"],
+.bet-topup-modal [class*="text-gray-500"] { color:var(--bet-topup-muted) !important; }
+.bet-topup-modal [class*="hover:text-white"]:hover { color:var(--bet-topup-text) !important; }
+/* A few light-on-dark accent colors (amber/emerald badges) are too pale
+   to read against a white background once the surrounding chrome flips
+   to light theme. */
+:root[data-theme="light"] .bet-topup-modal [class*="text-amber-200"] { color:#b45309 !important; }
+:root[data-theme="light"] .bet-topup-modal [class*="text-amber-100"] { color:#92400e !important; }
+:root[data-theme="light"] .bet-topup-modal [class*="text-emerald-300"] { color:#047857 !important; }
+

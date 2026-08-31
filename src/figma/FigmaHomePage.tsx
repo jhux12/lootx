@@ -56,7 +56,6 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   const { stripeSettings } = useBoxes();
   const { setView, setShowTopUpModal } = useUI();
   const [category, setCategory] = useState('all');
-  const [showAffordableOnly, setShowAffordableOnly] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // The header dispatches this whenever the shared mobile menu opens or
@@ -123,9 +122,8 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
 
   const filteredBoxes = useMemo(() => visibleBoxes.filter((box) => {
     if (category !== 'all' && !getBoxTags(box).includes(normalizeBoxTag(category))) return false;
-    if (showAffordableOnly && !box.isDaily && toCoins(box.price, PRICE_UNIT_MODE) > balance) return false;
     return true;
-  }), [balance, category, showAffordableOnly, visibleBoxes]);
+  }), [category, visibleBoxes]);
 
   const promoBoxes = nonDailyBoxes.slice(0, 3);
   const heroSlides = stripeSettings.homeHeroSlides;
@@ -196,14 +194,9 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
       <section className="bet-home-events">
         <div className="bet-home-events-title">
           <h2>Top Boxes</h2>
-          <button
-            type="button"
-            className="bet-home-toggle"
-            onClick={() => setShowAffordableOnly((value) => !value)}
-            aria-pressed={showAffordableOnly}
-          >
-            <span>Enough coins to open</span>
-            <i className={showAffordableOnly ? 'is-on' : ''} />
+          <button type="button" className="bet-home-view-all" onClick={onViewAllBoxes}>
+            <span>View All</span>
+            <ChevronRight />
           </button>
         </div>
         <div className="bet-home-categories">
@@ -221,7 +214,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           ))}
         </div>
         <div className="bet-home-event-list">
-          {filteredBoxes.slice(0, 12).map((box, index) => (
+          {filteredBoxes.slice(0, 6).map((box, index) => (
             <BoxTile
               key={box.id}
               box={box}
