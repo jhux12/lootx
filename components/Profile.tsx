@@ -951,16 +951,16 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setView({ type: 'REFERRALS' })}
-            className="pullz-dark-chip group flex min-h-14 w-full items-center gap-3 rounded-xl border border-amber-300/15 bg-gradient-to-r from-amber-300/[0.09] via-[#171719] to-[#111115] px-4 py-3 text-left shadow-[0_10px_28px_rgba(0,0,0,0.2)] transition hover:border-amber-300/30 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-amber-300/40 sm:px-5"
+            className="pullz-refer-friend-btn group flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition hover:brightness-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-400/50 sm:px-5"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200/15 bg-black/25 shadow-inner shadow-black/30">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-200/40 bg-blue-50 shadow-inner">
               <img src={COIN_ICON} alt="" className="h-6 w-6 object-contain" width={24} height={24} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-white sm:text-base">Refer a Friend</span>
-              <span className="mt-0.5 block truncate text-[11px] font-medium text-[#929299] sm:text-xs">Invite friends and earn coins together</span>
+              <span className="block text-sm font-black text-[#0b1220] sm:text-base">Refer a Friend</span>
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-[#5b6472] sm:text-xs">Invite friends and earn coins together</span>
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-amber-200/60 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-100" aria-hidden="true" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-blue-500 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600" aria-hidden="true" />
           </button>
 
           <div className="mt-2 grid grid-cols-2 gap-2">

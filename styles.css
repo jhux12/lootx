@@ -204,8 +204,20 @@ body {
 .bet-box-tile-name { position:relative; z-index:1; max-width:100%; overflow:hidden; color:#050505; font-size:13px; font-weight:900; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 :root[data-theme="dark"] .bet-box-tile-name { color:#f6f4f9; }
 
-/* Rarity-colored glow behind each box's artwork, using the box's
-   highest-rarity item — same palette as the live-pulls ticker. */
+/* Rarity-colored gradient glow — a soft tinted background wash across
+   the whole tile plus a brighter blurred glow behind the artwork,
+   using the box's highest-rarity item (same palette as the live-pulls
+   ticker). Kept subtle so it reads as polish, not noise. */
+.bet-box-tile.rarity-glow-common { background:linear-gradient(160deg,#fff 0%,#fff 55%,#eef0f2 100%); }
+.bet-box-tile.rarity-glow-uncommon { background:linear-gradient(160deg,#fff 0%,#fff 50%,rgba(42,189,105,.10) 100%); }
+.bet-box-tile.rarity-glow-rare { background:linear-gradient(160deg,#fff 0%,#fff 50%,rgba(59,130,246,.10) 100%); }
+.bet-box-tile.rarity-glow-epic { background:linear-gradient(160deg,#fff 0%,#fff 48%,rgba(139,92,246,.12) 100%); }
+.bet-box-tile.rarity-glow-legendary { background:linear-gradient(160deg,#fff 0%,#fff 45%,rgba(245,184,61,.16) 100%); }
+:root[data-theme="dark"] .bet-box-tile.rarity-glow-common { background:linear-gradient(160deg,#181c28 0%,#181c28 55%,#1e2330 100%); }
+:root[data-theme="dark"] .bet-box-tile.rarity-glow-uncommon { background:linear-gradient(160deg,#181c28 0%,#181c28 50%,rgba(42,189,105,.14) 100%); }
+:root[data-theme="dark"] .bet-box-tile.rarity-glow-rare { background:linear-gradient(160deg,#181c28 0%,#181c28 50%,rgba(59,130,246,.14) 100%); }
+:root[data-theme="dark"] .bet-box-tile.rarity-glow-epic { background:linear-gradient(160deg,#181c28 0%,#181c28 48%,rgba(139,92,246,.18) 100%); }
+:root[data-theme="dark"] .bet-box-tile.rarity-glow-legendary { background:linear-gradient(160deg,#181c28 0%,#181c28 45%,rgba(245,184,61,.22) 100%); }
 .bet-box-tile-glow {
   position:absolute; top:8%; left:50%; width:78%; aspect-ratio:1; transform:translateX(-50%);
   border-radius:50%; filter:blur(28px); opacity:.55; pointer-events:none; z-index:0;
@@ -807,6 +819,19 @@ body {
 .pullz-dark-chip [class*="bg-[#1b2024]"] { background-color:rgba(27,32,36,.7) !important; }
 .pullz-dark-chip [class*="text-[#79a7ff]"] { color:#79a7ff !important; }
 .pullz-dark-chip [class*="text-white/45"] { color:rgba(255,255,255,.45) !important; }
+
+/* "Refer a Friend" — always white with an animated blue gradient
+   border, regardless of theme, so it reads as a distinct standout CTA
+   on both light and dark. */
+.pullz-refer-friend-btn { position:relative; isolation:isolate; background:#fff; color:#0b1220; border-radius:12px; }
+.pullz-refer-friend-btn::before {
+  content:""; position:absolute; inset:0; z-index:-1; border-radius:12px;
+  background:linear-gradient(120deg,#205DD7,#7dd3fc,#4f7ff4,#205DD7);
+  background-size:300% 300%; animation:pullz-refer-border-flow 4s linear infinite;
+}
+.pullz-refer-friend-btn::after { content:""; position:absolute; inset:2px; z-index:-1; border-radius:10px; background:#fff; }
+@keyframes pullz-refer-border-flow { to { background-position:300% 50%; } }
+@media (prefers-reduced-motion: reduce) { .pullz-refer-friend-btn::before { animation:none; } }
 
 /* Case-opening page: the spinner reel and prize-reveal card stay
    intentionally dark in both themes (a deliberate "spotlight" moment,
