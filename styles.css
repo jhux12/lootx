@@ -700,3 +700,34 @@ body {
 :root[data-theme="light"] .bet-topup-modal [class*="text-amber-100"] { color:#92400e !important; }
 :root[data-theme="light"] .bet-topup-modal [class*="text-emerald-300"] { color:#047857 !important; }
 
+/* Case-opening page: the spinner reel and prize-reveal card stay
+   intentionally dark in both themes (a deliberate "spotlight" moment,
+   similar to how video players and slot-style reels commonly stay
+   dark regardless of site theme) — only the surrounding page chrome
+   and non-reveal modal content adapt. */
+:root[data-theme="light"] .bet-case-page { background:#fff; color:#050505; }
+:root[data-theme="light"] .bet-case-page [class*="text-gray-400"] { color:#6b6b70 !important; }
+.bet-case-back-btn:hover { color:var(--bet-orange) !important; }
+
+.bet-case-modal {
+  --bet-case-bg:#1b2028; --bet-case-line:rgba(255,255,255,0.2); --bet-case-text:#f6f4f9; --bet-case-muted:#9ca3af;
+}
+:root[data-theme="light"] .bet-case-modal {
+  --bet-case-bg:#ffffff; --bet-case-line:#e5e5e7; --bet-case-text:#050505; --bet-case-muted:#6b6b70;
+}
+:root[data-theme="light"] .bet-case-modal[class*="bg-[#121722]"] { background:var(--bet-case-bg) !important; }
+:root[data-theme="light"] .bet-case-modal[class*="border-white/20"],
+:root[data-theme="light"] .bet-case-modal [class*="border-white/20"] { border-color:var(--bet-case-line) !important; }
+:root[data-theme="light"] .bet-case-modal .text-white { color:var(--bet-case-text) !important; }
+:root[data-theme="light"] .bet-case-modal[class*="text-gray-200"],
+:root[data-theme="light"] .bet-case-modal [class*="text-gray-300"] { color:var(--bet-case-muted) !important; }
+
+/* Win-modal header/footer bars only — never the reveal card between
+   them, which keeps its own dark stage regardless of theme. */
+:root[data-theme="light"] .bet-case-modal-bar { background:#f2f2f4 !important; border-color:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-case-modal-bar .text-white { color:#050505 !important; }
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-gray-300"],
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-gray-400"] { color:#6b6b70 !important; }
+:root[data-theme="light"] .bet-case-modal-bar [class*="border-white/10"] { border-color:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-case-modal-bar [class*="bg-white/5"] { background:#e5e5e7 !important; }
+

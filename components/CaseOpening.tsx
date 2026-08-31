@@ -2211,7 +2211,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [lastReveal?.serverSeed, lastRoll, playSound]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
+    <div className="bet-case-page w-full max-w-7xl mx-auto p-4 sm:p-6 animate-in fade-in zoom-in-95 duration-300">
       {!isReady ? (
         <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="text-center max-w-sm">
@@ -2235,7 +2235,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
-                    className="min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
+                    className="bet-case-back-btn min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
                 >
                     <ChevronLeft className="w-4 h-4" /> All boxes
                 </button>
@@ -2543,7 +2543,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             onClick={() => setShowInfoModal(false)}
           >
             <div
-              className="w-full max-w-lg rounded-2xl border border-white/20 bg-[#121722] p-4 text-gray-200 shadow-2xl sm:p-6"
+              className="bet-case-modal w-full max-w-lg rounded-2xl border border-white/20 bg-[#121722] p-4 text-gray-200 shadow-2xl sm:p-6"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-start justify-between gap-4">
@@ -2579,7 +2579,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
                 />
               ))}
-              <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
+              <div className="bet-case-modal-bar flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/15">
                     <Check className="h-5 w-5 text-emerald-400" />
@@ -2641,7 +2641,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 </div>
               </div>
 
-              <div className="border-t border-white/10 bg-black/20 p-4 sm:p-6">
+              <div className="bet-case-modal-bar border-t border-white/10 bg-black/20 p-4 sm:p-6">
                 {isDemoSpin ? (
                   <div className="flex flex-col gap-3">
                     <button
