@@ -19,6 +19,7 @@ import {
   LogIn,
   LogOut,
   Menu,
+  Moon,
   Package,
   PenTool,
   Plus,
@@ -29,6 +30,7 @@ import {
   Clock3,
   ShieldCheck,
   Trophy,
+  Sun,
   Twitter,
   User as UserIcon,
   Users,
@@ -118,6 +120,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   const { playSound } = useSound();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGamesMenuOpen, setIsGamesMenuOpen] = useState(false);
+  const [colorTheme, setColorTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'dark';
+    const saved = window.localStorage.getItem('pullz:color-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
   const [questReadyCount, setQuestReadyCount] = useState(0);
   const [claimedTodayCount, setClaimedTodayCount] = useState(0);
   const [locallyClaimedQuestIds, setLocallyClaimedQuestIds] = useState<
@@ -134,6 +142,10 @@ const HeaderComponent: React.FC<HeaderProps> = ({
   );
   const balanceTone = useBalanceFeedback(balance, isAuthenticated);
   const unreadCount = useUnreadActivityCount();
+  useEffect(() => {
+    document.documentElement.dataset.siteTheme = colorTheme;
+    window.localStorage.setItem('pullz:color-theme', colorTheme);
+  }, [colorTheme]);
   const lastDailyClaim = useMemo(
     () =>
       Number.isFinite(user.lastDailyClaim ?? NaN)
@@ -591,6 +603,9 @@ const HeaderComponent: React.FC<HeaderProps> = ({
               </div>
 
               <div className="relative z-10 flex min-h-[42px] min-w-[132px] shrink-0 items-center justify-end gap-2 sm:min-w-[148px] sm:gap-3 lg:min-w-0 xl:min-w-[360px]">
+                <button type="button" className="bet-theme-toggle" onClick={() => setColorTheme((theme) => theme === 'dark' ? 'light' : 'dark')} aria-label={`Use ${colorTheme === 'dark' ? 'light' : 'dark'} mode`} title={`Use ${colorTheme === 'dark' ? 'light' : 'dark'} mode`}>
+                  {colorTheme === 'dark' ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+                </button>
                 {!authInitialized ? (
                   <HeaderSkeleton />
                 ) : isAuthenticated ? (
