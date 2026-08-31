@@ -723,13 +723,30 @@ body {
 .pullz-legacy-theme [class*="bg-[#080c16]"],
 .pullz-legacy-theme [class*="bg-[#131825]"],
 .pullz-legacy-theme [class*="bg-[#101520]"],
+.pullz-legacy-theme [class*="bg-[#08080a]"],
+.pullz-legacy-theme [class*="bg-[#09090c]"],
+.pullz-legacy-theme [class*="bg-[#090a0e]"],
+.pullz-legacy-theme[class*="bg-[#090a0e]"],
+.pullz-legacy-theme [class*="bg-[#19191d]"],
+.pullz-legacy-theme [class*="bg-[#1a1a1e]"],
 .pullz-legacy-theme[class*="#05060a"] { background:var(--pullz-legacy-surface) !important; }
 .pullz-legacy-theme [class*="bg-[#202830]"],
-.pullz-legacy-theme [class*="bg-[#20262b]"] { background:var(--pullz-legacy-surface-strong) !important; }
+.pullz-legacy-theme [class*="bg-[#20262b]"],
+.pullz-legacy-theme [class*="bg-[#111116]"],
+.pullz-legacy-theme [class*="bg-[#141821]"],
+.pullz-legacy-theme [class*="bg-[#171d24]"],
+.pullz-legacy-theme [class*="bg-[#1f252c]"],
+.pullz-legacy-theme [class*="bg-[#24242a]"],
+.pullz-legacy-theme [class*="bg-[#262d35]"],
+.pullz-legacy-theme [class*="bg-[#2d3540]"],
+.pullz-legacy-theme [class*="bg-[#0d1b34]"] { background:var(--pullz-legacy-surface-strong) !important; }
 .pullz-legacy-theme [class*="border-[#2a3b58]"],
 .pullz-legacy-theme [class*="border-white/10"],
 .pullz-legacy-theme [class*="border-white/15"],
 .pullz-legacy-theme [class*="border-white/20"],
+.pullz-legacy-theme [class*="border-white/[0.07]"],
+.pullz-legacy-theme [class*="border-white/[0.06]"],
+.pullz-legacy-theme [class*="divide-white/[0.06]"],
 .pullz-legacy-theme [class*="border-gray-800"] { border-color:var(--pullz-legacy-line) !important; }
 .pullz-legacy-theme [class*="bg-white/5"],
 .pullz-legacy-theme [class*="bg-white/[0.035]"] { background:var(--pullz-legacy-surface) !important; }
@@ -743,6 +760,22 @@ body {
 .pullz-legacy-theme [class*="text-gray-500"],
 .pullz-legacy-theme [class*="text-gray-600"],
 .pullz-legacy-theme [class*="text-slate-400"] { color:var(--pullz-legacy-muted) !important; }
+/* Profile.tsx's bespoke grayscale palette — many near-identical muted
+   grays tuned for a dark background. Rather than replicate each one's
+   exact relative lightness in light mode, they're bucketed into the
+   same shared muted/soft tones used elsewhere on this page. */
+.pullz-legacy-theme [class*="text-[#d4d4da]"],
+.pullz-legacy-theme [class*="text-[#d2d2d8]"],
+.pullz-legacy-theme [class*="text-[#b6b6be]"] { color:var(--pullz-legacy-soft) !important; }
+.pullz-legacy-theme [class*="text-[#aaaab0]"],
+.pullz-legacy-theme [class*="text-[#929299]"],
+.pullz-legacy-theme [class*="text-[#77777e]"],
+.pullz-legacy-theme [class*="text-[#71717a]"],
+.pullz-legacy-theme [class*="text-[#68686f]"],
+.pullz-legacy-theme [class*="text-[#66666d]"],
+.pullz-legacy-theme [class*="text-[#6c6c74]"],
+.pullz-legacy-theme [class*="text-[#5f5f65]"],
+.pullz-legacy-theme [class*="text-[#5e5e64]"] { color:var(--pullz-legacy-muted) !important; }
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-100"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-200"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-300"] { color:#0e7490 !important; }
