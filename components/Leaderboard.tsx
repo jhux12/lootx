@@ -243,7 +243,7 @@ export const Leaderboard: React.FC = () => {
   const lowerRows = useMemo(() => leaders.slice(3), [leaders]);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
+    <div className="pullz-legacy-theme min-h-screen bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] text-white">
       <main className="mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-transparent pb-8 sm:max-w-[720px] lg:max-w-[960px]">
         <header className="flex items-center justify-between px-5 pb-5 pt-6 sm:px-8 sm:pt-8">
           <button
@@ -281,7 +281,7 @@ export const Leaderboard: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { playSound('click'); setShowInfo(false); }}
-                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition hover:brightness-110"
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-[#fff] shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition hover:brightness-110"
               >
                 Got it
               </button>
@@ -352,7 +352,7 @@ export const Leaderboard: React.FC = () => {
                     return (
                       <div key={entry.uid} className="grid grid-cols-[2rem_3.5rem_1fr_auto] items-center gap-2 py-4 sm:grid-cols-[2.5rem_4rem_1fr_auto] sm:gap-3">
                         <div className="text-sm font-black text-white/70 sm:text-base">#{rank}</div>
-                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-white sm:h-14 sm:w-14">
+                        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#273250] to-[#1b2024] text-lg font-black text-[#fff] sm:h-14 sm:w-14">
                           {entry.avatarUrl ? <img src={entry.avatarUrl} alt={entry.displayName} className="h-full w-full object-cover" loading="lazy" decoding="async" /> : avatarFallback(entry.displayName)}
                         </div>
                         <div className="min-w-0"><div className="truncate text-sm font-semibold text-white sm:text-base">{entry.displayName}</div>{rowRewardLabel && <div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] font-semibold text-white/50 sm:text-xs"><span>Reward</span><img src={COIN_ICON} alt="Coins" className="h-3 w-3 shrink-0 object-contain sm:h-3.5 sm:w-3.5" loading="lazy" decoding="async" /><span className="truncate">{rowRewardLabel}</span></div>}</div>

@@ -719,8 +719,10 @@ body {
 .pullz-legacy-theme [class*="bg-[#0b0e14]"],
 .pullz-legacy-theme [class*="bg-[#1b2228]"],
 .pullz-legacy-theme [class*="bg-[#101827]"],
-.pullz-legacy-theme [class*="bg-[#0f1522]"] { background:var(--pullz-legacy-surface) !important; }
-.pullz-legacy-theme [class*="bg-[#202830]"] { background:var(--pullz-legacy-surface-strong) !important; }
+.pullz-legacy-theme [class*="bg-[#0f1522]"],
+.pullz-legacy-theme[class*="#05060a"] { background:var(--pullz-legacy-surface) !important; }
+.pullz-legacy-theme [class*="bg-[#202830]"],
+.pullz-legacy-theme [class*="bg-[#20262b]"] { background:var(--pullz-legacy-surface-strong) !important; }
 .pullz-legacy-theme [class*="border-[#2a3b58]"],
 .pullz-legacy-theme [class*="border-white/10"],
 .pullz-legacy-theme [class*="border-white/15"],
@@ -728,7 +730,8 @@ body {
 .pullz-legacy-theme [class*="border-gray-800"] { border-color:var(--pullz-legacy-line) !important; }
 .pullz-legacy-theme [class*="bg-white/5"],
 .pullz-legacy-theme [class*="bg-white/[0.035]"] { background:var(--pullz-legacy-surface) !important; }
-.pullz-legacy-theme .text-white { color:var(--pullz-legacy-text) !important; }
+.pullz-legacy-theme .text-white,
+.pullz-legacy-theme[class*="text-white"] { color:var(--pullz-legacy-text) !important; }
 .pullz-legacy-theme [class*="text-gray-200"],
 .pullz-legacy-theme [class*="text-gray-300"],
 .pullz-legacy-theme [class*="text-slate-200"],
@@ -740,6 +743,7 @@ body {
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-100"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-200"],
 :root[data-theme="light"] .pullz-legacy-theme [class*="text-cyan-300"] { color:#0e7490 !important; }
+:root[data-theme="light"] .pullz-legacy-theme [class*="text-[#79a7ff]"] { color:#1d4ed8 !important; }
 
 /* Case-opening page: the spinner reel and prize-reveal card stay
    intentionally dark in both themes (a deliberate "spotlight" moment,
