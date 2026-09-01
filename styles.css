@@ -532,6 +532,33 @@ body {
 .bet-home-view-all svg { width:16px; height:16px; stroke-width:3; }
 :root[data-theme="dark"] .bet-home-view-all { color:#f6f4f9; }
 
+/* How It Works — 3-step section below the box grid */
+.bet-home-how-it-works { margin-top:56px; }
+.bet-home-how-it-works h2 { margin:0 0 22px; font-size:26px; font-weight:1000; letter-spacing:-.01em; }
+.bet-home-how-it-works-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+.bet-home-how-it-works-step { position:relative; border:1px solid #dedee0; border-radius:18px; padding:26px 22px; background:#fff; overflow:hidden; }
+.bet-home-how-it-works-number { display:block; margin-bottom:14px; font-size:40px; font-weight:1000; line-height:1; color:var(--bet-orange); opacity:.9; }
+.bet-home-how-it-works-step img { display:block; height:64px; width:64px; margin-bottom:14px; object-fit:contain; }
+.bet-home-how-it-works-step strong { display:block; margin-bottom:8px; font-size:17px; font-weight:900; }
+.bet-home-how-it-works-step p { margin:0; font-size:14px; line-height:1.55; color:#6b6b70; }
+@media(min-width:760px){ .bet-home-how-it-works-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; } }
+:root[data-theme="dark"] .bet-home-how-it-works-step { border-color:#2d303d; background:#181c28; }
+:root[data-theme="dark"] .bet-home-how-it-works-step p { color:#9a9ca6; }
+
+/* Homepage FAQ */
+.bet-home-faq { margin-top:56px; }
+.bet-home-faq h2 { margin:0 0 22px; font-size:26px; font-weight:1000; letter-spacing:-.01em; }
+.bet-home-faq-list { display:flex; flex-direction:column; gap:10px; }
+.bet-home-faq-item { border:1px solid #dedee0; border-radius:14px; background:#fff; overflow:hidden; }
+.bet-home-faq-item.is-open { border-color:var(--bet-orange); }
+.bet-home-faq-question { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; text-align:left; font-size:15px; font-weight:800; background:none; }
+.bet-home-faq-question svg { width:18px; height:18px; flex:0 0 auto; color:var(--bet-orange); }
+.bet-home-faq-answer { margin:0; padding:0 20px 18px; font-size:14px; line-height:1.6; color:#6b6b70; }
+:root[data-theme="dark"] .bet-home-faq-item { border-color:#2d303d; background:#181c28; }
+:root[data-theme="dark"] .bet-home-faq-item.is-open { border-color:var(--bet-orange); }
+:root[data-theme="dark"] .bet-home-faq-answer { color:#9a9ca6; }
+@media(max-width:720px){ .bet-home-how-it-works, .bet-home-faq { margin-top:40px; } .bet-home-how-it-works h2, .bet-home-faq h2 { font-size:22px; } }
+
 /* Coin-balance dock item (replaces the former wallet icon) */
 .bet-home-dock-coin { width:24px; height:24px; object-fit:contain; }
 .bet-home-dock-more-dots { display:flex; align-items:center; justify-content:center; gap:3px; width:24px; height:24px; }

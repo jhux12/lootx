@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Boxes, ChevronRight, Flame, Sparkles, X } from 'lucide-react';
+import { Boxes, ChevronRight, Flame, Minus, Plus, Sparkles, X } from 'lucide-react';
 import type { CaseItem, HomeHeroSlide, MysteryBox } from '../../types';
 import { CoinAmount } from '../../components/CoinAmount';
 import { COIN_ICON } from '../../constants';
@@ -15,6 +15,47 @@ type FigmaHomePageProps = {
 };
 
 // This page is the isolated Betting Mobile Figma homepage implementation.
+
+const HOW_IT_WORKS_STEPS = [
+  {
+    number: '01',
+    title: 'Choose Your Box',
+    description: 'Browse boxes and select one based on the collectibles, price, and displayed odds.'
+  },
+  {
+    number: '02',
+    title: 'Open & Reveal',
+    description: 'Open the box for an animated reveal and instantly discover the real collectible you pulled.'
+  },
+  {
+    number: '03',
+    title: 'Keep It or Sell It Back',
+    description: 'Keep the item for shipping or instantly sell it back for coins to open another box.'
+  }
+];
+
+const HOME_FAQ_ITEMS = [
+  {
+    question: 'What is Pullz.gg?',
+    answer: 'Pullz.gg is an online collectible box-opening platform. You choose a box, reveal a real item, and receive ownership of that item in your Pullz inventory. Depending on the item and available account options, you can keep it, sell it back for coins, or request shipping.'
+  },
+  {
+    question: 'How do I open a box?',
+    answer: 'Create or sign in to your account, choose a box, review its contents and odds, and select the open button. You can use coins for eligible openings, and some accounts or boxes may also have free, promotional, or reward openings. The revealed item is added to your inventory after the opening is completed.'
+  },
+  {
+    question: 'What are coins?',
+    answer: 'Coins are the balance used for eligible box openings, shipping charges where enabled, and other supported features on Pullz.gg. Coin package pricing and any included bonus amount are shown before purchase or use.'
+  },
+  {
+    question: 'Is opening fair?',
+    answer: 'Pullz.gg publishes box odds and provides information about how results are generated and verified. Review the box details and the provably fair information before opening.'
+  },
+  {
+    question: 'How long does shipping take?',
+    answer: 'Processing and delivery times can vary based on item availability, destination, carrier service, and account review requirements. Tracking information is provided when the shipment is prepared where available.'
+  }
+];
 
 const RARITY_ORDER: CaseItem['rarity'][] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
@@ -55,6 +96,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
   const { setView, setShowTopUpModal } = useUI();
   const [category, setCategory] = useState('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   // The header dispatches this whenever the shared mobile menu opens or
   // closes (including via the backdrop or a nav link), so the dock's
@@ -240,6 +282,46 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
           {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another category.</span></div> : null}
         </div>
         <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
+      </section>
+
+      <section className="bet-home-how-it-works" aria-labelledby="home-how-it-works-title">
+        <h2 id="home-how-it-works-title">How It Works</h2>
+        <div className="bet-home-how-it-works-grid">
+          {HOW_IT_WORKS_STEPS.map((step, index) => (
+            <div className="bet-home-how-it-works-step" key={step.number}>
+              {stripeSettings.howItWorksStepImageUrls[index] ? (
+                <img src={stripeSettings.howItWorksStepImageUrls[index]} alt="" loading="lazy" decoding="async" />
+              ) : (
+                <span className="bet-home-how-it-works-number" aria-hidden="true">{step.number}</span>
+              )}
+              <strong>{step.title}</strong>
+              <p>{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="bet-home-faq" aria-labelledby="home-faq-title">
+        <h2 id="home-faq-title">Frequently Asked Questions</h2>
+        <div className="bet-home-faq-list">
+          {HOME_FAQ_ITEMS.map((item, index) => {
+            const isOpen = openFaqIndex === index;
+            return (
+              <div className={`bet-home-faq-item${isOpen ? ' is-open' : ''}`} key={item.question}>
+                <button
+                  type="button"
+                  className="bet-home-faq-question"
+                  onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{item.question}</span>
+                  {isOpen ? <Minus aria-hidden="true" /> : <Plus aria-hidden="true" />}
+                </button>
+                {isOpen ? <p className="bet-home-faq-answer">{item.answer}</p> : null}
+              </div>
+            );
+          })}
+        </div>
       </section>
       <nav className="bet-home-dock" aria-label="Homepage navigation">
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>

@@ -12,6 +12,7 @@ import { db } from '../firebase';
 import { storage } from '../firebaseStorage';
 import { HomepageShowcaseEditor } from './admin/HomepageShowcaseEditor';
 import { HomeHeroSlidesEditor } from './admin/HomeHeroSlidesEditor';
+import { HomeHowItWorksEditor } from './admin/HomeHowItWorksEditor';
 import { BoxesPageConfigEditor } from './admin/BoxesPageConfigEditor';
 import { FooterPagesEditor } from './admin/FooterPagesEditor';
 import { PollsAdminSection } from './admin/PollsAdminSection';
@@ -3599,7 +3600,6 @@ export const AdminPanel: React.FC = () => {
           authPopupImageUrls: stripeSettingsDraft.authPopupImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategoryImageUrls: stripeSettingsDraft.homeCategoryImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           homeCategorySlugs: stripeSettingsDraft.homeCategorySlugs.map((slug) => slug.trim()).slice(0, 3),
-          howItWorksStepImageUrls: stripeSettingsDraft.howItWorksStepImageUrls.map((imageUrl) => imageUrl.trim()).slice(0, 3),
           shippingCashEnabled: stripeSettingsDraft.shippingCashEnabled,
           shippingFlatRateCents,
           stripeShippingProductId: stripeSettingsDraft.stripeShippingProductId,
@@ -3619,7 +3619,18 @@ export const AdminPanel: React.FC = () => {
           caseLabPublishFeeCoins: Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabPublishFeeCoins) || 0)),
           caseLabSellBackPercent: Math.min(100, Math.max(0, Math.round(Number(stripeSettingsDraft.caseLabSellBackPercent) || 0))),
           caseLabVisibleBoxIds: Array.from(new Set(stripeSettingsDraft.caseLabVisibleBoxIds)),
-          boxTagIcons: stripeSettings.boxTagIcons
+          boxTagIcons: stripeSettings.boxTagIcons,
+          // These three are edited by their own dedicated Homepage-tab
+          // editors (HomeHeroSlidesEditor, HomeHowItWorksEditor, and the
+          // box-tag label editor), not this form's draft state — reading
+          // them from the live settings instead of stripeSettingsDraft
+          // avoids this save silently reverting them to whatever they
+          // were when this component first mounted (or wiping them
+          // entirely, since normalizeStripeSettings defaults missing
+          // array/object fields to empty).
+          boxTagLabels: stripeSettings.boxTagLabels,
+          homeHeroSlides: stripeSettings.homeHeroSlides,
+          howItWorksStepImageUrls: stripeSettings.howItWorksStepImageUrls
       });
       setStripeSettingsNotice(true);
       window.setTimeout(() => setStripeSettingsNotice(false), 3000);
@@ -6959,6 +6970,7 @@ export const AdminPanel: React.FC = () => {
             {activeTab === 'homepage' && (
                 <div className="space-y-6">
                     <HomeHeroSlidesEditor />
+                    <HomeHowItWorksEditor />
                     <HomepageShowcaseEditor />
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -7309,21 +7321,6 @@ export const AdminPanel: React.FC = () => {
                                                 </p>
                                             ) : null}
                                         </div>
-                                    ))}
-                                    {[0, 1, 2].map((index) => (
-                                        <Input
-                                            key={`how-it-works-image-${index}`}
-                                            type="url"
-                                            value={stripeSettingsDraft.howItWorksStepImageUrls[index] ?? ''}
-                                            onChange={(event) => {
-                                                const nextUrls = [...stripeSettingsDraft.howItWorksStepImageUrls];
-                                                nextUrls[index] = event.target.value;
-                                                setStripeSettingsDraft((prev) => ({ ...prev, howItWorksStepImageUrls: nextUrls }));
-                                                setStripeSettingsNotice(false);
-                                            }}
-                                            placeholder={`How it works step ${index + 1} image URL`}
-                                            className="w-full bg-[#111827] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-                                        />
                                     ))}
                                 </div>
                                 <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
