@@ -163,7 +163,7 @@ export const PollsPage: React.FC = () => {
   const renderedPolls = useMemo(() => polls.filter((poll) => poll.options.length >= 2), [polls]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <div className="pullz-legacy-theme mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <button
         type="button"
         onClick={() => window.history.back()}

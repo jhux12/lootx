@@ -52,7 +52,7 @@ export const ManagedFooterContent: React.FC<{ pageKey: FooterPageKey; children?:
   const { title, html, lastUpdated } = useManagedFooterPage(pageKey);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+    <div className="pullz-legacy-theme mx-auto flex max-w-4xl flex-col gap-6 px-4 pb-16 pt-10 sm:px-6 lg:px-8">
       <section className="rounded-2xl border border-white/10 bg-[#0b0f1a] p-5 sm:p-6 md:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">{FOOTER_PAGE_META[pageKey].eyebrow}</p>
         <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">{title}</h1>

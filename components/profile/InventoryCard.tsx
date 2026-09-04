@@ -65,7 +65,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
     : 'border-purple-300/80 ring-2 ring-purple-400/50 shadow-[0_0_30px_rgba(168,85,247,0.36)]';
   const selectedCheckClass = isLegendary
     ? 'bg-yellow-400 text-yellow-950 shadow-[0_0_18px_rgba(250,204,21,0.68)]'
-    : 'bg-purple-500 text-white shadow-[0_0_18px_rgba(168,85,247,0.65)]';
+    : 'bg-purple-500 text-[#fff] shadow-[0_0_18px_rgba(168,85,247,0.65)]';
   const cardBoxShadow = selected
     ? isLegendary
       ? `0 18px 34px rgba(0,0,0,0.32), 0 0 34px rgba(250,204,21,0.38), inset 0 0 0 1px ${rarityStyle.accent}55`
@@ -113,7 +113,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           onToggleSelect();
         }
       }}
-      className={`group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
+      className={`pullz-dark-chip group relative overflow-hidden rounded-lg border p-0 text-left shadow-[0_18px_34px_rgba(0,0,0,0.32)] transition hover:-translate-y-0.5 hover:border-white/20 sm:rounded-xl ${isList ? 'sm:grid sm:grid-cols-[8.5rem_minmax(0,1fr)_10rem] sm:items-center sm:gap-4 sm:p-3' : 'flex min-h-[270px] flex-col sm:min-h-[320px]'} ${rarityStyle.card} ${
         selected ? selectedCardClass : 'hover:shadow-[0_20px_40px_rgba(0,0,0,0.38)]'
       } ${selectable ? 'cursor-pointer' : 'cursor-default'}`}
       style={{ boxShadow: cardBoxShadow }}
@@ -155,7 +155,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({ item, selected, se
           className={`${primaryActionButtonBase} ${
             actionDisabled
               ? 'cursor-not-allowed border-white/10 bg-[#111720] text-gray-500 shadow-none'
-              : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-white shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'
+              : 'border-purple-300/45 bg-[linear-gradient(135deg,rgba(147,51,234,0.95)_0%,rgba(124,58,237,0.9)_100%)] text-[#fff] shadow-[0_14px_34px_rgba(147,51,234,0.24)] hover:scale-[1.01] hover:border-purple-200/65 hover:shadow-[0_18px_42px_rgba(147,51,234,0.30)]'
           }`}
         >
           {!actionDisabled ? <span aria-hidden="true" className={primaryActionShineClass} /> : null}

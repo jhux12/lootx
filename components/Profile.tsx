@@ -929,7 +929,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
   const tradeInModalItem = normalizedInventory.find((item) => item.instanceId === tradeInModalItemId) ?? null;
 
   return (
-    <div className="min-h-screen bg-[#090a0e] px-3 py-4 text-white sm:px-5 sm:py-6">
+    <div className="pullz-legacy-theme min-h-screen bg-[#090a0e] px-3 py-4 text-white sm:px-5 sm:py-6">
       <main className="mx-auto w-full max-w-[30rem] overflow-hidden bg-[#08080a] pb-20 sm:max-w-6xl sm:rounded-[2rem] sm:border sm:border-white/10 sm:shadow-[0_30px_100px_rgba(0,0,0,0.38)] md:pb-6">
         <section className="relative overflow-hidden border-b border-white/5 bg-[#08080a] px-5 pb-6 pt-7 sm:px-10 sm:py-9">
           <button type="button" onClick={() => setShowEditProfile(true)} className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-bold text-[#5e5e64] transition hover:bg-white/5 hover:text-white" aria-label="Edit profile">
@@ -951,16 +951,16 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
           <button
             type="button"
             onClick={() => setView({ type: 'REFERRALS' })}
-            className="group flex min-h-14 w-full items-center gap-3 rounded-xl border border-amber-300/15 bg-gradient-to-r from-amber-300/[0.09] via-[#171719] to-[#111115] px-4 py-3 text-left shadow-[0_10px_28px_rgba(0,0,0,0.2)] transition hover:border-amber-300/30 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-amber-300/40 sm:px-5"
+            className="pullz-refer-friend-btn group flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition hover:brightness-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-400/50 sm:px-5"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-200/15 bg-black/25 shadow-inner shadow-black/30">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-200/40 bg-blue-50 shadow-inner">
               <img src={COIN_ICON} alt="" className="h-6 w-6 object-contain" width={24} height={24} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-black text-white sm:text-base">Refer a Friend</span>
-              <span className="mt-0.5 block truncate text-[11px] font-medium text-[#929299] sm:text-xs">Invite friends and earn coins together</span>
+              <span className="block text-sm font-black text-[#0b1220] sm:text-base">Refer a Friend</span>
+              <span className="mt-0.5 block truncate text-[11px] font-medium text-[#5b6472] sm:text-xs">Invite friends and earn coins together</span>
             </span>
-            <ChevronRight className="h-4 w-4 shrink-0 text-amber-200/60 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-100" aria-hidden="true" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-blue-500 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600" aria-hidden="true" />
           </button>
 
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -1008,7 +1008,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             <CoinAmount amount={getSellBackValue(toCoins(tradeInModalItem.price, PRICE_UNIT_MODE), getSellBackRate(tradeInModalItem))} formatOptions={{ maximumFractionDigits: 0 }} className="text-xl font-bold text-emerald-400" iconClassName="h-5 w-5" />
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button className="rounded-xl border border-white/10 py-2 text-sm text-gray-200" onClick={() => setTradeInModalItemId(null)}>Cancel</button>
-              <button className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 py-2 text-sm font-bold text-white" onClick={handleConfirmTradeIn}>{isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}</button>
+              <button className="rounded-xl bg-gradient-to-r from-[#205DD7] to-sky-500 py-2 text-sm font-bold text-[#fff]" onClick={handleConfirmTradeIn}>{isSellingItems[tradeInModalItem.instanceId] ? 'Trading In...' : 'Trade In'}</button>
             </div>
           </div>
         </div>
@@ -1271,7 +1271,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             )}
 
             <div className="mt-4 space-y-2">
-              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-white shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
+              <button className="min-h-12 w-full rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-base font-black text-[#fff] shadow-lg shadow-blue-950/40 disabled:cursor-not-allowed disabled:opacity-50" disabled={!selectedLiveRate || isLoadingLiveRates || isSubmittingCashShipping} onClick={() => void handleLiveShippingCheckout()}>{isSubmittingCashShipping ? 'Creating secure checkout…' : selectedLiveRate ? (selectedLiveRate.customerAmountCents === 0 ? 'Request Free Shipping' : `Pay $${(selectedLiveRate.customerAmountCents / 100).toFixed(2)} & Request Shipping`) : 'Select a Shipping Method'}</button>
               <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-base font-bold text-slate-300 transition hover:bg-white/5 hover:text-white" onClick={() => { setShowShippingRateTooltip(false); setShippingRequestConfirmed(false); setShowShippingReview(false); }}>Cancel</button>
             </div>
 

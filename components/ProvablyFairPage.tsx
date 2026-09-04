@@ -158,7 +158,7 @@ export const ProvablyFairPage: React.FC = () => {
   if (battleId) {
     const battle = battleVerify.battle;
     return (
-      <div className="mx-auto w-full max-w-5xl space-y-6 px-3 pb-12 pt-6 sm:px-6">
+      <div className="pullz-legacy-theme mx-auto w-full max-w-5xl space-y-6 px-3 pb-12 pt-6 sm:px-6">
         <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 space-y-3">
           <h1 className="text-xl font-bold text-white">Battle Verification</h1>
           {battle ? (
@@ -209,7 +209,7 @@ export const ProvablyFairPage: React.FC = () => {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 pb-12 pt-8 sm:px-6 lg:px-8">
+    <div className="pullz-legacy-theme mx-auto w-full max-w-6xl space-y-8 px-4 pb-12 pt-8 sm:px-6 lg:px-8">
       <header className="rounded-2xl border border-white/10 bg-[#0b0f1a] p-5 sm:p-6 md:p-8">
         <h1 className="text-2xl font-bold text-white sm:text-3xl">{managedContent.title}</h1>
         {managedContent.lastUpdated && <p className="mt-2 text-xs uppercase tracking-[0.3em] text-gray-500">Last updated {managedContent.lastUpdated}</p>}

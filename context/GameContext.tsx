@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useState, useEffect, ReactNode, useRef, useMemo } from 'react';
-import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, Shipment, ShipmentStatus } from '../types';
+import { AppNotification, User, InventoryItem, CaseItem, InventoryProvenance, ViewState, Battle, MysteryBox, ShippingAddress, UserLocks, CoinPackage, StripeSettings, HomeHeroSlide, Shipment, ShipmentStatus } from '../types';
 import { normalizeStoredShippingAddress } from '../src/lib/shippingAddress';
 import { CASE_ITEMS } from '../constants';
 import { auth, db } from '../firebase';
@@ -284,9 +284,42 @@ const DEFAULT_STRIPE_SETTINGS: StripeSettings = {
   caseLabSellBackPercent: 75,
   caseLabVisibleBoxIds: [],
   boxTagIcons: {},
-  boxTagLabels: {}
+  boxTagLabels: {},
+  homeHeroSlides: []
 };
 
+
+const HEX_COLOR_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const normalizeHexColor = (value: unknown, fallback: string) =>
+  typeof value === 'string' && HEX_COLOR_PATTERN.test(value.trim()) ? value.trim() : fallback;
+
+const normalizeHomeHeroSlides = (slides: unknown): HomeHeroSlide[] => {
+  if (!Array.isArray(slides)) return [];
+
+  return slides
+    .map((slide, index) => {
+      if (!slide || typeof slide !== 'object') return null;
+      const source = slide as Partial<HomeHeroSlide>;
+      const backgroundType: HomeHeroSlide['backgroundType'] =
+        source.backgroundType === 'gradient' || source.backgroundType === 'image' ? source.backgroundType : 'color';
+
+      return {
+        id: typeof source.id === 'string' && source.id.trim() ? source.id.trim() : `hero-${index}-${Date.now()}`,
+        backgroundType,
+        backgroundColor: normalizeHexColor(source.backgroundColor, '#050505'),
+        backgroundGradientFrom: normalizeHexColor(source.backgroundGradientFrom, '#6225ef'),
+        backgroundGradientTo: normalizeHexColor(source.backgroundGradientTo, '#4f7ff4'),
+        backgroundImage: typeof source.backgroundImage === 'string' ? source.backgroundImage.trim() : '',
+        image: typeof source.image === 'string' ? source.image.trim() : '',
+        link: typeof source.link === 'string' ? source.link.trim() : '',
+        text: typeof source.text === 'string' ? source.text.trim() : '',
+        textColor: normalizeHexColor(source.textColor, '#ffffff'),
+        shopNowText: typeof source.shopNowText === 'string' && source.shopNowText.trim() ? source.shopNowText.trim() : 'Shop now'
+      };
+    })
+    .filter((slide): slide is HomeHeroSlide => Boolean(slide))
+    .slice(0, 6);
+};
 
 const normalizeEditableShippingTiers = (tiers: unknown, fallback: StripeSettings['shippingRateTiers']): StripeSettings['shippingRateTiers'] => {
   if (!Array.isArray(tiers)) return fallback;
@@ -378,7 +411,8 @@ const normalizeStripeSettings = (settings: Partial<StripeSettings>): StripeSetti
             .map(([tag, label]) => [tag.trim().toLowerCase(), label.trim()])
             .filter(([tag, label]) => tag.length > 0 && label.length > 0)
         )
-      : {}
+      : {},
+    homeHeroSlides: normalizeHomeHeroSlides(settings.homeHeroSlides)
   };
 };
 

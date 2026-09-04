@@ -14,10 +14,12 @@ type OriginalScrollStyles = {
   bodyOverscrollBehavior: string;
   bodyPosition: string;
   bodyTop: string;
+  bodyLeft: string;
   bodyWidth: string;
   bodyTouchAction: string;
   htmlOverflow: string;
   htmlOverscrollBehavior: string;
+  scrollX: number;
   scrollY: number;
 };
 
@@ -36,12 +38,19 @@ const applyActiveScrollLock = () => {
   document.body.style.overscrollBehavior = 'none';
 
   if (shouldPreserveScroll) {
+    // Without also pinning `left` to the horizontal scroll offset, a fixed
+    // body with only `top` set can visibly shift the page (and anything
+    // rendered fixed within it) to the left whenever there's any
+    // horizontal scroll position at lock time — e.g. from a page that's
+    // momentarily wider than the viewport, or iOS rubber-band scrolling.
     document.body.style.position = 'fixed';
     document.body.style.top = `-${originalStyles.scrollY}px`;
+    document.body.style.left = `-${originalStyles.scrollX}px`;
     document.body.style.width = '100%';
   } else {
     document.body.style.position = originalStyles.bodyPosition;
     document.body.style.top = originalStyles.bodyTop;
+    document.body.style.left = originalStyles.bodyLeft;
     document.body.style.width = originalStyles.bodyWidth;
   }
 
@@ -61,10 +70,12 @@ export const lockPageScroll = (options: ScrollLockOptions = {}) => {
       bodyOverscrollBehavior: document.body.style.overscrollBehavior,
       bodyPosition: document.body.style.position,
       bodyTop: document.body.style.top,
+      bodyLeft: document.body.style.left,
       bodyWidth: document.body.style.width,
       bodyTouchAction: document.body.style.touchAction,
       htmlOverflow: document.documentElement.style.overflow,
       htmlOverscrollBehavior: document.documentElement.style.overscrollBehavior,
+      scrollX: window.scrollX,
       scrollY: window.scrollY
     };
   }
@@ -93,8 +104,9 @@ export const lockPageScroll = (options: ScrollLockOptions = {}) => {
     document.body.style.overscrollBehavior = stylesToRestore.bodyOverscrollBehavior;
     document.body.style.position = stylesToRestore.bodyPosition;
     document.body.style.top = stylesToRestore.bodyTop;
+    document.body.style.left = stylesToRestore.bodyLeft;
     document.body.style.width = stylesToRestore.bodyWidth;
     document.body.style.touchAction = stylesToRestore.bodyTouchAction;
-    window.scrollTo(0, stylesToRestore.scrollY);
+    window.scrollTo(stylesToRestore.scrollX, stylesToRestore.scrollY);
   };
 };
