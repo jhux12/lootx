@@ -7,8 +7,8 @@ export const DEFAULT_REFERRAL_SETTINGS = {
   enabled: true,
   referrerRewardCoins: 1000,
   friendRewardCoins: 1000,
-  requiredDepositCoins: 1000,
-  requireFirstQualifyingGame: true,
+  requiredDepositCoins: 1,
+  requireFirstQualifyingGame: false,
   leaderboardPointsEnabled: false,
   referrerLeaderboardPoints: 0,
   friendLeaderboardPoints: 0,
@@ -145,8 +145,7 @@ export const buildReferralRecordId = (referredUid) => `referred_${referredUid}`;
 export const evaluateReferralStatus = ({ referral = {}, settings }) => {
   const depositQualified = referral.depositQualified === true;
   const firstGameQualified = referral.firstGameQualified === true;
-  const gameRequirementMet = settings.requireFirstQualifyingGame ? firstGameQualified : true;
-  const completed = depositQualified && gameRequirementMet;
+  const completed = depositQualified;
   return {
     depositQualified,
     firstGameQualified,
@@ -208,8 +207,8 @@ export const maybeCompleteReferralReward = async ({ referredUid }) => {
       return { updated: false, reason: 'invalid_users' };
     }
 
-    const referrerRewardCoins = liveSettings.referrerRewardCoins;
-    const friendRewardCoins = liveSettings.friendRewardCoins;
+    const referrerRewardCoins = 1000;
+    const friendRewardCoins = 1000;
     const rewardPatch = {
       referralRewardsEarned: admin.firestore.FieldValue.increment(referrerRewardCoins),
       updatedAt: Date.now()
@@ -283,12 +282,12 @@ export const markReferralDepositQualified = async ({ referredUid, depositCoins =
     const referral = referralSnap.data() ?? {};
     const priorTotal = Math.max(0, Math.floor(Number(referral.depositQualifiedAmount || 0)));
     const nextTotal = priorTotal + amount;
-    const meets = nextTotal >= settings.requiredDepositCoins;
+    const meets = nextTotal > 0;
     tx.set(referralRef, {
       depositQualifiedAmount: nextTotal,
       depositQualified: meets || referral.depositQualified === true,
-      status: (meets || referral.firstGameQualified === true && !settings.requireFirstQualifyingGame) ? 'completed' : 'pending_qualification',
-      qualifiedAt: meets && (!settings.requireFirstQualifyingGame || referral.firstGameQualified === true)
+      status: meets ? 'completed' : 'pending_qualification',
+      qualifiedAt: meets
         ? admin.firestore.FieldValue.serverTimestamp()
         : referral.qualifiedAt || null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()

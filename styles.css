@@ -913,3 +913,22 @@ body {
 :root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-100"],
 :root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-50"] { color:#047857 !important; }
 
+
+/* Compact referral dashboard with explicit light/dark theme tokens. */
+.referrals-page {
+  --ref-card: #181c28;
+  --ref-code: #11141d;
+  --ref-border: #2d303d;
+  --ref-muted: #9a9eae;
+  color: #f6f4f9;
+}
+.referral-card { border: 1px solid var(--ref-border); border-radius: 1rem; background: var(--ref-card); }
+.referral-code { border: 1px solid var(--ref-border); background: var(--ref-code); }
+.referral-muted { color: var(--ref-muted); }
+:root[data-theme="light"] .referrals-page {
+  --ref-card: #ffffff;
+  --ref-code: #f4f5f7;
+  --ref-border: #dedfe4;
+  --ref-muted: #626674;
+  color: #17181d;
+}

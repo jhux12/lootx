@@ -65,7 +65,7 @@ export const useRecentPulls = (pullLimit = 30) => {
               obtainedAt: toMillis(data.createdAt),
             };
           })
-          .filter((entry): entry is RecentPull => Boolean(entry));
+          .filter((entry): entry is RecentPull => Boolean(entry) && entry.value >= 500);
 
         // A momentary empty/from-cache snapshot shouldn't wipe out pulls we
         // already loaded successfully — only accept it if we have nothing
