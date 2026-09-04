@@ -22,6 +22,7 @@ import { CookieConsentToast } from './components/CookieConsentToast';
 import { getCookieConsent, hasAnalyticsConsent } from './utils/cookieConsent';
 import { initializeAnalytics, trackEvent as trackGaEvent, trackPageView } from './services/analytics';
 import { clearPendingCheckout, getPendingCheckout } from './services/checkoutTracking';
+import { MaintenanceModeGate } from './components/MaintenanceModeGate';
 
 type ClarityWindow = Window &
   typeof globalThis & {
@@ -715,7 +716,9 @@ function App() {
         <PreviewProvider>
           <PerformanceModeProvider>
             <ToastProvider>
-              <AppShell />
+              <MaintenanceModeGate>
+                <AppShell />
+              </MaintenanceModeGate>
             </ToastProvider>
           </PerformanceModeProvider>
         </PreviewProvider>
