@@ -615,7 +615,8 @@ export const AdminPanel: React.FC = () => {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [expandedUserIds, setExpandedUserIds] = useState<Record<string, boolean>>({});
   const [usersQuickFilter, setUsersQuickFilter] = useState<'all' | 'shared_ip' | 'locked' | 'high_risk' | 'empty_inventory' | 'high_value'>('all');
-  const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
+  const [usersDepositFilter, setUsersDepositFilter] = useState<'all' | 'deposited' | 'never' | 'today' | 'last_7_days' | 'last_30_days'>('all');
+  const [usersSort, setUsersSort] = useState<{ key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lastDeposit' | 'lifetimeSpent' | 'pendingShipments' | 'risk'; direction: 'asc' | 'desc' }>({
       key: 'created',
       direction: 'desc'
   });
@@ -2793,7 +2794,7 @@ export const AdminPanel: React.FC = () => {
       setVoidReason('');
   };
 
-  const toggleUsersSort = (key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lifetimeSpent' | 'pendingShipments' | 'risk') => {
+  const toggleUsersSort = (key: 'user' | 'created' | 'lastActive' | 'status' | 'coins' | 'inventoryValue' | 'lifetimeDeposits' | 'lastDeposit' | 'lifetimeSpent' | 'pendingShipments' | 'risk') => {
       setUsersSort((prev) => ({
           key,
           direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
@@ -2875,7 +2876,9 @@ export const AdminPanel: React.FC = () => {
       const logs = adminLogs[profile.id] ?? profile.adminLogs ?? [];
       const pendingShipmentCount = shipments.filter((shipment) => shipment.uid === profile.id && shipment.status !== 'shipped').length;
       const supportTicketCount = supportCases.filter((caseItem) => caseItem.uid === profile.id && caseItem.status !== 'Closed').length;
-      const lifetimeDeposits = ledger.filter((entry) => entry.type === 'deposit').reduce((sum, entry) => sum + Math.max(0, entry.amount), 0);
+      const deposits = ledger.filter((entry) => entry.type === 'deposit' && entry.amount > 0);
+      const lifetimeDeposits = deposits.reduce((sum, entry) => sum + entry.amount, 0);
+      const lastDepositAt = deposits.reduce((latest, entry) => Math.max(latest, Number(entry.createdAt ?? 0)), 0);
       const lifetimeSpent = Math.abs(ledger.filter((entry) => entry.type === 'case_open').reduce((sum, entry) => sum + Math.min(0, entry.amount), 0));
       const lifetimeSellback = ledger.filter((entry) => entry.type === 'sell_back').reduce((sum, entry) => sum + Math.max(0, entry.amount), 0);
       const inventoryValue = inventory.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
@@ -2896,6 +2899,7 @@ export const AdminPanel: React.FC = () => {
           pendingShipmentCount,
           supportTicketCount,
           lifetimeDeposits,
+          lastDepositAt,
           lifetimeSpent,
           lifetimeSellback,
           inventoryValue,
@@ -2947,8 +2951,21 @@ export const AdminPanel: React.FC = () => {
           return true;
       });
 
+      const now = Date.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const depositFiltered = quickFiltered.filter((profile) => {
+          const { lastDepositAt, lifetimeDeposits } = getUserMetrics(profile);
+          if (usersDepositFilter === 'deposited') return lifetimeDeposits > 0;
+          if (usersDepositFilter === 'never') return lifetimeDeposits <= 0;
+          if (usersDepositFilter === 'today') return lastDepositAt >= todayStart.getTime();
+          if (usersDepositFilter === 'last_7_days') return lastDepositAt >= now - 7 * 24 * 60 * 60 * 1000;
+          if (usersDepositFilter === 'last_30_days') return lastDepositAt >= now - 30 * 24 * 60 * 60 * 1000;
+          return true;
+      });
+
       const direction = usersSort.direction === 'asc' ? 1 : -1;
-      return [...quickFiltered].sort((a, b) => {
+      return [...depositFiltered].sort((a, b) => {
           const am = getUserMetrics(a);
           const bm = getUserMetrics(b);
           const aStatus = userStatuses[a.id] ?? 'active';
@@ -2961,13 +2978,14 @@ export const AdminPanel: React.FC = () => {
               coins: Number(a.balance ?? 0) - Number(b.balance ?? 0),
               inventoryValue: am.inventoryValue - bm.inventoryValue,
               lifetimeDeposits: am.lifetimeDeposits - bm.lifetimeDeposits,
+              lastDeposit: am.lastDepositAt - bm.lastDepositAt,
               lifetimeSpent: am.lifetimeSpent - bm.lifetimeSpent,
               pendingShipments: am.pendingShipmentCount - bm.pendingShipmentCount,
               risk: am.riskScore - bm.riskScore
           };
           return comparisons[usersSort.key] * direction;
       });
-  }, [normalizedUserSearch, users, usersQuickFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses, signupIpAccounts]);
+  }, [normalizedUserSearch, users, usersQuickFilter, usersDepositFilter, usersSort, inventoryState, ledgerEntries, adminLogs, shipments, supportCases, userInternalLabels, userLocks, userStatuses, signupIpAccounts]);
   const selectedLedgerEntries = useMemo(() => {
       if (!isRealSelectedUserId(selectedUserId)) return [];
       return normalizeLedgerEntries(ledgerEntries[selectedUserId] ?? [], selectedUser?.balance ?? 0);
@@ -5196,6 +5214,30 @@ export const AdminPanel: React.FC = () => {
                             ))}
                             <span className="ml-auto rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">Live • synced</span>
                         </div>
+                        <div className="mt-4 border-t border-gray-800 pt-4">
+                            <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">Filter by deposits and deposit date</div>
+                            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Filter users by deposit activity">
+                                {[
+                                    { key: 'all', label: 'All deposit activity' },
+                                    { key: 'deposited', label: 'Has deposited' },
+                                    { key: 'never', label: 'Never deposited' },
+                                    { key: 'today', label: 'Deposited today' },
+                                    { key: 'last_7_days', label: 'Last 7 days' },
+                                    { key: 'last_30_days', label: 'Last 30 days' }
+                                ].map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={usersDepositFilter === tab.key}
+                                        onClick={() => setUsersDepositFilter(tab.key as typeof usersDepositFilter)}
+                                        className={`min-h-10 shrink-0 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${usersDepositFilter === tab.key ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-200' : 'border-gray-700 bg-[#0b0e14] text-gray-400 hover:border-gray-600 hover:text-gray-200'}`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
                     {selectedSignupIp && (
@@ -5226,7 +5268,7 @@ export const AdminPanel: React.FC = () => {
                                 <thead className="sticky top-0 z-10 border-b border-gray-800 bg-[#0b0e14] text-gray-400">
                                     <tr>
                                         {[
-                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Signup IP', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
+                                            ['User', 'user'], ['Email', 'user'], ['UID', 'user'], ['Signup IP', 'user'], ['Created', 'created'], ['Last Active', 'lastActive'], ['Status', 'status'], ['Coins', 'coins'], ['Inventory Value', 'inventoryValue'], ['Lifetime Deposits', 'lifetimeDeposits'], ['Last Deposit', 'lastDeposit'], ['Lifetime Spent', 'lifetimeSpent'], ['Pending Shipments', 'pendingShipments'], ['Risk Score', 'risk'], ['Internal Labels', 'user'], ['Actions', 'user']
                                         ].map(([label, key]) => (
                                             <th key={label} className="px-3 py-3 font-semibold">
                                                 <button type="button" onClick={() => toggleUsersSort(key as typeof usersSort.key)} className="inline-flex items-center gap-1 text-left hover:text-white">
@@ -5240,7 +5282,7 @@ export const AdminPanel: React.FC = () => {
                                 <tbody className="divide-y divide-gray-800">
                                     {filteredUsers.length === 0 ? (
                                         <tr>
-                                            <td colSpan={15} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
+                                            <td colSpan={16} className="px-6 py-10 text-center text-gray-500">{users.length === 0 ? 'No users found in Firebase.' : 'No users match your search or filters.'}</td>
                                         </tr>
                                     ) : (
                                         filteredUsers.map((profile) => {
@@ -5278,6 +5320,7 @@ export const AdminPanel: React.FC = () => {
                                                     <td className="px-3 py-3 text-gray-200">{Math.round(profile.balance ?? 0).toLocaleString()}</td>
                                                     <td className="px-3 py-3 text-gray-300">{Math.round(metrics.inventoryValue).toLocaleString()}</td>
                                                     <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeDeposits).toLocaleString()}</td>
+                                                    <td className="whitespace-nowrap px-3 py-3 text-gray-300">{metrics.lastDepositAt ? new Date(metrics.lastDepositAt).toLocaleDateString() : 'Never'}</td>
                                                     <td className="px-3 py-3 text-gray-300">{Math.round(metrics.lifetimeSpent).toLocaleString()}</td>
                                                     <td className="px-3 py-3 text-gray-300">{metrics.pendingShipmentCount}</td>
                                                     <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 font-bold ${metrics.riskLevel === 'High' ? 'bg-red-500/10 text-red-300' : metrics.riskLevel === 'Medium' ? 'bg-yellow-500/10 text-yellow-300' : 'bg-emerald-500/10 text-emerald-300'}`}>{metrics.riskScore}</span></td>
@@ -5307,6 +5350,10 @@ export const AdminPanel: React.FC = () => {
                                                     <div className="text-xs text-gray-500">{profile.email || profile.id}</div>
                                                 </div>
                                                 <span className="rounded-full bg-[#131720] px-2 py-1 text-xs text-gray-300">Risk {metrics.riskScore}</span>
+                                            </div>
+                                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                                <div className="rounded-lg bg-[#131720] p-2 text-gray-400"><span className="block text-[10px] uppercase text-gray-600">Deposits</span><span className="font-semibold text-gray-200">{Math.round(metrics.lifetimeDeposits).toLocaleString()}</span></div>
+                                                <div className="rounded-lg bg-[#131720] p-2 text-gray-400"><span className="block text-[10px] uppercase text-gray-600">Last deposit</span><span className="font-semibold text-gray-200">{metrics.lastDepositAt ? new Date(metrics.lastDepositAt).toLocaleDateString() : 'Never'}</span></div>
                                             </div>
                                             {profile.signupIp && (signupIpAccounts.get(profile.signupIp)?.length ?? 0) > 1 && <span role="button" tabIndex={0} onClick={(event) => { event.stopPropagation(); setSelectedSignupIp(profile.signupIp!); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); setSelectedSignupIp(profile.signupIp!); } }} className="mt-3 inline-flex max-w-full rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-1 font-mono text-[11px] text-red-300">{profile.signupIp} • {signupIpAccounts.get(profile.signupIp)?.length} accounts</span>}
                                         </button>
