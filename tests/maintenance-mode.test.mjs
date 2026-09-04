@@ -13,6 +13,10 @@ test('maintenance mode replaces the customer application while preserving verifi
   assert.match(gate, /Site under maintenance/);
   assert.match(gate, /view\.type === 'ADMIN'/);
   assert.match(gate, /user\.isAdmin === true/);
+  assert.match(gate, /Admin sign in/);
+  assert.match(gate, /await login\(email, password, true\)/);
+  assert.match(gate, /setView\(\{ type: 'ADMIN' \}\)/);
+  assert.match(gate, /This account does not have administrator access/);
 });
 
 test('site settings exposes a confirmed maintenance toggle', () => {
