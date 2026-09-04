@@ -1,8 +1,8 @@
-# Pullz.gg Header Navigation Redesign Concepts
+# Ripza Header Navigation Redesign Concepts
 
 ## Recommended implementation: Option 2 — Modern gaming platform layout
 
-Option 2 is the strongest long-term direction for Pullz.gg because it keeps every current action visible, makes navigation easier to scan, and introduces a premium segmented-control system that can scale as more games, rewards, and utility features are added.
+Option 2 is the strongest long-term direction for Ripza because it keeps every current action visible, makes navigation easier to scan, and introduces a premium segmented-control system that can scale as more games, rewards, and utility features are added.
 
 ---
 

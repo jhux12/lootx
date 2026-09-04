@@ -21,7 +21,7 @@ const SITE_SEARCH_ENTRIES: SiteSearchEntry[] = [
     title: 'Box Battles',
     keywords: ['battle', 'box battle', 'arena', 'versus', 'round'],
     content:
-      'Box Battles let players open the same boxes and the highest total wins. The battle arena is a core gameplay mode on Pullz.gg.'
+      'Box Battles let players open the same boxes and the highest total wins. The battle arena is a core gameplay mode on Ripza.'
   },
   {
     title: 'Box Lab',
@@ -33,7 +33,7 @@ const SITE_SEARCH_ENTRIES: SiteSearchEntry[] = [
     title: 'Provably fair',
     keywords: ['provably fair', 'fair', 'fairness', 'verify', 'random'],
     content:
-      'Outcomes are provably fair and can be verified. Pullz.gg uses fair randomness for openings.'
+      'Outcomes are provably fair and can be verified. Ripza uses fair randomness for openings.'
   }
 ];
 

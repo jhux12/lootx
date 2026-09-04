@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { getAppUrl } from './_lib/appUrl.js';
 import { requireActiveAccount } from './_utils/auth.js';
 import { admin, adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
@@ -207,10 +208,11 @@ export default async function handler(req, res) {
       }
     ];
 
+    const appUrl = getAppUrl();
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${process.env.APP_URL}/inventory?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/inventory?shipping=cancel`,
+      success_url: `${appUrl}/inventory?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/inventory?shipping=cancel`,
       line_items: lineItems,
       metadata: {
         userId: decoded.uid,

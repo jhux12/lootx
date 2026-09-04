@@ -29,7 +29,7 @@ const parseCookies = (cookieHeader = ''): Record<string, string> => (
 
 const clearStateCookie = () => `${OAUTH_STATE_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
 
-const getAppUrl = () => process.env.APP_URL || 'https://www.pullz.gg';
+const getAppUrl = () => process.env.APP_URL || 'https://ripza.gg';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {

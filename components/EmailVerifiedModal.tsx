@@ -69,7 +69,7 @@ export const EmailVerifiedModal: React.FC = () => {
           </div>
           <h2 className="mt-4 text-2xl font-black tracking-tight text-white sm:text-[2rem]">Email verified — please sign in</h2>
           <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-300 sm:text-[15px]">
-            Verification successful — please sign in to continue to Pullz.gg.
+            Verification successful — please sign in to continue to Ripza.
           </p>
         </div>
 

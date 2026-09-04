@@ -66,7 +66,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
       {showHero && (
         <div className="border-b border-gray-800 bg-gradient-to-r from-[#205DD7]/15 via-sky-500/10 to-transparent p-5 sm:p-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-            Pullz.gg Integrity
+            Ripza Integrity
           </div>
           <h1 className="mt-4 text-2xl font-black text-white sm:text-3xl">Provably Fair</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300 sm:text-base">

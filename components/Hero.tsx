@@ -55,7 +55,7 @@ export const Hero: React.FC = () => {
               Fair Value <span className="block bg-gradient-to-r from-[#205DD7] via-blue-400 to-sky-300 bg-clip-text text-transparent">Guarantee</span>
             </h1>
             <p className="max-w-xl text-sm font-medium uppercase tracking-[0.15em] text-slate-300 sm:text-base">
-              Discover, open &amp; collect on Pullz.
+              Discover, open &amp; collect on Ripza.
             </p>
           </div>
 
@@ -87,7 +87,7 @@ export const Hero: React.FC = () => {
           <img
             src={heroImage}
             className="relative z-10 h-[280px] w-auto max-w-full object-contain drop-shadow-[0_8px_20px_rgba(34,211,238,0.3)] sm:h-[360px] lg:h-[500px] animate-hero-float"
-            alt="Pullz.gg hero"
+            alt="Ripza hero"
             loading="eager"
             decoding="async"
             fetchPriority="high"

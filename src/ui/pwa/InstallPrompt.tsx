@@ -18,11 +18,11 @@ export const InstallPrompt: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">
-                {variant === 'chromium' ? 'Install Pullz for faster access' : 'Add Pullz to your Home Screen'}
+                {variant === 'chromium' ? 'Install Ripza for faster access' : 'Add Ripza to your Home Screen'}
               </p>
               {variant === 'chromium' ? (
                 <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                  Launch Pullz instantly, keep it full-screen, and enjoy a smoother mobile experience.
+                  Launch Ripza instantly, keep it full-screen, and enjoy a smoother mobile experience.
                 </p>
               ) : (
                 <div className="mt-1 text-xs leading-relaxed text-slate-300">
@@ -49,7 +49,7 @@ export const InstallPrompt: React.FC = () => {
             disabled={!canTriggerNativePrompt}
             className="relative mt-4 flex w-full items-center justify-center rounded-xl border border-cyan-300/50 bg-gradient-to-r from-[#205DD7]/90 to-cyan-500/90 px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Install Pullz
+            Install Ripza
           </button>
         )}
       </div>

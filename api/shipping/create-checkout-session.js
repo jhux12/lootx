@@ -3,6 +3,7 @@ import { admin, db } from '../_lib/firebaseAdmin.js';
 import { finalizeShippingPayment, isValidCents, paymentAttemptIdFor, releaseShippingPaymentAttempt, SHIPPING_LOCK_MS } from '../_lib/shippingPayment.js';
 import { hasUserMadeDeposit } from '../_lib/depositEligibility.js';
 import { deny, ok, requireUser } from '../_utils/auth.js';
+import { getAppUrl } from '../_lib/appUrl.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const cleanId = (value) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,150}$/.test(value) ? value : '';
@@ -76,12 +77,13 @@ export default async function handler(req, res) {
       return ok(res, { sessionId: null, shipmentBatchId: finalized.shipmentBatchId, freeShipping: true });
     }
     if (!isValidCents(Number(checkout.rate.customerAmountCents))) throw { status: 400, error: 'SHIPPING_RATE_INVALID' };
+    const appUrl = getAppUrl();
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-      success_url: `${process.env.APP_URL}/profile?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/profile?shipping=cancelled&attempt_id=${encodeURIComponent(attemptId)}`,
-      line_items: [{ price_data: { currency: 'usd', unit_amount: checkout.rate.customerAmountCents, product_data: { name: 'Pullz.gg Shipping', description: `${checkout.rate.provider} ${checkout.rate.service}`.slice(0, 200) } }, quantity: 1 }],
+      success_url: `${appUrl}/profile?shipping=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/profile?shipping=cancelled&attempt_id=${encodeURIComponent(attemptId)}`,
+      line_items: [{ price_data: { currency: 'usd', unit_amount: checkout.rate.customerAmountCents, product_data: { name: 'Ripza Shipping', description: `${checkout.rate.provider} ${checkout.rate.service}`.slice(0, 200) } }, quantity: 1 }],
       metadata: { type: 'shipping', paymentType: 'live_shipping', userId: uid, quoteId, shippoRateId: checkout.rate.shippoRateId, shippingBatchId: checkout.shipmentBatchId, paymentAttemptId: attemptId }
     }, { idempotencyKey: `shipping-${attemptId}` });
     createdSessionId = session.id;

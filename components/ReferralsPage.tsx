@@ -3,6 +3,7 @@ import { Check, ChevronLeft, Copy, Gift, Users, Wallet } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { authedFetch } from '../utils/authedFetch';
 import { COIN_ICON } from '../constants';
+import { PUBLIC_BRAND } from '../config/publicBrand';
 
 type ReferralSettings = { enabled: boolean; referrerRewardCoins: number; friendRewardCoins: number };
 type ReferralRecord = { id: string; friendLabel: string; joinedAt: number | null; status: string; youEarned: number; depositQualified?: boolean };
@@ -14,7 +15,7 @@ type ReferralData = {
 };
 
 const DEFAULT_SETTINGS: ReferralSettings = { enabled: true, referrerRewardCoins: 1000, friendRewardCoins: 1000 };
-const CANONICAL_REFERRAL_BASE_URL = 'https://pullz.gg';
+const CANONICAL_REFERRAL_BASE_URL = PUBLIC_BRAND.canonicalOrigin;
 
 const CoinValue = ({ amount }: { amount: number }) => (
   <span className="inline-flex items-center gap-1.5">

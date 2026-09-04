@@ -2638,7 +2638,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Firebase Google auth error', { code: error?.code, message: error?.message, error });
       const errorCode = error?.code;
       if (errorCode === 'auth/popup-blocked' || errorCode === 'auth/operation-not-supported-in-this-environment') {
-        return { status: 'error', message: 'Your browser blocked Google sign-in. Open Pullz in Safari or Chrome and try again.' };
+        return { status: 'error', message: 'Your browser blocked Google sign-in. Open Ripza in Safari or Chrome and try again.' };
       }
       if (errorCode === 'auth/account-exists-with-different-credential') {
         const pendingCredential = GoogleAuthProvider.credentialFromError(error);

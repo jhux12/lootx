@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       return deny(res, 422, activePackageCount === 0 ? 'SHIPPING_PACKAGES_NOT_CONFIGURED' : parcel.errorCode);
     }
     const origin = allFree ? null : await loadShippingOrigin();
-    const quotedRates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Pullz', service: 'Standard Shipping', serviceLevelToken: 'free', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
+    const quotedRates = allFree ? [{ id: 'free', shippoRateId: 'free', provider: 'Ripza', service: 'Standard Shipping', serviceLevelToken: 'free', carrierAmountCents: 0, handlingFeeCents: 0, customerAmountCents: 0, currency: 'USD', attributes: [] }] : await requestShippoRates({ fromAddress: toShippoAddress(origin), toAddress: toShippoAddress(destination), parcel });
     const rates = allFree ? quotedRates : selectCustomerRates(quotedRates, destination.countryCode);
     if (!rates.length) return deny(res, 404, destination.countryCode === 'US' ? 'NO_STANDARD_SHIPPING_RATE' : 'NO_SHIPPING_RATES');
     const quotedAt = Date.now(); const expiresAt = quotedAt + 15 * 60_000; const quoteRef = userRef.collection('shippingRateQuotes').doc();

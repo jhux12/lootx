@@ -441,7 +441,7 @@ export const LiveCommunitySection: React.FC = () => {
     <div className="rounded-[1.1rem] border border-white/[0.06] bg-[#20262b]/62 p-3 shadow-[0_16px_40px_rgba(5,8,12,0.18)] sm:p-4">
       <div className="mb-2.5 flex items-end justify-between gap-2 px-0.5">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/85">Community Pullz</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/85">Community Ripza</p>
           <h2 className="mt-0.5 text-xl font-black tracking-tight text-white sm:text-2xl">Real wins &amp; deliveries</h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -459,7 +459,7 @@ export const LiveCommunitySection: React.FC = () => {
         <div
           ref={storyRailRef}
           className="scrollbar-hide flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain px-4 py-1.5 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [touch-action:pan-x_pinch-zoom] sm:gap-3 sm:px-0.5"
-          aria-label="Community Pullz stories. Swipe horizontally to browse."
+          aria-label="Community Ripza stories. Swipe horizontally to browse."
         >
           <button
             type="button"
@@ -500,7 +500,7 @@ export const LiveCommunitySection: React.FC = () => {
               </div>
               <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 rounded-full border px-2 py-0.5 text-[8px] font-black uppercase tracking-wide backdrop-blur-md ${storyBadgeClass[badge]}`}>{badge}</span>
             </div>
-            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-slate-200">@{story.username || 'pullz'}</span>
+            <span className="mt-1.5 max-w-full truncate text-[11px] font-bold text-slate-200">@{story.username || 'ripza'}</span>
           </button>
         );}) : Array.from({ length: 10 }).map((_, idx) => <div key={idx} className="relative h-[86px] w-[86px] shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/[0.03] sm:h-[100px] sm:w-[100px] lg:h-[108px] lg:w-[108px]"><div className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" /></div>)}
         </div>

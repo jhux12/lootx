@@ -8,23 +8,23 @@ import { useTheme } from '../src/lib/theme/useTheme';
 
 const socialLinks = [
   {
-    href: 'https://www.instagram.com/pullz.gg/',
-    label: 'Follow Pullz.gg on Instagram',
+    href: 'https://www.instagram.com/ripza.gg/',
+    label: 'Follow Ripza on Instagram',
     Icon: Instagram
   },
   {
-    href: 'https://www.facebook.com/pullzgg',
-    label: 'Follow Pullz.gg on Facebook',
+    href: 'https://www.facebook.com/ripzagg',
+    label: 'Follow Ripza on Facebook',
     Icon: Facebook
   },
   {
-    href: 'https://x.com/pullzgg',
-    label: 'Follow Pullz.gg on X',
+    href: 'https://x.com/ripzagg',
+    label: 'Follow Ripza on X',
     Icon: Twitter
   },
   {
-    href: 'https://www.threads.com/@pullz.gg',
-    label: 'Follow Pullz.gg on Threads',
+    href: 'https://www.threads.com/@ripza.gg',
+    label: 'Follow Ripza on Threads',
     Icon: AtSign
   }
 ];
@@ -42,11 +42,11 @@ export const SiteFooter: React.FC = () => {
             type="button"
             onClick={() => setView({ type: 'HOME' })}
             className="inline-flex min-h-11 items-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
-            aria-label="Go to Pullz home"
+            aria-label="Go to Ripza home"
           >
             <BrandLockup className="justify-start" variant={theme === 'light' ? 'light' : 'dark'} logoClassName="h-9 w-auto md:h-10" />
           </button>
-          <div className="grid w-full grid-cols-4 gap-2 text-white sm:w-auto sm:flex sm:items-center sm:gap-3" aria-label="Pullz.gg social links">
+          <div className="grid w-full grid-cols-4 gap-2 text-white sm:w-auto sm:flex sm:items-center sm:gap-3" aria-label="Ripza social links">
             {socialLinks.map(({ href, label, Icon }) => (
               <a
                 key={href}
@@ -137,7 +137,7 @@ export const SiteFooter: React.FC = () => {
             By accessing this site, you confirm that you are over 18 years old.
           </p>
         </div>
-        <p className="text-xs text-slate-500">&copy; 2026 Pullz.gg. All rights reserved.</p>
+        <p className="text-xs text-slate-500">&copy; 2026 Ripza. All rights reserved.</p>
       </div>
     </footer>
   );

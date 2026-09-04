@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import { PUBLIC_BRAND } from '../config/publicBrand';
 
 export type TwitterCard = 'summary' | 'summary_large_image';
 export type RobotsMeta = 'index,follow' | 'index,nofollow' | 'noindex,follow' | 'noindex,nofollow';
@@ -18,14 +19,14 @@ export interface SeoSettings {
 }
 
 export const DEFAULT_SEO_SETTINGS: SeoSettings = {
-  siteName: 'Pullz.gg', seoTitle: 'Pullz.gg | Pokémon Mystery Boxes & Trading Cards',
+  siteName: PUBLIC_BRAND.name, seoTitle: `${PUBLIC_BRAND.name} | Pokémon Mystery Boxes & Trading Cards`,
   metaDescription: 'Open Pokémon mystery boxes online and collect authentic trading cards, sealed products, and collectibles. Keep your pulls, ship them, or sell them back for coins.',
-  canonicalUrl: 'https://pullz.gg', indexPage: true, followLinks: true,
-  openGraphTitle: 'Open Pokémon Mystery Boxes on Pullz.gg', openGraphDescription: 'Open digital mystery boxes and reveal authentic trading cards and collectibles delivered to your door.', openGraphImage: '',
+  canonicalUrl: PUBLIC_BRAND.canonicalOrigin, indexPage: true, followLinks: true,
+  openGraphTitle: 'Open Pokémon Mystery Boxes on Ripza', openGraphDescription: 'Open digital mystery boxes and reveal authentic trading cards and collectibles delivered to your door.', openGraphImage: '',
   twitterTitle: '', twitterDescription: '', twitterImage: '', twitterCard: 'summary_large_image',
-  faviconUrl: '', appleTouchIcon: '', businessLogo: '', organizationName: 'Pullz.gg', organizationDescription: '', businessUrl: 'https://pullz.gg', businessEmail: '', schemaLogo: '', socialProfiles: [],
+  faviconUrl: '', appleTouchIcon: '', businessLogo: '', organizationName: PUBLIC_BRAND.name, organizationDescription: '', businessUrl: PUBLIC_BRAND.canonicalOrigin, businessEmail: PUBLIC_BRAND.contactEmail, schemaLogo: '', socialProfiles: [],
   enableOrganizationSchema: true, enableWebsiteSchema: true, enableSearchActionSchema: false,
-  googleVerification: '', bingVerification: '', pinterestVerification: '', yandexVerification: '', robotsMeta: 'index,follow', sitemapUrl: 'https://pullz.gg/sitemap.xml', additionalHeadMarkup: '', homepageShareImage: '', fallbackOpenGraphImage: '', fallbackTwitterImage: ''
+  googleVerification: '', bingVerification: '', pinterestVerification: '', yandexVerification: '', robotsMeta: 'index,follow', sitemapUrl: `${PUBLIC_BRAND.canonicalOrigin}/sitemap.xml`, additionalHeadMarkup: '', homepageShareImage: '', fallbackOpenGraphImage: '', fallbackTwitterImage: ''
 };
 
 export const normalizeSeoSettings = (value?: Partial<SeoSettings>): SeoSettings => ({ ...DEFAULT_SEO_SETTINGS, ...value, socialProfiles: Array.isArray(value?.socialProfiles) ? value.socialProfiles : [] });

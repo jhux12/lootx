@@ -9,21 +9,21 @@ const steps = [
     title: 'Choose Your Box',
     description: 'Browse boxes and select one based on the collectibles, price, and displayed odds.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork.png?alt=media&token=4da2e4ea-b001-4b2e-b1fd-7be8c1ff780d',
-    alt: 'Pullz mystery boxes ready to choose'
+    alt: 'Ripza mystery boxes ready to choose'
   },
   {
     number: '02',
     title: 'Open & Reveal',
     description: 'Open the box for an animated reveal and instantly discover the real collectible you pulled.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork%20(1).png?alt=media&token=2f3488c5-5309-4f73-a882-863609967ace',
-    alt: 'A collectible appearing during a Pullz box reveal'
+    alt: 'A collectible appearing during a Ripza box reveal'
   },
   {
     number: '03',
     title: 'Keep It or Sell It Back',
     description: 'Keep the item for shipping or instantly sell it back for coins to open another box.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork%20(2).png?alt=media&token=7b8c55ce-0068-4f86-9d6f-03961851e5bd',
-    alt: 'Pullz options to keep a collectible or sell it back'
+    alt: 'Ripza options to keep a collectible or sell it back'
   }
 ] as const;
 

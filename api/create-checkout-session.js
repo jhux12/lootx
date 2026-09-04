@@ -3,6 +3,7 @@ import { requireActiveAccount } from './_utils/auth.js';
 import { adminAuth, firestore } from './_lib/firebaseAdmin.js';
 import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { sendMetaEvent } from './_lib/metaCapi.js';
+import { getAppUrl } from './_lib/appUrl.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -80,10 +81,11 @@ export default async function handler(req, res) {
       return sendJson(res, 400, { error: 'Invalid bonus coins' });
     }
 
+    const appUrl = getAppUrl();
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      success_url: `${process.env.APP_URL}/?topup=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/?topup=cancel`,
+      success_url: `${appUrl}/?topup=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/?topup=cancel`,
       line_items: [{ price: stripePriceId, quantity: 1 }],
       metadata: {
         uid: decoded.uid,
@@ -108,7 +110,7 @@ export default async function handler(req, res) {
         req,
         event_name: 'InitiateCheckout',
         event_id: normalizedEventId,
-        event_source_url: `${process.env.APP_URL}/top-up`,
+        event_source_url: `${appUrl}/top-up`,
         user: {
           email: decoded.email ?? null,
           external_id: decoded.uid,

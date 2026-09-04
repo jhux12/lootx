@@ -334,12 +334,12 @@ const createShareImageFile = async (item: CaseItem, caseName: string): Promise<F
 
       context.fillStyle = '#e2e8f0';
       context.font = '600 34px Inter, system-ui, sans-serif';
-      context.fillText('Open your own case at pullz.gg', canvas.width / 2, 1270);
+      context.fillText('Open your own case at ripza.gg', canvas.width / 2, 1270);
 
       const resultBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((blob) => resolve(blob), 'image/png', 0.92));
       if (!resultBlob) return null;
 
-      return new File([resultBlob], 'pullzgg-unboxing.png', { type: 'image/png' });
+      return new File([resultBlob], 'ripzagg-unboxing.png', { type: 'image/png' });
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
@@ -2133,7 +2133,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (typeof window === 'undefined' || !wonItem) return;
 
     const caseName = box?.name ?? 'Mystery Box';
-    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on pullz.gg!`;
+    const shareText = `I just unboxed ${wonItem.name} from ${caseName} on ripza.gg!`;
     const shareUrl = window.location.href;
 
     try {
@@ -2146,7 +2146,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       if (navigator.share) {
         await navigator.share({
-          title: 'pullz.gg Unboxing',
+          title: 'ripza.gg Unboxing',
           text: shareText,
           url: shareUrl,
           ...(supportsFileShare ? { files: [shareImage] } : {})

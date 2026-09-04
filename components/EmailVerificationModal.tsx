@@ -116,7 +116,7 @@ export const EmailVerificationModal: React.FC = () => {
 
           <h2 className="text-2xl font-black tracking-tight text-white sm:text-[2rem]">Verify your email to ship your items</h2>
           <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-300 sm:text-[15px]">
-            You can keep using Pullz without verifying your email, but we need a verified email before your first shipment request.
+            You can keep using Ripza without verifying your email, but we need a verified email before your first shipment request.
             {emailAddress ? <span className="mt-2 block text-slate-200">Verification email: {emailAddress}</span> : null}
           </p>
         </div>

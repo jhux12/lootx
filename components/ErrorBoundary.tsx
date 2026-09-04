@@ -21,7 +21,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     if (import.meta.env.DEV) {
-      console.error('Pullz error boundary caught an error', { error, errorInfo });
+      console.error('Ripza error boundary caught an error', { error, errorInfo });
     }
   }
 
@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 text-2xl font-black text-cyan-200">
             P
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">{component.props.title ?? 'Pullz hit a snag'}</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">{component.props.title ?? 'Ripza hit a snag'}</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">
             {component.props.message ?? 'Something unexpected happened. Your balance, account, and case results are safe. Try again to continue.'}
           </p>
@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             onClick={this.recover}
             className="mt-6 min-h-11 w-full rounded-xl bg-[#205DD7] px-4 py-3 text-sm font-extrabold text-white transition hover:bg-[#1f6bea] active:scale-[0.98]"
           >
-            {component.props.actionLabel ?? 'Reload Pullz'}
+            {component.props.actionLabel ?? 'Reload Ripza'}
           </button>
         </div>
       </div>

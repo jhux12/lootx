@@ -811,8 +811,8 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   <div className="min-w-0">
                     <p className="truncate text-base font-black text-white">
                       {isAuthenticated
-                        ? resolvedDisplayName || "Pullz Player"
-                        : "Welcome to Pullz"}
+                        ? resolvedDisplayName || "Ripza Player"
+                        : "Welcome to Ripza"}
                     </p>
                   </div>
                 </button>

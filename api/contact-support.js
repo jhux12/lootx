@@ -1,6 +1,6 @@
 import { sendJson } from './_lib/http.js';
 
-const CONTACT_EMAIL = 'contact@pullz.gg';
+const CONTACT_EMAIL = 'contact@ripza.gg';
 const MAX_LENGTHS = { firstName: 60, lastName: 60, email: 254, subject: 120, message: 3000 };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
         from: emailFrom,
         to: CONTACT_EMAIL,
         reply_to: fields.email,
-        subject: `[Pullz.gg Support] ${fields.subject}`,
+        subject: `[Ripza Support] ${fields.subject}`,
         html: `<h2>New customer support message</h2><p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(fields.email)})</p><p><strong>Subject:</strong> ${escapeHtml(fields.subject)}</p><hr /><p>${htmlMessage}</p>`
       })
     });

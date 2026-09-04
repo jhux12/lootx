@@ -1,7 +1,7 @@
 import { admin, db } from './firebaseAdmin.js';
 import { normalizeAddress, validateLocalAddress } from './shippingAddress.js';
 
-const DEFAULT_ORIGIN = { fullName: 'Pullz.gg', street1: '320 N Meridian St', street2: 'Ste 823 #122', city: 'Indianapolis', state: 'IN', postalCode: '46204-1731', countryCode: 'US', phone: '' };
+const DEFAULT_ORIGIN = { fullName: 'Ripza', street1: '320 N Meridian St', street2: 'Ste 823 #122', city: 'Indianapolis', state: 'IN', postalCode: '46204-1731', countryCode: 'US', phone: '' };
 const fromSettings = (data = {}) => normalizeAddress({ fullName: data.shipFromName, street1: data.shipFromStreet1, street2: data.shipFromStreet2, city: data.shipFromCity, state: data.shipFromState, postalCode: data.shipFromPostalCode, countryCode: data.shipFromCountry, phone: data.shipFromPhone });
 const fromEnvironment = () => normalizeAddress({ fullName: process.env.SHIP_FROM_NAME, street1: process.env.SHIP_FROM_STREET1, street2: process.env.SHIP_FROM_STREET2, city: process.env.SHIP_FROM_CITY, state: process.env.SHIP_FROM_STATE, postalCode: process.env.SHIP_FROM_POSTAL_CODE, countryCode: process.env.SHIP_FROM_COUNTRY, phone: process.env.SHIP_FROM_PHONE });
 export const validateShippingOrigin = (address) => {

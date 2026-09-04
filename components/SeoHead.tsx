@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
 
-const STATIC_IMAGE = 'https://pullz.gg/assets/png/pullz-horizontal-dark-2400.png';
+const STATIC_IMAGE = 'https://ripza.gg/assets/png/pullz-horizontal-dark-2400.png';
 // Search currently opens in-app rather than on a crawlable public route.
 const HAS_PUBLIC_SEARCH_PAGE = false;
 const meta = (selector: string, attrs: Record<string, string>, enabled = true) => {
@@ -48,7 +48,7 @@ export const SeoHead = ({ view }: { view: ViewState }) => {
     const twitterImage = settings.twitterImage || settings.fallbackTwitterImage || ogImage;
     document.title = isPrivate ? settings.siteName : settings.seoTitle;
     link('canonical', canonical); link('icon', settings.faviconUrl, !!settings.faviconUrl); link('apple-touch-icon', settings.appleTouchIcon, !!settings.appleTouchIcon);
-    meta('meta[name="description"]', { name: 'description', content: isPrivate ? 'Private Pullz.gg area.' : settings.metaDescription }); meta('meta[name="robots"]', { name: 'robots', content: robots });
+    meta('meta[name="description"]', { name: 'description', content: isPrivate ? 'Private Ripza area.' : settings.metaDescription }); meta('meta[name="robots"]', { name: 'robots', content: robots });
     meta('meta[property="og:type"]', { property: 'og:type', content: 'website' }); meta('meta[property="og:site_name"]', { property: 'og:site_name', content: settings.siteName }); meta('meta[property="og:title"]', { property: 'og:title', content: ogTitle }); meta('meta[property="og:description"]', { property: 'og:description', content: ogDescription }); meta('meta[property="og:image"]', { property: 'og:image', content: ogImage }); meta('meta[property="og:url"]', { property: 'og:url', content: canonical });
     meta('meta[name="twitter:card"]', { name: 'twitter:card', content: settings.twitterCard }); meta('meta[name="twitter:title"]', { name: 'twitter:title', content: settings.twitterTitle || ogTitle }); meta('meta[name="twitter:description"]', { name: 'twitter:description', content: settings.twitterDescription || ogDescription }); meta('meta[name="twitter:image"]', { name: 'twitter:image', content: twitterImage });
     meta('meta[name="google-site-verification"]', { name: 'google-site-verification', content: settings.googleVerification }, !!settings.googleVerification); meta('meta[name="msvalidate.01"]', { name: 'msvalidate.01', content: settings.bingVerification }, !!settings.bingVerification); meta('meta[name="p:domain_verify"]', { name: 'p:domain_verify', content: settings.pinterestVerification }, !!settings.pinterestVerification); meta('meta[name="yandex-verification"]', { name: 'yandex-verification', content: settings.yandexVerification }, !!settings.yandexVerification);

@@ -67,7 +67,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
 
             <div className="relative z-10 text-center">
               <div className="mb-3 flex items-center justify-center">
-                <img src={pullzIcon} alt="Pullz" className="h-9 w-auto object-contain" loading="lazy" decoding="async" width={2048} height={2341} style={{ aspectRatio: "2048 / 2341" }} />
+                <img src={pullzIcon} alt="Ripza" className="h-9 w-auto object-contain" loading="lazy" decoding="async" width={2048} height={2341} style={{ aspectRatio: "2048 / 2341" }} />
               </div>
               <h2 id="promo-popup-title" className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">
                 Get your <span className="text-cyan-300">free</span> box!
