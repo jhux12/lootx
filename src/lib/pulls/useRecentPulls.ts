@@ -44,7 +44,9 @@ export const useRecentPulls = (pullLimit = 30) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const opensQuery = query(collection(db, 'opens'), orderBy('createdAt', 'desc'), limit(pullLimit));
+    // Read a wider real-activity window before applying the value threshold so
+    // a run of inexpensive pulls does not make the ticker appear fabricated or empty.
+    const opensQuery = query(collection(db, 'opens'), orderBy('createdAt', 'desc'), limit(Math.max(pullLimit * 10, 100)));
 
     const unsubscribe = onSnapshot(
       opensQuery,
@@ -65,7 +67,8 @@ export const useRecentPulls = (pullLimit = 30) => {
               obtainedAt: toMillis(data.createdAt),
             };
           })
-          .filter((entry): entry is RecentPull => Boolean(entry) && entry.value >= 500);
+          .filter((entry): entry is RecentPull => Boolean(entry) && entry.value >= 500)
+          .slice(0, pullLimit);
 
         // A momentary empty/from-cache snapshot shouldn't wipe out pulls we
         // already loaded successfully — only accept it if we have nothing
