@@ -18,6 +18,15 @@ service cloud.firestore {
       return isAdminByClaim();
     }
 
+    function isMaintenanceMode() {
+      return exists(/databases/$(database)/documents/site/maintenance)
+        && get(/databases/$(database)/documents/site/maintenance).data.enabled == true;
+    }
+
+    function canUseCustomerSite() {
+      return !isMaintenanceMode() || isAdmin();
+    }
+
     function validUsernameLower(value) {
       return value is string && value.matches('^[a-z0-9_]{3,16}$');
     }
@@ -66,7 +75,8 @@ service cloud.firestore {
 
     match /usernames/{usernameLower} {
       allow read: if true;
-      allow create: if isSignedIn()
+      allow create: if canUseCustomerSite()
+        && isSignedIn()
         && !exists(/databases/$(database)/documents/usernames/$(usernameLower))
         && validUsernameLower(usernameLower)
         && hasOnlyKeys(request.resource.data, ['uid', 'createdAt'])
@@ -79,7 +89,8 @@ service cloud.firestore {
 
       allow create: if isAdmin()
         || (
-          isOwnUser(uid)
+          canUseCustomerSite()
+          && isOwnUser(uid)
           && request.resource.data.uid == request.auth.uid
           && hasOnlyKeys(request.resource.data, userProfileCreateKeys())
           && request.resource.data.username is string
@@ -89,7 +100,8 @@ service cloud.firestore {
 
       allow update: if isAdmin()
         || (
-          isOwnUser(uid)
+          canUseCustomerSite()
+          && isOwnUser(uid)
           && request.resource.data.uid == uid
           && (!hasField(resource.data, 'uid') || request.resource.data.uid == resource.data.uid)
           && (!hasField(resource.data, 'createdAt') || request.resource.data.createdAt == resource.data.createdAt)
@@ -105,7 +117,7 @@ service cloud.firestore {
 
     match /users/{uid}/notifications/{notificationId} {
       allow read: if isOwnUser(uid) || isAdmin();
-      allow create, update, delete: if isOwnUser(uid);
+      allow create, update, delete: if isOwnUser(uid) && canUseCustomerSite();
     }
 
     match /users/{uid}/shippingRateQuotes/{quoteId} {
@@ -123,7 +135,7 @@ service cloud.firestore {
 
     match /users/{uid}/activity/{activityId} {
       allow read: if isOwnUser(uid) || isAdmin();
-      allow create, update: if isOwnUser(uid) || isAdmin();
+      allow create, update: if (isOwnUser(uid) && canUseCustomerSite()) || isAdmin();
       allow delete: if false;
     }
 
@@ -169,7 +181,7 @@ service cloud.firestore {
     }
 
     match /supportTickets/{ticketId} {
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if canUseCustomerSite() && isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
       allow update, delete: if isAdmin();
     }
@@ -243,7 +255,8 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
       allow update: if isAdmin()
         || (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+          canUseCustomerSite()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
           && request.resource.data.views is int
           && resource.data.views is int
           && request.resource.data.views == resource.data.views + 1

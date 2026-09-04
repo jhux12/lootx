@@ -654,6 +654,10 @@ export const AdminPanel: React.FC = () => {
   const dailySpinRows = useMemo(() => getDailySpinRows(bonusDraft.dailySpinOdds), [bonusDraft.dailySpinOdds]);
   const [economyDraft, setEconomyDraft] = useState<EconomySettingsDraft>(DEFAULT_ECONOMY_SETTINGS);
   const [economySaveNotice, setEconomySaveNotice] = useState(false);
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+  const [isSavingMaintenance, setIsSavingMaintenance] = useState(false);
+  const [maintenanceNotice, setMaintenanceNotice] = useState<string | null>(null);
   const [xpShopItems, setXpShopItems] = useState<AdminXpShopItem[]>([]);
   const [xpRedemptions, setXpRedemptions] = useState<AdminXpRedemption[]>([]);
   const [editingXpShopItemId, setEditingXpShopItemId] = useState<string | null>(null);
@@ -1518,6 +1522,19 @@ export const AdminPanel: React.FC = () => {
       });
 
       return () => unsubscribe();
+  }, [activeTab]);
+
+  useEffect(() => {
+      if (activeTab !== 'settings') return;
+      setMaintenanceLoading(true);
+      return onSnapshot(doc(db, 'site', 'maintenance'), (snapshot) => {
+          setMaintenanceEnabled(snapshot.exists() && snapshot.data()?.enabled === true);
+          setMaintenanceLoading(false);
+      }, (error) => {
+          console.error('Maintenance status snapshot failed', error);
+          setMaintenanceNotice('Unable to load maintenance status.');
+          setMaintenanceLoading(false);
+      });
   }, [activeTab]);
 
   useEffect(() => {
@@ -3449,6 +3466,31 @@ export const AdminPanel: React.FC = () => {
       await setDoc(doc(db, 'settings', 'economy'), payload, { merge: true });
       setEconomySaveNotice(true);
       window.setTimeout(() => setEconomySaveNotice(false), 3000);
+  };
+
+  const handleToggleMaintenance = async () => {
+      if (maintenanceLoading || isSavingMaintenance) return;
+      const nextEnabled = !maintenanceEnabled;
+      const confirmed = window.confirm(nextEnabled
+          ? 'Turn on maintenance mode? Customers will immediately see only the maintenance screen and customer API actions will be blocked. The admin page will remain available.'
+          : 'Turn off maintenance mode and reopen the site to customers?');
+      if (!confirmed) return;
+
+      setIsSavingMaintenance(true);
+      setMaintenanceNotice(null);
+      try {
+          await setDoc(doc(db, 'site', 'maintenance'), {
+              enabled: nextEnabled,
+              updatedAt: serverTimestamp(),
+              updatedBy: adminUser.id
+          }, { merge: true });
+          setMaintenanceNotice(nextEnabled ? 'Maintenance mode is on.' : 'The site is live again.');
+      } catch (error) {
+          console.error('Failed to update maintenance mode', error);
+          setMaintenanceNotice('Unable to update maintenance mode. Please try again.');
+      } finally {
+          setIsSavingMaintenance(false);
+      }
   };
 
   const resetXpShopItemDraft = () => {
@@ -7241,6 +7283,31 @@ export const AdminPanel: React.FC = () => {
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
                                 <Input type="text" value="pullz.gg" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
+                            </div>
+                            <div className={`rounded-xl border p-4 md:col-span-2 ${maintenanceEnabled ? 'border-red-500/35 bg-red-500/10' : 'border-emerald-500/25 bg-emerald-500/5'}`}>
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <ShieldAlert className={`h-5 w-5 ${maintenanceEnabled ? 'text-red-300' : 'text-emerald-300'}`} />
+                                            <h4 className="font-bold text-white">Maintenance mode</h4>
+                                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${maintenanceEnabled ? 'bg-red-500/20 text-red-200' : 'bg-emerald-500/15 text-emerald-200'}`}>
+                                                {maintenanceLoading ? 'Loading' : maintenanceEnabled ? 'On' : 'Site live'}
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 max-w-2xl text-xs leading-5 text-gray-400">
+                                            When enabled, customers only see a clean maintenance screen and customer API actions are blocked. Admin tools, webhooks, and scheduled jobs remain available.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { void handleToggleMaintenance(); }}
+                                        disabled={maintenanceLoading || isSavingMaintenance}
+                                        className={`min-h-11 shrink-0 rounded-lg px-5 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${maintenanceEnabled ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25' : 'border border-red-400/40 bg-red-500/15 text-red-100 hover:bg-red-500/25'}`}
+                                    >
+                                        {isSavingMaintenance ? 'Updating…' : maintenanceEnabled ? 'Turn Off Maintenance' : 'Turn On Maintenance'}
+                                    </button>
+                                </div>
+                                {maintenanceNotice && <p className={`mt-3 text-xs ${maintenanceNotice.startsWith('Unable') ? 'text-red-300' : 'text-gray-300'}`}>{maintenanceNotice}</p>}
                             </div>
                             <div className="rounded-xl border border-gray-800 bg-[#0b0e14] p-4 md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
