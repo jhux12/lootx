@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       <div className="flex min-h-[60dvh] items-center justify-center bg-[#1b2024] px-4 py-12 text-white">
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#111820] p-6 text-center shadow-2xl shadow-black/30 sm:p-8">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 text-2xl font-black text-cyan-200">
-            P
+            R
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">{component.props.title ?? 'Ripza hit a snag'}</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">

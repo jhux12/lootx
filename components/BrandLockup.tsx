@@ -1,6 +1,6 @@
 import React from 'react';
 import horizontalDarkLogo from '../assets/png/pullz-horizontal-dark-2400.png';
-import horizontalLightLogo from '../assets/png/pullz-horizontal-light-2400.png';
+import horizontalLightLogo from '../assets/png/assetspngpullz-horizontal-light-2400.png';
 
 type BrandLockupProps = {
   className?: string;
