@@ -26,3 +26,9 @@ test('preferences dialog includes accessibility and mobile safeguards', () => {
   assert.match(dialog, /document\.body\.style\.overflow = 'hidden'/);
   assert.match(dialog, /env\(safe-area-inset-bottom\)/);
 });
+
+test('consent banner is a full-width bottom bar', () => {
+  assert.match(dialog, /aria-label="Cookie consent" className="fixed inset-x-0 bottom-0/);
+  assert.match(dialog, /border-t border-violet-300\/20 bg-\[#0b0911\]/);
+  assert.doesNotMatch(dialog, /bottom-\[calc\(env\(safe-area-inset-bottom\)\+76px\)\]/);
+});
