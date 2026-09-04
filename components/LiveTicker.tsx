@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '../context/GameContext';
-import { LiveDrop, User } from '../types';
-import { CASE_ITEMS } from '../constants';
-import { CoinAmount } from './CoinAmount';
+import { LiveDrop } from '../types';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
 import { BlurImage } from '../src/ui/images/BlurImage';
 
 export const LiveTicker: React.FC = () => {
-  const { items, users } = useGame();
+  const { users } = useGame();
   const tickerRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
+  const lastDropsRef = useRef<LiveDrop[]>([]);
 
   useEffect(() => {
     const node = tickerRef.current;
@@ -26,14 +25,6 @@ export const LiveTicker: React.FC = () => {
 
   const drops = useMemo(() => {
     const publicUsers = users.filter((user) => user.hiddenFromPublicDisplay !== true);
-    const availableUsers: User[] = publicUsers.length ? publicUsers : [{
-      id: 'guest',
-      name: 'Player',
-      avatar: 'https://picsum.photos/seed/guest/100/100',
-      level: 1,
-      xp: 0
-    }];
-
     const liveWins = publicUsers.flatMap((user) => {
       const inventoryItems = user.inventory?.length ? user.inventory : user.topPulls ?? [];
       return inventoryItems.map((item) => ({
@@ -45,32 +36,24 @@ export const LiveTicker: React.FC = () => {
       .sort((a, b) => (b.item.obtainedAt ?? 0) - (a.item.obtainedAt ?? 0))
       .slice(0, 12);
 
-    const mapped = liveWins.length
-      ? liveWins.map(({ item, user }) => ({
+    const mapped = liveWins.map(({ item, user }) => ({
           id: item.instanceId ?? item.id,
           itemName: item.name,
           itemImage: item.image,
           value: toCoins(item.price, PRICE_UNIT_MODE),
           user,
           rarity: item.rarity
-        }))
-      : (items.length ? items : CASE_ITEMS)
-          .filter(item => ['legendary', 'epic', 'rare'].includes(item.rarity))
-          .sort((a, b) => {
-            const rarityRank = { epic: 0, rare: 1, legendary: 2, uncommon: 3, common: 4 } as const;
-            return (rarityRank[a.rarity] ?? 5) - (rarityRank[b.rarity] ?? 5);
-          })
-          .map((item, index) => ({
-            id: item.id,
-            itemName: item.name,
-            itemImage: item.image,
-            value: toCoins(item.price, PRICE_UNIT_MODE),
-            user: availableUsers[index % availableUsers.length],
-            rarity: item.rarity
-          }));
+        }));
 
-    return mapped.length ? [...mapped, ...mapped, ...mapped] : [];
-  }, [items, users]);
+    if (mapped.length) {
+      const repeated = [...mapped, ...mapped, ...mapped];
+      lastDropsRef.current = repeated;
+      return repeated;
+    }
+    // Mobile auth/network reconnects can briefly emit an empty snapshot.
+    // Keep the last successful rail instead of flashing back to an empty state.
+    return lastDropsRef.current;
+  }, [users]);
 
   const getRarityColor = (rarity: LiveDrop['rarity']) => {
     switch (rarity) {
@@ -83,12 +66,13 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div ref={tickerRef} className="relative w-full h-16 sm:h-20 bg-[#0b0f17] overflow-hidden border border-white/5 rounded-2xl flex items-center">
+    <div ref={tickerRef} className="live-pulls-ticker relative w-full h-20 overflow-hidden rounded-2xl flex items-center" aria-label="Live pulls from Pullz users" aria-live="off">
       {/* Gradient fade overlays */}
-      <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
-      <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0b0f17] to-transparent z-10 pointer-events-none"></div>
+      <div className="live-pulls-fade live-pulls-fade-left" />
+      <div className="live-pulls-fade live-pulls-fade-right" />
 
-      <div className="flex gap-4 px-4 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
+      <div className="live-pulls-label"><i /><strong>LIVE<br />PULLZ</strong></div>
+      <div className="live-pulls-track flex gap-2 px-3 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
         {drops.length === 0 ? (
           Array.from({ length: 6 }).map((_, idx) => (
             <div key={`recent-skeleton-${idx}`} className="w-40 h-12">
@@ -99,23 +83,12 @@ export const LiveTicker: React.FC = () => {
           <div 
             key={`${drop.id}-${idx}`} 
             className={`
-              group flex-shrink-0 w-40 h-12 rounded-xl flex items-center p-2 gap-3 min-w-0
-              border border-white/5 bg-[#101521] transition-all hover:scale-[1.02] hover:border-white/15 cursor-pointer
+              group flex-shrink-0 w-16 h-16 rounded-lg flex items-center justify-center p-1 min-w-0
+              live-pulls-card transition-all hover:scale-[1.02]
               ${getRarityColor(drop.rarity)}
             `}
           >
-            <div className="h-9 w-9 rounded bg-gray-900/60"><BlurImage src={drop.itemImage} alt={drop.itemName} className="w-9 h-9 object-contain rounded" /></div>
-            <div className="flex flex-col overflow-hidden min-w-0">
-              <span className="text-[11px] font-semibold text-gray-300 truncate group-hover:text-white transition-colors">{drop.itemName}</span>
-              <span className="text-[10px] text-gray-500 truncate group-hover:text-gray-300 transition-colors">{drop.user.name}</span>
-            </div>
-            <CoinAmount
-              amount={drop.value}
-              formatOptions={{ maximumFractionDigits: 0 }}
-              className="ml-auto text-[11px] font-medium text-emerald-300/80 max-w-[72px] justify-end group-hover:text-emerald-200"
-              iconClassName="w-3.5 h-3.5 flex-shrink-0"
-              textClassName="truncate"
-            />
+            <BlurImage src={drop.itemImage} alt={`${drop.itemName}, pulled by ${drop.user.name}`} className="h-full w-full object-contain rounded" />
           </div>
         ))}
       </div>

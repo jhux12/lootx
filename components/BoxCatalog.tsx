@@ -6,7 +6,7 @@ import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
 import { getBoxSummaryPage } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
-import { getBoxTags, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
+import { CATEGORY_ORDER, getBoxTags, isCategoryIconUrl, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
 import { PRICE_UNIT_MODE, toCoins } from '../utils/coins';
 import { CoinAmount } from './CoinAmount';
 import { SkeletonTile } from '../src/ui/skeleton/Skeleton';
@@ -14,20 +14,12 @@ import { BlurImage } from '../src/ui/images/BlurImage';
 import { usePerformanceMode } from '../src/lib/performance';
 import { useIntentPrefetch } from '../src/lib/prefetch/useIntentPrefetch';
 import type { CaseItem, MysteryBox } from '../types';
+import { BOX_SORT_OPTIONS as SORT_OPTIONS } from '../src/lib/boxSort';
+import type { BoxSortOption as SortOption } from '../src/lib/boxSort';
 
 type BoxCatalogProps = {
   isChatCollapsed: boolean;
 };
-
-type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'newest' | 'trending';
-
-const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
-  { id: 'featured', label: 'Featured' },
-  { id: 'trending', label: 'Trending' },
-  { id: 'newest', label: 'Newest' },
-  { id: 'price-asc', label: 'Price: Low to High' },
-  { id: 'price-desc', label: 'Price: High to Low' }
-];
 
 const getBoxPrice = (box: MysteryBox) => toCoins(box.price, PRICE_UNIT_MODE);
 
@@ -49,6 +41,7 @@ type CatalogBoxModel = {
   featuredScore: number;
   trendingScore: number;
   topItemPreviews: CatalogItemPreview[];
+  isFreeSignupBox: boolean;
 };
 
 const getTopItemPreviews = (items: CaseItem[]): CatalogItemPreview[] =>
@@ -87,8 +80,20 @@ const createCatalogModel = (box: MysteryBox): CatalogBoxModel => {
     createdAt: box.createdAt,
     tags,
     topItemPreviews: getTopItemPreviews(box.items),
+    isFreeSignupBox: Boolean(box.isDaily),
     ...scores
   };
+};
+
+const RARITY_ORDER: CaseItem['rarity'][] = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+
+const getBoxRarity = (box: MysteryBox): CaseItem['rarity'] => {
+  if (!box.items?.length) return 'common';
+  return box.items.reduce<CaseItem['rarity']>((highest, item) => {
+    const itemRank = RARITY_ORDER.indexOf(item.rarity);
+    const highestRank = RARITY_ORDER.indexOf(highest);
+    return itemRank > highestRank ? item.rarity : highest;
+  }, 'common');
 };
 
 const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
@@ -100,6 +105,7 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
   const { box } = model;
   const isPriority = index < 4;
   const prefetchHandlers = useIntentPrefetch(box.id, async () => box, box.image);
+  const isFreeSignupBox = model.isFreeSignupBox;
 
   return (
     <button
@@ -108,31 +114,30 @@ const CatalogBoxCard = memo(({ model, index, staticImages, onOpen }: {
       onMouseEnter={prefetchHandlers.onMouseEnter}
       onTouchStart={prefetchHandlers.onTouchStart}
       onFocus={prefetchHandlers.onFocus}
-      className="group relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-[#121318] text-left shadow-[0_14px_30px_rgba(0,0,0,0.3)] transition hover:-translate-y-1 hover:border-violet-300/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 [content-visibility:auto] [contain-intrinsic-size:260px]"
+      className={`bet-box-tile rarity-glow-${getBoxRarity(box)} [content-visibility:auto] [contain-intrinsic-size:260px]${isFreeSignupBox ? ' is-free-signup' : ''}`}
     >
-      <div className="relative h-[164px] overflow-hidden bg-[radial-gradient(circle_at_50%_20%,rgba(139,92,246,0.18),transparent_48%),#090a0e] px-3 pt-4 sm:h-[180px]">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_35%,rgba(255,255,255,0.06),transparent_62%)]" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center px-3">
-          <BlurImage
-            src={box.image}
-            fallbackSrc="/assets/favicon/android-chrome-512.png"
-            alt={box.name}
-            loading={isPriority ? 'eager' : 'lazy'}
-            fetchPriority={isPriority ? 'high' : 'low'}
-            decoding="async"
-            width={360}
-            height={230}
-            ratioClassName="h-[132px] w-full sm:h-[148px]"
-            className="h-full w-full object-contain drop-shadow-[0_16px_20px_rgba(0,0,0,0.55)] transition duration-300 group-hover:scale-105"
-            staticRender={staticImages}
-            retryOnError={!staticImages}
-          />
-        </div>
-      </div>
-      <div className="border-t border-white/10 px-3 pb-3 pt-2.5">
-        <div className="line-clamp-1 text-[13px] font-black uppercase tracking-tight text-white sm:text-sm">{box.name}</div>
-        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} className="mt-1 justify-start text-[13px] font-black text-[#c4b5fd]" iconClassName="h-3.5 w-3.5" />
-      </div>
+      {isFreeSignupBox && <span className="bet-box-tile-badge">Sign-Up Bonus</span>}
+      <span className="bet-box-tile-glow" aria-hidden="true" />
+      <BlurImage
+        src={box.image}
+        fallbackSrc="/assets/favicon/android-chrome-512.png"
+        alt=""
+        loading={isPriority ? 'eager' : 'lazy'}
+        fetchPriority={isPriority ? 'high' : 'low'}
+        decoding="async"
+        width={360}
+        height={230}
+        ratioClassName="h-[132px] w-full sm:h-[148px]"
+        className="relative z-[1] h-full w-full object-contain transition duration-300 group-hover:scale-105"
+        staticRender={staticImages}
+        retryOnError={!staticImages}
+      />
+      <span className="bet-box-tile-name">{box.name}</span>
+      {isFreeSignupBox ? (
+        <span className="bet-box-tile-free">Free</span>
+      ) : (
+        <CoinAmount amount={Math.round(model.priceCoins)} formatOptions={{ maximumFractionDigits: 0 }} iconClassName="h-3.5 w-3.5" />
+      )}
     </button>
   );
 });
@@ -178,11 +183,6 @@ const toCategoryVariants = (value: string) => {
   return Array.from(variants);
 };
 
-const isCategoryIconUrl = (value: string) => {
-  const normalized = value.trim().toLowerCase();
-  return normalized.startsWith('http://') || normalized.startsWith('https://') || normalized.startsWith('data:image/');
-};
-
 export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { setView } = useUI();
   const { stripeSettings } = useBoxes();
@@ -223,7 +223,18 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
       setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => setCatalogError('Unable to load more boxes. Please retry.')).finally(() => setCatalogLoading(false));
   };
-  const CATEGORY_ORDER = ['all', 'pokemon', 'tech', 'sneakers', 'streetwear', 'collectibles', 'gaming'];
+  // Categories are filtered client-side from whatever pages have been
+  // fetched so far, so a category could look incomplete (or empty) just
+  // because later Firestore pages haven't loaded yet. Once a specific
+  // category is selected, keep auto-fetching pages in the background
+  // until every matching box has actually loaded, instead of making the
+  // visitor repeatedly click "Load more boxes" themselves.
+  useEffect(() => {
+    if (activeCategory === 'all') return;
+    if (catalogLoading || catalogEnd || !catalogCursor) return;
+    loadMoreCatalog();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, catalogLoading, catalogEnd, catalogCursor]);
   const HOW_IT_WORKS_LOCAL_KEY = 'pullz:boxCatalogHowItWorksDismissed';
   const HOW_IT_WORKS_SESSION_KEY = 'pullz:boxCatalogHowItWorksShownThisSession';
 
@@ -232,11 +243,13 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     searchQuery.trim().length > 0 ||
     showAffordableOnly;
 
+  const hasUnclaimedFreeBox = !isAuthenticated || !user.lastFreeBoxClaim;
+
   const catalogModels = useMemo(
     () => boxes
-      .filter((box) => !box.isDaily && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
+      .filter((box) => (!box.isDaily || hasUnclaimedFreeBox) && !box.isUserCreated && !box.isPullPassBox && !(box.currencyType === 'XP' || Number(box.priceXP ?? 0) > 0))
       .map(createCatalogModel),
-    [boxes]
+    [boxes, hasUnclaimedFreeBox]
   );
 
   const isLoadingBoxes = catalogLoading && boxes.length === 0;
@@ -275,7 +288,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     });
   }, [activeCategory, balance, catalogModels, normalizedSearchQuery, showAffordableOnly]);
 
-  const sortedFilteredBoxes = useMemo(() => getSortedBoxes(filteredBoxes, sortOption), [filteredBoxes, sortOption]);
+  const sortedFilteredBoxes = useMemo(() => {
+    const sorted = getSortedBoxes(filteredBoxes, sortOption);
+    if (!hasUnclaimedFreeBox) return sorted;
+    // Pin the free sign-up box to the front regardless of sort order,
+    // as long as it's still unclaimed and matches the active filters.
+    const freeBoxIndex = sorted.findIndex((model) => model.box.isDaily);
+    if (freeBoxIndex <= 0) return sorted;
+    const freeBoxModel = sorted[freeBoxIndex];
+    return [freeBoxModel, ...sorted.slice(0, freeBoxIndex), ...sorted.slice(freeBoxIndex + 1)];
+  }, [filteredBoxes, hasUnclaimedFreeBox, sortOption]);
 
   const groupedBoxes = useMemo(() => sortedFilteredBoxes, [sortedFilteredBoxes]);
   const visibleBoxes = useMemo(() => groupedBoxes.slice(0, visibleBoxCount), [groupedBoxes, visibleBoxCount]);
@@ -283,7 +305,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const staticCatalogImages = performanceMode.isMobile || performanceMode.isLowPower;
 
   useEffect(() => {
-    setVisibleBoxCount(performanceMode.isMobile ? 12 : 30);
+    // Once a specific category is selected, show everything that matches
+    // instead of capping the client-side render to the default page size
+    // — combined with the auto-fetch effect above, this means selecting a
+    // category always reveals its full set without any "load more" click.
+    setVisibleBoxCount(activeCategory !== 'all' ? Number.MAX_SAFE_INTEGER : (performanceMode.isMobile ? 12 : 30));
   }, [activeCategory, normalizedSearchQuery, performanceMode.isMobile, showAffordableOnly, sortOption]);
 
   useEffect(() => {
@@ -431,7 +457,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   }, [playSound, setView]);
 
   return (
-    <div className="w-full bg-[radial-gradient(circle_at_68%_10%,rgba(92,50,255,0.20),transparent_24rem),radial-gradient(circle_at_28%_35%,rgba(28,119,255,0.10),transparent_30rem),#05060a] pb-20 text-white">
+    <div className="lootx-box-catalog bet-boxes-page w-full pb-20 text-white">
       {showHowItWorksModal && (
         <div
           className={`fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 pt-8 transition-colors duration-300 sm:items-center sm:px-5 sm:pb-5 ${
@@ -512,34 +538,39 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           </div>
         </div>
       )}
-      <div className="pullz-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
-        <section className="pullz-boxes-hero" aria-labelledby="boxes-hero-title">
-          <div className="pullz-boxes-hero-copy">
-            <h1 id="boxes-hero-title">Open. Pull.<br /><span>Collect.</span></h1>
+      <div className="bet-boxes-hero-shell mx-auto max-w-[1880px] px-3 pb-5 pt-4 sm:px-5 sm:pt-7 lg:px-8">
+        <section className="bet-boxes-hero" aria-labelledby="boxes-hero-title">
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-1" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-2" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-3" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-4" aria-hidden="true" />
+          <span className="bet-boxes-hero-orb bet-boxes-hero-orb-5" aria-hidden="true" />
+          <div className="bet-boxes-hero-copy">
+            <p className="bet-boxes-hero-eyebrow">Pullz Boxes</p>
+            <h1 id="boxes-hero-title">Open. Pull. Collect.</h1>
+            <p className="bet-boxes-hero-sub">Every box is provably fair. Keep what you pull, or sell it back instantly.</p>
           </div>
-
-          <div className="pullz-boxes-hero-art" aria-label="Featured graded collectible cards">
-            <div className="pullz-boxes-hero-orbit" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-left" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design.svg?alt=media&token=9d00502f-9317-4880-87aa-7da6fe392b45" alt="" aria-hidden="true" loading="eager" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-center" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294" alt="Featured graded collectible card" loading="eager" fetchPriority="high" decoding="async" />
-            <img className="pullz-boxes-slab pullz-boxes-slab-right" src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(1).svg?alt=media&token=6fcb9e37-025c-4ac8-a20d-ec3cf2fad353" alt="" aria-hidden="true" loading="eager" decoding="async" />
-            <div className="pullz-boxes-hero-platform" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-1" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-2" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-3" />
-            <span className="pullz-boxes-particle pullz-boxes-particle-4" />
-          </div>
+          <img
+            className="bet-boxes-hero-art"
+            src="https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/heroimg%2FUntitled%20design%20(2).svg?alt=media&token=0bc8a362-65f2-4fc0-84da-2ccefabb8294"
+            alt="Featured graded collectible card"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            width={220}
+            height={220}
+          />
         </section>
       </div>
 
-      <div className="sticky top-[var(--pullz-header-height,70px)] z-40 w-full border-y border-[#24242c] bg-[#0a0a0d]/95 backdrop-blur">
-        <div className="mx-auto max-w-[1320px] px-4 py-4 sm:px-5">
+      <div className="bet-boxes-filterbar sticky top-[var(--pullz-header-height,70px)] z-40 w-full backdrop-blur">
+        <div className="mx-auto max-w-[1900px] px-4 py-4 sm:px-5 lg:px-8">
           <div className="relative mb-3">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#7a7a88]" />
             <input
               type="search"
               placeholder="Search Charizard, Base Set, ETB..."
-              className="h-[50px] w-full rounded-[14px] border border-[#24242c] bg-[#131318] py-3 pl-11 pr-11 text-base text-[#f2f2f5] placeholder:text-[#7a7a88] outline-none transition focus:border-[#5b6bf5] focus:ring-1 focus:ring-[#5b6bf5]"
+              className="h-[50px] w-full rounded-lg border border-[#2d303d] bg-[#181c28] py-3 pl-11 pr-11 text-base text-[#f6f4f9] placeholder:text-[#7d8091] outline-none transition focus:border-[var(--bet-orange)] focus:ring-1 focus:ring-[var(--bet-orange)]"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
@@ -549,7 +580,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
           <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button type="button" onClick={() => setIsSortOpen(true)} className="flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border border-[#24242c] bg-[#131318] p-1.5 text-center text-[#c8c8d2] transition hover:border-[#3a3a44] hover:text-[#f2f2f5] sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+            <button type="button" onClick={() => setIsSortOpen(true)} className="bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl p-1.5 text-center transition sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
               <ListFilter className="h-6 w-6 text-[#9a9aa8] sm:h-7 sm:w-7" aria-hidden="true" />
               <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
                 {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
@@ -565,10 +596,10 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-md border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
+                  className={`bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border p-1.5 text-center transition sm:w-[84px] sm:p-2 ${
                     isActive
-                      ? 'border-[#5b6bf5] bg-[#5b6bf5] text-[#f5f6ff]'
-                      : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44] hover:text-[#f2f2f5]'
+                      ? 'border-[var(--bet-orange)] bg-[var(--bet-orange)] text-white'
+                      : 'border-[#2d303d] bg-[#181c28] text-[#7d8091] hover:border-[var(--bet-orange)]/50 hover:text-[#f6f4f9]'
                   }`}
                 >
                   {cat.id !== 'all' && cat.iconClass && isCategoryIconUrl(cat.iconClass) ? (
@@ -593,9 +624,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             })}
             </div>
             <span className="h-[22px] w-px shrink-0 bg-[#24242c]" aria-hidden="true" />
-            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-[13.5px] font-bold transition ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]/15 text-[#f2f2f5]' : 'border-[#24242c] bg-[#131318] text-[#c8c8d2] hover:border-[#3a3a44]'}`}>
-              <span className={`flex h-4 w-4 items-center justify-center rounded-[5px] border-[1.5px] ${showAffordableOnly ? 'border-[#5b6bf5] bg-[#5b6bf5]' : 'border-[#3a3a44]'}`}>{showAffordableOnly && <Check className="h-3 w-3 stroke-[3] text-[#0a0a0d]" />}</span>
-              Enough coins
+            <button type="button" onClick={() => setShowAffordableOnly((value) => !value)} aria-pressed={showAffordableOnly} className="bet-home-toggle">
+              <span>Enough coins to buy</span>
+              <i className={showAffordableOnly ? 'is-on' : ''} />
             </button>
           </div>
         </div>
@@ -608,7 +639,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <h2 id="sort-options-title" className="px-3 pb-3 text-[15px] font-bold text-[#f2f2f5]">Sort by</h2>
             {SORT_OPTIONS.map((option) => {
               const active = option.id === sortOption;
-              return <button key={option.id} type="button" onClick={() => { setSortOption(option.id); setIsSortOpen(false); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3.5 text-left text-[15px] ${active ? 'bg-white/[0.06] font-bold text-[#5b6bf5]' : 'font-medium text-[#c8c8d2] hover:bg-white/[0.04]'}`}>
+              return <button key={option.id} type="button" onClick={() => { setSortOption(option.id); setIsSortOpen(false); }} className={`flex w-full items-center justify-between rounded-xl px-3 py-3.5 text-left text-[15px] ${active ? 'bg-white/[0.06] font-bold text-[var(--bet-orange)]' : 'font-medium text-[#c8c8d2] hover:bg-white/[0.04]'}`}>
                 {option.label}
                 {active && <Check className="h-4 w-4 stroke-[3]" />}
               </button>;
@@ -617,7 +648,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         </div>
       )}
 
-      <div className="mx-auto min-h-[100dvh] w-full max-w-[1320px] px-3 py-4 sm:px-5 sm:py-5">
+      <div className="mx-auto min-h-[100dvh] w-full max-w-[1900px] px-3 py-4 sm:px-5 sm:py-5 lg:px-8">
         <div className="flex flex-col gap-6">
           {isLoadingBoxes && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
@@ -654,7 +685,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           {!isLoadingBoxes && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
-                <Search className="h-6 w-6 text-blue-300" />
+                <Search className="h-6 w-6 text-[var(--bet-orange)]" />
               </div>
               <h2 className="mb-2 text-2xl font-bold text-white">No boxes match this view yet</h2>
               <p className="mx-auto mb-6 max-w-xl text-sm text-neutral-400 sm:text-base">
@@ -662,7 +693,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </p>
               <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                 {hasActiveFilters && (
-                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-[#205DD7] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#1f6bea] sm:w-auto">
+                  <button type="button" onClick={clearFilters} className="w-full rounded-xl bg-[var(--bet-orange)] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110 sm:w-auto">
                     Clear filters
                   </button>
                 )}

@@ -20,6 +20,18 @@ export default {
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
+        lootx: {
+          canvas: '#13151D',
+          surface: '#181C28',
+          elevated: '#202431',
+          line: '#2D303D',
+          text: '#F6F4F9',
+          muted: '#7D8091',
+          red: '#FF4D55',
+          orange: '#FF8D4D',
+          green: '#2ABD69',
+          blue: '#02C5FF',
+        },
         brand: {
           dark: '#0f172a',
           blue: '#205DD7',

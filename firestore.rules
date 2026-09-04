@@ -212,6 +212,16 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    match /opens/{openId} {
+      // Written server-side only, via the Admin SDK in api/open-case.js
+      // (which bypasses these rules entirely). Publicly readable so the
+      // site-wide "recent pulls" ticker works for signed-out visitors too;
+      // provablyFair only exposes the seed *hash*, which is meant to be
+      // public for verification, not the raw seed.
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /site/seo {
       allow read: if true;
       allow write: if isAdmin();

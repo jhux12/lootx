@@ -3,6 +3,7 @@ import { BrandLockup } from './BrandLockup';
 import { AtSign, Facebook, Instagram, Twitter } from 'lucide-react';
 import { useGame } from '../context/GameContext';
 import { PaymentMethodIcons } from './PaymentMethodIcons';
+import { useTheme } from '../src/lib/theme/useTheme';
 
 
 const socialLinks = [
@@ -30,9 +31,10 @@ const socialLinks = [
 
 export const SiteFooter: React.FC = () => {
   const { setView } = useGame();
+  const { theme } = useTheme();
 
   return (
-    <footer className="mt-20 border-t border-violet-300/15 bg-[#05060a] py-10 text-sm text-slate-300">
+    <footer className="bet-site-footer mt-20 py-10 text-sm">
       <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6">
         <PaymentMethodIcons className="px-2" iconClassName="h-5 sm:h-6" />
         <div className="flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
@@ -42,7 +44,7 @@ export const SiteFooter: React.FC = () => {
             className="inline-flex min-h-11 items-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
             aria-label="Go to Pullz home"
           >
-            <BrandLockup className="justify-start" logoClassName="h-9 w-auto md:h-10" />
+            <BrandLockup className="justify-start" variant={theme === 'light' ? 'light' : 'dark'} logoClassName="h-9 w-auto md:h-10" />
           </button>
           <div className="grid w-full grid-cols-4 gap-2 text-white sm:w-auto sm:flex sm:items-center sm:gap-3" aria-label="Pullz.gg social links">
             {socialLinks.map(({ href, label, Icon }) => (

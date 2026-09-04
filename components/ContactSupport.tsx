@@ -56,7 +56,7 @@ export const ContactSupport: React.FC = () => {
   const inputClasses = 'min-h-12 w-full rounded-xl border border-white/10 bg-[#0b0f1a] px-4 py-3 text-base text-white outline-none placeholder:text-gray-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm';
 
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+    <section className="pullz-legacy-theme mx-auto w-full max-w-3xl px-4 pb-16 pt-8 sm:px-6 sm:pt-10 lg:px-8">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-5 sm:p-6">
         <div className="mb-5">
           <h2 className="text-xl font-semibold text-white">Send us a message</h2>
@@ -93,7 +93,7 @@ export const ContactSupport: React.FC = () => {
             {statusMessage && <p className="text-sm text-green-400">{statusMessage}</p>}
           </div>
 
-          <button type="submit" disabled={isSending} className="min-h-12 w-full rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-40">
+          <button type="submit" disabled={isSending} className="min-h-12 w-full rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-[#fff] transition hover:bg-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-40">
             {isSending ? 'Sending...' : 'Send message'}
           </button>
         </form>
