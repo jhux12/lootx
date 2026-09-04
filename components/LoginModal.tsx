@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Mail, Lock, User, Loader2, MailCheck } from 'lucide-react';
+import { X, Mail, Lock, User, Loader2, MailCheck, Ticket } from 'lucide-react';
 import { AuthCredential } from 'firebase/auth';
 import { useGame } from '../context/GameContext';
 import { useSound } from '../context/SoundContext';
@@ -16,16 +16,21 @@ const AUTH_INLINE_MESSAGE_KEY = 'authInlineMessage';
 const EMAIL_CONFIRMATION_MESSAGE = 'Account ready. We sent a verification email for when you are ready to ship items.';
 
 export const LoginModal: React.FC = () => {
-  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode, stripeSettings } = useGame();
+  const { login, loginWithGoogle, linkGoogleAccount, register, resetPassword, setShowLoginModal, authModalMode, setAuthModalMode } = useGame();
   const { playSound } = useSound();
   const [mode, setMode] = useState<'login' | 'register'>(authModalMode);
-  const fallbackRegisterBonusImage = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/boxes%2Fu%20(4).png?alt=media&token=2bb02e25-aad4-45b7-b406-46a189ee6f34';
-  const registerBonusImage = stripeSettings.boxCatalogHeroImageUrl || fallbackRegisterBonusImage;
 
   // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  const [referralCode, setReferralCode] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    const pendingCode = window.localStorage.getItem('pullz_pending_referral_code') ?? '';
+    window.localStorage.removeItem('pullz_pending_referral_code');
+    return pendingCode;
+  });
+  const [referralStatus, setReferralStatus] = useState<'idle' | 'checking' | 'saved' | 'invalid'>('idle');
   const [googleLinkEmail, setGoogleLinkEmail] = useState('');
   const [googleLinkPassword, setGoogleLinkPassword] = useState('');
   const [googleLinkCredential, setGoogleLinkCredential] = useState<AuthCredential | null>(null);
@@ -52,6 +57,38 @@ export const LoginModal: React.FC = () => {
   const isEmailConfirmationMessage = message === EMAIL_CONFIRMATION_MESSAGE;
   const showEmailConfirmationNotice = Boolean(isEmailConfirmationMessage && emailConfirmationSentTo && normalizedEmail === emailConfirmationSentTo && mode === 'register' && showEmailFields && !isLinkingGoogle);
   const showRegisterFormMessage = Boolean(message && mode === 'register' && showEmailFields && !isLinkingGoogle && !showEmailConfirmationNotice);
+  const referralNeedsConfirmation = mode === 'register' && Boolean(referralCode) && referralStatus !== 'saved';
+
+  const handleReferralCodeChange = (value: string) => {
+    const normalized = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+    setReferralCode(normalized);
+    setReferralStatus('idle');
+    window.localStorage.removeItem('pullz_pending_referral_code');
+  };
+
+  const confirmReferralCode = async () => {
+    const normalized = referralCode.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!normalized) return;
+    setReferralStatus('checking');
+    try {
+      const response = await fetch('/api/referrals/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode: normalized })
+      });
+      const payload = await response.json();
+      if (!response.ok || payload?.valid !== true) {
+        setReferralStatus('invalid');
+        window.localStorage.removeItem('pullz_pending_referral_code');
+        return;
+      }
+      setReferralCode(payload.code);
+      window.localStorage.setItem('pullz_pending_referral_code', payload.code);
+      setReferralStatus('saved');
+    } catch {
+      setReferralStatus('invalid');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -358,24 +395,6 @@ export const LoginModal: React.FC = () => {
             )}
           </div>
 
-          {mode === 'register' && !isLinkingGoogle && !showEmailFields && (
-            <div className="relative mb-3 mt-6 overflow-visible rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.04] via-[#18181b] to-[#101014] px-4 pb-3 pt-10 text-center sm:mt-8 sm:pt-12">
-              <div className="pointer-events-none absolute left-1/2 top-0 z-10 h-24 w-[min(70vw,210px)] -translate-x-1/2 -translate-y-1/2 sm:h-28 sm:w-[240px]">
-                <img
-                  src={registerBonusImage}
-                  alt="Free signup box"
-                  className="h-full w-full object-contain"
-                  loading="eager"
-                  decoding="async"
-                  width={320}
-                  height={176}
-                  style={{ aspectRatio: '20 / 11' }}
-                />
-              </div>
-              <p className="text-sm text-neutral-300">Create your account to open your free box.</p>
-            </div>
-          )}
-
           {!isLinkingGoogle && (
             <>
               {mode === 'register' && (
@@ -396,7 +415,7 @@ export const LoginModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={isLoading || (mode === 'register' && !signupConsent)}
+                  disabled={isLoading || (mode === 'register' && (!signupConsent || referralNeedsConfirmation))}
                   className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#18181b] py-3 text-sm font-medium text-white transition-colors hover:bg-[#27272a] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isOAuthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <img src={googleLogo} alt="Google" className="h-5 w-5" width={20} height={20} style={{ aspectRatio: '1 / 1' }} />}
@@ -574,7 +593,7 @@ export const LoginModal: React.FC = () => {
               <button
                 type={showEmailConfirmationNotice ? 'button' : 'submit'}
                 onClick={showEmailConfirmationNotice ? remindEmailConfirmation : undefined}
-                disabled={isLoading || (mode === 'register' && !signupConsent)}
+                disabled={isLoading || (mode === 'register' && (!signupConsent || referralNeedsConfirmation))}
                 className="mt-2 w-full rounded-xl bg-[var(--bet-orange)] py-3.5 text-sm font-bold text-[#fff] transition-all hover:brightness-110 hover:shadow-lg active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? 'Please wait...' : showEmailConfirmationNotice ? 'Please check your email to confirm' : mode === 'login' ? 'Login with Password' : 'Register with Password'}
@@ -594,6 +613,26 @@ export const LoginModal: React.FC = () => {
             >
               {mode === 'login' ? 'Sign in with Email' : 'Continue with Email'}
             </button>
+          )}
+
+          {mode === 'register' && !isLinkingGoogle && (
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <label className="ml-1 text-xs font-semibold text-neutral-400" htmlFor="register-referral-code">
+                Referral code <span className="font-normal text-neutral-600">(optional)</span>
+              </label>
+              <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <div className="relative min-w-0">
+                  <Ticket className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+                  <Input id="register-referral-code" type="text" value={referralCode} onChange={(e) => handleReferralCodeChange(e.target.value)} className="h-11 rounded-xl border-white/10 bg-[#18181b] pl-10 pr-3 uppercase" placeholder="Enter code" maxLength={16} autoCapitalize="characters" aria-describedby="referral-code-status" />
+                </div>
+                <button type="button" onClick={confirmReferralCode} disabled={!referralCode || referralStatus === 'checking' || referralStatus === 'saved'} className="min-h-11 rounded-xl border border-blue-400/40 bg-blue-500/10 px-3 text-xs font-bold text-blue-300 transition hover:bg-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50">
+                  {referralStatus === 'checking' ? 'Checking…' : referralStatus === 'saved' ? 'Saved' : 'Save'}
+                </button>
+              </div>
+              <p id="referral-code-status" className={`ml-1 mt-1.5 text-[11px] ${referralStatus === 'saved' ? 'text-emerald-400' : referralStatus === 'invalid' ? 'text-red-400' : 'text-neutral-500'}`} aria-live="polite">
+                {referralStatus === 'saved' ? 'Referral code confirmed and saved.' : referralStatus === 'invalid' ? 'That referral code does not exist.' : 'Confirm the code before creating your account.'}
+              </p>
+            </div>
           )}
 
           {!isLinkingGoogle && (

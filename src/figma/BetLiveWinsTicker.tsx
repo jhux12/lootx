@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Crown, Package } from 'lucide-react';
 import { useRecentPulls } from '../lib/pulls/useRecentPulls';
-import { CASE_ITEMS } from '../../constants';
 
 // A compact, theme-aware "recent pulls" ticker for the Betting Mobile
 // homepage. Backed by useRecentPulls, a live Firestore subscription to the
@@ -25,26 +24,9 @@ export const BetLiveWinsTicker: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Only fall back to sample case art before the first snapshot resolves,
-  // or on a brand-new site with no opens logged yet. Once real pulls exist,
-  // they're always what's shown.
   const drops = useMemo(() => {
-    if (pulls.length) {
-      return [...pulls, ...pulls];
-    }
-    if (isLoading) return [];
-
-    const sample = CASE_ITEMS.slice(0, 20).map((item) => ({
-      id: item.id,
-      itemName: item.name,
-      itemImage: item.image,
-      rarity: item.rarity,
-      value: item.price,
-      boxName: 'Mystery Box',
-      obtainedAt: 0,
-    }));
-    return [...sample, ...sample];
-  }, [isLoading, pulls]);
+    return pulls.length ? [...pulls, ...pulls] : [];
+  }, [pulls]);
 
   const showSkeleton = isLoading && !pulls.length;
 
@@ -64,7 +46,7 @@ export const BetLiveWinsTicker: React.FC = () => {
             ? Array.from({ length: 8 }).map((_, index) => (
                 <div key={`ticker-skeleton-${index}`} className="bet-home-ticker-item is-loading" />
               ))
-            : drops.map((drop, index) => (
+            : drops.length ? drops.map((drop, index) => (
                 <div
                   key={`${drop.id}-${index}`}
                   className={`bet-home-ticker-item rarity-${drop.rarity}`}
@@ -85,7 +67,7 @@ export const BetLiveWinsTicker: React.FC = () => {
                     }}
                   />
                 </div>
-              ))}
+              )) : <p className="bet-home-ticker-empty">No qualifying pulls yet</p>}
         </div>
       </div>
     </div>
