@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Ripza favicon</title>
+  <desc id="desc">A violet R monogram split by a cyan rip slash on a dark rounded square.</desc>
+  <defs>
+    <linearGradient id="bg" x1="48" y1="32" x2="464" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111426"/>
+      <stop offset="1" stop-color="#070912"/>
+    </linearGradient>
+    <linearGradient id="r" x1="130" y1="120" x2="370" y2="410" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CFF"/>
+      <stop offset="1" stop-color="#5B2EFF"/>
+    </linearGradient>
+    <linearGradient id="slash" x1="110" y1="380" x2="410" y2="130" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00BCEB"/>
+      <stop offset="1" stop-color="#19F4F4"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path fill="url(#r)" fill-rule="evenodd" d="M126 106h169c78 0 125 43 125 108 0 48-27 84-73 99l79 93h-104l-65-82h-43v82h-88V106Zm88 76v74h75c28 0 43-13 43-37s-15-37-43-37h-75Z"/>
+  <path fill="url(#slash)" d="M82 382 218 262l-65 3 277-142-137 121 67-4L82 382Z"/>
+</svg>
