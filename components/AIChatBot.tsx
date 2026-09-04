@@ -11,7 +11,7 @@ interface Message {
 }
 
 const SITE_CONTEXT = `
-Pullz.gg is a mystery box and box battle experience. The site includes:
+Ripza is a mystery box and box battle experience. The site includes:
 - Mystery boxes with real-world items shown in each box.
 - Box Battles where players open the same boxes and the highest total wins.
 - Box Lab for creating custom boxes.
@@ -51,7 +51,7 @@ interface AIChatBotProps {
 }
 
 const DEFAULT_MESSAGES: Message[] = [
-  { id: 'welcome', role: 'model', text: "Hi! I'm the Pullz Assistant from Pullz.gg. I can only answer using information available on the site. How can I help you today?" }
+  { id: 'welcome', role: 'model', text: "Hi! I'm the Ripza Assistant from Ripza. I can only answer using information available on the site. How can I help you today?" }
 ];
 
 export const AIChatBot: React.FC<AIChatBotProps> = ({ 
@@ -130,7 +130,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             body: JSON.stringify({
               mode: 'assistant',
               prompt,
-              systemInstruction: `You are the Pullz Assistant for Pullz.gg. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, SITE_SEARCH_RESULTS, and the chat history. If the answer is not in those sources, say you don't have that information on Pullz.gg and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
+              systemInstruction: `You are the Ripza Assistant for Ripza. Use ONLY the information in SITE_CONTEXT, CURRENT_PAGE_CONTENT, SITE_SEARCH_RESULTS, and the chat history. If the answer is not in those sources, say you don't have that information on Ripza and suggest checking the site or support. Do not guess or use outside knowledge. Keep answers concise and professional, with a gamer-friendly tone.\n\nSITE_CONTEXT:\n${SITE_CONTEXT}`
             })
           });
           if (!result.ok) throw new Error('Assistant request failed');
@@ -171,7 +171,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             </div>
             <div className="flex-1">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                  Pullz Assistant
+                  Ripza Assistant
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-blue/20 text-brand-blue rounded-full border border-brand-blue/30">
                     AI Support
                   </span>
@@ -192,7 +192,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
             )}
         </div>
         <div className="px-4 py-2 bg-[#0f1219] border-b border-gray-800 text-[10px] sm:text-xs text-gray-400">
-          Answers use Pullz.gg info, current page content, and site search results to prevent misinformation.
+          Answers use Ripza info, current page content, and site search results to prevent misinformation.
         </div>
 
         {/* Messages */}

@@ -36,8 +36,8 @@ const HOW_IT_WORKS_STEPS = [
 
 const HOME_FAQ_ITEMS = [
   {
-    question: 'What is Pullz.gg?',
-    answer: 'Pullz.gg is an online collectible box-opening platform. You choose a box, reveal a real item, and receive ownership of that item in your Pullz inventory. Depending on the item and available account options, you can keep it, sell it back for coins, or request shipping.'
+    question: 'What is Ripza?',
+    answer: 'Ripza is an online collectible box-opening platform. You choose a box, reveal a real item, and receive ownership of that item in your Ripza inventory. Depending on the item and available account options, you can keep it, sell it back for coins, or request shipping.'
   },
   {
     question: 'How do I open a box?',
@@ -45,11 +45,11 @@ const HOME_FAQ_ITEMS = [
   },
   {
     question: 'What are coins?',
-    answer: 'Coins are the balance used for eligible box openings, shipping charges where enabled, and other supported features on Pullz.gg. Coin package pricing and any included bonus amount are shown before purchase or use.'
+    answer: 'Coins are the balance used for eligible box openings, shipping charges where enabled, and other supported features on Ripza. Coin package pricing and any included bonus amount are shown before purchase or use.'
   },
   {
     question: 'Is opening fair?',
-    answer: 'Pullz.gg publishes box odds and provides information about how results are generated and verified. Review the box details and the provably fair information before opening.'
+    answer: 'Ripza publishes box odds and provides information about how results are generated and verified. Review the box details and the provably fair information before opening.'
   },
   {
     question: 'How long does shipping take?',

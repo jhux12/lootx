@@ -15,13 +15,13 @@ type HomeReplicaBelowFoldProps = {
 const faqs = [
   {
     id: 'how-pullz-works',
-    question: 'How does Pullz.gg work?',
+    question: 'How does Ripza work?',
     answer: 'Choose a box, open it instantly, and reveal a random collectible. Keep your item and ship it to your door, or sell it back for coins to continue opening boxes.'
   },
   {
     id: 'real-cards',
     question: 'Are these real cards?',
-    answer: 'Yes. All cards and collectibles featured on Pullz.gg are authentic physical items that can be shipped directly to you.'
+    answer: 'Yes. All cards and collectibles featured on Ripza are authentic physical items that can be shipped directly to you.'
   },
   {
     id: 'shipping',
@@ -36,7 +36,7 @@ const faqs = [
   {
     id: 'random-results',
     question: 'Are the box results random?',
-    answer: 'Yes. Pullz.gg uses a provably fair system so box outcomes cannot be manipulated. You can verify each result using the provided fairness information.'
+    answer: 'Yes. Ripza uses a provably fair system so box outcomes cannot be manipulated. You can verify each result using the provided fairness information.'
   },
   {
     id: 'what-can-i-win',
@@ -198,7 +198,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
 
         {showSignupCta && (
           <section className="min-h-[150px] rounded-xl bg-[#22282c] p-5">
-            <h2 className="text-xl font-black">Get started with Pullz.gg</h2>
+            <h2 className="text-xl font-black">Get started with Ripza</h2>
             <p className="mt-2 text-sm text-slate-300">Sign up and open mystery boxes in seconds.</p>
             <button
               onClick={onSignUp}
@@ -232,7 +232,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
 
       <aside className="space-y-4 lg:sticky lg:top-20">
         <section>
-          <h3 className="mb-2 text-xs font-black uppercase text-slate-300 sm:mb-3 sm:text-sm">Top Pullz</h3>
+          <h3 className="mb-2 text-xs font-black uppercase text-slate-300 sm:mb-3 sm:text-sm">Top Ripza</h3>
           <div className="space-y-2">
             {topPullz.map((item) => (
               <div key={item.id} className="group relative min-h-[146px] overflow-hidden rounded-lg bg-[#1f2730]/45 p-2 text-center sm:min-h-[228px] sm:rounded-2xl sm:p-3">

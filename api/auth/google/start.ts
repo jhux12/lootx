@@ -4,7 +4,7 @@ const OAUTH_STATE_COOKIE = 'pullz_google_oauth_state';
 
 const isProduction = () => process.env.NODE_ENV === 'production';
 
-const getAppUrl = () => process.env.APP_URL || 'https://www.pullz.gg';
+const getAppUrl = () => process.env.APP_URL || 'https://ripza.gg';
 
 const buildCookieHeader = (state: string) => {
   const maxAgeSeconds = 60 * 10;

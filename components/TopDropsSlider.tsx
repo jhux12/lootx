@@ -57,7 +57,7 @@ export const TopDropsSlider: React.FC<TopDropsSliderProps> = ({ boxes, onOpenBox
       <div className="relative w-full border-b border-white/5 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex w-full items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-orange-200 sm:text-xs">
           <Flame className="h-3.5 w-3.5 shrink-0 text-orange-400" />
-          <span className="truncate">Best Pullz</span>
+          <span className="truncate">Best Ripza</span>
         </div>
       </div>
 

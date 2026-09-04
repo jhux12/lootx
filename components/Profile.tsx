@@ -1257,7 +1257,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
             {shippingDepositNotice && (
               <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-xs leading-5 text-amber-100 sm:text-[13px]">
                 <p>
-                  {shippingDepositNotice} You can keep using Pullz, but shipping unlocks after first deposit.
+                  {shippingDepositNotice} You can keep using Ripza, but shipping unlocks after first deposit.
                 </p>
                 {shippingDepositMessage && <p className="mt-1 text-amber-200/90">{shippingDepositMessage}</p>}
                 <button

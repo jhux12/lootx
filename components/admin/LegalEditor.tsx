@@ -31,7 +31,7 @@ type ToastState = {
 
 const DEFAULT_TERMS_CONTENT = `# Terms of Service
 
-Welcome to Pullz.gg! These terms outline the rules for using our platform.
+Welcome to Ripza! These terms outline the rules for using our platform.
 
 ## Eligibility
 - You must be at least 18 years old.
@@ -46,7 +46,7 @@ Welcome to Pullz.gg! These terms outline the rules for using our platform.
 - We reserve the right to investigate suspicious activity.
 
 ## Contact
-If you have questions, reach us at support@pullz.gg.
+If you have questions, reach us at support@ripza.gg.
 `;
 
 const DEFAULT_PRIVACY_CONTENT = `# Privacy Policy
@@ -66,7 +66,7 @@ We value your privacy and explain how your data is handled.
 - Update marketing preferences anytime.
 
 ## Contact
-Questions? Email support@pullz.gg.
+Questions? Email support@ripza.gg.
 `;
 
 const buildDefaultLegalDoc = () => ({

@@ -45,7 +45,7 @@ export const ContactSupport: React.FC = () => {
       }
 
       setForm(EMPTY_FORM);
-      setStatusMessage('Thanks for contacting us. Your message has been sent to contact@pullz.gg.');
+      setStatusMessage('Thanks for contacting us. Your message has been sent to contact@ripza.gg.');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Unable to send your message. Please try again.');
     } finally {

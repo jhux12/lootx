@@ -7282,7 +7282,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Site Name</label>
-                                <Input type="text" value="pullz.gg" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
+                                <Input type="text" value="ripza.gg" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white" readOnly />
                             </div>
                             <div className={`rounded-xl border p-4 md:col-span-2 ${maintenanceEnabled ? 'border-red-500/35 bg-red-500/10' : 'border-emerald-500/25 bg-emerald-500/5'}`}>
                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

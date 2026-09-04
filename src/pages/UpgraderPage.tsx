@@ -302,7 +302,7 @@ export default function UpgraderPage() {
     }
 
     const proofText = [
-      'Pullz Upgrader Provably Fair Proof',
+      'Ripza Upgrader Provably Fair Proof',
       `Server Seed Hash: ${proof.serverSeedHash}`,
       `Client Seed: ${proof.clientSeed}`,
       `Nonce: ${proof.nonce}`,

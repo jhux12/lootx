@@ -126,7 +126,7 @@ export const ProvablyFairPage: React.FC = () => {
   const copyProof = useCallback(async () => {
     if (!lastRoll) return;
     const proofLines = [
-      'Pullz.gg Provably Fair Proof',
+      'Ripza Provably Fair Proof',
       `Server Seed (revealed): ${lastReveal?.serverSeed ?? 'Not revealed yet'}`,
       `Server Seed Hash (committed): ${lastRoll.serverSeedHash}`,
       `Client Seed: ${lastRoll.clientSeed}`,

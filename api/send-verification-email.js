@@ -1,10 +1,10 @@
 import { adminAuth } from './_lib/firebaseAdmin.js';
 import { getBearerToken, sendJson } from './_lib/http.js';
 
-const EXPECTED_EMAIL_FROM = 'Pullz.gg <verify@pullz.gg>';
+const EXPECTED_EMAIL_FROM = 'Ripza <verify@ripza.gg>';
 
 const getVerificationHandlerUrl = () => {
-  const configuredBaseUrl = process.env.VERIFY_CONTINUE_URL || 'https://pullz.gg';
+  const configuredBaseUrl = process.env.VERIFY_CONTINUE_URL || 'https://ripza.gg';
 
   try {
     const url = new URL(configuredBaseUrl);
@@ -13,7 +13,7 @@ const getVerificationHandlerUrl = () => {
     url.hash = '';
     return url.toString();
   } catch {
-    return 'https://pullz.gg/verify';
+    return 'https://ripza.gg/verify';
   }
 };
 
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: emailFrom,
         to: decoded.email,
-        subject: 'Verify your Pullz.gg email',
+        subject: 'Verify your Ripza email',
         template: {
           id: 'email-verification',
           variables: {

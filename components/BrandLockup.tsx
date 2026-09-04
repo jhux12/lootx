@@ -15,7 +15,7 @@ type BrandLockupProps = {
   variant?: 'dark' | 'light';
 };
 
-/** A consistently sized Pullz wordmark for dark and light surfaces. */
+/** A consistently sized Ripza wordmark for dark and light surfaces. */
 export const BrandLockup: React.FC<BrandLockupProps> = ({
   className = '',
   logoClassName = 'h-10 w-auto md:h-12',
@@ -29,7 +29,7 @@ export const BrandLockup: React.FC<BrandLockupProps> = ({
     <div className={`flex items-center justify-center ${className}`.trim()}>
       <img
         src={logo}
-        alt="Pullz"
+        alt="Ripza"
         width={logoWidth}
         height={logoHeight}
         className={`${logoClassName} shrink-0 object-contain`}

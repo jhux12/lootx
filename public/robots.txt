@@ -7,4 +7,4 @@ Disallow: /profile
 Disallow: /checkout
 Disallow: /settings
 
-Sitemap: https://pullz.gg/sitemap.xml
+Sitemap: https://ripza.gg/sitemap.xml

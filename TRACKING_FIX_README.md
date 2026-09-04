@@ -1,4 +1,4 @@
-# Pullz.gg tracking repair
+# Ripza tracking repair
 
 ## What was fixed
 

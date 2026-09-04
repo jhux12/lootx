@@ -66,12 +66,12 @@ export const LiveTicker: React.FC = () => {
   };
 
   return (
-    <div ref={tickerRef} className="live-pulls-ticker relative w-full h-20 overflow-hidden rounded-2xl flex items-center" aria-label="Live pulls from Pullz users" aria-live="off">
+    <div ref={tickerRef} className="live-pulls-ticker relative w-full h-20 overflow-hidden rounded-2xl flex items-center" aria-label="Live pulls from Ripza users" aria-live="off">
       {/* Gradient fade overlays */}
       <div className="live-pulls-fade live-pulls-fade-left" />
       <div className="live-pulls-fade live-pulls-fade-right" />
 
-      <div className="live-pulls-label"><i /><strong>LIVE<br />PULLZ</strong></div>
+      <div className="live-pulls-label"><i /><strong>LIVE<br />RIPZA</strong></div>
       <div className="live-pulls-track flex gap-2 px-3 ticker-animation whitespace-nowrap" style={{ animationPlayState: isVisible ? 'running' : 'paused' }}>
         {drops.length === 0 ? (
           Array.from({ length: 6 }).map((_, idx) => (

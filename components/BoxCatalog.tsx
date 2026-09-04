@@ -364,7 +364,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           return;
         }
       } catch (error) {
-        console.warn('Failed to load BoxCatalog How Pullz Works preference.', error);
+        console.warn('Failed to load BoxCatalog How Ripza Works preference.', error);
       }
 
       if (!cancelled) {
@@ -396,7 +396,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
         try {
           await setDoc(doc(db, 'users', resolvedUserId), { dismissedBoxCatalogHowItWorks: true }, { merge: true });
         } catch (error) {
-          console.warn('Failed to save BoxCatalog How Pullz Works preference.', error);
+          console.warn('Failed to save BoxCatalog How Ripza Works preference.', error);
         }
       }
     }
@@ -474,7 +474,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7d8faf]">Welcome</p>
-                <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">How Pullz Works</h2>
+                <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">How Ripza Works</h2>
               </div>
               <button
                 type="button"
@@ -546,7 +546,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           <span className="bet-boxes-hero-orb bet-boxes-hero-orb-4" aria-hidden="true" />
           <span className="bet-boxes-hero-orb bet-boxes-hero-orb-5" aria-hidden="true" />
           <div className="bet-boxes-hero-copy">
-            <p className="bet-boxes-hero-eyebrow">Pullz Boxes</p>
+            <p className="bet-boxes-hero-eyebrow">Ripza Boxes</p>
             <h1 id="boxes-hero-title">Open. Pull. Collect.</h1>
             <p className="bet-boxes-hero-sub">Every box is provably fair. Keep what you pull, or sell it back instantly.</p>
           </div>
