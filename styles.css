@@ -1010,45 +1010,9 @@ body {
   will-change: transform, opacity;
 }
 
-@keyframes pullz-charge-pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.28; }
-  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.52; }
-}
-.pullz-charge-glow {
-  filter: blur(38px);
-  transform: translate(-50%, -50%);
-  animation: pullz-charge-pulse 700ms ease-in-out infinite;
-}
-html.pullz-reduced-motion .pullz-charge-glow {
-  animation: none;
-}
-@media (max-width: 640px) {
-  /* A smaller blur radius costs meaningfully less on phone GPUs while still
-     reading as a soft glow at the pack's on-screen size. */
-  .pullz-charge-glow {
-    filter: blur(22px);
-  }
-}
-
 .win-rarity-card,
 .pullz-win-card-pop {
   animation: pullz-win-card-pop 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-}
-
-.win-rarity-card--accented::before {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  padding: 2px;
-  background: conic-gradient(from 0deg, var(--rarity-color, #9ca3af), transparent 30%, var(--rarity-color, #9ca3af) 60%, transparent 90%, var(--rarity-color, #9ca3af));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0.85;
-  filter: drop-shadow(0 0 10px var(--rarity-color, #9ca3af));
-  animation: pullz-win-border-spin 3.2s linear infinite;
-  pointer-events: none;
 }
 
 .pullz-holo-sweep {
@@ -1086,8 +1050,7 @@ html.pullz-low-performance .pullz-pack-idle-float {
 
 html.pullz-reduced-motion .pullz-pack-shockwave-ring,
 html.pullz-reduced-motion .pullz-pack-flash,
-html.pullz-reduced-motion .pullz-holo-sweep::after,
-html.pullz-reduced-motion .win-rarity-card--accented::before {
+html.pullz-reduced-motion .pullz-holo-sweep::after {
   display: none;
 }
 html.pullz-reduced-motion .pullz-pack-shake {
@@ -1097,7 +1060,6 @@ html.pullz-reduced-motion .win-rarity-card,
 html.pullz-reduced-motion .pullz-win-card-pop {
   animation: none;
 }
-html.pullz-low-performance .pullz-holo-sweep::after,
-html.pullz-low-performance .win-rarity-card--accented::before {
+html.pullz-low-performance .pullz-holo-sweep::after {
   display: none;
 }

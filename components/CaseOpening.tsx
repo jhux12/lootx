@@ -26,7 +26,7 @@ import pullzLogo from '../assets/png/pullz-icon-color-2048.png';
 import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
-import { motion, AnimatePresence } from 'motion/react';
+import { PackTearReveal } from './PackTearReveal';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -53,13 +53,16 @@ interface RevealData {
 }
 
 // Pack-opening tuning constants (kept centralized so motion can be adjusted safely).
+// burstDurationMs/revealDurationMs are sized to let PackTearReveal's own CSS
+// animations (560ms tear-apart, 560ms card spring-in) actually finish before
+// the phase advances — the quick variants intentionally cut them short.
 const PACK_MOTION = {
   chargeDurationMs: 1400,
   quickChargeDurationMs: 320,
-  burstDurationMs: 420,
-  quickBurstDurationMs: 160,
-  revealDurationMs: 700,
-  quickRevealDurationMs: 260,
+  burstDurationMs: 620,
+  quickBurstDurationMs: 180,
+  revealDurationMs: 850,
+  quickRevealDurationMs: 300,
   goldStageDelayMs: 900,
   quickGoldStageDelayMs: 220
 } as const;
@@ -1534,82 +1537,42 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </div>
 
             {/* Pack Stage: the pack sits idle, then charges, bursts, and reveals the item. */}
-            <div className="relative z-20 flex min-h-[300px] flex-col items-center justify-center px-4 pb-8 pt-2 sm:min-h-[360px] sm:pb-10">
+            <div className="relative z-20 flex min-h-[340px] flex-col items-center justify-center px-4 pb-8 pt-2 sm:min-h-[400px] sm:pb-10">
               {isSpinnerAssetsLoading && (
                 <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#0a0f19]/60">
                   <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
                 </div>
               )}
 
-              {animationPhase === 'charging' && richEffectsEnabled && (
+              {animationPhase === 'idle' && (
                 <div
-                  className="pullz-charge-glow pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 rounded-full sm:h-52 sm:w-52"
-                  style={{ background: stageRarityIndicator.color }}
-                  aria-hidden="true"
-                />
-              )}
-
-              <AnimatePresence mode="wait">
-                {(animationPhase === 'idle' || animationPhase === 'charging') ? (
-                  <motion.div
-                    key="pack"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 1.06 }}
-                    transition={{ duration: 0.22 }}
-                    className={`pullz-gpu-layer relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56 ${animationPhase === 'charging' && richEffectsEnabled ? 'pullz-pack-shake' : ''} ${animationPhase === 'idle' && richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
-                  >
-                    <BlurImage
-                      src={box?.image ?? ''}
-                      alt={box?.name ?? 'Mystery pack'}
-                      showPlaceholder={false}
-                      loading="eager"
-                      fetchPriority="high"
-                      staticRender
-                      className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key={`reveal-${burstToken}`}
-                    initial={{ opacity: 0, scale: 0.4, rotate: -6 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                    transition={prefersReducedMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 260, damping: 18 }}
-                    className="pullz-gpu-layer relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56"
-                    style={{ '--rarity-color': stageDisplayItem?.color } as React.CSSProperties}
-                  >
-                    {(animationPhase === 'bursting' || animationPhase === 'revealing') && richEffectsEnabled && !prefersReducedMotion && (
-                      <>
-                        <span className="pullz-pack-shockwave-ring" aria-hidden="true" />
-                        {stageRarityKey === 'legendary' && <span className="pullz-pack-flash" aria-hidden="true" />}
-                      </>
-                    )}
-                    <BlurImage
-                      src={stageDisplayItem?.image ?? ''}
-                      alt={stageDisplayItem?.name ?? 'Revealed item'}
-                      showPlaceholder={false}
-                      loading="eager"
-                      fetchPriority="high"
-                      staticRender
-                      className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {stageDisplayItem && (animationPhase === 'revealing' || animationPhase === 'settled') && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1, duration: 0.25 }}
-                  className="mt-5 text-center"
+                  className={`pullz-gpu-layer relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56 ${richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
                 >
-                  <p className="text-xs font-bold uppercase tracking-wider" style={{ color: stageRarityIndicator.color }}>
-                    {stageRarityIndicator.label}
-                  </p>
-                  <h2 className="max-w-[80vw] truncate text-lg font-bold text-white">{stageDisplayItem.name}</h2>
-                </motion.div>
+                  <BlurImage
+                    src={box?.image ?? ''}
+                    alt={box?.name ?? 'Mystery pack'}
+                    showPlaceholder={false}
+                    loading="eager"
+                    fetchPriority="high"
+                    staticRender
+                    className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
+                  />
+                </div>
               )}
+
+              <PackTearReveal
+                packImageUrl={box?.image ?? ''}
+                phase={
+                  animationPhase === 'idle' ? 'idle'
+                  : animationPhase === 'charging' ? 'anticipation'
+                  : animationPhase === 'bursting' ? 'tearing'
+                  : 'revealed'
+                }
+                item={stageDisplayItem}
+                glowColor={stageRarityIndicator.glow}
+                rarityLabel={stageDisplayItem ? stageRarityIndicator.label : undefined}
+                reduceMotion={!richEffectsEnabled || prefersReducedMotion}
+              />
             </div>
 
             {/* Action Bar */}
@@ -1826,7 +1789,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div
                   key={burstToken}
-                  className={`win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center ${wonItemIsHighTier ? 'win-rarity-card--accented' : ''} ${wonItemIsTopTier && !prefersReducedMotion ? 'pullz-pack-shake' : ''}`}
+                  className={`win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center ${wonItemIsTopTier && !prefersReducedMotion ? 'pullz-pack-shake' : ''}`}
                   style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
                 >
                   {wonItemIsHighTier && !prefersReducedMotion && (
