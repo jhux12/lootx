@@ -3,7 +3,7 @@ import { Check, ListFilter, Search, X } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useAuth, useBoxes, useUI, useWallet } from '../context/GameContext';
-import { getBoxSummaryPage } from '../utils/boxRepository';
+import { getBoxSummaryPageWithRetry, getCachedBoxSummaries } from '../utils/boxRepository';
 import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { useSound } from '../context/SoundContext';
 import { CATEGORY_ORDER, getBoxTags, isCategoryIconUrl, normalizeBoxTag, sanitizeFontAwesomeClass } from '../utils/boxTags';
@@ -188,11 +188,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   const { stripeSettings } = useBoxes();
   const { user, isAuthenticated } = useAuth();
   const { balance } = useWallet();
-  const [boxes, setBoxes] = useState<MysteryBox[]>([]);
+  const [boxes, setBoxes] = useState<MysteryBox[]>(() => getCachedBoxSummaries());
   const [catalogCursor, setCatalogCursor] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogEnd, setCatalogEnd] = useState(false);
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const catalogRequestRef = React.useRef(0);
   const { playSound } = useSound();
   const performanceMode = usePerformanceMode();
@@ -209,16 +210,16 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
   useEffect(() => {
     let active = true; const requestId = ++catalogRequestRef.current;
     setCatalogLoading(true); setCatalogError(null); setCatalogEnd(false); setCatalogCursor(null);
-    void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24).then((page) => {
+    void getBoxSummaryPageWithRetry(performanceMode.isMobile ? 12 : 24).then((page) => {
       if (!active || requestId !== catalogRequestRef.current) return;
       setBoxes(page.boxes); setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => { if (active) setCatalogError('Unable to load packs. Please retry.'); }).finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
-  }, [performanceMode.isMobile]);
+  }, [catalogReloadKey, performanceMode.isMobile]);
   const loadMoreCatalog = () => {
     if (catalogLoading || catalogEnd || !catalogCursor) return;
     setCatalogLoading(true); setCatalogError(null);
-    void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24, catalogCursor).then((page) => {
+    void getBoxSummaryPageWithRetry(performanceMode.isMobile ? 12 : 24, catalogCursor).then((page) => {
       setBoxes((current) => Array.from(new Map([...current, ...page.boxes].map((box) => [box.id, box])).values()));
       setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
     }).catch(() => setCatalogError('Unable to load more packs. Please retry.')).finally(() => setCatalogLoading(false));
@@ -681,8 +682,8 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </button>
             </div>
           )}
-          {catalogError && boxes.length > 0 && <div className="text-center text-sm text-red-300">{catalogError} <button type="button" onClick={loadMoreCatalog} className="underline">Retry</button></div>}
-          {!isLoadingBoxes && groupedBoxes.length === 0 && (
+          {catalogError && <div className="text-center text-sm text-red-300" role="alert">{catalogError} <button type="button" onClick={boxes.length > 0 && catalogCursor ? loadMoreCatalog : () => setCatalogReloadKey((key) => key + 1)} className="min-h-11 px-2 underline">Retry</button></div>}
+          {!isLoadingBoxes && !catalogError && groupedBoxes.length === 0 && (
             <div className="rounded-2xl border border-dashed border-white/10 bg-neutral-950/70 px-6 py-12 text-center">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
                 <Search className="h-6 w-6 text-[var(--bet-orange)]" />

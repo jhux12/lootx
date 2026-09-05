@@ -22,3 +22,31 @@ test('homepage distinguishes loading and failed catalog reads from an empty cata
   assert.match(homepage, /Loading packs…/);
   assert.match(homepage, /!isLoadingBoxes && !hasBoxLoadError/);
 });
+
+test('pack surfaces restore cached summaries immediately and retry bounded network reads', async () => {
+  const [repository, home, catalog] = await Promise.all([
+    source('utils/boxRepository.ts'),
+    source('components/HomeReplica.tsx'),
+    source('components/BoxCatalog.tsx')
+  ]);
+
+  assert.match(repository, /SUMMARY_STORAGE_MAX_AGE_MS/);
+  assert.match(repository, /getCachedBoxSummaries/);
+  assert.match(repository, /getBoxSummaryPageWithRetry/);
+  assert.match(repository, /page\.boxes\.length === 0/);
+  assert.match(home, /useState<MysteryBox\[\]>\(\(\) => getCachedBoxSummaries\(\)\)/);
+  assert.match(catalog, /catalogReloadKey/);
+  assert.match(catalog, /!catalogError && groupedBoxes\.length === 0/);
+});
+
+test('live pulls use a capped listener, session cache, and finite loading state', async () => {
+  const pulls = await source('src/lib/pulls/useRecentPulls.ts');
+
+  assert.match(pulls, /RECENT_PULLS_CACHE_KEY/);
+  assert.match(pulls, /limit\(100\)/);
+  assert.match(pulls, /setTimeout\(\(\) => setIsLoading\(false\), 6_000\)/);
+  assert.doesNotMatch(pulls, /pullLimit \* 10/);
+
+  const ticker = await source('src/figma/BetLiveWinsTicker.tsx');
+  assert.match(ticker, /loading=\{index < 6 \? 'eager' : 'lazy'\}/);
+});
