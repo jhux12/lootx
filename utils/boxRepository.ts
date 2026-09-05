@@ -9,6 +9,8 @@ const summaryCache = new Map<string, BoxSummary>();
 const summaryInFlight = new Map<string, Promise<BoxSummary | null>>();
 const legacyCursorIds = new Set<string>();
 const legacyFallbackEnabled = import.meta.env.VITE_ENABLE_LEGACY_BOX_FALLBACK !== 'false';
+const SUMMARY_STORAGE_KEY = 'ripza:box-summaries:v2';
+const SUMMARY_STORAGE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const asSummary = (snapshot: DocumentSnapshot<DocumentData>): BoxSummary => {
  const value = snapshot.data() ?? {}; return { id: snapshot.id, name: String(value.name ?? 'Mystery Pack'), price: Number(value.price ?? 0), priceXP: value.priceXP == null ? undefined : Number(value.priceXP), currencyType: value.currencyType === 'XP' ? 'XP' : 'COIN', image: typeof value.image === 'string' ? value.image : '', accentColor: typeof value.accentColor === 'string' ? value.accentColor : '#3b82f6', tag: value.tag, tags: Array.isArray(value.tags) ? value.tags : undefined, isDaily: value.isDaily === true, isPullPassBox: value.isPullPassBox === true, pullPassBoxType: value.pullPassBoxType, isUserCreated: false, items: [], sortOrder: Number(value.sortOrder ?? 0), published: value.published !== false } as BoxSummary;
@@ -39,8 +41,8 @@ export const getBoxSummaryPage = async (pageSize: number, cursor?: QueryDocument
 
 const homepageCache = new Map<number, BoxSummary[]>();
 const homepageInFlight = new Map<number, Promise<BoxSummary[]>>();
-const HOMEPAGE_LOAD_TIMEOUT_MS = 8_000;
-const HOMEPAGE_RETRY_DELAYS_MS = [300, 900];
+const HOMEPAGE_LOAD_TIMEOUT_MS = 5_000;
+const HOMEPAGE_RETRY_DELAYS_MS = [250, 700];
 
 const wait = (delayMs: number) => new Promise((resolve) => setTimeout(resolve, delayMs));
 
@@ -52,6 +54,48 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
      (error) => { clearTimeout(timeoutId); reject(error); }
    );
  });
+
+const persistSummaries = (boxes: BoxSummary[]) => {
+ if (typeof window === 'undefined' || boxes.length === 0) return;
+ try {
+   window.localStorage.setItem(SUMMARY_STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), boxes }));
+ } catch {
+   // Storage can be unavailable in private browsing; Firestore's cache still works.
+ }
+};
+
+export const getCachedBoxSummaries = (): BoxSummary[] => {
+ if (typeof window === 'undefined') return [];
+ try {
+   const parsed = JSON.parse(window.localStorage.getItem(SUMMARY_STORAGE_KEY) ?? 'null') as { savedAt?: number; boxes?: BoxSummary[] } | null;
+   if (!parsed?.savedAt || Date.now() - parsed.savedAt > SUMMARY_STORAGE_MAX_AGE_MS || !Array.isArray(parsed.boxes)) return [];
+   return parsed.boxes.filter((box) => box && typeof box.id === 'string' && box.published !== false);
+ } catch {
+   return [];
+ }
+};
+
+export const getBoxSummaryPageWithRetry = async (pageSize: number, cursor?: QueryDocumentSnapshot<DocumentData> | null) => {
+ let lastError: unknown;
+ for (let attempt = 0; attempt <= HOMEPAGE_RETRY_DELAYS_MS.length; attempt += 1) {
+   try {
+     const page = await withTimeout(getBoxSummaryPage(pageSize, cursor), HOMEPAGE_LOAD_TIMEOUT_MS);
+     // An empty initial cache snapshot is common while a mobile Firestore
+     // connection is warming up. Confirm it before treating the catalog as empty.
+     if (!cursor && page.boxes.length === 0 && attempt < HOMEPAGE_RETRY_DELAYS_MS.length) {
+       await wait(HOMEPAGE_RETRY_DELAYS_MS[attempt]);
+       continue;
+     }
+     if (!cursor) persistSummaries(page.boxes);
+     return page;
+   } catch (error) {
+     lastError = error;
+     if (attempt === HOMEPAGE_RETRY_DELAYS_MS.length) throw error;
+     await wait(HOMEPAGE_RETRY_DELAYS_MS[attempt]);
+   }
+ }
+ throw lastError ?? new Error('BOX_SUMMARY_LOAD_FAILED');
+};
 
 const loadHomepageSummaryPage = async (pageSize: number) => {
  let lastError: unknown;
@@ -77,6 +121,7 @@ export const getHomepageSummaries = (pageSize: number) => {
  const request = loadHomepageSummaryPage(pageSize).then((boxes) => {
    // Do not make a transient empty response sticky for the lifetime of the tab.
    if (boxes.length > 0) homepageCache.set(pageSize, boxes);
+   if (boxes.length > 0) persistSummaries(boxes);
    return boxes;
  }).finally(() => homepageInFlight.delete(pageSize));
  homepageInFlight.set(pageSize, request); return request;

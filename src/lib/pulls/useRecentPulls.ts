@@ -27,6 +27,29 @@ type OpenDoc = {
 const toMillis = (value: Timestamp | undefined) =>
   value && typeof value.toMillis === 'function' ? value.toMillis() : 0;
 
+const RECENT_PULLS_CACHE_KEY = 'ripza:recent-pulls:v1';
+const RECENT_PULLS_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+const readCachedPulls = (pullLimit: number): RecentPull[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const cached = JSON.parse(window.sessionStorage.getItem(RECENT_PULLS_CACHE_KEY) ?? 'null') as { savedAt?: number; pulls?: RecentPull[] } | null;
+    if (!cached?.savedAt || Date.now() - cached.savedAt > RECENT_PULLS_CACHE_MAX_AGE_MS || !Array.isArray(cached.pulls)) return [];
+    return cached.pulls.slice(0, pullLimit);
+  } catch {
+    return [];
+  }
+};
+
+const cachePulls = (pulls: RecentPull[]) => {
+  if (typeof window === 'undefined' || pulls.length === 0) return;
+  try {
+    window.sessionStorage.setItem(RECENT_PULLS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), pulls }));
+  } catch {
+    // sessionStorage can be disabled; the Firestore listener remains sufficient.
+  }
+};
+
 /**
  * Live, site-wide feed of the most recently opened box prizes, sourced from
  * the top-level `opens` collection that api/open-case.js writes to on every
@@ -40,13 +63,17 @@ const toMillis = (value: Timestamp | undefined) =>
  * snapshot, and never clear it out on a transient listener error.
  */
 export const useRecentPulls = (pullLimit = 30) => {
-  const [pulls, setPulls] = useState<RecentPull[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [pulls, setPulls] = useState<RecentPull[]>(() => readCachedPulls(pullLimit));
+  const [isLoading, setIsLoading] = useState(() => readCachedPulls(pullLimit).length === 0);
 
   useEffect(() => {
     // Read a wider real-activity window before applying the value threshold so
     // a run of inexpensive pulls does not make the ticker appear fabricated or empty.
-    const opensQuery = query(collection(db, 'opens'), orderBy('createdAt', 'desc'), limit(Math.max(pullLimit * 10, 100)));
+    // Cap the live listener at 100 documents. The old 10x multiplier downloaded
+    // 300 documents for the default rail on every cold visit, which was costly
+    // and noticeably delayed mobile rendering.
+    const opensQuery = query(collection(db, 'opens'), orderBy('createdAt', 'desc'), limit(100));
+    const loadingTimeout = window.setTimeout(() => setIsLoading(false), 6_000);
 
     const unsubscribe = onSnapshot(
       opensQuery,
@@ -73,18 +100,24 @@ export const useRecentPulls = (pullLimit = 30) => {
         // A momentary empty/from-cache snapshot shouldn't wipe out pulls we
         // already loaded successfully — only accept it if we have nothing
         // yet, or it actually has data.
+        if (next.length > 0) cachePulls(next);
         setPulls((previous) => (next.length > 0 || previous.length === 0 ? next : previous));
         setIsLoading(false);
+        window.clearTimeout(loadingTimeout);
       },
       (error) => {
         console.error('Failed to subscribe to recent pulls', error);
         // Keep whatever we already have rather than clearing it on a
         // transient network error — the listener will keep retrying.
         setIsLoading(false);
+        window.clearTimeout(loadingTimeout);
       },
     );
 
-    return () => unsubscribe();
+    return () => {
+      window.clearTimeout(loadingTimeout);
+      unsubscribe();
+    };
   }, [pullLimit]);
 
   return { pulls, isLoading };

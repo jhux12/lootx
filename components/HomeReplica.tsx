@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { MysteryBox } from '../types';
-import { getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
+import { getCachedBoxSummaries, getConfiguredHomepageSummaries, getHomepageSummaries, invalidateHomepageSummaries } from '../utils/boxRepository';
 import { usePerformanceMode } from '../src/lib/performance';
 import { FigmaHomePage } from '../src/figma/FigmaHomePage';
 
@@ -18,20 +18,20 @@ const PROMO_BOX_ID = 'JjVFjwx4lcXIXe3SZuAm';
 /** Lean data adapter for the Figma homepage. */
 export const HomeReplica: React.FC<HomeReplicaProps> = ({ demoBoxId, trendingBoxIds = [], onOpenBox, onViewAllBoxes }) => {
   const performanceMode = usePerformanceMode();
-  const [homepageBoxes, setHomepageBoxes] = useState<MysteryBox[]>([]);
+  const [homepageBoxes, setHomepageBoxes] = useState<MysteryBox[]>(() => getCachedBoxSummaries());
   const [configuredBoxes, setConfiguredBoxes] = useState<MysteryBox[]>([]);
-  const [summariesLoading, setSummariesLoading] = useState(true);
+  const [summariesLoading, setSummariesLoading] = useState(() => getCachedBoxSummaries().length === 0);
   const [summaryError, setSummaryError] = useState(false);
   const summaryLimit = performanceMode.isMobile ? 12 : 24;
 
   const loadSummaries = useCallback(() => {
-    setSummariesLoading(true);
+    setSummariesLoading(homepageBoxes.length === 0);
     setSummaryError(false);
     void getHomepageSummaries(summaryLimit)
       .then(setHomepageBoxes)
       .catch(() => setSummaryError(true))
       .finally(() => setSummariesLoading(false));
-  }, [summaryLimit]);
+  }, [homepageBoxes.length, summaryLimit]);
 
   useEffect(() => loadSummaries(), [loadSummaries]);
 

@@ -58,7 +58,10 @@ export const BetLiveWinsTicker: React.FC = () => {
                   <img
                     src={drop.itemImage}
                     alt={drop.itemName}
-                    loading="lazy"
+                    // Native lazy loading can miss images moving into view via a
+                    // CSS transform. Eagerly fetch the first visible mobile rail.
+                    loading={index < 6 ? 'eager' : 'lazy'}
+                    fetchPriority={index < 4 ? 'high' : 'low'}
                     decoding="async"
                     // A broken/expired image URL shouldn't leave a blank
                     // gap in the strip — hide just that one tile.
