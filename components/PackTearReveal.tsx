@@ -10,8 +10,8 @@ interface PackTearRevealProps {
   phase: PackTearPhase;
   /** The item to reveal. Only its image/name are read, once phase reaches 'tearing' / 'revealed'. */
   item: CaseItem | null;
-  /** Burst/glow/card-border color. Callers resolve this from their own rarity
-   *  palette (already normalized against loose/server rarity strings) so this
+  /** Burst/glow color. Callers resolve this from their own rarity palette
+   *  (already normalized against loose/server rarity strings) so this
    *  component doesn't need its own copy of that logic. */
   glowColor: string;
   /** Optional short tier label ("Legendary") shown above the item name. */
@@ -24,11 +24,18 @@ interface PackTearRevealProps {
 
 /**
  * Replaces the pack's charge/burst visual with a "tear open the pack" reveal:
- * the pack shakes, splits in half and flies apart, then the item card springs
- * in with a holo sheen. Purely presentational — driven entirely by `phase`,
- * so it never touches spin timing, provably-fair locking, or win-modal logic.
- * Renders as an absolute overlay; the caller is responsible for showing the
- * idle (unopened) pack art before `phase` leaves 'idle'.
+ * the pack shakes, splits in half and flies apart, then the item art springs
+ * in large and unboxed (no card frame) with a soft rarity glow and a holo
+ * glint. Purely presentational — driven entirely by `phase`, so it never
+ * touches spin timing, provably-fair locking, or win-modal logic. Renders as
+ * an absolute overlay; the caller is responsible for showing the idle
+ * (unopened) pack art before `phase` leaves 'idle'.
+ *
+ * Fills whatever box the caller sizes (see the stage container in
+ * CaseOpening.tsx) rather than using fixed pixels, so it can be a large
+ * "main stage" hero on every screen size without stretching the artwork —
+ * every layer uses `object-fit: contain` / `background-size: contain` and
+ * percentage-based transforms.
  */
 export const PackTearReveal: React.FC<PackTearRevealProps> = ({
   packImageUrl,
@@ -44,7 +51,7 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
 
   return (
     <div
-      className={`pullz-tear-overlay absolute inset-0 z-50 flex items-center justify-center bg-[linear-gradient(180deg,rgba(5,9,17,0.97),rgba(14,19,30,0.94)_50%,rgba(5,9,17,0.97))] ${reduceMotion ? 'pullz-tear-reduced' : ''}`}
+      className={`pullz-tear-overlay absolute inset-0 z-50 flex items-center justify-center ${reduceMotion ? 'pullz-tear-reduced' : ''}`}
       role="status"
       aria-live="polite"
       aria-label={phase === 'revealed' && item ? `You got ${item.name}` : 'Opening pack'}
@@ -67,10 +74,12 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           aria-hidden="true"
         />
 
-        <div
-          className={`pullz-tear-card ${phase === 'revealed' ? 'show' : ''}`}
-          style={{ boxShadow: `0 0 0 1px ${glowColor}, 0 25px 55px rgba(0,0,0,0.55)` }}
-        >
+        <div className={`pullz-tear-card ${phase === 'revealed' ? 'show' : ''}`}>
+          <div
+            className="pullz-tear-glow"
+            style={{ background: `radial-gradient(circle, ${glowColor} 0%, transparent 72%)` }}
+            aria-hidden="true"
+          />
           {item?.image ? (
             <img src={item.image} alt={item.name} className="pullz-tear-card-img" draggable={false} />
           ) : null}
@@ -88,9 +97,15 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
       </div>
 
       <style>{`
-        .pullz-tear-scene { position: relative; width: 220px; height: 260px; }
+        /* Sizing comes entirely from the caller's stage container (the overlay
+           is inset:0 within it); this just fills whatever box it's given. */
+        .pullz-tear-scene {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
         .pullz-tear-burst {
-          position: absolute; left: 50%; top: 50%; width: 100px; height: 100px;
+          position: absolute; left: 50%; top: 50%; width: 55%; height: 55%;
           border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; pointer-events: none;
           will-change: transform, opacity;
         }
@@ -98,12 +113,11 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
         @keyframes pullzTearBurst {
           0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
           35% { opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(6); opacity: 0; }
+          100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
         }
         .pullz-tear-half {
-          position: absolute; left: 50%; top: 50%; width: 190px; height: 260px;
-          transform: translate(-50%, -50%); background-color: #11182a;
-          background-size: 190px 260px; background-repeat: no-repeat; background-position: center;
+          position: absolute; inset: 0; background-color: #11182a;
+          background-size: contain; background-repeat: no-repeat; background-position: center;
           border-radius: 12px; box-shadow: 0 18px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
           backface-visibility: hidden; -webkit-backface-visibility: hidden; will-change: transform, opacity;
         }
@@ -111,62 +125,71 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
         .pullz-tear-half.bottom { clip-path: polygon(0 52%, 100% 48%, 100% 100%, 0 100%); }
         .pullz-tear-half.shaking { animation: pullzTearShake 420ms ease-in-out infinite; }
         @keyframes pullzTearShake {
-          0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
-          25% { transform: translate(calc(-50% - 3px), -50%) rotate(-1.5deg); }
-          75% { transform: translate(calc(-50% + 3px), -50%) rotate(1.5deg); }
+          0%, 100% { transform: translate(0, 0) rotate(0deg); }
+          25% { transform: translate(-3px, 1px) rotate(-1.5deg); }
+          75% { transform: translate(3px, 1px) rotate(1.5deg); }
         }
         .pullz-tear-half.top.torn { animation: pullzTearTop 560ms cubic-bezier(.4,0,.2,1) forwards; }
         .pullz-tear-half.bottom.torn { animation: pullzTearBottom 560ms cubic-bezier(.4,0,.2,1) forwards; }
         @keyframes pullzTearTop {
-          0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
-          100% { transform: translate(-50%, calc(-50% - 200px)) rotate(-26deg); opacity: 0; }
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+          100% { transform: translate(0, -95%) rotate(-26deg); opacity: 0; }
         }
         @keyframes pullzTearBottom {
-          0% { transform: translate(-50%, -50%) rotate(0deg); opacity: 1; }
-          100% { transform: translate(-50%, calc(-50% + 220px)) rotate(18deg); opacity: 0; }
+          0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+          100% { transform: translate(0, 95%) rotate(18deg); opacity: 0; }
         }
         .pullz-tear-card {
-          position: absolute; left: 50%; top: 50%; width: 168px; height: 232px;
-          transform: translate(-50%, -50%) scale(0.4); opacity: 0; border-radius: 14px;
-          background: linear-gradient(160deg, #171c28, #0b0f18);
-          display: flex; align-items: center; justify-content: center; overflow: hidden;
+          position: absolute; inset: 6%;
+          transform: scale(0.4); opacity: 0;
+          display: flex; align-items: center; justify-content: center;
           will-change: transform, opacity;
         }
         .pullz-tear-card.show { animation: pullzTearCardIn 560ms cubic-bezier(.2,.8,.25,1.15) forwards; }
         @keyframes pullzTearCardIn {
-          0% { transform: translate(-50%, -50%) scale(0.3) rotate(-6deg); opacity: 0; }
-          60% { transform: translate(-50%, -50%) scale(1.06) rotate(2deg); opacity: 1; }
-          100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+          0% { transform: scale(0.3) rotate(-6deg); opacity: 0; }
+          60% { transform: scale(1.06) rotate(2deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .pullz-tear-glow {
+          position: absolute; inset: -10%; z-index: 0;
+          border-radius: 50%; filter: blur(28px); opacity: 0.55;
         }
         .pullz-tear-card-img {
-          width: 82%; height: 82%; object-fit: contain; position: relative; z-index: 2;
-          filter: drop-shadow(0 8px 18px rgba(0,0,0,0.5));
+          width: 100%; height: 100%; object-fit: contain; position: relative; z-index: 2;
+          filter: drop-shadow(0 18px 30px rgba(0,0,0,0.55));
         }
         .pullz-tear-holo {
-          position: absolute; inset: 0;
-          background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.3) 45%, rgba(255,255,255,0) 60%);
-          transform: translateX(-120%); mix-blend-mode: overlay; z-index: 3;
+          position: absolute; inset: 0; overflow: hidden; z-index: 3; pointer-events: none;
         }
-        .pullz-tear-card.show .pullz-tear-holo { animation: pullzTearSheen 1100ms 380ms ease-in-out; }
-        @keyframes pullzTearSheen { to { transform: translateX(120%); } }
+        .pullz-tear-holo::after {
+          content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%;
+          background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
+          transform: translateX(0);
+        }
+        .pullz-tear-card.show .pullz-tear-holo::after { animation: pullzTearSheen 1100ms 380ms ease-in-out; }
+        @keyframes pullzTearSheen {
+          from { transform: translateX(0); }
+          to { transform: translateX(220%); }
+        }
         .pullz-tear-label {
-          position: absolute; left: 50%; bottom: -12px; transform: translate(-50%, 100%);
-          display: flex; flex-direction: column; align-items: center; gap: 2px;
-          white-space: nowrap; text-align: center;
+          position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 100%);
+          display: flex; flex-direction: column; align-items: center; gap: 4px;
+          white-space: nowrap; text-align: center; padding-top: 14px;
           opacity: 0; animation: pullzTearLabelIn 360ms 500ms ease forwards;
         }
         .pullz-tear-label-tier {
-          font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+          font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
         }
         .pullz-tear-label-name {
-          font-size: 13px; font-weight: 700; letter-spacing: 0.3px; color: #fff;
+          font-size: 16px; font-weight: 700; letter-spacing: 0.2px; color: #fff;
         }
         @keyframes pullzTearLabelIn { to { opacity: 1; } }
         .pullz-tear-reduced .pullz-tear-half.torn,
         .pullz-tear-reduced .pullz-tear-card.show,
         .pullz-tear-reduced .pullz-tear-burst.go,
         .pullz-tear-reduced .pullz-tear-half.shaking,
-        .pullz-tear-reduced .pullz-tear-card.show .pullz-tear-holo,
+        .pullz-tear-reduced .pullz-tear-card.show .pullz-tear-holo::after,
         .pullz-tear-reduced .pullz-tear-label {
           animation-duration: 1ms !important;
           animation-delay: 0ms !important;
