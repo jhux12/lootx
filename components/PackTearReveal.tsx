@@ -25,8 +25,8 @@ interface PackTearRevealProps {
 /**
  * The pack-open payoff: splits in half and flies apart with a radial burst,
  * then the item art springs in large and unboxed (no card frame) with a soft
- * rarity glow, a holo glint, and a name label anchored over the bottom of the
- * art. Purely presentational — driven entirely by `phase`, so it never
+ * rarity glow and a name label anchored over the bottom of the art. Purely
+ * presentational — driven entirely by `phase`, so it never
  * touches spin timing, provably-fair locking, or win-modal logic. Mounts
  * only once the caller is ready to tear (there's no separate "anticipation"
  * phase here — that lives in the caller as the pack zoom + slide-to-open);
@@ -75,7 +75,6 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           {item?.image ? (
             <img src={item.image} alt={item.name} className="pullz-tear-card-img" draggable={false} />
           ) : null}
-          <div className="pullz-tear-holo" aria-hidden="true" />
           {phase === 'revealed' && item ? (
             <div className="pullz-tear-label">
               {rarityLabel ? (
@@ -145,19 +144,6 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           width: 100%; height: 100%; object-fit: contain; position: relative; z-index: 2;
           filter: drop-shadow(0 18px 30px rgba(0,0,0,0.55));
         }
-        .pullz-tear-holo {
-          position: absolute; inset: 0; overflow: hidden; z-index: 3; pointer-events: none;
-        }
-        .pullz-tear-holo::after {
-          content: ""; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%;
-          background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
-          transform: translateX(0);
-        }
-        .pullz-tear-card.show .pullz-tear-holo::after { animation: pullzTearSheen 1000ms 320ms ease-in-out; }
-        @keyframes pullzTearSheen {
-          from { transform: translateX(0); }
-          to { transform: translateX(220%); }
-        }
         .pullz-tear-label {
           position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
           display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -177,7 +163,6 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
         .pullz-tear-reduced .pullz-tear-half.torn,
         .pullz-tear-reduced .pullz-tear-card.show,
         .pullz-tear-reduced .pullz-tear-burst.go,
-        .pullz-tear-reduced .pullz-tear-card.show .pullz-tear-holo::after,
         .pullz-tear-reduced .pullz-tear-label {
           animation-duration: 1ms !important;
           animation-delay: 0ms !important;
