@@ -777,9 +777,9 @@ const AppShell = () => {
           <section className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 py-10 text-center sm:py-16">
             <Ban className="mb-4 h-12 w-12 text-red-400" aria-hidden="true" />
             <h1 className="text-2xl font-black text-white sm:text-3xl">Account features are disabled</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-400 sm:text-base">Top ups, box openings, rewards, shipments, selling, games, and other account actions are unavailable while this ban is active.</p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-400 sm:text-base">Top ups, pack openings, rewards, shipments, selling, games, and other account actions are unavailable while this ban is active.</p>
             <div className="mt-7 grid w-full grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Disabled account features">
-              {[['Top ups', CreditCard], ['Box openings', PackageX], ['Shipments & rewards', ShieldAlert]].map(([label, Icon]) => (
+              {[['Top ups', CreditCard], ['Pack openings', PackageX], ['Shipments & rewards', ShieldAlert]].map(([label, Icon]) => (
                 <div key={label as string} aria-disabled="true" className="flex min-h-24 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 text-gray-500 grayscale opacity-60">
                   <Icon className="h-5 w-5" /><span className="font-bold">{label as string}</span>
                 </div>

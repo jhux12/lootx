@@ -70,7 +70,7 @@ export const Hero: React.FC = () => {
               onClick={handleGetStarted}
               className="inline-flex min-h-12 items-center justify-center rounded-xl bg-gradient-to-r from-[#205DD7] via-blue-500 to-sky-400 px-7 py-3 text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_16px_45px_-20px_rgba(32,93,215,0.9)] transition duration-300 hover:brightness-110 hover:shadow-[0_20px_55px_-24px_rgba(32,93,215,0.95)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300/70"
             >
-              Sign Up &amp; Get Free Box
+              Sign Up &amp; Get Free Pack
             </button>
             <button
               onClick={() => scrollToSection('how-it-works')}

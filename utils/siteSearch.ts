@@ -18,16 +18,16 @@ const SITE_SEARCH_ENTRIES: SiteSearchEntry[] = [
       'In Inventory, you can ship items or sell them back for coins. Select items and review shipping, then ship an item to start tracking its progress. Once items are shipped, tracking details appear in the Shipped tab with a tracking number.'
   },
   {
-    title: 'Box Battles',
-    keywords: ['battle', 'box battle', 'arena', 'versus', 'round'],
+    title: 'Pack Battles',
+    keywords: ['battle', 'pack battle', 'arena', 'versus', 'round'],
     content:
-      'Box Battles let players open the same boxes and the highest total wins. The battle arena is a core gameplay mode on Ripza.'
+      'Pack Battles let players open the same packs and the highest total wins. The battle arena is a core gameplay mode on Ripza.'
   },
   {
-    title: 'Box Lab',
-    keywords: ['box lab', 'custom box', 'custom', 'create', 'odds'],
+    title: 'Pack Lab',
+    keywords: ['pack lab', 'custom pack', 'custom', 'create', 'odds'],
     content:
-      'Box Lab lets you create custom boxes with specific odds and publish them for others to open.'
+      'Pack Lab lets you create custom packs with specific odds and publish them for others to open.'
   },
   {
     title: 'Provably fair',

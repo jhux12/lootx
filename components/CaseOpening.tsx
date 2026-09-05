@@ -115,7 +115,7 @@ const mapBoxDetail = (id: string, data: Record<string, any>): MysteryBox => {
     const rarity = (item.rarity ?? 'common') as CaseItem['rarity'];
     return { id: item.id ?? `${id}-${index}`, name: item.name ?? 'Mystery Item', price: Number(item.value ?? item.price ?? 0), image: item.image ?? '', rarity, chance: Number(item.weight ?? item.chance ?? 0), color: item.color ?? '#9ca3af', brand: item.brand ?? '', category: item.category ?? '', tags: Array.isArray(item.tags) ? item.tags : [], sizes: Array.isArray(item.sizes) ? item.sizes : [], redeemable: item.redeemable !== false } as CaseItem;
   });
-  return { id, name: data.name ?? 'Mystery Box', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
+  return { id, name: data.name ?? 'Mystery Pack', price: Number(data.price ?? 0), priceXP: data.priceXP == null ? undefined : Number(data.priceXP), currencyType: data.currencyType === 'XP' ? 'XP' : 'COIN', image: data.image ?? '', accentColor: data.accentColor ?? '#3b82f6', tag: data.tag, tags: Array.isArray(data.tags) ? data.tags : undefined, isDaily: data.isDaily === true, isPullPassBox: data.isPullPassBox === true, items, isUserCreated: data.isUserCreated === true, sellBackRate: data.sellBackRate == null ? undefined : Number(data.sellBackRate) } as MysteryBox;
 };
 
 const normalizeRarityKey = (rarity?: string) => {
@@ -614,7 +614,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       setCopyStatusMessage(copiedLabel);
     } catch (error) {
-      console.error('Failed to copy seed or box link', error);
+      console.error('Failed to copy seed or pack link', error);
       setCopyStatusMessage('Could not copy right now.');
     }
 
@@ -1222,7 +1222,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       if (!lockedWinner || reelItemsRef.current[winnerIndex]?.id !== lockedWinner.item.id) {
         spinRequestLockRef.current = false;
         setIsSpinning(false);
-        throw new Error('Spinner reel no longer matches the locked box-opening result.');
+        throw new Error('Spinner reel no longer matches the locked pack-opening result.');
       }
       const frozenMeasurements = spinnerMeasurementsRef.current;
       lockedSpinStateRef.current = createLockedSpinState({
@@ -1606,7 +1606,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
         if (availableCoins < currentCasePrice) {
           spinRequestLockRef.current = false;
-          setSpinFeedbackMessage('Not enough coins — top up to open this box.');
+          setSpinFeedbackMessage('Not enough coins — top up to open this pack.');
 
           if (!showTopUpModal && !topUpTriggerLockRef.current) {
             topUpTriggerLockRef.current = true;
@@ -1637,7 +1637,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
       if (!canFreeSpin) {
         spinRequestLockRef.current = false;
-        toast.info("Free signup box already claimed.");
+        toast.info("Free signup pack already claimed.");
         return;
       }
       if (!auth.currentUser?.phoneNumber) {
@@ -1803,11 +1803,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         const status = typeof (error as { status?: unknown })?.status === 'number'
           ? (error as { status: number }).status
           : 'unknown';
-        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open box.';
+        const rawMessage = error instanceof Error ? error.message : 'OPEN_FAILED: Unable to open pack.';
         const readableMessage = rawMessage.includes(':') ? rawMessage.split(':').slice(1).join(':').trim() : rawMessage;
         const errorCode = rawMessage.includes(':') ? rawMessage.split(':')[0] : 'OPEN_FAILED';
 
-        console.error('Failed to open box', {
+        console.error('Failed to open pack', {
           status,
           code: errorCode,
           message: readableMessage,
@@ -1818,8 +1818,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         isSpinSequenceLockedRef.current = false;
         setIsBoxPreviewVisible(false);
         setIsBoxPreviewFading(false);
-        setSpinFeedbackMessage(readableMessage || 'Unable to open box.');
-        toast.error(readableMessage || 'Unable to open box.');
+        setSpinFeedbackMessage(readableMessage || 'Unable to open pack.');
+        toast.error(readableMessage || 'Unable to open pack.');
         spinRequestLockRef.current = false;
         return;
       }
@@ -2132,7 +2132,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     if (typeof window === 'undefined' || !wonItem) return;
 
-    const caseName = box?.name ?? 'Mystery Box';
+    const caseName = box?.name ?? 'Mystery Pack';
     const shareText = `I just unboxed ${wonItem.name} from ${caseName} on ripza.gg!`;
     const shareUrl = window.location.href;
 
@@ -2223,8 +2223,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <button type="button" onClick={() => setView({ type: 'BOXES' })} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white">Back</button>
               </div>
             </> : <>
-              <p className="text-white text-lg font-semibold">Loading box...</p>
-              <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this box.</p>
+              <p className="text-white text-lg font-semibold">Loading pack...</p>
+              <p className="text-gray-400 text-sm mt-2">We&apos;re syncing the drops and odds for this pack.</p>
             </>}
           </div>
         </div>
@@ -2237,7 +2237,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
                     className="bet-case-back-btn min-h-11 flex items-center gap-2 rounded px-3 py-1.5 text-gray-400 text-sm font-medium transition-colors hover:text-white"
                 >
-                    <ChevronLeft className="w-4 h-4" /> All boxes
+                    <ChevronLeft className="w-4 h-4" /> All packs
                 </button>
                 <div className="flex items-center gap-3">
                     {isFree && <span className="bg-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded">FREE SPIN</span>}
@@ -2281,7 +2281,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
             <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
               <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
-                {box?.name ?? 'Mystery Box'}
+                {box?.name ?? 'Mystery Pack'}
               </h1>
               {copyStatusMessage && (
                 <p className="mx-auto mt-2 max-w-[92vw] text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
@@ -2408,7 +2408,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       ) : isBalanceLoading ? (
                         'Loading balance...'
                       ) : isRewardOpen ? (
-                        'Open Reward Box'
+                        'Open Reward Pack'
                       ) : isFree ? (
                         'Free Spin'
                       ) : (
@@ -2477,7 +2477,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
 
         {showXpConfirmSheet && showXpOpenUi && (
-          <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Use XP to open box">
+          <div className="fixed inset-0 z-[120]" role="dialog" aria-modal="true" aria-label="Use XP to open pack">
             <button
               type="button"
               className="absolute inset-0 bg-black/55"
@@ -2486,7 +2486,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             />
             <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-white/10 bg-[#1a1f26] p-4 shadow-2xl backdrop-blur-sm animate-in slide-in-from-bottom duration-300 sm:mx-auto sm:mb-6 sm:max-w-md sm:rounded-2xl">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">Open this box with XP?</p>
+                <p className="text-sm font-semibold text-white">Open this pack with XP?</p>
                 <button
                   type="button"
                   onClick={() => setShowXpConfirmSheet(false)}
@@ -2498,7 +2498,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               </div>
               <p className="text-xs text-gray-300">Open with XP: <span className="font-semibold text-gray-100">{currentXpBalance.toLocaleString()} / {xpCostForCoinCase.toLocaleString()}</span></p>
               {!canOpenWithXp && (
-                <p className="mt-2 text-xs text-amber-300">You need more XP to open this box.</p>
+                <p className="mt-2 text-xs text-amber-300">You need more XP to open this pack.</p>
               )}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
@@ -2723,7 +2723,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   redirectToBoxesCatalog();
                 }}
                 className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-slate-300 transition hover:bg-white/[0.14] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 sm:right-4 sm:top-4"
-                aria-label="Maybe later, return to boxes"
+                aria-label="Maybe later, return to packs"
               >
                 <X className="h-5 w-5" />
               </button>

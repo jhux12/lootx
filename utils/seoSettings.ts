@@ -20,9 +20,9 @@ export interface SeoSettings {
 
 export const DEFAULT_SEO_SETTINGS: SeoSettings = {
   siteName: PUBLIC_BRAND.name, seoTitle: `${PUBLIC_BRAND.name} | Pokémon Mystery Boxes & Trading Cards`,
-  metaDescription: 'Open Pokémon mystery boxes online and collect authentic trading cards, sealed products, and collectibles. Keep your pulls, ship them, or sell them back for coins.',
+  metaDescription: 'Open Pokémon mystery packs online and collect authentic trading cards, sealed products, and collectibles. Keep your pulls, ship them, or sell them back for coins.',
   canonicalUrl: PUBLIC_BRAND.canonicalOrigin, indexPage: true, followLinks: true,
-  openGraphTitle: 'Open Pokémon Mystery Boxes on Ripza', openGraphDescription: 'Open digital mystery boxes and reveal authentic trading cards and collectibles delivered to your door.', openGraphImage: '',
+  openGraphTitle: 'Open Pokémon Mystery Packs on Ripza', openGraphDescription: 'Open digital mystery packs and reveal authentic trading cards and collectibles delivered to your door.', openGraphImage: '',
   twitterTitle: '', twitterDescription: '', twitterImage: '', twitterCard: 'summary_large_image',
   faviconUrl: '', appleTouchIcon: '', businessLogo: '', organizationName: PUBLIC_BRAND.name, organizationDescription: '', businessUrl: PUBLIC_BRAND.canonicalOrigin, businessEmail: PUBLIC_BRAND.contactEmail, schemaLogo: '', socialProfiles: [],
   enableOrganizationSchema: true, enableWebsiteSchema: true, enableSearchActionSchema: false,

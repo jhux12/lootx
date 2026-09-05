@@ -31,16 +31,16 @@ export default async function handler(req, res) {
     const rawBox = body?.box;
 
     if (!rawBox || typeof rawBox !== 'object') {
-      return sendJson(res, 400, { error: 'Missing box payload' });
+      return sendJson(res, 400, { error: 'Missing pack payload' });
     }
 
     const name = toString(rawBox.name).trim();
     const items = Array.isArray(rawBox.items) ? rawBox.items : [];
     if (!name) {
-      return sendJson(res, 400, { error: 'Missing box name' });
+      return sendJson(res, 400, { error: 'Missing pack name' });
     }
     if (items.length === 0) {
-      return sendJson(res, 400, { error: 'Missing box items' });
+      return sendJson(res, 400, { error: 'Missing pack items' });
     }
 
     const settingsSnap = await firestore.collection('settings').doc(STRIPE_SETTINGS_DOC).get();
@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       const currentCoins = toNumber(userData.coins ?? userData.balance, 0);
 
       if (caseLabPublishFeeCoins > 0 && currentCoins < caseLabPublishFeeCoins) {
-        throw { status: 400, error: 'Insufficient coins to publish Case Lab box' };
+        throw { status: 400, error: 'Insufficient coins to publish Case Lab pack' };
       }
 
       if (caseLabPublishFeeCoins > 0) {
@@ -119,9 +119,9 @@ export default async function handler(req, res) {
   } catch (error) {
     const status = error?.status;
     if (status) {
-      return sendJson(res, status, { error: error.error || 'Unable to publish Case Lab box' });
+      return sendJson(res, status, { error: error.error || 'Unable to publish Case Lab pack' });
     }
-    console.error('publish-case-lab-box error', error);
-    return sendJson(res, 500, { error: 'Unable to publish Case Lab box' });
+    console.error('publish-case-lab-pack error', error);
+    return sendJson(res, 500, { error: 'Unable to publish Case Lab pack' });
   }
 }

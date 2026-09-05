@@ -12,7 +12,7 @@ const BattleFairnessPage: React.FC = () => {
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-gray-300">
               <li>Confirm serverSeedHash matches pre-commit hash.</li>
               <li>Recompute each round roll from seeds + nonce.</li>
-              <li>Validate item mapping against box odds table.</li>
+              <li>Validate item mapping against pack odds table.</li>
             </ol>
           </section>
         </div>

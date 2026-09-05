@@ -387,7 +387,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
               Daily bonus claimed!
             </p>
             <p className="mt-2 text-sm text-neutral-300">
-              Your free reward is locked in. Explore more boxes while the next
+              Your free reward is locked in. Explore more packs while the next
               spin gets ready.
             </p>
             <div className="mt-4 rounded-2xl border border-white/10 bg-neutral-950/55 px-4 py-3">
@@ -403,7 +403,7 @@ export const DailySpinPage: React.FC<DailySpinPageProps> = ({
               onClick={onExploreBoxes}
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#205DD7] to-sky-400 px-5 py-3 text-sm font-black text-white shadow-[0_12px_30px_rgba(32,93,215,0.35)] transition-transform hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
             >
-              Explore Boxes
+              Explore Packs
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

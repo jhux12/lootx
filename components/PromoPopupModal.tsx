@@ -50,7 +50,7 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
       >
         <div className="relative overflow-visible rounded-[28px] border border-white/10 bg-gradient-to-br from-[#111a3a] via-[#0b1020] to-[#050811] shadow-[0_28px_70px_rgba(5,8,17,0.75)]">
           <div className="pointer-events-none absolute left-1/2 top-[-128px] z-30 w-[min(78vw,260px)] -translate-x-1/2 sm:top-[-165px] sm:w-[330px]">
-            <img src={popupImage} alt="Mystery box promotion" className="aspect-square h-auto w-full object-contain" loading="lazy" decoding="async" width={560} height={560} style={{ aspectRatio: "1 / 1" }} />
+            <img src={popupImage} alt="Mystery pack promotion" className="aspect-square h-auto w-full object-contain" loading="lazy" decoding="async" width={560} height={560} style={{ aspectRatio: "1 / 1" }} />
           </div>
 
           <div className="relative z-20 overflow-hidden rounded-[24px] bg-gradient-to-b from-[#101a34] via-[#0b1020] to-[#050811] px-6 pb-8 pt-24 sm:px-10 sm:pb-10 sm:pt-28">
@@ -70,9 +70,9 @@ export const PromoPopupModal: React.FC<PromoPopupModalProps> = ({ isOpen, onClos
                 <img src={pullzIcon} alt="Ripza" className="h-9 w-auto object-contain" loading="lazy" decoding="async" width={2048} height={2341} style={{ aspectRatio: "2048 / 2341" }} />
               </div>
               <h2 id="promo-popup-title" className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">
-                Get your <span className="text-cyan-300">free</span> box!
+                Get your <span className="text-cyan-300">free</span> pack!
               </h2>
-              <p className="mt-3 text-sm text-gray-300 sm:text-base">Sign up now to claim a free box.</p>
+              <p className="mt-3 text-sm text-gray-300 sm:text-base">Sign up now to claim a free pack.</p>
 
               <div className="mt-6 flex flex-col gap-3">
                 <button

@@ -2144,7 +2144,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
           return {
             id: docSnap.id,
-            name: data.name ?? 'Mystery Box',
+            name: data.name ?? 'Mystery Pack',
             price: Number(data.price ?? 0),
             priceXP: data.priceXP != null ? Number(data.priceXP) : undefined,
             currencyType: getBoxCurrencyType({
@@ -2192,7 +2192,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return [...pendingUserCreated, ...firebaseBoxes].sort((a, b) => getBoxSortPrice(a) - getBoxSortPrice(b));
         });
       } catch (error) {
-        if (!cancelled) console.error('Failed to load boxes', error);
+        if (!cancelled) console.error('Failed to load packs', error);
       }
       })();
     };
@@ -3307,7 +3307,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const selectedCases = boxIds.map(id => boxes.find(b => b.id === id)).filter(Boolean) as MysteryBox[];
     if (!selectedCases.length) {
-      alert('Please select at least one box');
+      alert('Please select at least one pack');
       return;
     }
 
@@ -3427,7 +3427,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           try {
             await setDoc(doc(db, 'boxes', boxId), boxData, { merge: true });
           } catch (error) {
-            console.error('Failed to update box with refreshed item data', error);
+            console.error('Failed to update pack with refreshed item data', error);
           }
         })
       );
@@ -3610,7 +3610,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               boxId = docRef.id;
           }
       } catch (error) {
-          console.error('Failed to save box to Firebase', error);
+          console.error('Failed to save pack to Firebase', error);
           throw error;
       }
 
@@ -3630,7 +3630,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (!response?.boxId) {
-        throw new Error('Missing published box id');
+        throw new Error('Missing published pack id');
       }
 
       setBoxes(prev => [...prev, { ...userBox, id: response.boxId }]);
@@ -3646,7 +3646,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const updateBox = async (updatedBox: MysteryBox) => {
       const { id, ...boxDataRaw } = updatedBox;
       if (!id) {
-          console.warn('Attempted to update a box without an id');
+          console.warn('Attempted to update a pack without an id');
           return;
       }
 
@@ -3655,7 +3655,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
           await setDoc(doc(db, 'boxes', id), boxData, { merge: true });
       } catch (error) {
-          console.error('Failed to update box in Firebase', error);
+          console.error('Failed to update pack in Firebase', error);
           throw error;
       }
 
@@ -3666,7 +3666,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
           await deleteDoc(doc(db, 'boxes', boxId));
       } catch (error) {
-          console.error('Failed to delete box from Firebase', error);
+          console.error('Failed to delete pack from Firebase', error);
       }
 
       removeAdminBox(boxId);

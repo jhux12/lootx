@@ -34,7 +34,7 @@ export const BetLiveWinsTicker: React.FC = () => {
     <div ref={tickerRef} className="bet-home-ticker" aria-label="Recently pulled items">
       <div className="bet-home-ticker-label">
         <span className="bet-home-ticker-live-dot" aria-hidden="true" />
-        <span>Live Ripza</span>
+        <span>Live Ripz</span>
       </div>
       <div className="bet-home-ticker-viewport">
         <div className="bet-home-ticker-fade bet-home-ticker-fade-right" aria-hidden="true" />

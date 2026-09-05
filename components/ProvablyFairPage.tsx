@@ -132,7 +132,7 @@ export const ProvablyFairPage: React.FC = () => {
       `Client Seed: ${lastRoll.clientSeed}`,
       `Nonce: ${lastRoll.nonce}`,
       `Game: ${lastRoll.game ?? 'case'}`,
-      `Box / Round ID: ${lastRoll.boxId}`,
+      `Pack / Round ID: ${lastRoll.boxId}`,
       `Target Item ID: ${lastRoll.targetItemId ?? 'N/A'}`,
       `Source Item Instance ID: ${lastRoll.sourceItemInstanceId ?? 'N/A'}`,
       `HMAC Message: ${lastRoll.message}`,

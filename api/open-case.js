@@ -137,13 +137,13 @@ export default async function handler(req, res) {
       const isPullPassClaimOpen = Boolean(pullPassClaimTier);
       if (isPullPassInventoryOpen) {
         if (!pullPassInventoryData) {
-          fail(404, 'PULL_PASS_REWARD_NOT_FOUND', 'Pull Pass reward box not found in inventory.', { inventoryId: pullPassInventoryId });
+          fail(404, 'PULL_PASS_REWARD_NOT_FOUND', 'Pull Pass reward pack not found in inventory.', { inventoryId: pullPassInventoryId });
         }
         if (pullPassInventoryData.status !== 'available' || pullPassInventoryData.openedAt) {
-          fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward box has already been opened.', { inventoryId: pullPassInventoryId });
+          fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward pack has already been opened.', { inventoryId: pullPassInventoryId });
         }
         if (pullPassInventoryData.source !== 'pullPassBoxReward' || pullPassInventoryData.boxId !== boxId) {
-          fail(403, 'INVALID_PULL_PASS_REWARD', 'This inventory item cannot open the requested Pull Pass box.', { inventoryId: pullPassInventoryId, caseId: boxId });
+          fail(403, 'INVALID_PULL_PASS_REWARD', 'This inventory item cannot open the requested Pull Pass pack.', { inventoryId: pullPassInventoryId, caseId: boxId });
         }
       }
       const pullPassClaimKey = pullPassClaimTier ? String(pullPassClaimTier) : null;
@@ -155,16 +155,16 @@ export default async function handler(req, res) {
         : null;
       if (isPullPassClaimOpen) {
         if (!pullPassClaimData) {
-          fail(404, 'PULL_PASS_CLAIM_NOT_FOUND', 'Pull Pass box reward claim not found.', { tier: pullPassClaimTier });
+          fail(404, 'PULL_PASS_CLAIM_NOT_FOUND', 'Pull Pass pack reward claim not found.', { tier: pullPassClaimTier });
         }
         if (!activePullPassBoxClaim || Number(activePullPassBoxClaim.tier) !== pullPassClaimTier || activePullPassBoxClaim.boxId !== boxId) {
           fail(403, 'INVALID_PULL_PASS_REWARD', 'This Pull Pass reward is not active for opening.', { tier: pullPassClaimTier, caseId: boxId });
         }
         if (pullPassClaimData.opened === true || pullPassClaimData.openedAt) {
-          fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward box has already been opened.', { tier: pullPassClaimTier });
+          fail(409, 'PULL_PASS_REWARD_ALREADY_OPENED', 'This Pull Pass reward pack has already been opened.', { tier: pullPassClaimTier });
         }
         if (pullPassClaimData.boxId !== boxId) {
-          fail(403, 'INVALID_PULL_PASS_REWARD', 'This Pull Pass claim cannot open the requested box.', { tier: pullPassClaimTier, caseId: boxId });
+          fail(403, 'INVALID_PULL_PASS_REWARD', 'This Pull Pass claim cannot open the requested pack.', { tier: pullPassClaimTier, caseId: boxId });
         }
       }
       if (boxData.isUserCreated && boxData.createdAt) {
@@ -203,10 +203,10 @@ export default async function handler(req, res) {
 
       if (isFree) {
         if (boxData.isDaily !== true) {
-          fail(400, 'INVALID_REQUEST', 'Only the signup free box can be opened for free.', { caseId: boxId });
+          fail(400, 'INVALID_REQUEST', 'Only the signup free pack can be opened for free.', { caseId: boxId });
         }
         if (Number.isFinite(existingFreeBoxClaim) && existingFreeBoxClaim > 0) {
-          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup box already claimed.', {
+          fail(409, 'FREE_BOX_ALREADY_CLAIMED', 'Free signup pack already claimed.', {
             caseId: boxId,
             claimedAt: existingFreeBoxClaim
           });
@@ -348,7 +348,7 @@ export default async function handler(req, res) {
           actorUid: decoded.uid,
           source: 'api/open-case',
           relatedId: openRef.id,
-          metadata: { boxId, paymentMethod: 'coins', caseName: boxData.name ?? 'Mystery Box' }
+          metadata: { boxId, paymentMethod: 'coins', caseName: boxData.name ?? 'Mystery Pack' }
         });
         newCoins = result.balanceAfter;
         balanceState = result.userData;
@@ -367,7 +367,7 @@ export default async function handler(req, res) {
           actorUid: decoded.uid,
           source: 'api/open-case',
           relatedId: openRef.id,
-          metadata: { boxId, paymentMethod: 'xp', caseName: boxData.name ?? 'Mystery Box' }
+          metadata: { boxId, paymentMethod: 'xp', caseName: boxData.name ?? 'Mystery Pack' }
         });
         newXpBalance = spendResult.balanceAfter;
         balanceState = spendResult.userData;
@@ -408,7 +408,7 @@ export default async function handler(req, res) {
             createdAt: Date.now(),
             balanceAfter: newCoins,
             sourceId: openRef.id,
-            memo: `Opened ${boxData.name ?? 'Mystery Box'}`
+            memo: `Opened ${boxData.name ?? 'Mystery Pack'}`
           }
         });
         await applySpendAndRewards({
@@ -539,7 +539,7 @@ export default async function handler(req, res) {
       const openPayload = {
         uid: decoded.uid,
         boxId,
-        boxName: boxData.name ?? 'Mystery Box',
+        boxName: boxData.name ?? 'Mystery Pack',
         price,
         priceXP: paidWithXp ? resolvedXpCost : null,
         currencyType: paidWithXp ? 'XP' : currencyType,

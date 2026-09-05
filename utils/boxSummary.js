@@ -1,7 +1,7 @@
 /** Trusted-only projection: never copy prizes, items, audits, or admin metadata. */
 export const toBoxSummary = (id, source = {}) => ({
   id,
-  name: typeof source.name === 'string' ? source.name : 'Mystery Box',
+  name: typeof source.name === 'string' ? source.name : 'Mystery Pack',
   price: Number(source.price || 0),
   ...(source.priceXP == null ? {} : { priceXP: Number(source.priceXP) }),
   currencyType: source.currencyType === 'XP' ? 'XP' : 'COIN',

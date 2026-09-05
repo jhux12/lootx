@@ -7,7 +7,7 @@ import { storage } from '../../firebaseStorage';
 type StoryStatus = 'pending' | 'approved' | 'rejected';
 type LiveStory = Record<string, any> & { id: string };
 
-const categories = ['shipment', 'delivered', 'big hit', 'upgrader', 'battles', 'psa/slabs', 'inventory flex', 'community setups', 'free box wins'];
+const categories = ['shipment', 'delivered', 'big hit', 'upgrader', 'battles', 'psa/slabs', 'inventory flex', 'community setups', 'free pack wins'];
 
 const EMPTY_DRAFT = {
   username: '',

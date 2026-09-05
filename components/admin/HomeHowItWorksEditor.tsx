@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useGame } from '../../context/GameContext';
 import { Input } from '../ui/Input';
 
-const STEP_LABELS = ['1. Choose Your Box', '2. Open & Reveal', '3. Keep It or Sell It Back'];
+const STEP_LABELS = ['1. Choose Your Pack', '2. Open & Reveal', '3. Keep It or Sell It Back'];
 
 export const HomeHowItWorksEditor: React.FC = () => {
   const { stripeSettings, updateStripeSettings } = useGame();

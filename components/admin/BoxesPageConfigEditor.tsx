@@ -89,12 +89,12 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
       await saveBoxesPageConfig(draft);
       setIsDirty(false);
       setCategoryValidation(false);
-      setSaveNotice('Saved boxes page configuration.');
+      setSaveNotice('Saved packs page configuration.');
       window.setTimeout(() => setSaveNotice(''), 3000);
     } catch (error) {
-      console.error('Failed to save boxes page config', error);
+      console.error('Failed to save packs page config', error);
       if (import.meta.env.DEV) {
-        console.debug('Boxes page config payload', prepareBoxesPageConfigForSave(draft));
+        console.debug('Packs page config payload', prepareBoxesPageConfigForSave(draft));
       }
       setSaveError('Unable to save. Please try again.');
     } finally {
@@ -244,7 +244,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
       <div className="rounded-2xl border border-gray-800 bg-[#0f131c] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">Boxes Page Configuration</h2>
+            <h2 className="text-xl font-semibold text-white">Packs Page Configuration</h2>
             <p className="text-sm text-gray-400">Control tabs, filters, curated rows, and mobile layout.</p>
           </div>
           <div className="flex items-center gap-3">
@@ -264,7 +264,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           <div className="flex flex-1 items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-white">Preview as user</p>
-              <p className="text-xs text-gray-400">See the Boxes page without admin-only controls.</p>
+              <p className="text-xs text-gray-400">See the Packs page without admin-only controls.</p>
             </div>
             <button
               type="button"
@@ -595,7 +595,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
           <Input
             value={hotPickSearch}
             onChange={(event) => setHotPickSearch(event.target.value)}
-            placeholder="Search boxes to add to hot picks"
+            placeholder="Search packs to add to hot picks"
           />
           <div className="flex flex-wrap gap-2">
             {hotPickCandidates.map((box) => (
@@ -758,7 +758,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                     <Input
                       value={searchValue}
                       onChange={(event) => setBoxSearch((prev) => ({ ...prev, [row.id]: event.target.value }))}
-                      placeholder="Search boxes to add"
+                      placeholder="Search packs to add"
                     />
                     <div className="flex flex-wrap gap-2">
                       {filteredBoxes.map((box) => (
@@ -775,7 +775,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
 
                     {(row.boxIds ?? []).length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Selected boxes</p>
+                        <p className="text-xs uppercase tracking-wide text-gray-500">Selected packs</p>
                         <div className="flex flex-wrap gap-2">
                           {(row.boxIds ?? []).map((boxId) => {
                             const box = boxes.find((item) => item.id === boxId);
@@ -804,7 +804,7 @@ export const BoxesPageConfigEditor: React.FC<BoxesPageConfigEditorProps> = ({ bo
                                     type="button"
                                     onClick={() => handleBoxRemove(row.id, boxId)}
                                     className="text-gray-400 transition hover:text-white"
-                                    aria-label="Remove box"
+                                    aria-label="Remove pack"
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </button>

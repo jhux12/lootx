@@ -70,7 +70,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
           </div>
           <h1 className="mt-4 text-2xl font-black text-white sm:text-3xl">Provably Fair</h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-300 sm:text-base">
-            Every box opening is generated with a verifiable system. We commit to fairness before you spin,
+            Every pack opening is generated with a verifiable system. We commit to fairness before you spin,
             and you can audit each result independently.
           </p>
         </div>
@@ -199,7 +199,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                   <div className="space-y-2 font-mono text-xs text-gray-300">
                     <div className="flex items-center justify-between"><span className="text-gray-500">Outcome</span><span className="text-white">{lastRoll.outcome}</span></div>
                     <div className="flex items-center justify-between"><span className="text-gray-500">Game</span><span>{lastRoll.game ?? 'case'}</span></div>
-                    <div className="flex items-center justify-between"><span className="text-gray-500">Box / Round ID</span><span>{lastRoll.boxId}</span></div>
+                    <div className="flex items-center justify-between"><span className="text-gray-500">Pack / Round ID</span><span>{lastRoll.boxId}</span></div>
                     <div className="flex items-center justify-between"><span className="text-gray-500">Nonce</span><span>{lastRoll.nonce}</span></div>
                     <div className="flex items-center justify-between"><span className="text-gray-500">Roll Value</span><span>{lastRoll.rollValue.toFixed(6)}</span></div>
                     <div>
@@ -212,7 +212,7 @@ export const ProvablyFairPanel: React.FC<ProvablyFairPanelProps> = ({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Open a box first to generate verifiable proof data for your result.</p>
+                  <p className="text-sm text-gray-500">Open a pack first to generate verifiable proof data for your result.</p>
                 )}
               </div>
             </div>

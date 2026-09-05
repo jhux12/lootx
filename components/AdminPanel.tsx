@@ -138,61 +138,61 @@ const DEFAULT_REWARDS_SETTINGS = {
     top2CoinReward: 3000,
     top3CoinReward: 2000,
     heroImageUrl: '',
-    questRulesText: '[{"id":"open-3-boxes","title":"Unboxing mission","description":"Open 3 boxes today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
+    questRulesText: '[{"id":"open-3-packs","title":"Unboxing mission","description":"Open 3 packs today","type":"unboxing_count","target":3,"rewardCoins":50,"enabled":true},{"id":"sell-2-items","title":"Sell back mission","description":"Sell back 2 items today","type":"sell_back_count","target":2,"rewardCoins":40,"enabled":true},{"id":"sell-200-coins","title":"Sell back value mission","description":"Sell back 200 coins worth today","type":"sell_back_value","target":200,"rewardCoins":60,"enabled":true},{"id":"unbox-rare","title":"Rarity mission","description":"Unbox 1 rare item today","type":"unbox_rarity","target":1,"rarity":"rare","rewardCoins":80,"enabled":true}]'
 };
 
 
 const DEFAULT_PULL_PASS_TIERS = [
-    { xpRequired: 50, tier: 1, premiumReward: '100 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 50, tier: 1, premiumReward: '100 Coins', freeReward: 'Bronze Pack' },
     { xpRequired: 100, tier: 2, premiumReward: '125 Coins', freeReward: '50 Coins' },
     { xpRequired: 160, tier: 3, premiumReward: '150 Coins', freeReward: '75 Coins' },
     { xpRequired: 230, tier: 4, premiumReward: '175 Coins', freeReward: '100 Coins' },
-    { xpRequired: 310, tier: 5, premiumReward: '200 Coins', freeReward: 'Bronze Box' },
+    { xpRequired: 310, tier: 5, premiumReward: '200 Coins', freeReward: 'Bronze Pack' },
     { xpRequired: 400, tier: 6, premiumReward: '225 Coins', freeReward: '125 Coins' },
     { xpRequired: 500, tier: 7, premiumReward: '250 Coins', freeReward: '150 Coins' },
     { xpRequired: 610, tier: 8, premiumReward: '275 Coins', freeReward: '175 Coins' },
     { xpRequired: 730, tier: 9, premiumReward: '300 Coins', freeReward: '200 Coins' },
-    { xpRequired: 860, tier: 10, premiumReward: '350 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 860, tier: 10, premiumReward: '350 Coins', freeReward: 'Silver Pack' },
     { xpRequired: 1000, tier: 11, premiumReward: '375 Coins', freeReward: '225 Coins' },
     { xpRequired: 1150, tier: 12, premiumReward: '400 Coins', freeReward: '250 Coins' },
     { xpRequired: 1310, tier: 13, premiumReward: '425 Coins', freeReward: '275 Coins' },
     { xpRequired: 1480, tier: 14, premiumReward: '450 Coins', freeReward: '300 Coins' },
-    { xpRequired: 1660, tier: 15, premiumReward: '500 Coins', freeReward: 'Silver Box' },
+    { xpRequired: 1660, tier: 15, premiumReward: '500 Coins', freeReward: 'Silver Pack' },
     { xpRequired: 1850, tier: 16, premiumReward: '525 Coins', freeReward: '325 Coins' },
     { xpRequired: 2050, tier: 17, premiumReward: '550 Coins', freeReward: '350 Coins' },
     { xpRequired: 2260, tier: 18, premiumReward: '575 Coins', freeReward: '375 Coins' },
     { xpRequired: 2480, tier: 19, premiumReward: '600 Coins', freeReward: '400 Coins' },
-    { xpRequired: 2710, tier: 20, premiumReward: '700 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 2710, tier: 20, premiumReward: '700 Coins', freeReward: 'Gold Pack' },
     { xpRequired: 2950, tier: 21, premiumReward: '725 Coins', freeReward: '425 Coins' },
     { xpRequired: 3200, tier: 22, premiumReward: '750 Coins', freeReward: '450 Coins' },
     { xpRequired: 3460, tier: 23, premiumReward: '775 Coins', freeReward: '475 Coins' },
     { xpRequired: 3730, tier: 24, premiumReward: '800 Coins', freeReward: '500 Coins' },
-    { xpRequired: 4010, tier: 25, premiumReward: '900 Coins', freeReward: 'Gold Box' },
+    { xpRequired: 4010, tier: 25, premiumReward: '900 Coins', freeReward: 'Gold Pack' },
     { xpRequired: 4300, tier: 26, premiumReward: '925 Coins', freeReward: '525 Coins' },
     { xpRequired: 4600, tier: 27, premiumReward: '950 Coins', freeReward: '550 Coins' },
     { xpRequired: 4910, tier: 28, premiumReward: '975 Coins', freeReward: '575 Coins' },
     { xpRequired: 5230, tier: 29, premiumReward: '1000 Coins', freeReward: '600 Coins' },
-    { xpRequired: 5560, tier: 30, premiumReward: '1250 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 5560, tier: 30, premiumReward: '1250 Coins', freeReward: 'Elite Pack' },
     { xpRequired: 5900, tier: 31, premiumReward: '1050 Coins', freeReward: '650 Coins' },
     { xpRequired: 6250, tier: 32, premiumReward: '1100 Coins', freeReward: '700 Coins' },
     { xpRequired: 6610, tier: 33, premiumReward: '1150 Coins', freeReward: '750 Coins' },
     { xpRequired: 6980, tier: 34, premiumReward: '1200 Coins', freeReward: '800 Coins' },
-    { xpRequired: 7360, tier: 35, premiumReward: '1500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 7360, tier: 35, premiumReward: '1500 Coins', freeReward: 'Elite Pack' },
     { xpRequired: 7750, tier: 36, premiumReward: '1250 Coins', freeReward: '850 Coins' },
     { xpRequired: 8150, tier: 37, premiumReward: '1300 Coins', freeReward: '900 Coins' },
     { xpRequired: 8560, tier: 38, premiumReward: '1350 Coins', freeReward: '950 Coins' },
     { xpRequired: 8980, tier: 39, premiumReward: '1400 Coins', freeReward: '1000 Coins' },
-    { xpRequired: 9410, tier: 40, premiumReward: '2000 Coins', freeReward: 'Master Box' },
+    { xpRequired: 9410, tier: 40, premiumReward: '2000 Coins', freeReward: 'Master Pack' },
     { xpRequired: 9850, tier: 41, premiumReward: '1450 Coins', freeReward: '1050 Coins' },
     { xpRequired: 10300, tier: 42, premiumReward: '1500 Coins', freeReward: '1100 Coins' },
     { xpRequired: 10760, tier: 43, premiumReward: '1600 Coins', freeReward: '1150 Coins' },
     { xpRequired: 11230, tier: 44, premiumReward: '1700 Coins', freeReward: '1200 Coins' },
-    { xpRequired: 11710, tier: 45, premiumReward: '2500 Coins', freeReward: 'Elite Box' },
+    { xpRequired: 11710, tier: 45, premiumReward: '2500 Coins', freeReward: 'Elite Pack' },
     { xpRequired: 12200, tier: 46, premiumReward: '1800 Coins', freeReward: '1250 Coins' },
     { xpRequired: 12700, tier: 47, premiumReward: '1900 Coins', freeReward: '1300 Coins' },
     { xpRequired: 13210, tier: 48, premiumReward: '2000 Coins', freeReward: '1350 Coins' },
     { xpRequired: 13730, tier: 49, premiumReward: '2500 Coins', freeReward: '1500 Coins' },
-    { xpRequired: 14260, tier: 50, premiumReward: '5000 Coins', freeReward: 'Gold Collector Box' },
+    { xpRequired: 14260, tier: 50, premiumReward: '5000 Coins', freeReward: 'Gold Collector Pack' },
 ];
 
 const DEFAULT_PULL_PASS_SETTINGS = {
@@ -215,7 +215,7 @@ const DEFAULT_LOCKS: UserLocks = {
 };
 
 const LOCK_LABELS: Record<keyof UserLocks, string> = {
-    openCases: 'Open Boxes',
+    openCases: 'Open Packs',
     deposits: 'Deposits',
     withdraws: 'Withdraws',
     marketplace: 'Marketplace',
@@ -1859,7 +1859,7 @@ export const AdminPanel: React.FC = () => {
   };
 
   const handleDeleteItem = async (id: string) => {
-      if (confirm("Are you sure you want to delete this item? It will be removed from future box selections, but existing boxes may still reference it.")) {
+      if (confirm("Are you sure you want to delete this item? It will be removed from future pack selections, but existing packs may still reference it.")) {
           await deleteItem(id);
       }
   };
@@ -2761,7 +2761,7 @@ export const AdminPanel: React.FC = () => {
           createdAt: Date.now(),
           balanceAfter: nextBalance,
           sourceId: voidSourceId.trim(),
-          memo: voidReason.trim() || 'Voided box open'
+          memo: voidReason.trim() || 'Voided pack open'
       };
       appendLedgerEntry(selectedUserId, entry);
       updateInventoryRecords(selectedUserId, (prevItems) => {
@@ -2771,7 +2771,7 @@ export const AdminPanel: React.FC = () => {
                   id: makeId('history'),
                   action: 'void_open',
                   createdAt: Date.now(),
-                  note: voidReason.trim() || 'Box open voided',
+                  note: voidReason.trim() || 'Pack open voided',
                   adminUid: adminUser?.id ?? 'admin'
               };
               return {
@@ -2787,7 +2787,7 @@ export const AdminPanel: React.FC = () => {
           'void_case_open',
           { sourceId: voidSourceId.trim(), affectedItems: impactedItems.length },
           { ledgerAmount: entry.amount, affectedItems: impactedItems.length },
-          voidReason.trim() || 'Box open voided'
+          voidReason.trim() || 'Pack open voided'
       );
       setVoidSourceId('');
       setVoidReason('');
@@ -3131,20 +3131,20 @@ export const AdminPanel: React.FC = () => {
   const handleSaveBox = async () => {
       const allowsZeroPrice = Boolean(newBox.isDaily || newBox.isPullPassBox);
       if(!newBox.name || !hasExplicitBoxPrice) {
-          alert("Please fill in box details");
+          alert("Please fill in pack details");
           return;
       }
       if (effectiveBoxPrice < 0) {
-          alert(isXpBox ? 'XP boxes cannot have a negative price.' : 'Boxes cannot have a negative coin price.');
+          alert(isXpBox ? 'XP packs cannot have a negative price.' : 'Packs cannot have a negative coin price.');
           return;
       }
       if (effectiveBoxPrice === 0 && !allowsZeroPrice) {
-          alert(isXpBox ? 'XP boxes require a positive XP price unless marked as a free daily or Pull Pass box.' : 'Boxes require a positive coin price unless marked as a free daily or Pull Pass box.');
+          alert(isXpBox ? 'XP packs require a positive XP price unless marked as a free daily or Pull Pass pack.' : 'Packs require a positive coin price unless marked as a free daily or Pull Pass pack.');
           return;
       }
 
       if(selectedItems.length === 0) {
-          alert("Select at least one item for the box");
+          alert("Select at least one item for the pack");
           return;
       }
       if (oddsOutOfBounds) {
@@ -3173,15 +3173,15 @@ export const AdminPanel: React.FC = () => {
       try {
           if (editingBoxId) {
               await updateBox(box);
-              alert("Box Updated!");
+              alert("Pack Updated!");
           } else {
               await createBox(box);
-              alert("Box Created in Firebase!");
+              alert("Pack Created in Firebase!");
           }
           resetBoxForm();
       } catch (error) {
-          console.error('Failed to persist box shipping profiles', error);
-          alert('The box could not be saved. Your shipping profile selections are still here—please try again.');
+          console.error('Failed to persist pack shipping profiles', error);
+          alert('The pack could not be saved. Your shipping profile selections are still here—please try again.');
       }
   };
 
@@ -3288,7 +3288,7 @@ export const AdminPanel: React.FC = () => {
           setStripeSettingsDraft((prev) => ({ ...prev, boxCatalogHeroImageUrl: downloadUrl }));
           setStripeSettingsNotice(false);
       } catch (error) {
-          console.error('Failed to upload box catalog hero image', error);
+          console.error('Failed to upload pack catalog hero image', error);
           alert('Unable to upload image. Please try again.');
       } finally {
           setIsUploadingBoxCatalogHero(false);
@@ -3558,7 +3558,7 @@ export const AdminPanel: React.FC = () => {
       };
 
       if (xpShopItemDraft.fulfillmentType === 'XP_BOX' && !metadata.caseId) {
-          window.alert('Please select an XP box for XP_BOX rewards.');
+          window.alert('Please select an XP pack for XP_BOX rewards.');
           setIsSavingXpShopItem(false);
           return;
       }
@@ -3779,7 +3779,7 @@ export const AdminPanel: React.FC = () => {
                      onClick={() => setActiveTab('boxes')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
-                       <BoxIcon className="w-4 h-4" /> Manage Boxes
+                       <BoxIcon className="w-4 h-4" /> Manage Packs
                    </button>
                    <button
                      onClick={() => setActiveTab('packages')}
@@ -3847,13 +3847,13 @@ export const AdminPanel: React.FC = () => {
                      onClick={() => setActiveTab('boxes-page')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'boxes-page' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
-                       <PackageOpen className="w-4 h-4" /> Boxes Page
+                       <PackageOpen className="w-4 h-4" /> Packs Page
                    </button>
                    <button
                      onClick={() => setActiveTab('case-lab')}
                      className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'case-lab' ? 'btn-logo-gradient text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                    >
-                       <Beaker className="w-4 h-4" /> Box Lab
+                       <Beaker className="w-4 h-4" /> Pack Lab
                    </button>
                    <button
                      onClick={() => setActiveTab('polls')}
@@ -3890,7 +3890,7 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'users' && 'User Database'}
                     {activeTab === 'settings' && 'System Configuration'}
                     {activeTab === 'items' && 'Item Manager'}
-                    {activeTab === 'boxes' && 'Box Manager'}
+                    {activeTab === 'boxes' && 'Pack Manager'}
                     {activeTab === 'packages' && 'Coin Packages'}
                     {activeTab === 'shipments' && 'Shipment Manager'}
                     {activeTab === 'shipping-profiles' && 'Shipping Profiles'}
@@ -3901,8 +3901,8 @@ export const AdminPanel: React.FC = () => {
                     {activeTab === 'referrals' && 'Referral Program'}
                     {activeTab === 'fees' && 'Fees & Shipping'}
                     {activeTab === 'homepage' && 'Homepage Showcase'}
-                    {activeTab === 'boxes-page' && 'Boxes Page'}
-                    {activeTab === 'case-lab' && 'Box Lab'}
+                    {activeTab === 'boxes-page' && 'Packs Page'}
+                    {activeTab === 'case-lab' && 'Pack Lab'}
                     {activeTab === 'polls' && 'Poll Management'}
                     {activeTab === 'footer-pages' && 'Footer Pages'}
                     {activeTab === 'market-pricing' && 'Market Pricing'}
@@ -4087,7 +4087,7 @@ export const AdminPanel: React.FC = () => {
                                 <span className="leading-tight">
                                   Force 100% sell back for this item
                                   <span className="mt-1 block text-[10px] text-gray-500">
-                                    Overrides the box sell back percentage when this item is won.
+                                    Overrides the pack sell back percentage when this item is won.
                                   </span>
                                 </span>
                             </label>
@@ -4174,7 +4174,7 @@ export const AdminPanel: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            <p className="mt-2 text-[10px] text-gray-500">Tags power Box Lab filters and box item search.</p>
+                            <p className="mt-2 text-[10px] text-gray-500">Tags power Pack Lab filters and pack item search.</p>
                         </div>
                         <div className="mb-4">
                             <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Size Options</label>
@@ -4374,14 +4374,14 @@ export const AdminPanel: React.FC = () => {
                     {/* Create/Edit Box Form */}
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold text-white">{editingBoxId ? 'Edit Box' : 'Create New Box'}</h3>
+                            <h3 className="text-lg font-bold text-white">{editingBoxId ? 'Edit Pack' : 'Create New Pack'}</h3>
                             {editingBoxId && <button onClick={resetBoxForm} className="text-xs text-red-400 hover:text-red-300">Cancel Edit</button>}
                         </div>
 
                         {/* Top Config Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="space-y-3">
-                                <Input type="text" placeholder="Box Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
+                                <Input type="text" placeholder="Pack Name" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.name} onChange={e => setNewBox({...newBox, name: e.target.value})} />
                                 <Input type="text" placeholder="Image URL" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.image} onChange={e => setNewBox({...newBox, image: e.target.value})} />
                                 <Input type="text" placeholder="Spinner Background URL (optional)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.spinnerBackgroundImage ?? ''} onChange={e => setNewBox({...newBox, spinnerBackgroundImage: e.target.value})} />
                                 <div className="rounded-lg border border-gray-700 bg-[#0b0e14] p-3">
@@ -4401,7 +4401,7 @@ export const AdminPanel: React.FC = () => {
                                 </div>
                                 <Input type="text" placeholder="Accent Color (Hex)" className="bg-[#0b0e14] border border-gray-700 rounded p-2 text-white" value={newBox.accentColor} onChange={e => setNewBox({...newBox, accentColor: e.target.value})} />
                                 <div>
-                                    <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Box Tags</label>
+                                    <label className="text-[10px] text-gray-500 uppercase font-bold block mb-2">Pack Tags</label>
                                     <div className="mb-2 flex flex-wrap gap-2">
                                         {BOX_TAG_PRESETS.map((tag) => (
                                             <button
@@ -4477,7 +4477,7 @@ export const AdminPanel: React.FC = () => {
                                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div>
                                             <h4 className="text-sm font-semibold text-white">Category tag editor</h4>
-                                            <p className="text-[11px] text-gray-400">Set a custom label and either a Font Awesome class or SVG icon for every box tag.</p>
+                                            <p className="text-[11px] text-gray-400">Set a custom label and either a Font Awesome class or SVG icon for every pack tag.</p>
                                         </div>
                                         <button
                                             type="button"
@@ -4505,7 +4505,7 @@ export const AdminPanel: React.FC = () => {
                                         <button type="button" onClick={addCustomBoxTag} className="rounded-lg border border-gray-600 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-blue-400 hover:text-white">Add tag</button>
                                     </div>
                                     {Array.from(new Set([...boxTagStats.map(({ tag }) => tag), ...Object.keys(boxTagLabelsDraft), ...Object.keys(boxTagIconsDraft)])).length === 0 ? (
-                                        <p className="text-xs text-gray-400">No tags found on current site boxes yet.</p>
+                                        <p className="text-xs text-gray-400">No tags found on current site packs yet.</p>
                                     ) : (
                                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                             {Array.from(new Set([...boxTagStats.map(({ tag }) => tag), ...Object.keys(boxTagLabelsDraft), ...Object.keys(boxTagIconsDraft)])).sort().map((tag) => {
@@ -4515,7 +4515,7 @@ export const AdminPanel: React.FC = () => {
                                                     <div key={`tag-icon-${tag}`} className="rounded-lg border border-white/10 p-2">
                                                         <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-gray-200">
                                                             <span className="truncate uppercase tracking-wide">{tag}</span>
-                                                            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">{count} box{count === 1 ? '' : 'es'}</span>
+                                                            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-gray-300">{count} pack{count === 1 ? '' : 'es'}</span>
                                                             {iconClass ? <i aria-hidden="true" className={`${sanitizeFontAwesomeClass(iconClass)} text-sm text-blue-300`} /> : <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />}
                                                         </div>
                                                         <Input
@@ -4572,7 +4572,7 @@ export const AdminPanel: React.FC = () => {
                                         <label className="text-[10px] text-gray-500 uppercase font-bold block mb-1">{isXpBox ? 'Price (XP)' : 'Price (coins)'}</label>
                                         <Input
                                           type="number"
-                                          placeholder={isXpBox ? 'Box Price (XP)' : 'Box Price (coins)'}
+                                          placeholder={isXpBox ? 'Pack Price (XP)' : 'Pack Price (coins)'}
                                           className="w-full bg-[#0b0e14] border border-gray-700 rounded p-2 text-white font-bold text-green-400"
                                           value={isXpBox ? (newBox.priceXP ?? '') : (newBox.price ?? '')}
                                           onChange={(e) => {
@@ -4678,11 +4678,11 @@ export const AdminPanel: React.FC = () => {
                                         className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                     />
                                     <label htmlFor="daily-case" className="text-sm text-gray-400 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Box
+                                        <Calendar className="w-3 h-3 text-yellow-500" /> Set as Daily Free Pack
                                     </label>
                                 </div>
                                 <p className="text-[10px] text-gray-500">
-                                    Daily free boxes can be saved with a price of 0.
+                                    Daily free packs can be saved with a price of 0.
                                 </p>
                                 <div className="mt-3 rounded-lg border border-purple-400/20 bg-purple-500/5 p-3">
                                     <div className="flex items-center gap-2">
@@ -4692,10 +4692,10 @@ export const AdminPanel: React.FC = () => {
                                             onChange={e => setNewBox({...newBox, isPullPassBox: e.target.checked, pullPassBoxType: e.target.checked ? (newBox.pullPassBoxType ?? 'bronze') : newBox.pullPassBoxType})}
                                             className="w-4 h-4 rounded border-gray-700 bg-[#0b0e14] text-brand-blue focus:ring-brand-blue"
                                         />
-                                        <label htmlFor="pull-pass-case" className="text-sm text-gray-300">Set as Pull Pass Box</label>
+                                        <label htmlFor="pull-pass-case" className="text-sm text-gray-300">Set as Pull Pass Pack</label>
                                     </div>
                                     {newBox.isPullPassBox && (
-                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Pull Pass box type
+                                        <label className="mt-3 block text-xs text-gray-500 uppercase font-bold">Pull Pass pack type
                                             <Select
                                                 value={newBox.pullPassBoxType ?? 'bronze'}
                                                 onChange={(event) => setNewBox((prev) => ({ ...prev, pullPassBoxType: event.target.value as any }))}
@@ -4841,14 +4841,14 @@ export const AdminPanel: React.FC = () => {
                                  <div className="border-t border-gray-800 pt-4">
                                      <div className="mb-3 space-y-2 rounded-xl border border-gray-700 bg-[#10141c] p-3">
                                          <div className="flex flex-wrap items-center justify-between gap-2">
-                                             <h4 className="text-sm font-bold uppercase text-gray-300">Box Contents ({selectedItems.length})</h4>
+                                             <h4 className="text-sm font-bold uppercase text-gray-300">Pack Contents ({selectedItems.length})</h4>
                                              <div className="flex gap-2">
                                                  <button type="button" onClick={() => setBulkShippingItemIds(selectedItems.map((item) => item.id))} className="min-h-10 rounded-lg border border-gray-600 px-3 text-xs font-bold text-gray-200">Select all</button>
                                                  {bulkShippingItemIds.length > 0 && <button type="button" onClick={() => setBulkShippingItemIds([])} className="min-h-10 rounded-lg border border-gray-700 px-3 text-xs font-bold text-gray-400">Clear</button>}
                                              </div>
                                          </div>
                                          <label className="flex flex-col gap-1 text-[10px] font-bold uppercase text-gray-500 sm:flex-row sm:items-center">Assign profile to {bulkShippingItemIds.length} selected
-                                             <Select aria-label="Assign a shipping profile to selected box items" defaultValue="" disabled={bulkShippingItemIds.length === 0} onChange={(event) => { const id = event.target.value; if (!id) return; const selectedIds = new Set(bulkShippingItemIds); setSelectedItems((current) => current.map((entry) => selectedIds.has(entry.id) ? { ...entry, shippingProfileId: id === '__unassigned' ? null : id } : entry)); event.target.value = ''; }} className="min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] px-3 text-sm normal-case text-white disabled:opacity-50 sm:min-w-64 sm:flex-1"><option value="">Choose profile…</option><option value="__unassigned">Default — Raw Card • 0.5 oz</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select>
+                                             <Select aria-label="Assign a shipping profile to selected pack items" defaultValue="" disabled={bulkShippingItemIds.length === 0} onChange={(event) => { const id = event.target.value; if (!id) return; const selectedIds = new Set(bulkShippingItemIds); setSelectedItems((current) => current.map((entry) => selectedIds.has(entry.id) ? { ...entry, shippingProfileId: id === '__unassigned' ? null : id } : entry)); event.target.value = ''; }} className="min-h-11 w-full rounded border border-gray-700 bg-[#0b0e14] px-3 text-sm normal-case text-white disabled:opacity-50 sm:min-w-64 sm:flex-1"><option value="">Choose profile…</option><option value="__unassigned">Default — Raw Card • 0.5 oz</option>{shippingProfiles.filter((profile) => profile.active).map((profile) => <option key={profile.id} value={profile.id}>{profile.name} • {profile.defaultWeightOz} oz</option>)}</Select>
                                          </label>
                                      </div>
                                      <div className="space-y-1">
@@ -4860,7 +4860,7 @@ export const AdminPanel: React.FC = () => {
                                                      onClick={() => toggleItemSelection(item)}
                                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-500/40 bg-red-500/10 text-red-300 transition hover:bg-red-500/20 focus:outline-none focus:ring-2 focus:ring-red-400"
                                                      aria-label={`Remove ${item.name} from box`}
-                                                     title="Remove item from box"
+                                                     title="Remove item from pack"
                                                  >
                                                      <X className="h-4 w-4" />
                                                  </button>
@@ -4938,7 +4938,7 @@ export const AdminPanel: React.FC = () => {
                             disabled={!canSaveBox}
                             className={`w-full py-3 ${editingBoxId ? 'bg-orange-600 hover:bg-orange-500' : 'btn-logo-gradient'} text-white font-bold rounded shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
-                            {editingBoxId ? 'Update Box' : 'Create Box'}
+                            {editingBoxId ? 'Update Pack' : 'Create Pack'}
                         </button>
                     </div>
 
@@ -4947,7 +4947,7 @@ export const AdminPanel: React.FC = () => {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#0b0e14] text-gray-400 font-medium">
                                 <tr>
-                                    <th className="px-4 py-3">Box</th>
+                                    <th className="px-4 py-3">Pack</th>
                                     <th className="px-4 py-3">Items</th>
                                     <th className="px-4 py-3">Price</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
@@ -5391,7 +5391,7 @@ export const AdminPanel: React.FC = () => {
                                                     ['Pending Shipments', metrics.pendingShipmentCount.toString()],
                                                     ['Support Tickets', metrics.supportTicketCount.toString()],
                                                     ['Biggest Win', Math.round(metrics.biggestWin).toLocaleString()],
-                                                    ['Last Box Opened', selectedLedgerEntries.find((entry) => entry.type === 'case_open')?.sourceId ?? '—']
+                                                    ['Last Pack Opened', selectedLedgerEntries.find((entry) => entry.type === 'case_open')?.sourceId ?? '—']
                                                 ].map(([label, value]) => (
                                                     <div key={label} className="rounded-xl border border-gray-800 bg-[#131720] p-3">
                                                         <div className="text-[10px] uppercase text-gray-500">{label}</div>
@@ -5592,7 +5592,7 @@ export const AdminPanel: React.FC = () => {
 
                                             <div className="rounded-2xl border border-gray-800 bg-[#131720] p-5 space-y-3">
                                                 <h4 className="text-xs font-bold uppercase tracking-wide text-gray-300">Immutable Ledger</h4>
-                                                <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Box open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
+                                                <div className="flex gap-2"><Select value={ledgerFilter} onChange={(event) => setLedgerFilter(event.target.value as 'all' | LedgerEntryType)} className="w-40 bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200"><option value="all">All</option><option value="deposit">Deposit</option><option value="case_open">Pack open</option><option value="sell_back">Sell back</option><option value="bonus">Bonus</option><option value="admin_adjustment">Admin adjustment</option><option value="chargeback_reversal">Chargeback reversal</option><option value="reversal">Reversal</option></Select><Input type="text" value={ledgerSearch} onChange={(event) => setLedgerSearch(event.target.value)} placeholder="Search" className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200" /></div>
                                                 <div className="max-h-60 space-y-2 overflow-auto pr-1">{filteredLedgerEntries.length === 0 ? <div className="text-xs text-gray-500">No ledger entries.</div> : filteredLedgerEntries.map((entry) => (<div key={entry.id} className="rounded-lg border border-gray-800 bg-[#0b0e14] p-2"><div className="flex items-center justify-between gap-2"><span className="text-xs uppercase text-gray-400">{entry.type.replace('_', ' ')}</span><CoinAmount amount={entry.amount} formatOptions={{ maximumFractionDigits: 0 }} showSign className={`text-xs font-bold ${entry.amount >= 0 ? 'text-green-400' : 'text-red-400'}`} iconClassName="w-3.5 h-3.5" /></div><div className="text-xs text-gray-300">{entry.memo || 'Balance update'}</div><div className="text-[10px] text-gray-500">{entry.sourceId || 'Manual'} • {formatTimestamp(entry.createdAt)}</div></div>))}</div>
                                             </div>
 
@@ -5863,15 +5863,15 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Support Threads</h3>
-                                <p className="text-sm text-gray-400">Review user requests, reply, and manage box status.</p>
+                                <p className="text-sm text-gray-400">Review user requests, reply, and manage pack status.</p>
                             </div>
-                            <div className="text-xs text-gray-400">{supportCases.length} total boxes</div>
+                            <div className="text-xs text-gray-400">{supportCases.length} total packs</div>
                         </div>
                     </div>
 
                     {supportCases.length === 0 ? (
                         <div className="bg-[#131720] border border-gray-800 rounded-xl p-8 text-center text-gray-500">
-                            No support boxes found yet.
+                            No support packs found yet.
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -5910,7 +5910,7 @@ export const AdminPanel: React.FC = () => {
                                         {isExpanded && (
                                             <div className="border-t border-gray-800 px-4 py-4 sm:px-6">
                                                 <div className="flex flex-col gap-3 text-xs text-gray-400 sm:flex-row sm:items-center sm:justify-between">
-                                                    <span>Box ID: {caseItem.id}</span>
+                                                    <span>Pack ID: {caseItem.id}</span>
                                                     <span>Created {formatSupportTimestamp(caseItem.createdAt)}</span>
                                                 </div>
                                                 <div className="mt-4 space-y-3">
@@ -6110,7 +6110,7 @@ export const AdminPanel: React.FC = () => {
                                 <div className="min-w-0">
                                     <p className="text-sm font-bold text-red-200">Reset current Pull Pass</p>
                                     <p className="mt-1 text-xs leading-5 text-gray-400">
-                                        Clears every user&apos;s Pull Pass XP, claims, and active reward-box claim flags so the current season starts fresh.
+                                        Clears every user&apos;s Pull Pass XP, claims, and active reward-pack claim flags so the current season starts fresh.
                                     </p>
                                 </div>
                                 <button
@@ -6134,7 +6134,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
-                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced boxes.</p>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced packs.</p>
                             </div>
                         </div>
                         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -6172,7 +6172,7 @@ export const AdminPanel: React.FC = () => {
                             </button>
                         </div>
                         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
-                            <p className="text-xs text-gray-500">Used for XP box cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <p className="text-xs text-gray-500">Used for XP pack cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
                             <button
                                 onClick={() => { void handleSaveEconomySettings(); }}
                                 className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
@@ -6308,7 +6308,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
                                 <h3 className="text-lg font-bold text-white">Economy Conversion</h3>
-                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced boxes.</p>
+                                <p className="text-sm text-gray-400">Control XP conversion for opening coin-priced packs.</p>
                             </div>
                         </div>
                         <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -6346,7 +6346,7 @@ export const AdminPanel: React.FC = () => {
                             </button>
                         </div>
                         <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-gray-800 pt-4">
-                            <p className="text-xs text-gray-500">Used for XP box cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
+                            <p className="text-xs text-gray-500">Used for XP pack cost formula: round((priceCoins / coinsPerDollar) * xpPerDollar).</p>
                             <button
                                 onClick={() => { void handleSaveEconomySettings(); }}
                                 className="w-full sm:w-auto px-5 py-2 bg-cyan-500/15 text-cyan-200 border border-cyan-400/35 rounded-lg text-sm font-bold hover:bg-cyan-500/25 transition-colors"
@@ -6626,7 +6626,7 @@ export const AdminPanel: React.FC = () => {
                                 {xpShopItemDraft.fulfillmentType === 'XP_BOX' && (
                                     <div className="space-y-3 rounded-lg border border-gray-800 bg-[#0b0e14] p-3">
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP Box</label>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">XP Pack</label>
                                             <Select
                                                 value={xpShopItemDraft.metadata?.caseId ?? ''}
                                                 onChange={(event) => setXpShopItemDraft((prev) => ({
@@ -6634,7 +6634,7 @@ export const AdminPanel: React.FC = () => {
                                                     metadata: { ...(prev.metadata ?? {}), caseId: event.target.value }
                                                 }))}
                                             >
-                                                <option value="">Select XP Box</option>
+                                                <option value="">Select XP Pack</option>
                                                 {xpBoxes.map((box) => (
                                                     <option key={box.id} value={box.id}>{box.name}</option>
                                                 ))}
@@ -6660,7 +6660,7 @@ export const AdminPanel: React.FC = () => {
                                             onClick={handleCreateXpBoxFromRewardEditor}
                                             className="w-full sm:w-auto px-3 py-2 rounded-lg border border-brand-blue/40 text-brand-blue hover:bg-brand-blue hover:text-white text-sm font-semibold"
                                         >
-                                            Create XP Box
+                                            Create XP Pack
                                         </button>
                                     </div>
                                 )}
@@ -6976,9 +6976,9 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-bold text-white">Box Lab Fees</h3>
+                                <h3 className="text-lg font-bold text-white">Pack Lab Fees</h3>
                                 <p className="text-sm text-gray-400">
-                                    Apply a one-time fee when publishing Box Lab boxes.
+                                    Apply a one-time fee when publishing Pack Lab packs.
                                 </p>
                             </div>
                         </div>
@@ -7000,7 +7000,7 @@ export const AdminPanel: React.FC = () => {
                                     placeholder="0"
                                 />
                                 <p className="mt-2 text-xs text-gray-500">
-                                    One-time fee charged when publishing a Box Lab box.
+                                    One-time fee charged when publishing a Pack Lab pack.
                                 </p>
                             </div>
                         </div>
@@ -7109,9 +7109,9 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-bold text-white">Box Lab Settings</h3>
+                                <h3 className="text-lg font-bold text-white">Pack Lab Settings</h3>
                                 <p className="text-sm text-gray-400">
-                                    Control default sell back rates for Box Lab boxes.
+                                    Control default sell back rates for Pack Lab packs.
                                 </p>
                             </div>
                         </div>
@@ -7133,15 +7133,15 @@ export const AdminPanel: React.FC = () => {
                                     className="w-full bg-[#0b0e14] border border-gray-700 rounded-lg px-4 py-2 text-white"
                                 />
                                 <p className="mt-2 text-xs text-gray-500">
-                                    Percent of item value paid on Box Lab sell backs.
+                                    Percent of item value paid on Pack Lab sell backs.
                                 </p>
                             </div>
                         </div>
                         <div className="mt-4">
                             <div className="flex flex-col gap-1">
-                                <label className="block text-xs font-bold text-gray-500 uppercase">Available source boxes</label>
+                                <label className="block text-xs font-bold text-gray-500 uppercase">Available source packs</label>
                                 <p className="text-xs text-gray-500">
-                                    Choose exactly which boxes can be used in Box Lab (for item picking and cover images).
+                                    Choose exactly which packs can be used in Pack Lab (for item picking and cover images).
                                 </p>
                             </div>
                             <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -7176,26 +7176,26 @@ export const AdminPanel: React.FC = () => {
                             </div>
                             {selectableCaseLabBoxes.length === 0 && (
                                 <div className="mt-3 rounded-lg border border-dashed border-gray-700 px-4 py-3 text-xs text-gray-500">
-                                    No eligible admin boxes are available yet.
+                                    No eligible admin packs are available yet.
                                 </div>
                             )}
                             <p className="mt-2 text-xs text-gray-500">
-                                If nothing is selected, Box Lab will continue showing all eligible boxes.
+                                If nothing is selected, Pack Lab will continue showing all eligible packs.
                             </p>
                         </div>
                         <div className="mt-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <span className="text-xs text-gray-500">
-                                Box Lab settings are stored with the Stripe configuration in Firestore.
+                                Pack Lab settings are stored with the Stripe configuration in Firestore.
                             </span>
                             <button
                                 onClick={handleSaveStripeSettings}
                                 className="w-full sm:w-auto px-5 py-2 bg-brand-blue/20 text-brand-blue border border-brand-blue/40 rounded-lg text-sm font-bold hover:bg-brand-blue hover:text-white transition-colors"
                             >
-                                Save Box Lab settings
+                                Save Pack Lab settings
                             </button>
                             {stripeSettingsNotice && (
                                 <div className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
-                                    Box Lab settings saved.
+                                    Pack Lab settings saved.
                                 </div>
                             )}
                         </div>
@@ -7203,9 +7203,9 @@ export const AdminPanel: React.FC = () => {
                     <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-bold text-white">User Created Boxes</h3>
+                                <h3 className="text-lg font-bold text-white">User Created Packs</h3>
                                 <p className="text-sm text-gray-400">
-                                    Remove Box Lab boxes that are expired or no longer needed.
+                                    Remove Pack Lab packs that are expired or no longer needed.
                                 </p>
                             </div>
                             <span className="text-xs text-gray-500">
@@ -7215,7 +7215,7 @@ export const AdminPanel: React.FC = () => {
                         <div className="mt-4 space-y-3">
                             {userCaseLabBoxes.length === 0 ? (
                                 <div className="text-sm text-gray-500 border border-dashed border-gray-700 rounded-lg px-4 py-6 text-center">
-                                    No user-created boxes are currently active.
+                                    No user-created packs are currently active.
                                 </div>
                             ) : (
                                 userCaseLabBoxes.map((box) => {
@@ -7250,7 +7250,7 @@ export const AdminPanel: React.FC = () => {
                                                     onClick={() => initiateDeleteBox(box.id)}
                                                     className="px-4 py-2 text-xs font-bold rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/20 transition-colors"
                                                 >
-                                                    Remove box
+                                                    Remove pack
                                                 </button>
                                             </div>
                                         </div>
@@ -7313,7 +7313,7 @@ export const AdminPanel: React.FC = () => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Homepage & auth images</label>
                                 <p className="text-xs text-gray-500 mb-4">Paste CDN image URLs. Optimized for mobile cards and modal artwork.</p>
                                 <div className="mb-4 rounded-lg border border-gray-700 bg-[#111827] p-3">
-                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-400">Box catalog header image</label>
+                                    <label className="mb-2 block text-xs font-bold uppercase text-gray-400">Pack catalog header image</label>
                                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                                         <Input
                                             type="url"
@@ -7663,7 +7663,7 @@ export const AdminPanel: React.FC = () => {
                       <ShieldAlert className="w-6 h-6 text-red-500" /> Confirm Deletion
                   </h3>
                   <p className="text-gray-400 text-sm mb-6">
-                      Are you sure you want to delete this box permanently? This action cannot be undone.
+                      Are you sure you want to delete this pack permanently? This action cannot be undone.
                   </p>
                   <div className="flex gap-3">
                       <button
@@ -7676,7 +7676,7 @@ export const AdminPanel: React.FC = () => {
                           onClick={confirmDeleteBox}
                           className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white text-sm font-bold rounded-lg shadow-lg shadow-red-900/20 transition-colors"
                       >
-                          Delete Box
+                          Delete Pack
                       </button>
                   </div>
               </div>

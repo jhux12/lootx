@@ -6,22 +6,22 @@ import { trackEvent } from '../utils/trackEvent';
 const steps = [
   {
     number: '01',
-    title: 'Choose Your Box',
-    description: 'Browse boxes and select one based on the collectibles, price, and displayed odds.',
+    title: 'Choose Your Pack',
+    description: 'Browse packs and select one based on the collectibles, price, and displayed odds.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork.png?alt=media&token=4da2e4ea-b001-4b2e-b1fd-7be8c1ff780d',
-    alt: 'Ripza mystery boxes ready to choose'
+    alt: 'Ripza mystery packs ready to choose'
   },
   {
     number: '02',
     title: 'Open & Reveal',
-    description: 'Open the box for an animated reveal and instantly discover the real collectible you pulled.',
+    description: 'Open the pack for an animated reveal and instantly discover the real collectible you pulled.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork%20(1).png?alt=media&token=2f3488c5-5309-4f73-a882-863609967ace',
-    alt: 'A collectible appearing during a Ripza box reveal'
+    alt: 'A collectible appearing during a Ripza pack reveal'
   },
   {
     number: '03',
     title: 'Keep It or Sell It Back',
-    description: 'Keep the item for shipping or instantly sell it back for coins to open another box.',
+    description: 'Keep the item for shipping or instantly sell it back for coins to open another pack.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/hiw%2Fhowitwork%20(2).png?alt=media&token=7b8c55ce-0068-4f86-9d6f-03961851e5bd',
     alt: 'Ripza options to keep a collectible or sell it back'
   }
@@ -51,7 +51,7 @@ export const HowItWorksSection: React.FC = () => {
         <h2 id="how-it-works-title" className="mt-3 text-3xl font-black uppercase tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
           How It <span className="bg-gradient-to-r from-[#a78bfa] via-[#ec6dce] to-[#56d9f5] bg-clip-text text-transparent">Works</span>
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-400 sm:text-base">From choosing a box to owning a real collectible, every pull is fast and simple.</p>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-400 sm:text-base">From choosing a pack to owning a real collectible, every pull is fast and simple.</p>
       </header>
 
       <div className="relative mx-auto mt-8 grid max-w-6xl gap-4 md:mt-11 md:grid-cols-3 md:gap-5 lg:gap-7">
@@ -65,7 +65,7 @@ export const HowItWorksSection: React.FC = () => {
           onClick={browseBoxes}
           className="group inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-gradient-to-r from-[#7c3aed] via-[#a43fca] to-[#168bc2] px-7 py-3 text-sm font-black uppercase tracking-[0.08em] text-white shadow-[0_12px_30px_rgba(103,55,204,0.26)] transition duration-200 hover:-translate-y-0.5 hover:brightness-110 hover:shadow-[0_16px_34px_rgba(103,55,204,0.34)] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 motion-reduce:transform-none sm:w-auto"
         >
-          Browse Boxes
+          Browse Packs
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" aria-hidden="true" />
         </button>
       </div>

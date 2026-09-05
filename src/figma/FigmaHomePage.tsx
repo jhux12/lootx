@@ -19,37 +19,37 @@ type FigmaHomePageProps = {
 const HOW_IT_WORKS_STEPS = [
   {
     number: '01',
-    title: 'Choose Your Box',
-    description: 'Browse boxes and select one based on the collectibles, price, and displayed odds.'
+    title: 'Choose Your Pack',
+    description: 'Browse packs and select one based on the collectibles, price, and displayed odds.'
   },
   {
     number: '02',
     title: 'Open & Reveal',
-    description: 'Open the box for an animated reveal and instantly discover the real collectible you pulled.'
+    description: 'Open the pack for an animated reveal and instantly discover the real collectible you pulled.'
   },
   {
     number: '03',
     title: 'Keep It or Sell It Back',
-    description: 'Keep the item for shipping or instantly sell it back for coins to open another box.'
+    description: 'Keep the item for shipping or instantly sell it back for coins to open another pack.'
   }
 ];
 
 const HOME_FAQ_ITEMS = [
   {
     question: 'What is Ripza?',
-    answer: 'Ripza is an online collectible box-opening platform. You choose a box, reveal a real item, and receive ownership of that item in your Ripza inventory. Depending on the item and available account options, you can keep it, sell it back for coins, or request shipping.'
+    answer: 'Ripza is an online collectible pack-opening platform. You choose a pack, reveal a real item, and receive ownership of that item in your Ripza inventory. Depending on the item and available account options, you can keep it, sell it back for coins, or request shipping.'
   },
   {
-    question: 'How do I open a box?',
-    answer: 'Create or sign in to your account, choose a box, review its contents and odds, and select the open button. You can use coins for eligible openings, and some accounts or boxes may also have free, promotional, or reward openings. The revealed item is added to your inventory after the opening is completed.'
+    question: 'How do I open a pack?',
+    answer: 'Create or sign in to your account, choose a pack, review its contents and odds, and select the open button. You can use coins for eligible openings, and some accounts or packs may also have free, promotional, or reward openings. The revealed item is added to your inventory after the opening is completed.'
   },
   {
     question: 'What are coins?',
-    answer: 'Coins are the balance used for eligible box openings, shipping charges where enabled, and other supported features on Ripza. Coin package pricing and any included bonus amount are shown before purchase or use.'
+    answer: 'Coins are the balance used for eligible pack openings, shipping charges where enabled, and other supported features on Ripza. Coin package pricing and any included bonus amount are shown before purchase or use.'
   },
   {
     question: 'Is opening fair?',
-    answer: 'Ripza publishes box odds and provides information about how results are generated and verified. Review the box details and the provably fair information before opening.'
+    answer: 'Ripza publishes pack odds and provides information about how results are generated and verified. Review the pack details and the provably fair information before opening.'
   },
   {
     question: 'How long does shipping take?',
@@ -142,7 +142,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
       ...CATEGORY_ORDER,
       ...categories.map((entry) => entry.id).filter((id) => !CATEGORY_ORDER.includes(id)),
     ]
-      .map((id) => (id === 'all' ? { id: 'all', title: 'All boxes', iconClass: '' } : categories.find((entry) => entry.id === id)))
+      .map((id) => (id === 'all' ? { id: 'all', title: 'All packs', iconClass: '' } : categories.find((entry) => entry.id === id)))
       .filter((entry): entry is { id: string; title: string; iconClass: string } => Boolean(entry)),
     [categories],
   );
@@ -240,7 +240,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
               ))
             : promoBoxes.map((box, index) => (
                 <button type="button" key={box.id} className={index === 0 ? 'is-orange' : 'is-black'} onClick={() => onOpenBox(box.id)}>
-                  <span><i><ChevronRight /></i><small>{index === 0 ? 'All boxes' : 'Hot boxes'}</small><strong>{box.name}</strong></span>
+                  <span><i><ChevronRight /></i><small>{index === 0 ? 'All packs' : 'Hot packs'}</small><strong>{box.name}</strong></span>
                   {box.image ? <img src={box.image} alt="" loading="eager" fetchPriority={index === 0 ? 'high' : 'auto'} decoding="async" /> : null}
                 </button>
               ))}
@@ -249,7 +249,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
       <BetLiveWinsTicker />
       <section className="bet-home-events">
         <div className="bet-home-events-title">
-          <h2>Top Boxes</h2>
+          <h2>Top Packs</h2>
           <button type="button" className="bet-home-view-all" onClick={onViewAllBoxes}>
             <span>View All</span>
             <ChevronRight />
@@ -279,7 +279,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
               onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))}
             />
           ))}
-          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No boxes found</strong><span>Try another category.</span></div> : null}
+          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No packs found</strong><span>Try another category.</span></div> : null}
         </div>
         <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
@@ -325,7 +325,7 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
       </section>
       <nav className="bet-home-dock" aria-label="Homepage navigation">
         <button type="button" className="is-active" onClick={() => setView({ type: 'HOME' })}><Flame /><span>Home</span></button>
-        <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Boxes</span></button>
+        <button type="button" onClick={onViewAllBoxes}><Boxes /><span>Packs</span></button>
         <button
           type="button"
           onClick={handleBalanceClick}
