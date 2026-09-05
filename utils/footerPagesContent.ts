@@ -32,10 +32,27 @@ export const normalizeFooterPageBranding = (content: string) =>
     domain ? 'ripza.gg' : 'Ripza'
   );
 
+const extractHeading = (content: string) => content.match(/^#\s+(.+)$/m)?.[1]?.trim();
+
+/**
+ * Guards against a persisted page carrying another page's copy under the
+ * wrong key (e.g. an "about" document that still holds Terms of Service
+ * text from a prior migration). Detected by comparing the leading markdown
+ * heading against every other page's own default heading.
+ */
+export const isMismatchedFooterPageContent = (pageKey: FooterPageKey, content: string) => {
+  const heading = extractHeading(content);
+  if (!heading) return false;
+  if (heading === extractHeading(DEFAULT_FOOTER_PAGE_CONTENT[pageKey].content)) return false;
+  return FOOTER_PAGE_KEYS.some(
+    (key) => key !== pageKey && heading === extractHeading(DEFAULT_FOOTER_PAGE_CONTENT[key].content)
+  );
+};
+
 export const DEFAULT_FOOTER_PAGE_CONTENT: Record<FooterPageKey, { title: string; content: string }> = {
   about: {
     title: 'About Ripza',
-    content: `# About Ripza\n\nRipza helps collectors discover Pokémon mystery boxes online with transparent rewards, account tools, and support.\n\n## Our focus\nWe build collectible-focused mystery box experiences with clear reward displays and simple inventory management.\n\n## Collector-first choices\nUsers can keep eligible items for shipment or sell them back for site credit where available.\n\n## Trust and transparency\nRipza provides support resources, legal policies, and provably fair information for users reviewing the platform.\n`
+    content: `# About Ripza\n\nRipza is an online collectible pack-opening platform. Choose a pack, open it for an animated reveal, and instantly discover the real, authentic collectible you pulled.\n\n## Authentic collectibles\nEvery card and collectible offered on Ripza is a genuine physical item, not a digital-only placeholder. Anything you pull is added to your account inventory and is yours to keep.\n\n## Transparent odds\nEach pack lists its contents and drop odds before you open it, and every result can be checked with our Provably Fair verification tools so outcomes can never be manipulated after the fact.\n\n## Shipping\nEligible items in your inventory can be requested for real-world shipment to your door, or instantly sold back for site credit if you'd rather keep opening packs.\n\n## Support\nOur support team is available for questions about your account, an order, or a shipment. Visit the Contact page any time you need help.\n`
   },
   faq: {
     title: 'FAQ',

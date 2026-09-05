@@ -1,4 +1,4 @@
-import pullzTicketImage from './assets/png/pullz-icon-color-2048.png';
+import ripzaTicketImage from './assets/png/ripza-icon-color-512.png';
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
 export const XP_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/WebIcons%2Fsd%20(27).png?alt=media&token=475e5bf6-136e-45ad-9c7f-7fcb88b9fa02';
@@ -43,7 +43,7 @@ export const GOLDEN_TICKET_ITEM: CaseItem = {
   id: 'golden-ticket',
   name: 'GOLDEN UPGRADE',
   price: 0,
-  image: pullzTicketImage,
+  image: ripzaTicketImage,
   rarity: 'legendary',
   chance: 0,
   color: '#fbbf24'

@@ -4,19 +4,22 @@ import { readFile } from 'node:fs/promises';
 
 const source = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('canonical and social metadata use the Ripza origin', async () => {
-  const [index, seo] = await Promise.all([source('index.html'), source('utils/seoSettings.ts')]);
-  assert.match(index, /rel="canonical" href="https:\/\/ripza\.gg"/);
-  assert.match(index, /property="og:url" content="https:\/\/ripza\.gg"/);
+test('canonical and social metadata use the canonical www.ripza.gg origin', async () => {
+  const [index, seo, brand] = await Promise.all([
+    source('index.html'), source('utils/seoSettings.ts'), source('config/publicBrand.ts')
+  ]);
+  assert.match(index, /rel="canonical" href="https:\/\/www\.ripza\.gg"/);
+  assert.match(index, /property="og:url" content="https:\/\/www\.ripza\.gg"/);
   assert.match(seo, /canonicalUrl: PUBLIC_BRAND\.canonicalOrigin/);
+  assert.match(brand, /canonicalOrigin: 'https:\/\/www\.ripza\.gg'/);
 });
 
-test('every sitemap location and robots sitemap use the Ripza origin', async () => {
+test('every sitemap location and robots sitemap use the canonical www.ripza.gg origin', async () => {
   const [sitemap, robots] = await Promise.all([source('public/sitemap.xml'), source('public/robots.txt')]);
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
   assert.ok(locations.length > 0);
-  assert.ok(locations.every((url) => url.startsWith('https://ripza.gg/')));
-  assert.match(robots, /Sitemap: https:\/\/ripza\.gg\/sitemap\.xml/);
+  assert.ok(locations.every((url) => url.startsWith('https://www.ripza.gg/')));
+  assert.match(robots, /Sitemap: https:\/\/www\.ripza\.gg\/sitemap\.xml/);
 });
 
 test('referrals use the centralized canonical origin', async () => {

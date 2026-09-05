@@ -1,6 +1,6 @@
 import React from 'react';
 import heroImage from '../assets/hero.png';
-import pullzPattern from '../assets/png/pullz-icon-color-2048.png';
+import ripzaPattern from '../assets/png/ripza-icon-color-512.png';
 import { useGame } from '../context/GameContext';
 import { setPostSignupRedirect } from '../utils/postSignupRedirect';
 import { trackEvent } from '../utils/trackEvent';
@@ -29,7 +29,7 @@ export const Hero: React.FC = () => {
     <section className="pullz-cls-hero group relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-[#060910] px-5 py-7 sm:px-8 sm:py-10 lg:px-14 lg:py-14">
       <div className="pointer-events-none absolute inset-0 rounded-[28px]">
         <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_50%_0%,#131f42_0%,#090d18_45%,#05070d_100%)]" />
-        <div className="absolute inset-0 opacity-20 mix-blend-screen animate-hero-drift" style={{ backgroundImage: `url(${pullzPattern})`, backgroundSize: '260px 260px' }} />
+        <div className="absolute inset-0 opacity-20 mix-blend-screen animate-hero-drift" style={{ backgroundImage: `url(${ripzaPattern})`, backgroundSize: '260px 260px' }} />
         <div className="absolute -left-28 top-[-14%] h-[500px] w-[500px] rounded-full bg-[#2563ff]/20 blur-[120px]" />
         <div className="absolute -right-24 top-[-10%] h-[460px] w-[460px] rounded-full bg-sky-500/22 blur-[120px]" />
         <div className="absolute right-[14%] top-[20%] h-[380px] w-[380px] rounded-full bg-blue-500/25 blur-[110px]" />

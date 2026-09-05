@@ -22,8 +22,8 @@ import { createMicroConfetti, MicroConfettiParticle } from '../src/ui/feedback/m
 import { ProvablyFairModal } from '../src/ui/provably/ProvablyFairModal';
 import { trackEvent } from '../utils/trackEvent';
 import { usePerformanceMode } from '../src/lib/performance';
-import pullzLogo from '../assets/png/pullz-icon-color-2048.png';
-import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
+import ripzaLogo from '../assets/png/ripza-icon-color-512.png';
+import pullzHorizontalLogo from '../assets/png/ripza-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 import { PackTearReveal } from './PackTearReveal';
@@ -2106,7 +2106,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <span className="absolute right-7 top-6 h-1.5 w-1.5 rounded-full bg-fuchsia-300 shadow-[0_0_12px_3px_rgba(232,121,249,0.5)]" />
                 <span className="absolute bottom-7 right-5 h-2 w-2 rounded-sm bg-indigo-300 shadow-[0_0_12px_3px_rgba(129,140,248,0.55)]" />
                 <img
-                  src={wonItem?.image || pullzLogo}
+                  src={wonItem?.image || ripzaLogo}
                   alt=""
                   className="h-[142px] w-[142px] object-contain drop-shadow-[0_16px_22px_rgba(0,0,0,0.6)] sm:h-[154px] sm:w-[154px]"
                 />
@@ -2173,7 +2173,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             <div className="mb-6 flex items-center gap-3 sm:gap-4">
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center sm:h-28 sm:w-28" aria-hidden="true">
                   <BlurImage
-                    src={box?.image || pullzLogo}
+                    src={box?.image || ripzaLogo}
                     alt=""
                     showPlaceholder={false}
                     className="h-full w-full object-contain drop-shadow-[0_14px_24px_rgba(0,0,0,0.55)]"

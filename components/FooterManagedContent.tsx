@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Timestamp, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { renderMarkdownToHtml } from '../utils/markdown';
-import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_META, FooterPageKey, normalizeFooterPageBranding } from '../utils/footerPagesContent';
+import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_META, FooterPageKey, isMismatchedFooterPageContent, normalizeFooterPageBranding } from '../utils/footerPagesContent';
 
 type ManagedFooterPage = {
   title?: string;
@@ -30,9 +30,11 @@ export const useManagedFooterPage = (pageKey: FooterPageKey) => {
         }
         const data = snapshot.data() as Record<string, ManagedFooterPage>;
         const section = data?.[pageKey];
-        setTitle(normalizeFooterPageBranding(section?.title ?? fallback.title));
-        setContent(normalizeFooterPageBranding(section?.published?.content || fallback.content));
-        setLastUpdated(formatTimestamp(section?.lastUpdated));
+        const publishedContent = section?.published?.content || fallback.content;
+        const isMismatched = isMismatchedFooterPageContent(pageKey, publishedContent);
+        setTitle(normalizeFooterPageBranding(isMismatched ? fallback.title : (section?.title ?? fallback.title)));
+        setContent(normalizeFooterPageBranding(isMismatched ? fallback.content : publishedContent));
+        setLastUpdated(isMismatched ? null : formatTimestamp(section?.lastUpdated));
       },
       (error) => {
         console.error('Failed to load managed footer page', { pageKey, error });

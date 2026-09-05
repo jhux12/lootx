@@ -1,57 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://ripza.gg/</loc>
+    <loc>https://www.ripza.gg/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/boxes</loc>
+    <loc>https://www.ripza.gg/boxes</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/leaderboards</loc>
+    <loc>https://www.ripza.gg/leaderboards</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/provably-fair</loc>
+    <loc>https://www.ripza.gg/provably-fair</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/contact</loc>
+    <loc>https://www.ripza.gg/contact</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/faq</loc>
+    <loc>https://www.ripza.gg/faq</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/about</loc>
+    <loc>https://www.ripza.gg/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/shipping-policy</loc>
+    <loc>https://www.ripza.gg/shipping-policy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/refund-policy</loc>
+    <loc>https://www.ripza.gg/refund-policy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/privacy</loc>
+    <loc>https://www.ripza.gg/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://ripza.gg/terms</loc>
+    <loc>https://www.ripza.gg/terms</loc>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
