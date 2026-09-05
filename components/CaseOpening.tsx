@@ -924,7 +924,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setFocusedWonIndex(0);
     playSound('click');
 
-    const entries: WonEntry[] = [];
+    // Phase 1 — transact: open every pack with the server, back-to-back, with
+    // no animation waits in between. Each iteration's addInventoryItemFromServer
+    // call below means the pack is paid for and in the player's inventory the
+    // moment its own request resolves — before any reveal even starts playing.
+    // This has to stay decoupled from the animate phase: if it were interleaved
+    // (open pack 1, wait through its whole reveal, then open pack 2, ...) then
+    // leaving the page mid-reveal would leave later packs never even requested,
+    // even though the player had already committed to opening all of them.
+    const fetched: { winner: CaseItem; inventoryItem: InventoryItem | null; rollValue: number; rollHash: string }[] = [];
 
     for (let i = 0; i < quantity; i += 1) {
       let winner: CaseItem;
@@ -1076,7 +1084,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           packIndex: i
         });
 
-        if (entries.length === 0) {
+        if (fetched.length === 0) {
           // Nothing opened yet — fail the whole request the way a single open always did.
           setIsSpinning(false);
           isSpinningRef.current = false;
@@ -1121,6 +1129,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         window.sessionStorage.setItem(LAST_ROLL_STORAGE_KEY, JSON.stringify(latestRoll));
       }
 
+      fetched.push({ winner, inventoryItem, rollValue, rollHash });
+    }
+
+    if (fetched.length === 0) {
+      setIsSpinning(false);
+      isSpinningRef.current = false;
+      spinRequestLockRef.current = false;
+      return;
+    }
+
+    // Phase 2 — animate: every pack above is already paid for and sitting in
+    // the player's inventory. Everything from here down is pure presentation,
+    // so leaving the page mid-reveal never costs them a pack they already opened.
+    const entries: WonEntry[] = [];
+
+    for (let i = 0; i < fetched.length; i += 1) {
+      const { winner, inventoryItem, rollValue, rollHash } = fetched[i];
+
       // Only the very first reveal of the whole batch asks the user to slide —
       // every pack after that plays automatically, one after another.
       const firstRevealRequiresSlide = i === 0;
@@ -1153,7 +1179,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
       entries.push({ item: winner, inventoryItem, resolved: false });
 
-      if (i < quantity - 1) {
+      if (i < fetched.length - 1) {
         // Hold on the just-settled reveal for a beat (same as it always
         // rested before the win modal appeared), then the next loop
         // iteration's playPackReveal takes it straight into charging for
@@ -1165,13 +1191,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
     }
 
-    if (entries.length > 0) {
-      finishBatch(entries);
-    } else {
-      setIsSpinning(false);
-      isSpinningRef.current = false;
-      spinRequestLockRef.current = false;
-    }
+    finishBatch(entries);
   };
 
   useEffect(() => {
@@ -1757,6 +1777,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               </div>
             )}
             </>
+            )}
+
+            {/* Every pack in the batch is opened with the server up front
+                (see handleSpin) before any reveal plays, so a multi-pack open
+                can take a beat here — same "Opening..." feedback the button
+                itself used to show while its single request was in flight. */}
+            {isSpinning && animationPhase === 'idle' && (
+              <div className="relative z-20 flex items-center justify-center gap-2 px-4 pb-3 pt-1 text-sm font-semibold text-white/70">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-transparent" />
+                Opening...
+              </div>
             )}
 
             {/* Slide-to-open: takes over the Action Bar's spot once the pack
