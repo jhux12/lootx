@@ -450,6 +450,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isWinImageZoomed, setIsWinImageZoomed] = useState(false);
   const [animatedModalCoins, setAnimatedModalCoins] = useState(0);
   const [confetti, setConfetti] = useState<MicroConfettiParticle[]>([]);
+  const [burstToken, setBurstToken] = useState(0);
   const [animationPhase, setAnimationPhase] = useState<'idle' | 'spinning' | 'settling'>('idle');
   const [hasSpinSettled, setHasSpinSettled] = useState(false);
   const [showPostFreeBoxModal, setShowPostFreeBoxModal] = useState(false);
@@ -550,6 +551,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const centeredSpinnerItem = reelItems[currentCenterIndex] ?? reelItems[reelWinnerIndex] ?? null;
   const centeredRarityKey = normalizeRarityKey(centeredSpinnerItem?.rarity);
   const centeredRarityIndicator = rarityIndicatorStyle[centeredRarityKey] ?? rarityIndicatorStyle.common;
+  const wonItemRarityKey = normalizeRarityKey(wonItem?.rarity);
+  const wonItemIsHighTier = wonItemRarityKey === 'rare' || wonItemRarityKey === 'epic' || wonItemRarityKey === 'legendary';
+  const wonItemIsTopTier = wonItemRarityKey === 'epic' || wonItemRarityKey === 'legendary';
 
   const updateSpinnerMeasurements = useCallback(() => {
     const viewport = scrollViewportRef.current;
@@ -2014,14 +2018,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         winSoundTimerRef.current = null;
       }, 120);
     }
-    if (!prefersReducedMotion && ['rare','ultra rare','legendary'].includes(String(displayedWinner.rarity).toLowerCase())) {
-      const particles = createMicroConfetti(reduceMobileEffects ? 10 : 18);
+    setBurstToken((t) => t + 1);
+    const winnerRarityKey = normalizeRarityKey(displayedWinner.rarity);
+    const winnerIsHighTier = winnerRarityKey === 'rare' || winnerRarityKey === 'epic' || winnerRarityKey === 'legendary';
+    if (!prefersReducedMotion && winnerIsHighTier) {
+      const particleCount = winnerRarityKey === 'legendary' ? 32 : winnerRarityKey === 'epic' ? 22 : 14;
+      const palette = winnerRarityKey === 'legendary'
+        ? [displayedWinner.color, '#fde047', '#ffffff']
+        : [displayedWinner.color, '#ffffff'];
+      const particles = createMicroConfetti(reduceMobileEffects ? Math.round(particleCount * 0.6) : particleCount, palette);
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
       confettiTimerRef.current = window.setTimeout(() => {
         setConfetti([]);
         confettiTimerRef.current = null;
-      }, reduceMobileEffects ? 520 : 720);
+      }, reduceMobileEffects ? 620 : 900);
     }
     setWonItem(displayedWinner);
     setRewardResolved(false);
@@ -2276,6 +2287,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         {/* SPINNER AREA */}
         <div className="relative mb-3 w-full overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_28%,rgba(111,77,255,0.16),transparent_42%),linear-gradient(180deg,rgba(17,24,39,0.8),rgba(8,12,20,0.35))] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:mb-5">
 
+            {/* Ambient rarity aura: the pack's "energy field" recolors to match whatever
+                rarity tier is centered, so the field feels alive even before landing. */}
+            {!reduceMobileEffects && (
+              <div
+                className="pointer-events-none absolute inset-0 z-0 rounded-3xl opacity-70 transition-[background] duration-500 ease-out"
+                style={{ background: `radial-gradient(circle at 50% 32%, ${centeredRarityIndicator.glow.replace(/0\.\d+\)/, '0.16)')}, transparent 60%)` }}
+                aria-hidden="true"
+              />
+            )}
+
             {/* Gold Mode Overlay Effect */}
             {isGoldMode && <div className="absolute inset-0 bg-yellow-500/5 animate-pulse pointer-events-none z-10"></div>}
 
@@ -2351,6 +2372,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                           const isFocusedItem = hasSpinSettled ? isSettledWinner : isCenteredItem;
                           const isUltraSmoothSpin = isSpinning;
                           const showItemGlow = true;
+                          const distanceFromCenter = Math.abs(idx - currentCenterIndex);
+                          const proximityIntensity = reduceMobileEffects ? 1 : Math.max(0.35, 1 - distanceFromCenter * 0.22);
+                          const isTopTierPassing = (rarityValue === 'epic' || rarityValue === 'legendary') && !reduceMobileEffects;
                           return (
                         <div
                             key={`${item.id}-${idx}`}
@@ -2367,12 +2391,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                             }}
                             onMouseEnter={() => !isSpinning && playSound('hover')}
                         >
+                            {!reduceMobileEffects && (
+                              <span
+                                className="pointer-events-none absolute left-1/2 top-1 h-[3px] w-12 -translate-x-1/2 rounded-full transition-opacity duration-150"
+                                style={{ background: item.color, opacity: proximityIntensity * 0.9, boxShadow: `0 0 8px ${item.color}` }}
+                                aria-hidden="true"
+                              />
+                            )}
                             <div
                               className={`pullz-spinner-rarity-glow pullz-spinner-glow pointer-events-none absolute inset-x-5 top-6 bottom-6 rounded-[40%] ${showItemGlow ? 'opacity-60 blur-2xl sm:blur-3xl' : 'opacity-0 blur-none'} ${rarityGlow}`}
-                              style={{ boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none' }}
+                              style={{
+                                boxShadow: isFocusedItem && !reduceMobileEffects ? `0 0 20px ${item.color}40` : 'none',
+                                opacity: reduceMobileEffects ? undefined : 0.6 * proximityIntensity
+                              }}
                             />
                             <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center self-stretch">
-                              <div className={`flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[154px] w-[154px] sm:h-[170px] sm:w-[170px]' : 'h-[170px] w-[170px]'}`}>
+                              <div className={`relative flex items-center justify-center ${useMobileSpinnerBehavior ? 'h-[154px] w-[154px] sm:h-[170px] sm:w-[170px]' : 'h-[170px] w-[170px]'} ${isSettledWinner && !reduceMobileEffects ? 'pullz-win-card-pop' : ''}`}>
+                              {isTopTierPassing && isCenteredItem && !isSpinning && (
+                                <div className="pullz-holo-sweep rounded-2xl" aria-hidden="true" />
+                              )}
                               <BlurImage
                                   src={item.image}
                                   alt={item.name}
@@ -2575,8 +2612,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               {confetti.map((piece) => (
                 <span
                   key={piece.id}
-                  className="pointer-events-none absolute rounded-full"
-                  style={{ left: `${piece.x}%`, top: `${piece.y}%`, width: piece.size, height: piece.size, background: piece.color, transform: `translate(${piece.dx}px, ${piece.dy}px)`, opacity: 0, animation: `fadeOut ${piece.life}ms ease-out forwards` }}
+                  className="pointer-events-none absolute z-10 rounded-full"
+                  style={{
+                    left: `${piece.x}%`,
+                    top: `${piece.y}%`,
+                    width: piece.size,
+                    height: piece.size,
+                    background: piece.color,
+                    boxShadow: `0 0 6px ${piece.color}`,
+                    animation: `fadeOut ${piece.life}ms ease-out forwards`,
+                    '--confetti-dx': `${piece.dx}px`,
+                    '--confetti-dy': `${piece.dy}px`
+                  } as React.CSSProperties}
                 />
               ))}
               <div className="bet-case-modal-bar flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-4 sm:px-6">
@@ -2596,11 +2643,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
               <div className="overflow-y-auto p-5 sm:p-6">
                 <div
-                  className="win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center"
+                  key={burstToken}
+                  className={`win-rarity-card relative mx-auto flex max-w-sm flex-col items-center rounded-2xl p-[2px] text-center ${wonItemIsHighTier ? 'win-rarity-card--accented' : ''} ${wonItemIsTopTier && !prefersReducedMotion ? 'pullz-pack-shake' : ''}`}
                   style={{ '--rarity-color': wonItem.color } as React.CSSProperties}
                 >
+                  {wonItemIsHighTier && !prefersReducedMotion && (
+                    <>
+                      <span className="pullz-pack-shockwave-ring" aria-hidden="true" />
+                      {wonItemIsTopTier && (
+                        <span className="pullz-pack-shockwave-ring" style={{ animationDelay: '120ms' }} aria-hidden="true" />
+                      )}
+                      {wonItemRarityKey === 'legendary' && <span className="pullz-pack-flash" aria-hidden="true" />}
+                    </>
+                  )}
                   <div className={`win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4 transition-all duration-300 ${isWinImageZoomed ? 'py-6 sm:py-8' : ''}`}>
                     <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
+                    {wonItemIsTopTier && !prefersReducedMotion && !reduceMobileEffects && (
+                      <div className="pullz-holo-sweep rounded-2xl" aria-hidden="true" />
+                    )}
                     <button
                       type="button"
                       onClick={() => setVerifyModalOpen(true)}

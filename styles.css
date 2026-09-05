@@ -932,3 +932,130 @@ body {
   --ref-muted: #626674;
   color: #17181d;
 }
+
+/* ---------------------------------------------------------------------
+   Pack-opening reveal effects (case spinner burst + win card).
+   Kept declarative/CSS-driven: CaseOpening only toggles classes and the
+   `--rarity-color` custom property; the pullz-reduced-motion/
+   pullz-low-performance rules below mirror the existing spinner perf
+   hooks in index.html.
+   ------------------------------------------------------------------- */
+@keyframes fadeOut {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--confetti-dx, 0px), var(--confetti-dy, 40px)) scale(0.4); }
+}
+
+@keyframes pullz-pack-shockwave {
+  0% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.15); border-width: 6px; }
+  70% { opacity: 0.35; }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2.4); border-width: 1px; }
+}
+
+@keyframes pullz-pack-flash {
+  0% { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+
+@keyframes pullz-pack-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-3px, 1px, 0); }
+  40% { transform: translate3d(3px, -1px, 0); }
+  60% { transform: translate3d(-2px, 1px, 0); }
+  80% { transform: translate3d(2px, -1px, 0); }
+}
+
+@keyframes pullz-win-card-pop {
+  0% { opacity: 0; transform: scale(0.86) translateY(10px); }
+  60% { opacity: 1; transform: scale(1.03) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes pullz-win-border-spin {
+  to { transform: rotate(360deg); }
+}
+
+.pullz-pack-shockwave-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 220px;
+  height: 220px;
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: var(--rarity-color, #9ca3af);
+  pointer-events: none;
+  animation: pullz-pack-shockwave 720ms cubic-bezier(0.16, 0.8, 0.24, 1) forwards;
+}
+
+.pullz-pack-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, var(--rarity-color, #9ca3af) 0%, transparent 68%);
+  mix-blend-mode: screen;
+  animation: pullz-pack-flash 480ms ease-out forwards;
+}
+
+.pullz-pack-shake {
+  animation: pullz-pack-shake 420ms ease-in-out;
+}
+
+.win-rarity-card,
+.pullz-win-card-pop {
+  animation: pullz-win-card-pop 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.win-rarity-card--accented::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from 0deg, var(--rarity-color, #9ca3af), transparent 30%, var(--rarity-color, #9ca3af) 60%, transparent 90%, var(--rarity-color, #9ca3af));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 10px var(--rarity-color, #9ca3af));
+  animation: pullz-win-border-spin 3.2s linear infinite;
+  pointer-events: none;
+}
+
+.pullz-holo-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pullz-holo-sweep::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: pullz-holo-sweep-move 2.4s ease-in-out infinite;
+}
+@keyframes pullz-holo-sweep-move {
+  0% { left: -60%; }
+  100% { left: 130%; }
+}
+
+html.pullz-reduced-motion .pullz-pack-shockwave-ring,
+html.pullz-reduced-motion .pullz-pack-flash,
+html.pullz-reduced-motion .pullz-holo-sweep::after,
+html.pullz-reduced-motion .win-rarity-card--accented::before {
+  display: none;
+}
+html.pullz-reduced-motion .pullz-pack-shake {
+  animation: none;
+}
+html.pullz-reduced-motion .win-rarity-card,
+html.pullz-reduced-motion .pullz-win-card-pop {
+  animation: none;
+}
+html.pullz-low-performance .pullz-holo-sweep::after,
+html.pullz-low-performance .win-rarity-card--accented::before {
+  display: none;
+}
