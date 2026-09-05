@@ -398,6 +398,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const confettiTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
   const slideResolverRef = useRef<(() => void) | null>(null);
+  const packAuraRef = useRef<HTMLDivElement>(null);
+  const auraBaseIntensityRef = useRef(0);
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
@@ -448,6 +450,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const stageDisplayItem = revealStageItem ?? wonItem;
   const stageRarityKey = normalizeRarityKey(stageDisplayItem?.rarity);
   const stageRarityIndicator = rarityIndicatorStyle[stageRarityKey] ?? rarityIndicatorStyle.common;
+  // Before a roll exists, the suspense aura wears the box's own brand color;
+  // once charging picks a real item it shifts to hint at the rarity tier.
+  const auraColor = stageDisplayItem ? stageRarityIndicator.color : (box?.accentColor || stageRarityIndicator.color);
 
   const handleCopyPageLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -815,6 +820,22 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     });
     return () => { isMounted = false; };
   }, [box?.image]);
+
+  // Base suspense level for the ambient aura behind the pack: a light idle
+  // shimmer, a stronger baseline once charging, then SlideToOpenBar layers a
+  // live boost on top of whichever base is current (see handleSlideProgress).
+  // Written straight to the DOM (not React state) so a drag can update it on
+  // every pointer move without re-rendering this component.
+  useEffect(() => {
+    const base = animationPhase === 'charging' ? 0.45 : animationPhase === 'idle' ? 0.12 : 0;
+    auraBaseIntensityRef.current = base;
+    packAuraRef.current?.style.setProperty('--aura-intensity', String(base));
+  }, [animationPhase]);
+
+  const handleSlideProgress = useCallback((progress: number) => {
+    const value = auraBaseIntensityRef.current + progress * 1.15;
+    packAuraRef.current?.style.setProperty('--aura-intensity', String(value));
+  }, []);
 
   // Plays the zoom/slide-to-open -> burst -> reveal sequence for one item,
   // ending with it settled on stage. Callers await this, then decide what
@@ -1574,6 +1595,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 className="relative mx-auto"
                 style={{ width: 'min(72vw, 40vh, 340px)', aspectRatio: '5 / 6' }}
               >
+                {/* Suspense aura: a quiet rotating/pulsing glow behind the pack
+                    before it opens, that SlideToOpenBar intensifies live as the
+                    user drags (see handleSlideProgress) — gone once it tears. */}
+                {richEffectsEnabled && (animationPhase === 'idle' || animationPhase === 'charging') && (
+                  <div
+                    ref={packAuraRef}
+                    className="pullz-pack-aura"
+                    style={{ '--aura-color': auraColor } as React.CSSProperties}
+                    aria-hidden="true"
+                  >
+                    <span className="pullz-pack-aura__ring" />
+                    <span className="pullz-pack-aura__pulse" />
+                  </div>
+                )}
+
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-[#0a0f19]/60">
                     <Loader2 className="h-6 w-6 animate-spin text-cyan-300" />
@@ -1706,6 +1742,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <SlideToOpenBar
                   key={stageDisplayItem?.id ?? 'slide'}
                   onComplete={() => slideResolverRef.current?.()}
+                  onProgress={handleSlideProgress}
                   accentColor={stageRarityIndicator.color}
                 />
               </div>

@@ -6,6 +6,10 @@ interface SlideToOpenBarProps {
   /** Track fill / handle icon color, usually the box or centered item's rarity color. */
   accentColor: string;
   label?: string;
+  /** Live 0-1 drag progress, fired on every pointer move and reset to 0 on a
+   *  released/cancelled drag that didn't complete — lets the caller intensify
+   *  something else (e.g. the ambient background) while the user drags. */
+  onProgress?: (progress: number) => void;
 }
 
 const COMPLETE_THRESHOLD = 0.6;
@@ -19,7 +23,7 @@ const TRACK_PADDING = 3;
  * a user who doesn't want to drag). Everything animates via transform/opacity
  * only — no layout properties change during drag — to stay smooth on phones.
  */
-export const SlideToOpenBar: React.FC<SlideToOpenBarProps> = ({ onComplete, accentColor, label = 'Slide to open' }) => {
+export const SlideToOpenBar: React.FC<SlideToOpenBarProps> = ({ onComplete, accentColor, label = 'Slide to open', onProgress }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const maxTravelRef = useRef(1);
   const startXRef = useRef(0);
@@ -41,11 +45,13 @@ export const SlideToOpenBar: React.FC<SlideToOpenBarProps> = ({ onComplete, acce
       firedRef.current = true;
       setCompleted(true);
       setProgress(1);
+      onProgress?.(1);
       completeTimerRef.current = window.setTimeout(onComplete, 140);
     } else {
       setProgress(0);
+      onProgress?.(0);
     }
-  }, [onComplete]);
+  }, [onComplete, onProgress]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (completed) return;
@@ -62,7 +68,9 @@ export const SlideToOpenBar: React.FC<SlideToOpenBarProps> = ({ onComplete, acce
     if (!dragging || completed) return;
     const delta = event.clientX - startXRef.current;
     if (Math.abs(delta) > 4) draggedRef.current = true;
-    setProgress(Math.min(1, Math.max(0, delta / maxTravelRef.current)));
+    const next = Math.min(1, Math.max(0, delta / maxTravelRef.current));
+    setProgress(next);
+    onProgress?.(next);
   };
 
   const handlePointerUp = () => {

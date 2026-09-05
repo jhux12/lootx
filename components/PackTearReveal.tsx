@@ -59,16 +59,12 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           aria-hidden="true"
         />
 
-        <div
-          className="pullz-tear-half top torn"
-          style={{ backgroundImage: packImageUrl ? `url(${packImageUrl})` : undefined }}
-          aria-hidden="true"
-        />
-        <div
-          className="pullz-tear-half bottom torn"
-          style={{ backgroundImage: packImageUrl ? `url(${packImageUrl})` : undefined }}
-          aria-hidden="true"
-        />
+        {packImageUrl ? (
+          <>
+            <img src={packImageUrl} alt="" className="pullz-tear-half top torn" draggable={false} aria-hidden="true" />
+            <img src={packImageUrl} alt="" className="pullz-tear-half bottom torn" draggable={false} aria-hidden="true" />
+          </>
+        ) : null}
 
         <div className={`pullz-tear-card ${phase === 'revealed' ? 'show' : ''}`}>
           <div
@@ -112,9 +108,9 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
         }
         .pullz-tear-half {
-          position: absolute; inset: 0; background-color: #11182a;
-          background-size: contain; background-repeat: no-repeat; background-position: center;
-          border-radius: 12px; box-shadow: 0 18px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06);
+          position: absolute; inset: 0; width: 100%; height: 100%;
+          object-fit: contain; object-position: center;
+          filter: drop-shadow(0 16px 26px rgba(0,0,0,0.5));
           backface-visibility: hidden; -webkit-backface-visibility: hidden; will-change: transform, opacity;
         }
         .pullz-tear-half.top { clip-path: polygon(0 0, 100% 0, 100% 48%, 0 52%); }
