@@ -337,6 +337,7 @@ type AdminSentNotification = {
 
 type DashboardTransaction = {
     id: string;
+    userId: string;
     userLabel: string;
     type: LedgerEntryType;
     amount: number;
@@ -515,6 +516,7 @@ export const AdminPanel: React.FC = () => {
   );
   const [dashboardTransactions, setDashboardTransactions] = useState<DashboardTransaction[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUserSummary[]>([]);
+  const [recentDeposits, setRecentDeposits] = useState<DashboardTransaction[]>([]);
 
   useEffect(() => {
       const currentIds = new Set(selectedItems.map((item) => item.id));
@@ -1108,6 +1110,7 @@ export const AdminPanel: React.FC = () => {
                   if (entry.amount === 0) return;
                   nextTransactions.push({
                       id: `${docSnap.id}-${entry.id ?? index}-${entry.createdAt}`,
+                      userId: docSnap.id,
                       userLabel,
                       type: entry.type,
                       amount: entry.amount,
@@ -1121,6 +1124,44 @@ export const AdminPanel: React.FC = () => {
           setDashboardUsers(nextUsers);
       }, (error) => {
           console.error('Dashboard users snapshot failed', error);
+      });
+
+      return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+      // Deposit recency is independent of signup recency. Querying lastDepositAt ensures an
+      // older account with a new deposit is not omitted from the dashboard.
+      // Fetch a small buffer so legacy profiles without a usable ledger entry do not leave gaps.
+      const recentDepositorsQuery = query(collection(db, 'users'), orderBy('lastDepositAt', 'desc'), limit(25));
+      const unsubscribe = onSnapshot(recentDepositorsQuery, (snapshot) => {
+          const deposits = snapshot.docs.flatMap((docSnap): DashboardTransaction[] => {
+              const data = docSnap.data() as Record<string, any>;
+              const latestDeposit = (Array.isArray(data.ledger) ? data.ledger : [])
+                  .filter((entry: any) => entry?.type === 'deposit' && Number(entry?.amount) > 0)
+                  .sort((a: any, b: any) => toMillis(b?.createdAt, 0) - toMillis(a?.createdAt, 0))[0];
+              if (!latestDeposit) return [];
+
+              const userLabel =
+                  typeof data.username === 'string' && data.username.trim()
+                      ? data.username.trim()
+                      : (typeof data.name === 'string' && data.name.trim() ? data.name.trim() : `User_${docSnap.id.slice(0, 6)}`);
+              const createdAt = toMillis(data.lastDepositAt, toMillis(latestDeposit.createdAt, 0));
+
+              return [{
+                  id: `${docSnap.id}-${String(latestDeposit.id ?? createdAt)}`,
+                  userId: docSnap.id,
+                  userLabel,
+                  type: 'deposit',
+                  amount: Number(latestDeposit.amount),
+                  createdAt
+              }];
+          });
+
+          deposits.sort((a, b) => b.createdAt - a.createdAt);
+          setRecentDeposits(deposits.slice(0, 8));
+      }, (error) => {
+          console.error('Recent deposits snapshot failed', error);
       });
 
       return () => unsubscribe();
@@ -1163,6 +1204,11 @@ export const AdminPanel: React.FC = () => {
       () => dashboardTransactions.slice(0, 8),
       [dashboardTransactions]
   );
+
+  const openDashboardUser = (userId: string) => {
+      setSelectedUserId(userId);
+      setActiveTab('users');
+  };
 
   useEffect(() => {
       if (users.length === 0) return;
@@ -3944,8 +3990,44 @@ export const AdminPanel: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Recent Activity Mock */}
-                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-6">
+                    <div className="mb-8 rounded-xl border border-emerald-500/20 bg-[#131720] p-4 sm:p-6">
+                        <div className="mb-5 flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-white">Recent Deposits</h3>
+                                <p className="mt-1 text-xs text-gray-400">Select a depositor to open their account.</p>
+                            </div>
+                            <BadgeDollarSign className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {recentDeposits.map((entry) => (
+                                <button
+                                    key={entry.id}
+                                    type="button"
+                                    onClick={() => openDashboardUser(entry.userId)}
+                                    className="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border border-gray-800 bg-[#0b0e14] p-3 text-left transition-colors hover:border-emerald-500/50 hover:bg-emerald-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                                    aria-label={`Open account for ${entry.userLabel}`}
+                                >
+                                    <div className="min-w-0">
+                                        <div className="truncate text-sm font-bold text-gray-100">{entry.userLabel}</div>
+                                        <div className="mt-1 text-xs text-gray-500">{new Date(entry.createdAt).toLocaleString()}</div>
+                                    </div>
+                                    <CoinAmount
+                                      amount={entry.amount}
+                                      formatOptions={{ maximumFractionDigits: 0 }}
+                                      showSign
+                                      className="shrink-0 text-sm font-bold text-emerald-400"
+                                      iconClassName="h-3.5 w-3.5"
+                                    />
+                                </button>
+                            ))}
+                            {recentDeposits.length === 0 && (
+                                <div className="text-sm text-gray-400 sm:col-span-2">No recent deposits yet.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Recent Activity */}
+                    <div className="bg-[#131720] border border-gray-800 rounded-xl p-4 sm:p-6">
                         <h3 className="text-lg font-bold text-white mb-6">Live Transactions</h3>
                         <div className="space-y-4">
                             {liveTransactions.map((entry) => (
