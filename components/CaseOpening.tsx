@@ -360,7 +360,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isSellingAll, setIsSellingAll] = useState(false);
   const [packQuantity, setPackQuantity] = useState(1);
-  const [remainingInBatch, setRemainingInBatch] = useState(1);
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('ripza-player');
   const [clientSeedInput, setClientSeedInput] = useState('ripza-player');
@@ -467,11 +466,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const stageDisplayItem = revealStageItem ?? wonItem;
   const stageRarityKey = normalizeRarityKey(stageDisplayItem?.rarity);
   const stageRarityIndicator = rarityIndicatorStyle[stageRarityKey] ?? rarityIndicatorStyle.common;
-  // How many extra "ghost" packs to stack behind the front one: reflects the
-  // selected quantity before opening, then counts down pack-by-pack as the
-  // batch reveals (each pack in the sequence removes one from the stack).
-  const packStackDisplayCount = isSpinning ? remainingInBatch : packQuantity;
-  const packStackGhostCount = Math.max(0, Math.min(packStackDisplayCount, 5) - 1);
+  // How many extra "ghost" packs to stack behind the front one while picking
+  // a quantity. Only shown pre-open — once opening starts the stage goes back
+  // to looking exactly like it did before multi-pack support (just repeated
+  // per pack), so the tear/burst/reveal animation itself never changes.
+  const packStackGhostCount = isSpinning ? 0 : Math.max(0, Math.min(packQuantity, 5) - 1);
   // Before a roll exists, the suspense aura wears the box's own brand color;
   // once charging picks a real item it shifts to hint at the rarity tier.
   const auraColor = stageDisplayItem ? stageRarityIndicator.color : (box?.accentColor || stageRarityIndicator.color);
@@ -923,7 +922,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setIsGoldMode(false);
     setWonBatch([]);
     setFocusedWonIndex(0);
-    setRemainingInBatch(quantity);
     playSound('click');
 
     const entries: WonEntry[] = [];
@@ -1154,14 +1152,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
 
       entries.push({ item: winner, inventoryItem, resolved: false });
-      setRemainingInBatch(quantity - entries.length);
 
       if (i < quantity - 1) {
+        // Hold on the just-settled reveal for a beat (same as it always
+        // rested before the win modal appeared), then the next loop
+        // iteration's playPackReveal takes it straight into charging for
+        // the next pack — the exact same charge/burst/reveal sequence,
+        // just replayed back-to-back with no new animation in between.
         const betweenDelay = isQuick ? PACK_MOTION.quickBetweenPacksDelayMs : PACK_MOTION.betweenPacksDelayMs;
         await wait(betweenDelay);
         if (!isMountedRef.current) return;
-        setAnimationPhase('idle');
-        setRevealStageItem(null);
       }
     }
 
@@ -1770,14 +1770,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   onProgress={handleSlideProgress}
                   accentColor={stageRarityIndicator.color}
                 />
-              </div>
-            )}
-
-            {/* Brief beat between packs in a multi-pack batch: the stage is
-                idle again but still mid-spin, waiting to charge the next pack. */}
-            {isSpinning && animationPhase === 'idle' && (
-              <div className="relative z-20 flex items-center justify-center px-4 pb-3 pt-1 text-xs font-semibold text-white/60">
-                Next pack opening...
               </div>
             )}
 
