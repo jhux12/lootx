@@ -1,6 +1,6 @@
 import { randomSeed, sha256 } from './provablyFair.js';
 
-const DEFAULT_CLIENT_SEED = 'pullz-player';
+const DEFAULT_CLIENT_SEED = 'ripza-player';
 const AUTO_ROTATE_INTERVAL_MS = 60 * 60 * 1000;
 
 export const ensureProvablyFairState = async (firestore, uid) => {
