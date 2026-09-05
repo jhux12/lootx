@@ -18,8 +18,16 @@ const resolveInitialMode = (): PerformanceMode => {
   }
   const reducedMotion = window.matchMedia(REDUCED_MOTION_QUERY).matches;
   const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
-  const constrainedDevice = (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4)
-    || (navigatorWithMemory.deviceMemory !== undefined && navigatorWithMemory.deviceMemory <= 4);
+  // Real phones very commonly report hardwareConcurrency/deviceMemory of 4
+  // (iOS caps core count reporting; Chrome buckets memory into 2/4/8 and a
+  // 6-8GB phone often lands on 4) — a <=4 threshold was flagging most actual
+  // phones as "low power" while desktop's mobile-viewport emulation (which
+  // doesn't touch these hardware properties) never tripped it, so rich
+  // effects looked fine in devtools but silently collapsed to no-animation
+  // on a real device. Narrowed to <=2 so this only catches genuinely weak
+  // hardware; the FPS sample below still catches slow devices at runtime.
+  const constrainedDevice = (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 2)
+    || (navigatorWithMemory.deviceMemory !== undefined && navigatorWithMemory.deviceMemory <= 2);
   return {
     isMobile: window.matchMedia(MOBILE_QUERY).matches,
     prefersReducedMotion: reducedMotion,

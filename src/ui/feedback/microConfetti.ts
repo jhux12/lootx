@@ -11,8 +11,9 @@ export interface MicroConfettiParticle {
 
 const COLORS = ['#205DD7', '#22d3ee', '#ffffff'];
 
-export const createMicroConfetti = (count = 18): MicroConfettiParticle[] => {
-  const total = Math.max(15, Math.min(25, count));
+export const createMicroConfetti = (count = 18, colors: string[] = COLORS): MicroConfettiParticle[] => {
+  const total = Math.max(15, Math.min(60, count));
+  const palette = colors.length ? colors : COLORS;
   return Array.from({ length: total }).map((_, index) => ({
     id: `${Date.now()}-${index}`,
     x: 45 + Math.random() * 10,
@@ -21,6 +22,6 @@ export const createMicroConfetti = (count = 18): MicroConfettiParticle[] => {
     dy: 20 + Math.random() * 45,
     size: 3 + Math.random() * 4,
     life: 500 + Math.random() * 200,
-    color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    color: palette[Math.floor(Math.random() * palette.length)]
   }));
 };

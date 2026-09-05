@@ -891,14 +891,16 @@ body {
 :root[data-theme="light"] .bet-case-modal[class*="text-gray-200"],
 :root[data-theme="light"] .bet-case-modal [class*="text-gray-300"] { color:var(--bet-case-muted) !important; }
 
-/* Win-modal header/footer bars only — never the reveal card between
-   them, which keeps its own dark stage regardless of theme. */
+/* Result panel header — same dark-card-with-light-theme-override treatment
+   as the old win modal's bars, now applied to the inline result card. */
 :root[data-theme="light"] .bet-case-modal-bar { background:#f2f2f4 !important; border-color:#e5e5e7 !important; }
 :root[data-theme="light"] .bet-case-modal-bar .text-white { color:#050505 !important; }
 :root[data-theme="light"] .bet-case-modal-bar [class*="text-gray-300"],
 :root[data-theme="light"] .bet-case-modal-bar [class*="text-gray-400"] { color:#6b6b70 !important; }
 :root[data-theme="light"] .bet-case-modal-bar [class*="border-white/10"] { border-color:#e5e5e7 !important; }
 :root[data-theme="light"] .bet-case-modal-bar [class*="bg-white/5"] { background:#e5e5e7 !important; }
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-100"],
+:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-50"] { color:#047857 !important; }
 
 /* Drop-table "Load more items" button — was near-invisible white-on-white
    (faint white bg + white text) even in dark mode, and fully invisible
@@ -907,11 +909,6 @@ body {
 .bet-case-load-more:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.2); }
 :root[data-theme="light"] .bet-case-load-more { border-color:#e5e5e7 !important; background:#f2f2f4 !important; color:#050505 !important; }
 :root[data-theme="light"] .bet-case-load-more:hover { background:#e5e5e7 !important; border-color:#d4d4d8 !important; }
-
-/* "Sell for X coins" button text was a very pale emerald, illegible
-   against the pale emerald-tinted background once the page is light. */
-:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-100"],
-:root[data-theme="light"] .bet-case-modal-bar [class*="text-emerald-50"] { color:#047857 !important; }
 
 
 /* Compact referral dashboard with explicit light/dark theme tokens. */
@@ -931,4 +928,86 @@ body {
   --ref-border: #dedfe4;
   --ref-muted: #626674;
   color: #17181d;
+}
+
+/* ---------------------------------------------------------------------
+   Pack-opening reveal effects (case spinner burst + win card).
+   Kept declarative/CSS-driven: CaseOpening only toggles classes and the
+   `--rarity-color` custom property; the pullz-reduced-motion/
+   pullz-low-performance rules below mirror the existing spinner perf
+   hooks in index.html.
+   ------------------------------------------------------------------- */
+@keyframes fadeOut {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--confetti-dx, 0px), var(--confetti-dy, 40px)) scale(0.4); }
+}
+
+/* Forces its own compositor layer so the spring/scale/opacity motion in the
+   pack stage runs on the GPU instead of triggering paint on every frame —
+   this is what keeps it smooth on mid-range phones. */
+.pullz-gpu-layer {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+@keyframes pullz-pack-idle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.pullz-pack-idle-float {
+  animation: pullz-pack-idle-float 3.6s ease-in-out infinite;
+}
+html.pullz-reduced-motion .pullz-pack-idle-float,
+html.pullz-low-performance .pullz-pack-idle-float {
+  animation: none;
+}
+
+/* Suspense aura behind the pack, before it opens. `--aura-intensity` (a
+   plain 0-2ish number) is written straight to the DOM by CaseOpening —
+   a light idle base, a stronger charging base, plus a live boost while
+   SlideToOpenBar is being dragged — so this stays quiet ("nothing crazy")
+   until the moment the user actually starts pulling the slider. */
+.pullz-pack-aura {
+  --aura-intensity: 0.12;
+  position: absolute;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+}
+.pullz-pack-aura__ring {
+  position: absolute;
+  inset: 8%;
+  border-radius: 9999px;
+  background: conic-gradient(from 0deg, var(--aura-color) 0deg, transparent 70deg, var(--aura-color) 150deg, transparent 220deg, var(--aura-color) 300deg, transparent 360deg);
+  filter: blur(32px);
+  opacity: calc(0.24 + var(--aura-intensity) * 0.3);
+  animation: pullzAuraSpin calc(20s / (1 + var(--aura-intensity))) linear infinite;
+  will-change: transform, opacity;
+}
+.pullz-pack-aura__pulse {
+  position: absolute;
+  inset: 20%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--aura-color) 0%, transparent 70%);
+  opacity: calc(0.26 + var(--aura-intensity) * 0.32);
+  animation: pullzAuraPulse calc(3s / (1 + var(--aura-intensity) * 0.6)) ease-in-out infinite;
+  will-change: opacity, transform;
+}
+/* The scale term is baked into every keyframe (rather than a separate
+   static `transform`) since an active CSS animation replaces the whole
+   `transform` property each frame — a static sibling declaration would
+   just get clobbered. */
+@keyframes pullzAuraSpin {
+  from { transform: scale(calc(1 + var(--aura-intensity) * 0.06)) rotate(0deg); }
+  to { transform: scale(calc(1 + var(--aura-intensity) * 0.06)) rotate(360deg); }
+}
+@keyframes pullzAuraPulse {
+  0%, 100% { transform: scale(0.92); }
+  50% { transform: scale(1.08); }
+}
+html.pullz-reduced-motion .pullz-pack-aura__ring,
+html.pullz-reduced-motion .pullz-pack-aura__pulse {
+  animation: none;
 }
