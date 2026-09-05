@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Timestamp, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { renderMarkdownToHtml } from '../utils/markdown';
-import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_META, FooterPageKey } from '../utils/footerPagesContent';
+import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_META, FooterPageKey, normalizeFooterPageBranding } from '../utils/footerPagesContent';
 
 type ManagedFooterPage = {
   title?: string;
@@ -30,8 +30,8 @@ export const useManagedFooterPage = (pageKey: FooterPageKey) => {
         }
         const data = snapshot.data() as Record<string, ManagedFooterPage>;
         const section = data?.[pageKey];
-        setTitle(section?.title ?? fallback.title);
-        setContent(section?.published?.content || fallback.content);
+        setTitle(normalizeFooterPageBranding(section?.title ?? fallback.title));
+        setContent(normalizeFooterPageBranding(section?.published?.content || fallback.content));
         setLastUpdated(formatTimestamp(section?.lastUpdated));
       },
       (error) => {

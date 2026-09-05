@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Timestamp, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { MarkdownEditorWithPreview } from './MarkdownEditorWithPreview';
-import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_KEYS, FOOTER_PAGE_META, FooterPageKey, FooterPageSection, buildDefaultFooterPagesDoc } from '../../utils/footerPagesContent';
+import { DEFAULT_FOOTER_PAGE_CONTENT, FOOTER_PAGE_KEYS, FOOTER_PAGE_META, FooterPageKey, FooterPageSection, buildDefaultFooterPagesDoc, normalizeFooterPageBranding } from '../../utils/footerPagesContent';
 
 type FooterPagesDoc = Record<FooterPageKey, FooterPageSection>;
 type ToastState = { tone: 'success' | 'error'; message: string };
@@ -10,14 +10,14 @@ type ToastState = { tone: 'success' | 'error'; message: string };
 const normalizeSection = (section: Partial<FooterPageSection> | undefined, key: FooterPageKey): FooterPageSection => {
   const defaults = DEFAULT_FOOTER_PAGE_CONTENT[key];
   return {
-    title: section?.title ?? defaults.title,
+    title: normalizeFooterPageBranding(section?.title ?? defaults.title),
     lastUpdated: section?.lastUpdated,
     published: {
-      content: section?.published?.content ?? defaults.content,
+      content: normalizeFooterPageBranding(section?.published?.content ?? defaults.content),
       version: section?.published?.version ?? 1
     },
     draft: {
-      content: section?.draft?.content ?? section?.published?.content ?? defaults.content,
+      content: normalizeFooterPageBranding(section?.draft?.content ?? section?.published?.content ?? defaults.content),
       version: section?.draft?.version ?? section?.published?.version ?? 1,
       updatedAt: section?.draft?.updatedAt
     }
@@ -98,9 +98,10 @@ export const FooterPagesEditor: React.FC = () => {
     if (!currentSection) return;
     const pagesRef = doc(db, 'site', 'footerPages');
     const nextVersion = (currentSection.draft.version ?? currentSection.published.version ?? 0) + 1;
+    const brandedDraft = normalizeFooterPageBranding(currentDraft);
     try {
       await updateDoc(pagesRef, {
-        [`${activePage}.draft.content`]: currentDraft,
+        [`${activePage}.draft.content`]: brandedDraft,
         [`${activePage}.draft.version`]: nextVersion,
         [`${activePage}.draft.updatedAt`]: serverTimestamp()
       });
@@ -116,12 +117,13 @@ export const FooterPagesEditor: React.FC = () => {
     if (!currentSection) return;
     const pagesRef = doc(db, 'site', 'footerPages');
     const nextVersion = (currentSection.published.version ?? 0) + 1;
+    const brandedDraft = normalizeFooterPageBranding(currentDraft);
     try {
       await updateDoc(pagesRef, {
-        [`${activePage}.published.content`]: currentDraft,
+        [`${activePage}.published.content`]: brandedDraft,
         [`${activePage}.published.version`]: nextVersion,
         [`${activePage}.lastUpdated`]: serverTimestamp(),
-        [`${activePage}.draft.content`]: currentDraft,
+        [`${activePage}.draft.content`]: brandedDraft,
         [`${activePage}.draft.version`]: nextVersion,
         [`${activePage}.draft.updatedAt`]: serverTimestamp()
       });

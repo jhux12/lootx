@@ -22,6 +22,16 @@ export const FOOTER_PAGE_META: Record<FooterPageKey, { label: string; eyebrow: s
 
 export const FOOTER_PAGE_KEYS = Object.keys(FOOTER_PAGE_META) as FooterPageKey[];
 
+/**
+ * Converts legacy public-facing Pullz references that may still exist in
+ * persisted footer-page content. Internal identifiers intentionally remain
+ * untouched; this helper is only used for copy displayed on these pages.
+ */
+export const normalizeFooterPageBranding = (content: string) =>
+  content.replace(/\bpullz(\.gg)?\b/gi, (_match, domain: string | undefined) =>
+    domain ? 'ripza.gg' : 'Ripza'
+  );
+
 export const DEFAULT_FOOTER_PAGE_CONTENT: Record<FooterPageKey, { title: string; content: string }> = {
   about: {
     title: 'About Ripza',
