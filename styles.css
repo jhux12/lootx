@@ -1042,6 +1042,18 @@ body {
   100% { left: 130%; }
 }
 
+@keyframes pullz-pack-idle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.pullz-pack-idle-float {
+  animation: pullz-pack-idle-float 3.6s ease-in-out infinite;
+}
+html.pullz-reduced-motion .pullz-pack-idle-float,
+html.pullz-low-performance .pullz-pack-idle-float {
+  animation: none;
+}
+
 html.pullz-reduced-motion .pullz-pack-shockwave-ring,
 html.pullz-reduced-motion .pullz-pack-flash,
 html.pullz-reduced-motion .pullz-holo-sweep::after,
