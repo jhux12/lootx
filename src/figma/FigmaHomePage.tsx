@@ -284,7 +284,6 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, isLoadingBo
           {!filteredBoxes.length && isLoadingBoxes ? <div className="bet-home-empty" role="status"><Sparkles /><strong>Loading packs…</strong><span>Getting the latest packs.</span></div> : null}
           {!filteredBoxes.length && !isLoadingBoxes && !hasBoxLoadError ? <div className="bet-home-empty"><Sparkles /><strong>No packs found</strong><span>Try another category.</span></div> : null}
         </div>
-        <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
 
       <section className="bet-home-how-it-works" aria-labelledby="home-how-it-works-title">

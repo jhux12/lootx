@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { DEFAULT_SEO_SETTINGS, SeoSettings, normalizeSeoSettings } from '../utils/seoSettings';
 import { ViewState } from '../types';
 
-const STATIC_IMAGE = 'https://ripza.gg/assets/png/pullz-horizontal-dark-2400.png';
+const STATIC_IMAGE = 'https://www.ripza.gg/assets/png/ripza-horizontal-dark-2400.png';
 // Search currently opens in-app rather than on a crawlable public route.
 const HAS_PUBLIC_SEARCH_PAGE = false;
 const meta = (selector: string, attrs: Record<string, string>, enabled = true) => {
