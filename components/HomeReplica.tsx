@@ -20,12 +20,17 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ demoBoxId, trendingBox
   const performanceMode = usePerformanceMode();
   const [homepageBoxes, setHomepageBoxes] = useState<MysteryBox[]>([]);
   const [configuredBoxes, setConfiguredBoxes] = useState<MysteryBox[]>([]);
+  const [summariesLoading, setSummariesLoading] = useState(true);
   const [summaryError, setSummaryError] = useState(false);
   const summaryLimit = performanceMode.isMobile ? 12 : 24;
 
   const loadSummaries = useCallback(() => {
+    setSummariesLoading(true);
     setSummaryError(false);
-    void getHomepageSummaries(summaryLimit).then(setHomepageBoxes).catch(() => setSummaryError(true));
+    void getHomepageSummaries(summaryLimit)
+      .then(setHomepageBoxes)
+      .catch(() => setSummaryError(true))
+      .finally(() => setSummariesLoading(false));
   }, [summaryLimit]);
 
   useEffect(() => loadSummaries(), [loadSummaries]);
@@ -53,7 +58,13 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ demoBoxId, trendingBox
   return (
     <div className="lootx-page-shell min-h-screen">
       {summaryError ? <div className="bet-home-error" role="status">Packs are temporarily unavailable. <button type="button" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div> : null}
-      <FigmaHomePage boxes={boxes} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
+      <FigmaHomePage
+        boxes={boxes}
+        isLoadingBoxes={summariesLoading}
+        hasBoxLoadError={summaryError}
+        onOpenBox={onOpenBox}
+        onViewAllBoxes={onViewAllBoxes}
+      />
     </div>
   );
 };

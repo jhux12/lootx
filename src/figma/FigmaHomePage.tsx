@@ -10,6 +10,8 @@ import { BetLiveWinsTicker } from './BetLiveWinsTicker';
 
 type FigmaHomePageProps = {
   boxes: MysteryBox[];
+  isLoadingBoxes?: boolean;
+  hasBoxLoadError?: boolean;
   onOpenBox: (boxId: string, isFree?: boolean) => void;
   onViewAllBoxes: () => void;
 };
@@ -89,7 +91,7 @@ const BoxTile: React.FC<{ box: MysteryBox; onOpen: () => void; isFreeSignupBox?:
 ));
 BoxTile.displayName = 'BoxTile';
 
-export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, onViewAllBoxes }) => {
+export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, isLoadingBoxes = false, hasBoxLoadError = false, onOpenBox, onViewAllBoxes }) => {
   const { isAuthenticated, openAuthModal, user } = useAuth();
   const { balance } = useWallet();
   const { stripeSettings } = useBoxes();
@@ -279,7 +281,8 @@ export const FigmaHomePage: React.FC<FigmaHomePageProps> = ({ boxes, onOpenBox, 
               onOpen={() => onOpenBox(box.id, Boolean(box.isDaily))}
             />
           ))}
-          {!filteredBoxes.length ? <div className="bet-home-empty"><Sparkles /><strong>No packs found</strong><span>Try another category.</span></div> : null}
+          {!filteredBoxes.length && isLoadingBoxes ? <div className="bet-home-empty" role="status"><Sparkles /><strong>Loading packs…</strong><span>Getting the latest packs.</span></div> : null}
+          {!filteredBoxes.length && !isLoadingBoxes && !hasBoxLoadError ? <div className="bet-home-empty"><Sparkles /><strong>No packs found</strong><span>Try another category.</span></div> : null}
         </div>
         <a className="bet-trustpilot" href="https://www.trustpilot.com" target="_blank" rel="noreferrer" aria-label="View Trustpilot"><img src="https://a.storyblok.com/f/91079/4000x2000/ea4fb218a1/trustpilot-logo.png" alt="Trustpilot" loading="lazy" decoding="async" /></a>
       </section>
