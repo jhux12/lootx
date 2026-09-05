@@ -237,7 +237,7 @@ export default function UpgraderPage() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isFairDetailsOpen, setIsFairDetailsOpen] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState('pullz-player');
+  const [clientSeed, setClientSeed] = useState('ripza-player');
   const [fairNonce, setFairNonce] = useState(0);
   const [isSyncingFair, setIsSyncingFair] = useState(false);
   const [lastProof, setLastProof] = useState<UpgraderProvablyFairProof | null>(null);

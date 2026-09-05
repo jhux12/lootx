@@ -4,7 +4,7 @@ import { getBearerToken, readJsonBody, sendJson } from './_lib/http.js';
 import { computeUpgradeRoll, randomSeed, sha256 } from './_lib/provablyFair.js';
 import { consumeRateLimit, getRateLimitKey } from './_utils/ratelimit.js';
 
-const DEFAULT_CLIENT_SEED = 'pullz-player';
+const DEFAULT_CLIENT_SEED = 'ripza-player';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);

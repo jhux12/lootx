@@ -28,3 +28,20 @@ test('persisted footer page titles and content have legacy branding normalized',
   assert.match(editor, /published\.content`\]: brandedDraft/);
   assert.match(editor, /draft\.content`\]: brandedDraft/);
 });
+
+test('provably fair features use the Ripza default client seed', async () => {
+  const paths = [
+    'api/_lib/provablyFairState.js',
+    'api/attempt-upgrade.js',
+    'api/open-case.js',
+    'components/CaseOpening.tsx',
+    'components/ProvablyFairPage.tsx',
+    'src/pages/UpgraderPage.tsx'
+  ];
+  const files = await Promise.all(paths.map(source));
+
+  for (const file of files) {
+    assert.match(file, /ripza-player/);
+    assert.doesNotMatch(file, /pullz-?player/);
+  }
+});

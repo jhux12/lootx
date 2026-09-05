@@ -11,7 +11,7 @@ import { sendMetaEvent } from './_lib/metaCapi.js';
 import { markReferralFirstGameQualified } from './_lib/referrals.js';
 import { requireVerifiedPhone } from './_utils/phoneVerification.js';
 
-const DEFAULT_CLIENT_SEED = 'pullz-player';
+const DEFAULT_CLIENT_SEED = 'ripza-player';
 const DEFAULT_NEW_USER_COINS = 0;
 
 const normalizeSizes = (sizes = []) =>

@@ -429,8 +429,8 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isSellingItem, setIsSellingItem] = useState(false);
   const [isDemoSpin, setIsDemoSpin] = useState(false);
   const [serverSeedHash, setServerSeedHash] = useState('');
-  const [clientSeed, setClientSeed] = useState('pullz-player');
-  const [clientSeedInput, setClientSeedInput] = useState('pullz-player');
+  const [clientSeed, setClientSeed] = useState('ripza-player');
+  const [clientSeedInput, setClientSeedInput] = useState('ripza-player');
   const [nonce, setNonce] = useState(0);
   const [lastRoll, setLastRoll] = useState<RollData | null>(null);
   const [lastReveal, setLastReveal] = useState<RevealData | null>(null);
