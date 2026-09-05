@@ -468,7 +468,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({ battleId }) => {
         <div className="sticky top-14 z-40 mb-3 rounded-xl border border-white/10 bg-[#0b1220]/95 p-2 backdrop-blur sm:p-3">
           <div className="flex flex-wrap items-center gap-2">
             <button onClick={() => setView({ type: 'BATTLES' })} className="rounded bg-[#162238] px-3 py-2 text-xs text-gray-200"><ChevronLeft className="mr-1 inline h-4 w-4" />Back</button>
-            <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-blue" />Box Battle</h2>
+            <h2 className="text-sm font-black text-white sm:text-base"><Swords className="mr-1 inline h-4 w-4 text-brand-blue" />Pack Battle</h2>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.mode || 'REGULAR'}</span>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.format || '1V1'}</span>
             <span className="rounded border border-white/10 px-2 py-1 text-[11px] text-gray-300">{battle.winConditionLabel || (battle.mode === 'CRAZY' ? 'Lowest Total' : 'Highest Total')}</span>

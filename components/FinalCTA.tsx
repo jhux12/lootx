@@ -22,7 +22,7 @@ export const FinalCTA: React.FC = () => {
   return (
     <section>
       <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-[#205DD7]/15 via-[#101724] to-sky-500/15 p-8 text-center sm:p-10">
-        <h2 className="text-2xl font-semibold text-white">Ready to open your first box?</h2>
+        <h2 className="text-2xl font-semibold text-white">Ready to open your first pack?</h2>
         <p className="mt-2 text-sm text-gray-300">
           Join thousands of players opening premium drops every day.
         </p>

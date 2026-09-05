@@ -157,7 +157,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
 
         <div className="mt-5 flex flex-wrap gap-2">
           {([
-            ['pending', 'Pending Review'], ['failed', 'Failed'], ['locked', 'Locked'], ['enabled', 'Auto-update enabled'], ['danger', 'Box margin danger']
+            ['pending', 'Pending Review'], ['failed', 'Failed'], ['locked', 'Locked'], ['enabled', 'Auto-update enabled'], ['danger', 'Pack margin danger']
           ] as [FilterKey, string][]).map(([key, label]) => (
             <button key={key} onClick={() => setFilters((prev) => ({ ...prev, [key]: !prev[key] }))} className={`rounded-full border px-3 py-1.5 text-xs font-bold ${filters[key] ? 'border-cyan-400 bg-cyan-400/10 text-cyan-100' : 'border-gray-700 text-gray-400'}`}>{label}</button>
           ))}
@@ -180,7 +180,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
                       <h3 className="truncate text-sm font-bold text-white">{item.name}</h3>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${statusClass(pricing.updateStatus, pricing.valueLocked)}`}>{pricing.valueLocked ? 'Locked' : (pricing.updateStatus || 'idle').replace('_', ' ')}</span>
-                        {dangerItemIds.has(item.id) && <span className="rounded-full border border-red-400/40 bg-red-400/10 px-2 py-1 text-[10px] font-bold uppercase text-red-200">Box danger</span>}
+                        {dangerItemIds.has(item.id) && <span className="rounded-full border border-red-400/40 bg-red-400/10 px-2 py-1 text-[10px] font-bold uppercase text-red-200">Pack danger</span>}
                       </div>
                       {pricing.lastError && <p className="mt-2 text-xs text-red-300">{pricing.lastError}</p>}
                     </div>
@@ -222,7 +222,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
       </section>
 
       <section className="rounded-2xl border border-gray-800 bg-[#131720] p-4 sm:p-6">
-        <div className="mb-4 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-300" /><h2 className="text-xl font-black text-white">Box Value Audit</h2></div>
+        <div className="mb-4 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-300" /><h2 className="text-xl font-black text-white">Pack Value Audit</h2></div>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {boxes.map((box) => {
             const audit = box.marketValueAudit;
@@ -232,7 +232,7 @@ export const MarketPricingAdminSection: React.FC<Props> = ({ items, boxes }) => 
                 <span className={`w-fit rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${auditClass(audit?.status)}`}>{audit?.status || 'not checked'}</span>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
-                <div><span className="text-xs text-gray-500">Box price</span><p className="font-bold text-white">{audit?.boxPriceCoins ?? box.price}</p></div>
+                <div><span className="text-xs text-gray-500">Pack price</span><p className="font-bold text-white">{audit?.boxPriceCoins ?? box.price}</p></div>
                 <div><span className="text-xs text-gray-500">EV</span><p className="font-bold text-white">{audit?.expectedValueCoins ?? '—'}</p></div>
                 <div><span className="text-xs text-gray-500">Margin</span><p className="font-bold text-white">{audit?.marginCoins ?? '—'}</p></div>
                 <div><span className="text-xs text-gray-500">Margin %</span><p className="font-bold text-white">{audit ? `${Math.round(audit.marginPercent * 1000) / 10}%` : '—'}</p></div>

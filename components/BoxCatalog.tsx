@@ -212,7 +212,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24).then((page) => {
       if (!active || requestId !== catalogRequestRef.current) return;
       setBoxes(page.boxes); setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
-    }).catch(() => { if (active) setCatalogError('Unable to load boxes. Please retry.'); }).finally(() => { if (active) setCatalogLoading(false); });
+    }).catch(() => { if (active) setCatalogError('Unable to load packs. Please retry.'); }).finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
   }, [performanceMode.isMobile]);
   const loadMoreCatalog = () => {
@@ -221,7 +221,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
     void getBoxSummaryPage(performanceMode.isMobile ? 12 : 24, catalogCursor).then((page) => {
       setBoxes((current) => Array.from(new Map([...current, ...page.boxes].map((box) => [box.id, box])).values()));
       setCatalogCursor(page.cursor); setCatalogEnd(!page.hasMore);
-    }).catch(() => setCatalogError('Unable to load more boxes. Please retry.')).finally(() => setCatalogLoading(false));
+    }).catch(() => setCatalogError('Unable to load more packs. Please retry.')).finally(() => setCatalogLoading(false));
   };
   // Categories are filtered client-side from whatever pages have been
   // fetched so far, so a category could look incomplete (or empty) just
@@ -486,11 +486,11 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               </button>
             </div>
             <p className="text-sm text-slate-300 sm:text-base">
-              Open boxes. Win real items. Keep them or sell back instantly.
+              Open packs. Win real items. Keep them or sell back instantly.
             </p>
             <div className="mt-5 space-y-3">
               {[
-                ['1', 'Pick a box', 'Browse boxes by category and choose one that fits your budget.'],
+                ['1', 'Pick a pack', 'Browse packs by category and choose one that fits your budget.'],
                 ['2', 'Open with coins', 'Use coins to open. Every result is generated fairly.'],
                 ['3', 'Keep or sell back', 'Keep your item for shipping, or sell it back for instant coins.']
               ].map(([step, title, description]) => (
@@ -546,9 +546,9 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
           <span className="bet-boxes-hero-orb bet-boxes-hero-orb-4" aria-hidden="true" />
           <span className="bet-boxes-hero-orb bet-boxes-hero-orb-5" aria-hidden="true" />
           <div className="bet-boxes-hero-copy">
-            <p className="bet-boxes-hero-eyebrow">Ripza Boxes</p>
+            <p className="bet-boxes-hero-eyebrow">Ripza Packs</p>
             <h1 id="boxes-hero-title">Open. Pull. Collect.</h1>
-            <p className="bet-boxes-hero-sub">Every box is provably fair. Keep what you pull, or sell it back instantly.</p>
+            <p className="bet-boxes-hero-sub">Every pack is provably fair. Keep what you pull, or sell it back instantly.</p>
           </div>
           <img
             className="bet-boxes-hero-art"
@@ -575,12 +575,12 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               onChange={(event) => setSearchQuery(event.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
-              aria-label="Search boxes"
+              aria-label="Search packs"
             />
             {searchQuery && <button type="button" onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[#7a7a88] transition hover:bg-white/5 hover:text-[#f2f2f5]" aria-label="Clear search"><X className="h-[18px] w-[18px]" /></button>}
           </div>
           <div className="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-0.5">
-            <button type="button" onClick={() => setIsSortOpen(true)} className="bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl p-1.5 text-center transition sm:w-[84px] sm:p-2" aria-label="Sort boxes" aria-haspopup="dialog" aria-expanded={isSortOpen}>
+            <button type="button" onClick={() => setIsSortOpen(true)} className="bet-filter-tile flex aspect-square w-[72px] shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl p-1.5 text-center transition sm:w-[84px] sm:p-2" aria-label="Sort packs" aria-haspopup="dialog" aria-expanded={isSortOpen}>
               <ListFilter className="h-6 w-6 text-[#9a9aa8] sm:h-7 sm:w-7" aria-hidden="true" />
               <span className="w-full truncate text-[10px] font-semibold leading-tight sm:text-[11px]">
                 {SORT_OPTIONS.find((option) => option.id === sortOption)?.label ?? 'Featured'}
@@ -677,7 +677,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                 disabled={catalogLoading}
                 className="min-h-11 rounded-xl border border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/[0.08] active:scale-[0.98]"
               >
-                {catalogLoading ? 'Loading boxes…' : 'Load more boxes'}
+                {catalogLoading ? 'Loading packs…' : 'Load more packs'}
               </button>
             </div>
           )}
@@ -687,7 +687,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5">
                 <Search className="h-6 w-6 text-[var(--bet-orange)]" />
               </div>
-              <h2 className="mb-2 text-2xl font-bold text-white">No boxes match this view yet</h2>
+              <h2 className="mb-2 text-2xl font-bold text-white">No packs match this view yet</h2>
               <p className="mx-auto mb-6 max-w-xl text-sm text-neutral-400 sm:text-base">
                 Try clearing the current filters, switching to another sort, or jump back into the full catalog to keep browsing.
               </p>
@@ -705,7 +705,7 @@ export const BoxCatalog: React.FC<BoxCatalogProps> = () => {
                   }}
                   className="w-full rounded-xl border border-white/10 px-5 py-3 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/5 sm:w-auto"
                 >
-                  Return to all boxes
+                  Return to all packs
                 </button>
                 <button type="button" onClick={() => setSortOption('featured')} className="w-full rounded-xl border border-white/10 px-5 py-3 text-sm font-bold text-white transition hover:border-white/20 hover:bg-white/5 sm:w-auto">
                   View featured sort

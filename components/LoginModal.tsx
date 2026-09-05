@@ -576,7 +576,7 @@ export const LoginModal: React.FC = () => {
                     <div className="min-w-0">
                       <p className="text-base font-black leading-6 text-white">Please check your email to confirm</p>
                       <p className="mt-1 leading-5 text-emerald-50/90">
-                        We sent a confirmation link{email.trim() ? <> to <span className="break-all font-semibold text-white">{email.trim()}</span></> : null}. Tap that link before signing in or claiming your free box.
+                        We sent a confirmation link{email.trim() ? <> to <span className="break-all font-semibold text-white">{email.trim()}</span></> : null}. Tap that link before signing in or claiming your free pack.
                       </p>
                       <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-emerald-100/80">Already clicked Register? This is your next step.</p>
                     </div>

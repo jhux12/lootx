@@ -52,7 +52,7 @@ export const HomeReplica: React.FC<HomeReplicaProps> = ({ demoBoxId, trendingBox
 
   return (
     <div className="lootx-page-shell min-h-screen">
-      {summaryError ? <div className="bet-home-error" role="status">Boxes are temporarily unavailable. <button type="button" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div> : null}
+      {summaryError ? <div className="bet-home-error" role="status">Packs are temporarily unavailable. <button type="button" onClick={() => { invalidateHomepageSummaries(summaryLimit); loadSummaries(); }}>Retry</button></div> : null}
       <FigmaHomePage boxes={boxes} onOpenBox={onOpenBox} onViewAllBoxes={onViewAllBoxes} />
     </div>
   );

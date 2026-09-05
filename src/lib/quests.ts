@@ -20,7 +20,7 @@ export type QuestProgressStats = {
 };
 
 export const DEFAULT_QUEST_RULES: QuestRule[] = [
-  { id: 'open-3-boxes', title: 'Unboxing mission', description: 'Open 3 boxes today.', type: 'unboxing_count', target: 3, rewardCoins: 50, enabled: true },
+  { id: 'open-3-boxes', title: 'Unboxing mission', description: 'Open 3 packs today.', type: 'unboxing_count', target: 3, rewardCoins: 50, enabled: true },
   { id: 'sell-2-items', title: 'Sell back mission', description: 'Sell back 2 items today.', type: 'sell_back_count', target: 2, rewardCoins: 40, enabled: true },
   { id: 'sell-200-coins', title: 'Sell back value mission', description: 'Sell back 200 coins worth today.', type: 'sell_back_value', target: 200, rewardCoins: 60, enabled: true },
   { id: 'unbox-rare', title: 'Rarity mission', description: 'Unbox 1 rare item today.', type: 'unbox_rarity', target: 1, rewardCoins: 80, rarity: 'rare', enabled: true }

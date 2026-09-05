@@ -120,7 +120,7 @@ export default async function handler(req, res) {
       const resolvedTargetCategory = toSafeString(targetItem.upgraderCategory || targetItem.category, '');
       if (Array.isArray(settings.categoriesEnabled) && settings.categoriesEnabled.length > 0 && !settings.categoriesEnabled.includes(resolvedTargetCategory)) throw new Error('Target category is currently disabled.');
       if (Array.isArray(settings.raritiesEnabled) && settings.raritiesEnabled.length > 0 && !settings.raritiesEnabled.includes(targetItem.rarity)) throw new Error('Target rarity is currently disabled.');
-      if (sourceItem.source === 'freebox' && settings.allowFromFreeBox === false) throw new Error('Free box items are blocked for upgrades.');
+      if (sourceItem.source === 'freebox' && settings.allowFromFreeBox === false) throw new Error('Free pack items are blocked for upgrades.');
       const allowedSourceItemIds = Array.isArray(settings.sourceItemIdsEnabled) ? settings.sourceItemIdsEnabled.map((entry) => String(entry)) : [];
       if (allowedSourceItemIds.length > 0 && !allowedSourceItemIds.includes(String(sourceItem.id ?? ''))) throw new Error('Source item is not enabled for upgrades.');
       if (sourceItem.source === 'promo' && settings.allowFromPromo === false) throw new Error('Promo items are blocked for upgrades.');

@@ -71,14 +71,14 @@ const DEFAULT_CONFIG: BoxesPageConfig = {
   tabs: {
     enabled: true,
     items: [
-      { id: 'official', label: 'Our Mystery Boxes', enabled: true },
-      { id: 'community', label: 'Community Mystery Boxes', enabled: true },
+      { id: 'official', label: 'Our Mystery Packs', enabled: true },
+      { id: 'community', label: 'Community Mystery Packs', enabled: true },
       { id: 'category', label: 'Browse by Category', enabled: true }
     ],
     defaultTabId: 'official'
   },
   filters: {
-    search: { enabled: true, placeholder: 'Search boxes' },
+    search: { enabled: true, placeholder: 'Search packs' },
     category: { enabled: true, default: 'All', options: [], cards: [] },
     sort: { enabled: true, default: 'Popular', options: [] },
     tagChips: { enabled: true, label: 'Popular tags', popularTags: [] },
@@ -259,7 +259,7 @@ export const subscribeBoxesPageConfig = (
       onData(normalizeBoxesPageConfig(data));
     },
     (error) => {
-      console.error('Boxes page config snapshot failed', error);
+      console.error('Packs page config snapshot failed', error);
       if (onError) onError(error as Error);
     }
   );

@@ -2,7 +2,7 @@ import pullzTicketImage from './assets/png/pullz-icon-color-2048.png';
 import { Battle, ChatMessage, LiveDrop, MysteryBox, CaseItem, User } from "./types";
 
 export const XP_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/WebIcons%2Fsd%20(27).png?alt=media&token=475e5bf6-136e-45ad-9c7f-7fcb88b9fa02';
-export const COIN_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Untitled%20design%20(33).png?alt=media&token=11882c1a-5b30-4025-9056-46d4123c5381';
+export const COIN_ICON = 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/packswebp%2Fripzacoin.webp?alt=media&token=e04bf3dc-a5b1-4b7e-89e1-125e144a3013';
 
 export const MOCK_USERS: User[] = [
   { id: '1', name: 'MarieJane', avatar: 'https://picsum.photos/id/64/100/100', level: 5, xp: 1250 },
@@ -33,7 +33,7 @@ export const CASE_ITEMS: CaseItem[] = [
 ];
 
 export const MYSTERY_BOXES: MysteryBox[] = [
-  { id: 'supreme', name: 'Box Supreme', price: 50.00, image: 'https://picsum.photos/id/175/300/300', accentColor: '#ef4444', tag: 'hot', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
+  { id: 'supreme', name: 'Pack Supreme', price: 50.00, image: 'https://picsum.photos/id/175/300/300', accentColor: '#ef4444', tag: 'hot', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
   { id: 'tech', name: 'Tech Beast', price: 150.00, image: 'https://picsum.photos/id/2/300/300', accentColor: '#3b82f6', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
   { id: 'sneaker', name: 'Sneakerhead', price: 95.00, image: 'https://picsum.photos/id/21/300/300', accentColor: '#22c55e', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },
   { id: 'watch', name: 'Timekeeper', price: 290.00, image: 'https://picsum.photos/id/180/300/300', accentColor: '#eab308', items: CASE_ITEMS, targetEV: 0.85, riskLevel: 50 },

@@ -898,7 +898,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
     }
     if (isPullPassBoxReward(item)) {
       return {
-        label: item.status === 'opened' ? 'Opened' : 'Open Box',
+        label: item.status === 'opened' ? 'Opened' : 'Open Pack',
         disabled: item.status !== 'available' || !item.boxId,
         onClick: () => {
           if (item.boxId) {
@@ -943,7 +943,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
           <div className="mt-5 grid sm:mx-auto sm:max-w-2xl grid-cols-3 divide-x divide-white/[0.06]">
             <div className="px-2 text-center"><CoinAmount amount={balance} formatOptions={{ maximumFractionDigits: 0 }} className="justify-center text-base font-black text-white sm:text-lg" iconClassName="h-3.5 w-3.5" /><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Coins</p></div>
             <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{activeInventory.length}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Items</p></div>
-            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{boxesOpened}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Boxes Opened</p></div>
+            <div className="px-2 text-center"><p className="text-base font-black sm:text-lg">{boxesOpened}</p><p className="mt-1 text-[10px] font-semibold text-[#66666d]">Packs Opened</p></div>
           </div>
         </section>
 

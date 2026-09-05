@@ -71,7 +71,7 @@ export const HomeHeroSlidesEditor: React.FC = () => {
         <div>
           <h3 className="text-lg font-bold text-white">Hero slider</h3>
           <p className="mt-1 text-sm text-gray-400">
-            The rotating promo cards at the top of the homepage. Each slide has its own background (color, gradient, or image), link, headline text, and small "Shop now"-style label. Up to 6 slides. Leave empty to fall back to the top 3 boxes automatically.
+            The rotating promo cards at the top of the homepage. Each slide has its own background (color, gradient, or image), link, headline text, and small "Shop now"-style label. Up to 6 slides. Leave empty to fall back to the top 3 packs automatically.
           </p>
         </div>
         <button
@@ -208,7 +208,7 @@ export const HomeHeroSlidesEditor: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Box art image URL</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase text-gray-500">Pack art image URL</label>
                   <Input
                     type="text"
                     value={slide.image}
@@ -223,7 +223,7 @@ export const HomeHeroSlidesEditor: React.FC = () => {
                     type="text"
                     value={slide.link}
                     onChange={(event) => updateSlide(slide.id, { link: event.target.value })}
-                    placeholder="e.g. a box slug, /boxes, or a full URL"
+                    placeholder="e.g. a pack slug, /boxes, or a full URL"
                     className="w-full bg-[#080b10] border border-gray-700 rounded p-2 text-xs text-white"
                   />
                 </div>
@@ -285,7 +285,7 @@ export const HomeHeroSlidesEditor: React.FC = () => {
 
         {draft.length === 0 && (
           <p className="rounded-lg border border-dashed border-gray-700 p-4 text-center text-xs text-gray-500">
-            No custom hero slides yet — the homepage will show your top 3 boxes automatically.
+            No custom hero slides yet — the homepage will show your top 3 packs automatically.
           </p>
         )}
 

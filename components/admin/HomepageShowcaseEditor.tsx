@@ -119,7 +119,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
   };
 
   const handleDemoBoxChange = (value: string) => {
-    persistRows(showcaseRows, 'Demo spinner box updated.', value);
+    persistRows(showcaseRows, 'Demo spinner pack updated.', value);
   };
 
   const handleTrustImageSave = () => {
@@ -130,7 +130,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
     const nextTrendingBoxIds = trendingBoxIds.includes(boxId)
       ? trendingBoxIds.filter((id) => id !== boxId)
       : [...trendingBoxIds, boxId].slice(0, 6);
-    persistRows(showcaseRows, 'Trending boxes updated.', demoBoxId, trustImageUrl, nextTrendingBoxIds);
+    persistRows(showcaseRows, 'Trending packs updated.', demoBoxId, trustImageUrl, nextTrendingBoxIds);
   };
 
   const handleDeleteRow = (rowId: string) => {
@@ -160,7 +160,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
     const row = showcaseRows.find((entry) => entry.id === rowId);
     if (!row || row.type !== 'boxes') return;
     if (row.boxIds.includes(boxId)) {
-      showToast('error', 'This box is already in the row.');
+      showToast('error', 'This pack is already in the row.');
       return;
     }
     if (row.boxIds.length >= MAX_SHOWCASE_BOXES) {
@@ -168,12 +168,12 @@ export const HomepageShowcaseEditor: React.FC = () => {
       return;
     }
     const nextRows = addBoxToRow(showcaseRows, rowId, boxId);
-    persistRows(nextRows, 'Box added.');
+    persistRows(nextRows, 'Pack added.');
   };
 
   const handleRemoveBox = (rowId: string, boxId: string) => {
     const nextRows = removeBoxFromRow(showcaseRows, rowId, boxId);
-    persistRows(nextRows, 'Box removed.');
+    persistRows(nextRows, 'Pack removed.');
   };
 
   const handleMoveBox = (rowId: string, boxId: string, direction: 'left' | 'right') => {
@@ -283,7 +283,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
         <div>
           <h2 className="text-xl font-bold text-white">Homepage Showcase</h2>
           <p className="text-sm text-gray-400">
-            Curate the rows that appear on the homepage and manage the boxes inside each row.
+            Curate the rows that appear on the homepage and manage the packs inside each row.
           </p>
         </div>
         <button
@@ -298,12 +298,12 @@ export const HomepageShowcaseEditor: React.FC = () => {
       <div className="grid grid-cols-1 gap-4 rounded-xl border border-gray-800 bg-[#131720] p-4 lg:grid-cols-3">
         <div>
           <label className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Demo spinner box (homepage hero)
+            Demo spinner pack (homepage hero)
             <Select
               value={demoBoxId}
               onChange={(event) => handleDemoBoxChange(event.target.value)}
             >
-              <option value="">Auto (first available box)</option>
+              <option value="">Auto (first available pack)</option>
               {sortedBoxes.map((box) => (
                 <option key={`demo-${box.id}`} value={box.id}>
                   {box.name}
@@ -312,7 +312,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
             </Select>
           </label>
           <p className="mt-2 text-xs text-gray-500">
-            This box powers the featured card and the demo spinner item pool on the homepage.
+            This pack powers the featured card and the demo spinner item pool on the homepage.
           </p>
         </div>
 
@@ -327,7 +327,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
             />
           </label>
           <p className="mt-2 text-xs text-gray-500">
-            Optional small image shown under the Open My Free Box button on the spin landing page.
+            Optional small image shown under the Open My Free Pack button on the spin landing page.
           </p>
           {trustImageUrl.trim() && (
             <img
@@ -341,7 +341,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
 
         <div>
           <div className="space-y-2 text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Trending boxes (homepage)
+            Trending packs (homepage)
             <div className="mt-2 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-gray-800 bg-[#0b0e14] p-2">
               {sortedBoxes.map((box) => {
                 const isSelected = trendingBoxIds.includes(box.id);
@@ -362,7 +362,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
             </div>
           </div>
           <p className="mt-2 text-xs text-gray-500">
-            Select up to 6 boxes for the mobile homepage Trending Boxes grid.
+            Select up to 6 packs for the mobile homepage Trending Packs grid.
           </p>
         </div>
       </div>
@@ -423,7 +423,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
                             handleRowTypeChange(row.id, event.target.value as ShowcaseRow['type'])
                           }
                         >
-                          <option value="boxes">Boxes</option>
+                          <option value="boxes">Packs</option>
                           <option value="categories">Categories</option>
                         </Select>
                       </label>
@@ -507,9 +507,9 @@ export const HomepageShowcaseEditor: React.FC = () => {
                     <>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <h4 className="text-sm font-semibold text-white">Selected boxes</h4>
+                          <h4 className="text-sm font-semibold text-white">Selected packs</h4>
                           <p className="text-xs text-gray-400">
-                            {row.boxIds.length} / {MAX_SHOWCASE_BOXES} boxes selected
+                            {row.boxIds.length} / {MAX_SHOWCASE_BOXES} packs selected
                           </p>
                         </div>
                         <button
@@ -520,13 +520,13 @@ export const HomepageShowcaseEditor: React.FC = () => {
                           }}
                           className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-gray-200 transition hover:border-white/30 hover:text-white"
                         >
-                          <Plus className="h-3.5 w-3.5" /> Add box
+                          <Plus className="h-3.5 w-3.5" /> Add pack
                         </button>
                       </div>
 
                       {selectedBoxes.length === 0 ? (
                         <div className="rounded-lg border border-gray-800 bg-[#0b0e14] p-4 text-xs text-gray-400">
-                          No boxes selected yet. Add boxes to populate this row.
+                          No packs selected yet. Add packs to populate this row.
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
@@ -570,7 +570,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
                             <Input
                               value={boxSearch}
                               onChange={(event) => setBoxSearch(event.target.value)}
-                              placeholder="Search boxes..."
+                              placeholder="Search packs..."
                               className="bg-[#050811]"
                             />
                             <button
@@ -584,7 +584,7 @@ export const HomepageShowcaseEditor: React.FC = () => {
                           <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                             {availableBoxes.length === 0 ? (
                               <div className="rounded-lg border border-gray-800 bg-[#050811] p-3 text-xs text-gray-400 sm:col-span-2">
-                                No boxes match this search.
+                                No packs match this search.
                               </div>
                             ) : (
                               availableBoxes.map((box) => (

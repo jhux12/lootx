@@ -16,7 +16,7 @@ const faqs = [
   {
     id: 'how-pullz-works',
     question: 'How does Ripza work?',
-    answer: 'Choose a box, open it instantly, and reveal a random collectible. Keep your item and ship it to your door, or sell it back for coins to continue opening boxes.'
+    answer: 'Choose a pack, open it instantly, and reveal a random collectible. Keep your item and ship it to your door, or sell it back for coins to continue opening packs.'
   },
   {
     id: 'real-cards',
@@ -31,17 +31,17 @@ const faqs = [
   {
     id: 'sell-items-back',
     question: 'Can I sell items back?',
-    answer: "Yes. If you don't want to ship an item, you can instantly sell it back for coins and use those coins to open more boxes."
+    answer: "Yes. If you don't want to ship an item, you can instantly sell it back for coins and use those coins to open more packs."
   },
   {
     id: 'random-results',
-    question: 'Are the box results random?',
-    answer: 'Yes. Ripza uses a provably fair system so box outcomes cannot be manipulated. You can verify each result using the provided fairness information.'
+    question: 'Are the pack results random?',
+    answer: 'Yes. Ripza uses a provably fair system so pack outcomes cannot be manipulated. You can verify each result using the provided fairness information.'
   },
   {
     id: 'what-can-i-win',
     question: 'What can I win?',
-    answer: 'Boxes may contain Pokémon cards, graded cards, sealed products, collectibles, and other featured items depending on the box you choose.'
+    answer: 'Packs may contain Pokémon cards, graded cards, sealed products, collectibles, and other featured items depending on the pack you choose.'
   }
 ];
 
@@ -190,7 +190,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
             )) : (
               <div className="rounded-xl border border-white/[0.06] bg-[#1b2024]/70 px-4 py-5 text-center">
                 <p className="text-sm font-bold text-white">No active leaderboard entries yet.</p>
-                <p className="mt-1 text-xs leading-5 text-slate-400">Open boxes to be one of the first players on the current board.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">Open packs to be one of the first players on the current board.</p>
               </div>
             )}
           </div>
@@ -199,7 +199,7 @@ export const HomeReplicaBelowFold: React.FC<HomeReplicaBelowFoldProps> = ({ boxe
         {showSignupCta && (
           <section className="min-h-[150px] rounded-xl bg-[#22282c] p-5">
             <h2 className="text-xl font-black">Get started with Ripza</h2>
-            <p className="mt-2 text-sm text-slate-300">Sign up and open mystery boxes in seconds.</p>
+            <p className="mt-2 text-sm text-slate-300">Sign up and open mystery packs in seconds.</p>
             <button
               onClick={onSignUp}
               className="mt-4 w-full rounded-lg bg-gradient-to-r from-[#205DD7] via-blue-600 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-[0_10px_24px_rgba(32,93,215,0.35)] transition-all duration-200 hover:brightness-110 sm:w-auto"

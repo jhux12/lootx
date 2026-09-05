@@ -23,7 +23,7 @@ type BoxGridProps = {
 };
 
 export const BoxGrid: React.FC<BoxGridProps> = ({
-  title = 'Popular Mystery Boxes',
+  title = 'Popular Mystery Packs',
   boxes: boxesOverride,
   viewAllQuery,
   viewAllLabel = 'View all',

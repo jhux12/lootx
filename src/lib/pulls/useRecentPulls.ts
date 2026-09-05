@@ -63,7 +63,7 @@ export const useRecentPulls = (pullLimit = 30) => {
               itemImage: prize.image,
               rarity: prize.rarity ?? 'common',
               value: Number(prize.value ?? 0),
-              boxName: data.boxName ?? 'Mystery Box',
+              boxName: data.boxName ?? 'Mystery Pack',
               obtainedAt: toMillis(data.createdAt),
             };
           })

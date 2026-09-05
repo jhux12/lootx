@@ -470,7 +470,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           openAuthModal("register");
         }}
         className="group relative inline-flex h-10 shrink-0 items-center gap-2 overflow-hidden rounded-[10px] bg-[linear-gradient(135deg,#6225ef_0%,#4f7ff4_100%)] px-4 text-[13px] font-bold text-white shadow-[0_14px_34px_rgba(79,127,244,0.25)] outline-none transition-transform hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-black active:scale-[0.99] sm:px-5 lg:h-11 lg:min-w-[188px] lg:justify-center lg:rounded-[11px] lg:text-[15px]"
-        aria-label="Open Free Box"
+        aria-label="Open Free Pack"
       >
         <span
           aria-hidden="true"
@@ -480,7 +480,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
           className="relative z-10 h-4 w-4 stroke-[2.1] lg:h-5 lg:w-5"
           aria-hidden="true"
         />
-        <span className="relative z-10 whitespace-nowrap">Open Free Box</span>
+        <span className="relative z-10 whitespace-nowrap">Open Free Pack</span>
       </button>
     ),
     [openAuthModal, playSound],
@@ -563,7 +563,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         : desktopNavButtonClass
                     }
                   >
-                    Boxes
+                    Packs
                   </button>
                   <button
                     type="button"
@@ -677,12 +677,12 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                         {showFreeBoxTooltip ? (
                           <div className="absolute left-1/2 top-full z-30 mt-2 w-max -translate-x-1/2 rounded-md border border-emerald-400/35 bg-[#0f1517] px-2 py-1 text-[10px] font-semibold text-emerald-200 shadow-lg">
                             <div className="flex items-center gap-1.5">
-                              <span>Free box available</span>
+                              <span>Free pack available</span>
                               <button
                                 type="button"
                                 onClick={dismissFreeBoxTooltip}
                                 className="rounded p-0.5 text-emerald-100/80 transition-colors hover:bg-white/10 hover:text-white"
-                                aria-label="Dismiss free box tooltip"
+                                aria-label="Dismiss free pack tooltip"
                               >
                                 <X className="h-3 w-3" />
                               </button>
@@ -862,7 +862,7 @@ const HeaderComponent: React.FC<HeaderProps> = ({
                   className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm font-extrabold transition-colors ${view.type === "BOXES" || view.type === "CASE_OPENING" ? "bg-[linear-gradient(135deg,rgba(32,93,215,0.28),rgba(84,245,179,0.12))] text-[#7dd3fc] shadow-[inset_0_0_0_1px_rgba(125,211,252,0.18)]" : "text-slate-200 hover:bg-white/[0.06] hover:text-white"}`}
                 >
                   <Package className="h-[18px] w-[18px] text-[#7dd3fc]" />
-                  Boxes
+                  Packs
                 </button>
                 <button
                   onClick={() => navigate("LEADERBOARD")}

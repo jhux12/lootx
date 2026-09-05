@@ -134,7 +134,7 @@ export const MobileBottomNav: React.FC = () => {
         <Flame /><span>Home</span>
       </button>
       <button type="button" className={view.type === 'BOXES' || view.type === 'CASE_OPENING' ? 'is-active' : ''} onClick={() => navigate('BOXES')}>
-        <Boxes /><span>Boxes</span>
+        <Boxes /><span>Packs</span>
       </button>
       <button
         type="button"

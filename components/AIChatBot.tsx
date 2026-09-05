@@ -11,10 +11,10 @@ interface Message {
 }
 
 const SITE_CONTEXT = `
-Ripza is a mystery box and box battle experience. The site includes:
-- Mystery boxes with real-world items shown in each box.
-- Box Battles where players open the same boxes and the highest total wins.
-- Box Lab for creating custom boxes.
+Ripza is a mystery pack and pack battle experience. The site includes:
+- Mystery packs with real-world items shown in each pack.
+- Pack Battles where players open the same packs and the highest total wins.
+- Pack Lab for creating custom packs.
 - Provably fair outcomes that can be verified.
 - Site coins used for gameplay.
 `.trim();
@@ -225,7 +225,7 @@ export const AIChatBot: React.FC<AIChatBotProps> = ({
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask about battles, boxes..."
+                    placeholder="Ask about battles, packs..."
                     className="pl-4 pr-12 py-3 text-sm"
                 />
                 <button 

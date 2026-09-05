@@ -18,7 +18,7 @@ type HomeBanner = {
 const FIRST_DEPOSIT_BANNER: HomeBanner = {
   title: 'Get a 50% Bonus on Your First Deposit',
   eyebrow: 'First deposit bonus',
-  description: 'Deposit for the first time and receive 50% extra coins instantly. More coins means more boxes, more pulls.',
+  description: 'Deposit for the first time and receive 50% extra coins instantly. More coins means more packs, more pulls.',
   image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/Announce.png?alt=media&token=9394b72b-d4f2-4207-9989-3e3dbb0e347e',
   cta: 'Claim bonus',
   action: 'claim-first-deposit',
@@ -27,11 +27,11 @@ const FIRST_DEPOSIT_BANNER: HomeBanner = {
 
 const HOME_BANNERS: HomeBanner[] = [
   {
-    title: 'Open mystery boxes',
+    title: 'Open mystery packs',
     eyebrow: 'Featured on Ripza',
-    description: 'Browse featured boxes and reveal collectible pulls in seconds.',
+    description: 'Browse featured packs and reveal collectible pulls in seconds.',
     image: 'https://firebasestorage.googleapis.com/v0/b/hyperdrop-6476c.firebasestorage.app/o/open.png?alt=media&token=34515af9-0309-412b-95fe-fb22837fd060',
-    cta: 'Open boxes',
+    cta: 'Open packs',
     view: { type: 'BOXES' },
     accent: 'blue'
   },
@@ -186,7 +186,7 @@ export const HomeBanners: React.FC = () => {
         onTouchEnd={handleTouchEnd}
         role="region"
         aria-roledescription="carousel"
-        aria-label="Deposit offer, mystery boxes, and leaderboard highlights"
+        aria-label="Deposit offer, mystery packs, and leaderboard highlights"
       >
         <div className="relative min-h-[210px] sm:min-h-[250px] lg:min-h-[280px]">
           {banners.map((banner, index) => {

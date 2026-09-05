@@ -129,19 +129,19 @@ export default async function handler(req, res) {
       let caseRef = null;
       if (fulfillmentType === 'XP_BOX') {
         if (!metadataSnapshot.caseId) {
-          throw { status: 400, error: 'XP box reward is missing caseId' };
+          throw { status: 400, error: 'XP pack reward is missing caseId' };
         }
 
         if (metadataSnapshot.xpPriceOverride != null) {
           caseRef = firestore.collection('boxes').doc(metadataSnapshot.caseId);
           const caseSnap = await transaction.get(caseRef);
           if (!caseSnap.exists) {
-            throw { status: 404, error: 'Referenced XP box not found' };
+            throw { status: 404, error: 'Referenced XP pack not found' };
           }
           const caseData = caseSnap.data() ?? {};
           const inferredXpLegacy = Number.isFinite(Number(caseData.priceXP)) && Number(caseData.priceXP) > 0;
           if ((caseData.currencyType === 'XP' || inferredXpLegacy ? 'XP' : 'COIN') !== 'XP') {
-            throw { status: 400, error: 'Referenced case is not configured as XP box' };
+            throw { status: 400, error: 'Referenced case is not configured as XP pack' };
           }
         }
       }
@@ -252,7 +252,7 @@ export default async function handler(req, res) {
               ? 'Coupon added to your account'
               : fulfillmentType === 'PHYSICAL_SHIP'
                 ? 'Added to shipments / pending fulfillment'
-                : 'XP Box added'
+                : 'XP Pack added'
       };
     });
 

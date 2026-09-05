@@ -103,7 +103,7 @@ export default async function handler(req, res) {
           .limit(1);
         const boxSnapshot = await transaction.get(boxQuery);
         pullPassBox = boxSnapshot.docs[0] ? { id: boxSnapshot.docs[0].id, ...boxSnapshot.docs[0].data() } : null;
-        if (!pullPassBox) fail(404, 'PULL_PASS_BOX_NOT_FOUND', 'No Pull Pass reward box is configured for this reward.', { tier: requestedTier, boxType });
+        if (!pullPassBox) fail(404, 'PULL_PASS_BOX_NOT_FOUND', 'No Pull Pass reward pack is configured for this reward.', { tier: requestedTier, boxType });
       }
 
       const claimedAt = Date.now();
