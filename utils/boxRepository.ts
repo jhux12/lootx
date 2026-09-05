@@ -39,11 +39,46 @@ export const getBoxSummaryPage = async (pageSize: number, cursor?: QueryDocument
 
 const homepageCache = new Map<number, BoxSummary[]>();
 const homepageInFlight = new Map<number, Promise<BoxSummary[]>>();
+const HOMEPAGE_LOAD_TIMEOUT_MS = 8_000;
+const HOMEPAGE_RETRY_DELAYS_MS = [300, 900];
+
+const wait = (delayMs: number) => new Promise((resolve) => setTimeout(resolve, delayMs));
+
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
+ new Promise<T>((resolve, reject) => {
+   const timeoutId = setTimeout(() => reject(new Error('BOX_SUMMARY_LOAD_TIMEOUT')), timeoutMs);
+   promise.then(
+     (value) => { clearTimeout(timeoutId); resolve(value); },
+     (error) => { clearTimeout(timeoutId); reject(error); }
+   );
+ });
+
+const loadHomepageSummaryPage = async (pageSize: number) => {
+ let lastError: unknown;
+ for (let attempt = 0; attempt <= HOMEPAGE_RETRY_DELAYS_MS.length; attempt += 1) {
+   try {
+     const { boxes } = await withTimeout(getBoxSummaryPage(pageSize), HOMEPAGE_LOAD_TIMEOUT_MS);
+     // Retry an empty first response because Firestore may still be establishing
+     // its initial network connection and have no local catalog cached yet.
+     if (boxes.length > 0 || attempt === HOMEPAGE_RETRY_DELAYS_MS.length) return boxes;
+   } catch (error) {
+     lastError = error;
+     if (attempt === HOMEPAGE_RETRY_DELAYS_MS.length) throw error;
+   }
+   await wait(HOMEPAGE_RETRY_DELAYS_MS[attempt]);
+ }
+ throw lastError ?? new Error('BOX_SUMMARY_LOAD_FAILED');
+};
+
 /** Homepage-only cache: it never shares a cursor or page state with BoxCatalog. */
 export const getHomepageSummaries = (pageSize: number) => {
  const cached = homepageCache.get(pageSize); if (cached) return Promise.resolve(cached);
  const ongoing = homepageInFlight.get(pageSize); if (ongoing) return ongoing;
- const request = getBoxSummaryPage(pageSize).then(({ boxes }) => { homepageCache.set(pageSize, boxes); return boxes; }).finally(() => homepageInFlight.delete(pageSize));
+ const request = loadHomepageSummaryPage(pageSize).then((boxes) => {
+   // Do not make a transient empty response sticky for the lifetime of the tab.
+   if (boxes.length > 0) homepageCache.set(pageSize, boxes);
+   return boxes;
+ }).finally(() => homepageInFlight.delete(pageSize));
  homepageInFlight.set(pageSize, request); return request;
 };
 export const invalidateHomepageSummaries = (pageSize?: number) => { if (pageSize) homepageCache.delete(pageSize); else homepageCache.clear(); };
