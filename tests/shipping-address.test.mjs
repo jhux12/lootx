@@ -73,6 +73,20 @@ test('accepted inconclusive addresses use the same Shippo mapper in the shipping
   assert.match(form, /Confirm Address/); assert.match(form, /min-h-11 w-full/);
 });
 
+test('carrier-invalid addresses can be deliberately saved as unverified', async () => {
+  const [save, profile, form] = await Promise.all([
+    readFile(new URL('../api/shipping/save-address.js', import.meta.url), 'utf8'),
+    readFile(new URL('../components/Profile.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../components/profile/AccountView.tsx', import.meta.url), 'utf8')
+  ]);
+  assert.doesNotMatch(save, /attempt\.status === 'invalid'\) return/);
+  assert.match(save, /attempt\.status === 'invalid' \? 'invalid'/);
+  assert.match(profile, /result\.status === 'invalid'/);
+  assert.match(form, /validationResult\.attemptId/);
+  assert.match(form, /Save Anyway/);
+  assert.match(form, /min-h-11 w-full/);
+});
+
 test('address autocomplete stays authenticated and shipping secrets remain server-only', async () => {
   const [endpoint, validationEndpoint, form] = await Promise.all([
     readFile(new URL('../api/shipping/address-suggestions.js', import.meta.url), 'utf8'),

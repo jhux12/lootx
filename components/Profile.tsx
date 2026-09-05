@@ -631,7 +631,7 @@ export const Profile: React.FC<{ initialTab?: 'inventory' }> = ({ initialTab }) 
       const response = await fetch('/api/shipping/save-address', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ attemptId: result.attemptId, choice }) });
       const payload = await response.json(); if (!response.ok) throw new Error(payload.error);
       await updateAddress(payload.address); setAddressForm(normalizeStoredShippingAddress(payload.address)); setAddressValidation(null);
-      toast.success(result.status === 'unavailable' ? 'Address saved. Verification will occur before shipment.' : choice === 'suggested' ? 'Suggested address saved.' : 'Address verified and saved.');
+      toast.success(result.status === 'unavailable' || result.status === 'invalid' ? 'Address saved. Verification will occur before shipment.' : choice === 'suggested' ? 'Suggested address saved.' : 'Address verified and saved.');
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not save your shipping address.'); }
     finally { setIsSavingAddress(false); }
   }

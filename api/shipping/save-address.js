@@ -12,12 +12,11 @@ export default async function handler(req, res) {
     const attemptRef = firestore.collection('users').doc(uid).collection('addressValidationAttempts').doc(attemptId);
     const attemptSnap = await attemptRef.get(); const attempt = attemptSnap.data();
     if (!attemptSnap.exists || Number(attempt?.expiresAt) < Date.now()) return sendJson(res, 400, { error: 'Address verification expired. Please try again.' });
-    if (attempt.status === 'invalid') return sendJson(res, 400, { error: 'Please edit the address before saving.' });
     const acceptedSuggestion = choice === 'suggested' && attempt.status === 'corrected' && attempt.suggestedAddress;
     const address = normalizeAddress(acceptedSuggestion ? attempt.suggestedAddress : attempt.originalAddress);
     if (validateLocalAddress(address).length) return sendJson(res, 400, { error: 'Please complete the required address fields.' });
     const isValidated = attempt.status === 'valid' || attempt.status === 'inconclusive' || Boolean(acceptedSuggestion);
-    const savedAddress = { ...address, validated: isValidated, validationStatus: acceptedSuggestion ? 'corrected' : attempt.status === 'valid' ? 'valid' : attempt.status === 'inconclusive' ? 'inconclusive' : 'unvalidated', validatedAt: isValidated ? new Date().toISOString() : null, shippoAddressId: isValidated ? attempt.shippoAddressId ?? null : null };
+    const savedAddress = { ...address, validated: isValidated, validationStatus: acceptedSuggestion ? 'corrected' : attempt.status === 'valid' ? 'valid' : attempt.status === 'inconclusive' ? 'inconclusive' : attempt.status === 'invalid' ? 'invalid' : 'unvalidated', validatedAt: isValidated ? new Date().toISOString() : null, shippoAddressId: isValidated ? attempt.shippoAddressId ?? null : null };
     await firestore.collection('users').doc(uid).set({ shippingAddress: savedAddress, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
     await attemptRef.delete();
     return sendJson(res, 200, { address: savedAddress });
