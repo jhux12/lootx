@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Info, X, ShieldCheck, Check, Backpack, Wallet, Copy, Share2, Zap, Loader2 } from 'lucide-react';
 import { GOLDEN_TICKET_ITEM, XP_ICON } from '../constants';
 import { CoinAmount } from './CoinAmount';
 import { CaseItem, InventoryItem, MysteryBox } from '../types';
@@ -53,6 +53,12 @@ interface RevealData {
   rotatedAt: number;
 }
 
+interface WonEntry {
+  item: CaseItem;
+  inventoryItem: InventoryItem | null;
+  resolved: boolean;
+}
+
 // Pack-opening tuning constants (kept centralized so motion can be adjusted safely).
 // burstDurationMs/revealDurationMs are sized to let PackTearReveal's own CSS
 // animations (560ms tear-apart, 560ms card spring-in) actually finish before
@@ -65,7 +71,9 @@ const PACK_MOTION = {
   revealDurationMs: 850,
   quickRevealDurationMs: 300,
   goldStageDelayMs: 900,
-  quickGoldStageDelayMs: 220
+  quickGoldStageDelayMs: 220,
+  betweenPacksDelayMs: 700,
+  quickBetweenPacksDelayMs: 160
 } as const;
 
 const dropTableRarityAccent: Record<string, string> = {
@@ -346,11 +354,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
   const [revealStageItem, setRevealStageItem] = useState<CaseItem | null>(null);
   const [chargeRequiresSlide, setChargeRequiresSlide] = useState(false);
-  const [wonItem, setWonItem] = useState<CaseItem | null>(null);
-  const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
+  const [wonBatch, setWonBatch] = useState<WonEntry[]>([]);
+  const [focusedWonIndex, setFocusedWonIndex] = useState(0);
   const [showWinModal, setShowWinModal] = useState(false);
   const [isSellingItem, setIsSellingItem] = useState(false);
-  const [isDemoSpin, setIsDemoSpin] = useState(false);
+  const [isSellingAll, setIsSellingAll] = useState(false);
+  const [packQuantity, setPackQuantity] = useState(1);
+  const [remainingInBatch, setRemainingInBatch] = useState(1);
   const [serverSeedHash, setServerSeedHash] = useState('');
   const [clientSeed, setClientSeed] = useState('ripza-player');
   const [clientSeedInput, setClientSeedInput] = useState('ripza-player');
@@ -363,7 +373,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [showFairModal, setShowFairModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [copyStatusMessage, setCopyStatusMessage] = useState<string | null>(null);
-  const [rewardResolved, setRewardResolved] = useState(false);
   const [selectedCaseItem, setSelectedCaseItem] = useState<CaseItem | null>(null);
   const [spinFeedbackMessage, setSpinFeedbackMessage] = useState<string | null>(null);
   const [showXpConfirmSheet, setShowXpConfirmSheet] = useState(false);
@@ -392,7 +401,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const hasTrackedFreeBoxViewRef = useRef(false);
   const spinRequestLockRef = useRef(false);
   const isSpinningRef = useRef(false);
-  const lockedWinnerRef = useRef<{ item: CaseItem; resultId: string; nonce: number } | null>(null);
   const winSoundPlayedRef = useRef(false);
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
@@ -443,13 +451,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return Math.max(0, Math.min(1, currentXpBalance / xpCostForCoinCase));
   }, [currentXpBalance, xpCostForCoinCase]);
   const showXpOpenUi = false;
-  const canOpenMain = isRewardOpen || isFree || balance >= currentCasePrice;
+  // Free/reward opens are always a single specific item; quantity only
+  // applies to a normal paid open.
+  const effectiveQuantity = (isFreeOpening || isRewardOpen) ? 1 : packQuantity;
+  const totalOpenCost = currentCasePrice * effectiveQuantity;
+  const canOpenMain = isRewardOpen || isFree || balance >= totalOpenCost;
   const canOpenWithXp = showXpOpenUi && currentXpBalance >= xpCostForCoinCase;
+  const focusedWonEntry = wonBatch[focusedWonIndex] ?? null;
+  const wonItem = focusedWonEntry?.item ?? null;
+  const wonInventoryItem = focusedWonEntry?.inventoryItem ?? null;
+  const isBatchOpen = wonBatch.length > 1;
+  const unresolvedWonCount = wonBatch.filter((entry) => !entry.resolved).length;
   // The item currently on stage during charging/bursting/revealing; falls back to
   // the resolved winner once settled so the aura color holds through the modal.
   const stageDisplayItem = revealStageItem ?? wonItem;
   const stageRarityKey = normalizeRarityKey(stageDisplayItem?.rarity);
   const stageRarityIndicator = rarityIndicatorStyle[stageRarityKey] ?? rarityIndicatorStyle.common;
+  // How many extra "ghost" packs to stack behind the front one: reflects the
+  // selected quantity before opening, then counts down pack-by-pack as the
+  // batch reveals (each pack in the sequence removes one from the stack).
+  const packStackDisplayCount = isSpinning ? remainingInBatch : packQuantity;
+  const packStackGhostCount = Math.max(0, Math.min(packStackDisplayCount, 5) - 1);
   // Before a roll exists, the suspense aura wears the box's own brand color;
   // once charging picks a real item it shifts to hint at the rarity tier.
   const auraColor = stageDisplayItem ? stageRarityIndicator.color : (box?.accentColor || stageRarityIndicator.color);
@@ -663,89 +685,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     };
   }, [animateCoinValue, selectedCaseItem]);
 
-  const getWinningItem = (randomValue: number) => {
-    // Weighted Randomness
-    const totalWeight = items.reduce((sum, item) => sum + item.chance, 0);
-    let random = randomValue * totalWeight;
-
-    for (const item of items) {
-      if (random < item.chance) return item;
-      random -= item.chance;
-    }
-    return items[items.length - 1];
-  };
-
-  const getDemoWinningItem = useCallback((randomValue: number) => {
-    const validItems = items.filter((item) => Number.isFinite(item.chance) && item.chance > 0);
-
-    if (validItems.length === 0) {
-      return getWinningItem(randomValue);
-    }
-
-    const baseTotalWeight = validItems.reduce((sum, item) => sum + item.chance, 0);
-    const baseExpectedValue = validItems.reduce((sum, item) => sum + item.chance * Math.max(0, Number(item.price ?? 0)), 0) / baseTotalWeight;
-    const positiveValues = validItems
-      .map((item) => Math.max(0, Number(item.price ?? 0)))
-      .filter((value) => value > 0);
-
-    if (!Number.isFinite(baseExpectedValue) || baseExpectedValue <= 0 || positiveValues.length === 0) {
-      return getWinningItem(randomValue);
-    }
-
-    const minPositiveValue = Math.min(...positiveValues);
-    const maxValue = Math.max(...positiveValues);
-    const maxAchievableExpectedValue = maxValue;
-    const targetExpectedValue = Math.min(
-      baseExpectedValue * 1.1,
-      maxAchievableExpectedValue
-    );
-
-    let low = 0;
-    let high = 2;
-    let exponent = 0;
-
-    for (let i = 0; i < 14; i += 1) {
-      const mid = (low + high) / 2;
-      const adjustedTotalWeight = validItems.reduce((sum, item) => {
-        const value = Math.max(0, Number(item.price ?? 0));
-        const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, mid) : 1;
-        return sum + item.chance * valueFactor;
-      }, 0);
-
-      const adjustedExpectedValue = validItems.reduce((sum, item) => {
-        const value = Math.max(0, Number(item.price ?? 0));
-        const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, mid) : 1;
-        return sum + item.chance * valueFactor * value;
-      }, 0) / adjustedTotalWeight;
-
-      if (adjustedExpectedValue >= targetExpectedValue) {
-        exponent = mid;
-        high = mid;
-      } else {
-        low = mid;
-      }
-    }
-
-    const adjustedWeights = validItems.map((item) => {
-      const value = Math.max(0, Number(item.price ?? 0));
-      const valueFactor = value > 0 ? Math.pow(value / minPositiveValue, exponent) : 1;
-      return {
-        item,
-        weight: item.chance * valueFactor
-      };
-    });
-
-    const adjustedTotalWeight = adjustedWeights.reduce((sum, entry) => sum + entry.weight, 0);
-    let random = randomValue * adjustedTotalWeight;
-
-    for (const entry of adjustedWeights) {
-      if (random < entry.weight) return entry.item;
-      random -= entry.weight;
-    }
-
-    return adjustedWeights[adjustedWeights.length - 1]?.item ?? validItems[validItems.length - 1];
-  }, [items]);
-
 
   const updateClientSeed = useCallback(async () => {
     const nextSeed = clientSeedInput.trim();
@@ -880,7 +819,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   }, [playSound, prefersReducedMotion]);
 
 
-  const handleSpin = async ({ isDemo = false, forceGold = false, paymentMethod = 'coins', isQuick = false }: { isDemo?: boolean; forceGold?: boolean; paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
+  const handleSpin = async ({ paymentMethod = 'coins', isQuick = false }: { paymentMethod?: 'coins' | 'xp'; isQuick?: boolean } = {}) => {
     if (isSpinning || spinRequestLockRef.current) {
       if (isFree) {
         trackEvent('free_spin_duplicate_click_blocked', { box_id: box?.id ?? boxId });
@@ -898,23 +837,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     }
     setSpinFeedbackMessage(null);
 
-    if (forceGold) {
-      isDemo = true;
-    }
-
-    if (isDemo) {
-      setIsDemoSpin(true);
-    } else {
-      setIsDemoSpin(false);
-    }
-
-    if (!isDemo && !isAuthenticated) {
+    if (!isAuthenticated) {
       spinRequestLockRef.current = false;
       openAuthModal('login');
       return;
     }
 
-    if (!isDemo && !isFree && !isRewardOpen) {
+    const quantity = effectiveQuantity;
+
+    if (!isFree && !isRewardOpen) {
       if (isBalanceLoading) {
         spinRequestLockRef.current = false;
         return;
@@ -937,17 +868,18 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           return;
         }
 
-        if (availableCoins < currentCasePrice) {
+        const requiredCoins = currentCasePrice * quantity;
+        if (availableCoins < requiredCoins) {
           spinRequestLockRef.current = false;
-          setSpinFeedbackMessage('Not enough coins — top up to open this pack.');
+          setSpinFeedbackMessage(quantity > 1 ? `Not enough coins — top up to open ${quantity} packs.` : 'Not enough coins — top up to open this pack.');
 
           if (!showTopUpModal && !topUpTriggerLockRef.current) {
             topUpTriggerLockRef.current = true;
             setTopUpModalIntent({
               reason: 'insufficient_balance',
-              requiredCoins: currentCasePrice,
+              requiredCoins,
               currentBalance: availableCoins,
-              missingCoins: currentCasePrice - availableCoins
+              missingCoins: requiredCoins - availableCoins
             });
             setShowTopUpModal(true);
             if (topUpLockTimerRef.current !== null) window.clearTimeout(topUpLockTimerRef.current);
@@ -961,7 +893,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }
     }
 
-    if (!isDemo && isFree) {
+    if (isFree) {
       trackEvent('free_spin_clicked', { box_id: box.id });
       if (!isAuthenticated) {
         spinRequestLockRef.current = false;
@@ -984,28 +916,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     setIsSpinning(true);
     setAnimationPhase('idle');
     setRevealStageItem(null);
-    if (!isDemo && isFree) {
+    if (isFree) {
       trackEvent('free_spin_started', { box_id: box.id });
     }
     setShowWinModal(false);
     setIsGoldMode(false);
-    setWonItem(null);
-    setWonInventoryItem(null);
-    setRewardResolved(false);
+    setWonBatch([]);
+    setFocusedWonIndex(0);
+    setRemainingInBatch(quantity);
     playSound('click');
 
-    let winner: CaseItem;
-    let rollValue = Math.random();
-    let rollHash = '';
-    let rollMessage = '';
-    let rollNonce = nonce;
-    let rollServerHash = serverSeedHash;
-    let rollClientSeed = clientSeed;
-    let spinResultId = `demo:${box.id}:${rollNonce}:${Date.now()}`;
+    const entries: WonEntry[] = [];
 
-    if (isDemo) {
-      winner = getDemoWinningItem(rollValue);
-    } else {
+    for (let i = 0; i < quantity; i += 1) {
+      let winner: CaseItem;
+      let rollValue = Math.random();
+      let rollHash = '';
+      let rollMessage = '';
+      let rollNonce = nonce;
+      let rollServerHash = serverSeedHash;
+      let rollClientSeed = clientSeed;
+      let inventoryItem: InventoryItem | null = null;
+
       try {
         // Server now authoritatively selects the prize + updates coins/inventory.
         const operationId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -1076,7 +1008,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               size: data.prize.size
             };
 
-        const inventoryItem: InventoryItem = {
+        inventoryItem = {
           ...(winner as CaseItem),
           instanceId: data.inventoryId,
           obtainedAt: Date.now(),
@@ -1119,8 +1051,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             xpSettingsUsed: data.xpSettingsUsed ?? null
           });
         }
-        setWonInventoryItem(inventoryItem);
-        spinResultId = data.openId;
         rollValue = data.provablyFair.roll;
         rollHash = data.provablyFair.rollHash;
         rollMessage = data.provablyFair.message;
@@ -1144,31 +1074,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           status,
           code: errorCode,
           message: readableMessage,
-          boxId: box.id
+          boxId: box.id,
+          packIndex: i
         });
-        setIsSpinning(false);
-        isSpinningRef.current = false;
-        setSpinFeedbackMessage(readableMessage || 'Unable to open pack.');
-        toast.error(readableMessage || 'Unable to open pack.');
-        spinRequestLockRef.current = false;
-        return;
+
+        if (entries.length === 0) {
+          // Nothing opened yet — fail the whole request the way a single open always did.
+          setIsSpinning(false);
+          isSpinningRef.current = false;
+          setSpinFeedbackMessage(readableMessage || 'Unable to open pack.');
+          toast.error(readableMessage || 'Unable to open pack.');
+          spinRequestLockRef.current = false;
+          return;
+        }
+
+        // Mid-batch failure: keep whatever already opened successfully and
+        // show those, rather than losing packs the user already paid for.
+        toast.error(readableMessage || `Unable to open pack ${i + 1} of ${quantity}.`);
+        break;
       }
-    }
 
-    const legendaryPool = items.filter((item) => item.rarity === 'legendary');
-    if (forceGold && legendaryPool.length > 0) {
-      winner = legendaryPool[Math.floor(rollValue * legendaryPool.length)];
-    }
-
-    // From this point through reveal dismissal, the authoritative result cannot
-    // be replaced by viewport changes, rerenders, or visually centered cards.
-    lockedWinnerRef.current = Object.freeze({
-      item: Object.freeze({ ...winner }),
-      resultId: spinResultId,
-      nonce: rollNonce
-    });
-
-    if (!isDemo) {
       const latestRoll = {
         nonce: rollNonce,
         rollHash,
@@ -1197,21 +1122,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem(LAST_ROLL_STORAGE_KEY, JSON.stringify(latestRoll));
       }
-    } else {
-      setLastRoll(null);
-    }
 
-    // 2. Gold spin only triggers when the winner is guaranteed legendary
-    const isGoldEligible = winner.rarity === 'legendary';
-    const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
-    const goldRollValue = deriveRollValue(goldRollHash);
-    const triggerGold = (forceGold && isGoldEligible) || (isGoldEligible && goldRollValue < 0.5);
+      // Only the very first reveal of the whole batch asks the user to slide —
+      // every pack after that plays automatically, one after another.
+      const firstRevealRequiresSlide = i === 0;
 
-    if (triggerGold) {
+      // Gold spin only triggers when the winner is guaranteed legendary.
+      const isGoldEligible = winner.rarity === 'legendary';
+      const goldRollHash = rollHash ? await hashString(`${rollHash}:gold`) : await hashString(`${rollValue}:gold`);
+      const goldRollValue = deriveRollValue(goldRollHash);
+      const triggerGold = isGoldEligible && goldRollValue < 0.5;
+
+      if (triggerGold) {
         // --- GOLD BONUS FLOW: pack opens to reveal a golden ticket first, then
-        // reopens onto the actual legendary winner. Only the first reveal asks
-        // for a slide — the user already committed once. ---
-        await playPackReveal(GOLDEN_TICKET_ITEM, isQuick);
+        // reopens onto the actual legendary winner. ---
+        await playPackReveal(GOLDEN_TICKET_ITEM, isQuick, { requireSlide: firstRevealRequiresSlide });
         if (!isMountedRef.current) return;
         setIsGoldMode(true);
 
@@ -1221,18 +1146,32 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
         await playPackReveal(winner, isQuick, { requireSlide: false });
         if (!isMountedRef.current) return;
-        finishSpin(winner);
-    } else {
+        setIsGoldMode(false);
+      } else {
         // --- NORMAL FLOW: pack opens straight to the winner. ---
-        await playPackReveal(winner, isQuick);
+        await playPackReveal(winner, isQuick, { requireSlide: firstRevealRequiresSlide });
         if (!isMountedRef.current) return;
-        finishSpin(winner);
-    }
-  };
+      }
 
-  const handleTryFree = () => {
-    setSpinFeedbackMessage(null);
-    handleSpin({ isDemo: true, isQuick: isQuickSpinEnabled });
+      entries.push({ item: winner, inventoryItem, resolved: false });
+      setRemainingInBatch(quantity - entries.length);
+
+      if (i < quantity - 1) {
+        const betweenDelay = isQuick ? PACK_MOTION.quickBetweenPacksDelayMs : PACK_MOTION.betweenPacksDelayMs;
+        await wait(betweenDelay);
+        if (!isMountedRef.current) return;
+        setAnimationPhase('idle');
+        setRevealStageItem(null);
+      }
+    }
+
+    if (entries.length > 0) {
+      finishBatch(entries);
+    } else {
+      setIsSpinning(false);
+      isSpinningRef.current = false;
+      spinRequestLockRef.current = false;
+    }
   };
 
   useEffect(() => {
@@ -1270,18 +1209,26 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     };
   }, []);
 
-  const finishSpin = (item: CaseItem) => {
-    // The displayed reveal is always the immutable, server-verified winner —
-    // never the mutable `item` argument closed over by an in-flight reveal.
-    const lockedResult = lockedWinnerRef.current;
-    const displayedWinner = lockedResult?.item ?? item;
+  // Called once the whole batch (1-5 packs) has finished revealing. Picks the
+  // highest-rarity item across the batch to drive the celebratory sound/confetti,
+  // then hands every won item to the Result Panel for per-item review.
+  const finishBatch = (entries: WonEntry[]) => {
     spinRequestLockRef.current = false;
     isSpinningRef.current = false;
     setIsSpinning(false);
 
+    setWonBatch(entries);
+    setFocusedWonIndex(0);
     setShowWinModal(true);
+
+    const rarityRank: Record<string, number> = { legendary: 4, epic: 3, rare: 2, uncommon: 1, common: 0 };
+    const topEntry = entries.reduce((best, entry) => (
+      rarityRank[normalizeRarityKey(entry.item.rarity)] > rarityRank[normalizeRarityKey(best.item.rarity)] ? entry : best
+    ), entries[0]);
+    const topWinner = topEntry.item;
+
     if (!winSoundPlayedRef.current) {
-      const rarity = String(displayedWinner.rarity ?? 'common').toLowerCase();
+      const rarity = String(topWinner.rarity ?? 'common').toLowerCase();
       winSoundTimerRef.current = window.setTimeout(() => {
         if (winSoundPlayedRef.current) return;
         if (rarity.includes('legend') || rarity.includes('mythic')) playSound('win-gold');
@@ -1293,13 +1240,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       }, 120);
     }
     setBurstToken((t) => t + 1);
-    const winnerRarityKey = normalizeRarityKey(displayedWinner.rarity);
+    const winnerRarityKey = normalizeRarityKey(topWinner.rarity);
     const winnerIsHighTier = winnerRarityKey === 'rare' || winnerRarityKey === 'epic' || winnerRarityKey === 'legendary';
     if (!prefersReducedMotion && winnerIsHighTier) {
       const particleCount = winnerRarityKey === 'legendary' ? 32 : winnerRarityKey === 'epic' ? 22 : 14;
       const palette = winnerRarityKey === 'legendary'
-        ? [displayedWinner.color, '#fde047', '#ffffff']
-        : [displayedWinner.color, '#ffffff'];
+        ? [topWinner.color, '#fde047', '#ffffff']
+        : [topWinner.color, '#ffffff'];
       const particles = createMicroConfetti(richEffectsEnabled ? particleCount : Math.round(particleCount * 0.6), palette);
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
@@ -1308,8 +1255,6 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
         confettiTimerRef.current = null;
       }, richEffectsEnabled ? 900 : 620);
     }
-    setWonItem(displayedWinner);
-    setRewardResolved(false);
   };
 
   const redirectToBoxesCatalog = () => {
@@ -1323,18 +1268,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
   const closeWinModal = () => {
     setIsSellingItem(false);
-    if (!rewardResolved) {
-      setRewardResolved(true);
-    }
+    setIsSellingAll(false);
     setShowWinModal(false);
     setAnimationPhase('idle');
     setRevealStageItem(null);
-    setWonInventoryItem(null);
-    lockedWinnerRef.current = null;
+    setWonBatch([]);
+    setFocusedWonIndex(0);
 
     if (pendingPostFreeBoxFlowRef.current) {
       setShowPostFreeBoxModal(true);
       pendingPostFreeBoxFlowRef.current = false;
+    }
+  };
+
+  // After a keep/sell resolves the focused item, jump to the next unreviewed
+  // one in the batch, or close the panel once everything's been handled.
+  const advanceOrClose = (updatedEntries: WonEntry[]) => {
+    setWonBatch(updatedEntries);
+    const nextUnresolvedIndex = updatedEntries.findIndex((entry) => !entry.resolved);
+    if (nextUnresolvedIndex === -1) {
+      closeWinModal();
+    } else {
+      setFocusedWonIndex(nextUnresolvedIndex);
     }
   };
 
@@ -1363,26 +1318,21 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
   const handleSell = async () => {
     playSound('click');
-    if (wonItem?.redeemable === false) {
+    const entry = focusedWonEntry;
+    if (!entry || entry.resolved || isSellingItem || isSellingAll) return;
+    if (entry.item.redeemable === false) {
         toast.error('This item is not redeemable and cannot be sold back.');
         return;
     }
-    if (isDemoSpin || isSellingItem) {
-        if (isDemoSpin) {
-          closeWinModal();
-        }
-        return;
-    }
-    if (wonInventoryItem && !rewardResolved) {
+    if (entry.inventoryItem) {
         setIsSellingItem(true);
         try {
-          await sellItem(wonInventoryItem.instanceId);
-          setRewardResolved(true);
-          trackSellBack({ box_id: box?.id, box_name: box?.name, item_id: wonInventoryItem.id, item_name: wonInventoryItem.name, original_item_value_coins: Number(wonInventoryItem.price ?? 0), sellback_value_coins: getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate), sellback_value_usd: coinsToUsd(getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate)), sellback_rate: sellBackRate, inventory_instance_id: wonInventoryItem.instanceId }, wonInventoryItem.instanceId);
+          await sellItem(entry.inventoryItem.instanceId);
+          trackSellBack({ box_id: box?.id, box_name: box?.name, item_id: entry.inventoryItem.id, item_name: entry.inventoryItem.name, original_item_value_coins: Number(entry.inventoryItem.price ?? 0), sellback_value_coins: getSellBackValue(toCoins(entry.inventoryItem.price, PRICE_UNIT_MODE), sellBackRate), sellback_value_usd: coinsToUsd(getSellBackValue(toCoins(entry.inventoryItem.price, PRICE_UNIT_MODE), sellBackRate)), sellback_rate: sellBackRate, inventory_instance_id: entry.inventoryItem.instanceId }, entry.inventoryItem.instanceId);
           if (isFree) {
             trackEvent('free_box_item_sold_back', {
-              item_id: wonInventoryItem.id,
-              value: getSellBackValue(toCoins(wonInventoryItem.price, PRICE_UNIT_MODE), sellBackRate),
+              item_id: entry.inventoryItem.id,
+              value: getSellBackValue(toCoins(entry.inventoryItem.price, PRICE_UNIT_MODE), sellBackRate),
               currency: 'COIN'
             });
           }
@@ -1390,8 +1340,46 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
           setIsSellingItem(false);
         }
     }
+    advanceOrClose(wonBatch.map((e, idx) => (idx === focusedWonIndex ? { ...e, resolved: true } : e)));
+  };
+
+  // Sequentially sells every not-yet-resolved, redeemable item in the batch,
+  // then closes the panel. Sequential (not Promise.all) to match sellItem's
+  // own contract — it mutates shared inventory state and refetches per call.
+  const handleSellAll = async () => {
+    playSound('click');
+    if (isSellingAll || isSellingItem) return;
+    const sellable = wonBatch.filter((entry) => !entry.resolved && entry.item.redeemable !== false && entry.inventoryItem);
+    if (sellable.length === 0) {
+      closeWinModal();
+      return;
+    }
+    setIsSellingAll(true);
+    let totalCredit = 0;
+    let soldCount = 0;
+    for (const entry of sellable) {
+      const inventoryItem = entry.inventoryItem!;
+      try {
+        const result = await sellItem(inventoryItem.instanceId);
+        totalCredit += Number(result?.creditCoins ?? 0);
+        soldCount += 1;
+        trackSellBack({ box_id: box?.id, box_name: box?.name, item_id: inventoryItem.id, item_name: inventoryItem.name, original_item_value_coins: Number(inventoryItem.price ?? 0), sellback_value_coins: getSellBackValue(toCoins(inventoryItem.price, PRICE_UNIT_MODE), sellBackRate), sellback_value_usd: coinsToUsd(getSellBackValue(toCoins(inventoryItem.price, PRICE_UNIT_MODE), sellBackRate)), sellback_rate: sellBackRate, inventory_instance_id: inventoryItem.instanceId }, inventoryItem.instanceId);
+        if (isFree) {
+          trackEvent('free_box_item_sold_back', {
+            item_id: inventoryItem.id,
+            value: getSellBackValue(toCoins(inventoryItem.price, PRICE_UNIT_MODE), sellBackRate),
+            currency: 'COIN'
+          });
+        }
+      } catch (error) {
+        console.error('Failed to sell item during Sell All', error);
+      }
+    }
+    setIsSellingAll(false);
+    if (soldCount > 0) {
+      toast.success(`Sold ${soldCount} item${soldCount === 1 ? '' : 's'} for ${totalCredit.toLocaleString()} coins.`);
+    }
     closeWinModal();
-    setIsSellingItem(false);
   };
 
 
@@ -1438,19 +1426,20 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
   const handleKeep = () => {
       playSound('click');
-      if (wonItem && !rewardResolved) {
-        setRewardResolved(true);
-        trackItemKept({ box_id: box?.id, box_name: box?.name, item_id: wonItem.id, item_name: wonItem.name, item_value_coins: Number(wonItem.price ?? 0), item_value_usd: coinsToUsd(Number(wonItem.price ?? 0)) }, wonInventoryItem?.instanceId ?? wonItem.id);
+      const entry = focusedWonEntry;
+      if (!entry) { closeWinModal(); return; }
+      if (!entry.resolved) {
+        trackItemKept({ box_id: box?.id, box_name: box?.name, item_id: entry.item.id, item_name: entry.item.name, item_value_coins: Number(entry.item.price ?? 0), item_value_usd: coinsToUsd(Number(entry.item.price ?? 0)) }, entry.inventoryItem?.instanceId ?? entry.item.id);
         if (isFree) {
           trackEvent('free_box_item_kept', {
-            item_id: wonItem.id,
-            value: toCoins(wonItem.price, PRICE_UNIT_MODE),
+            item_id: entry.item.id,
+            value: toCoins(entry.item.price, PRICE_UNIT_MODE),
             currency: 'COIN'
           });
         }
       }
       setIsSellingItem(false);
-      closeWinModal();
+      advanceOrClose(wonBatch.map((e, idx) => (idx === focusedWonIndex ? { ...e, resolved: true } : e)));
   };
 
   const handleCopyProof = useCallback(async () => {
@@ -1617,19 +1606,41 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 )}
 
                 {(animationPhase === 'idle' || animationPhase === 'charging') && (
-                  <div
-                    className={`pullz-gpu-layer absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${animationPhase === 'charging' ? 'scale-[1.1]' : 'scale-100'} ${animationPhase === 'idle' && richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
-                  >
-                    <BlurImage
-                      src={box?.image ?? ''}
-                      alt={box?.name ?? 'Mystery pack'}
-                      showPlaceholder={false}
-                      loading="eager"
-                      fetchPriority="high"
-                      staticRender
-                      className={`h-full w-full object-contain transition-[filter] duration-500 ${animationPhase === 'charging' ? 'drop-shadow-[0_26px_50px_rgba(0,0,0,0.6)]' : 'drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]'}`}
-                    />
-                  </div>
+                  <>
+                    {packStackGhostCount > 0 && Array.from({ length: packStackGhostCount }).map((_, ghostIndex) => {
+                      const depth = ghostIndex + 1;
+                      const sign = depth % 2 === 0 ? -1 : 1;
+                      return (
+                        <img
+                          key={`pack-stack-${depth}`}
+                          src={box?.image ?? ''}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                          className="pullz-pack-stack-ghost absolute inset-0 h-full w-full object-contain transition-all duration-300 ease-out"
+                          style={{
+                            transform: `translate(${sign * depth * 5}px, ${depth * 7}px) scale(${1 - depth * 0.05})`,
+                            opacity: Math.max(0.3, 0.8 - depth * 0.18),
+                            filter: `brightness(${1 - depth * 0.12}) drop-shadow(0 14px 26px rgba(0,0,0,0.45))`,
+                            zIndex: -depth
+                          }}
+                        />
+                      );
+                    })}
+                    <div
+                      className={`pullz-gpu-layer absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${animationPhase === 'charging' ? 'scale-[1.1]' : 'scale-100'} ${animationPhase === 'idle' && richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
+                    >
+                      <BlurImage
+                        src={box?.image ?? ''}
+                        alt={box?.name ?? 'Mystery pack'}
+                        showPlaceholder={false}
+                        loading="eager"
+                        fetchPriority="high"
+                        staticRender
+                        className={`h-full w-full object-contain transition-[filter] duration-500 ${animationPhase === 'charging' ? 'drop-shadow-[0_26px_50px_rgba(0,0,0,0.6)]' : 'drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]'}`}
+                      />
+                    </div>
+                  </>
                 )}
 
                 <PackTearReveal
@@ -1650,7 +1661,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             {/* Action Bar — only while truly idle. Mid-reveal it's replaced by
                 the SlideToOpenBar, then by the inline Result Panel, so only
                 one control ever occupies this spot at a time. */}
-            {animationPhase === 'idle' && !(showWinModal && wonItem) && (
+            {animationPhase === 'idle' && !isSpinning && !(showWinModal && wonItem) && (
             <>
             <div className="relative z-20 mt-0.5 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-3 pt-1 sm:gap-3 sm:px-4">
                  <button
@@ -1672,15 +1683,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       ) : (
                     <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-[11px] sm:gap-3 sm:text-sm">
                           <span className="inline-flex items-center gap-2">
-                            Open for
+                            {effectiveQuantity > 1 ? `Open ${effectiveQuantity} for` : 'Open for'}
                             {caseCurrencyType === 'XP' ? (
                               <span className="inline-flex items-center gap-1 text-white">
                                 <img loading="lazy" decoding="async" src={XP_ICON} alt="XP" className="h-4 w-4 object-contain" />
-                                <span>{currentCaseXpPrice.toLocaleString()}</span>
+                                <span>{(currentCaseXpPrice * effectiveQuantity).toLocaleString()}</span>
                               </span>
                             ) : (
                               <CoinAmount
-                                amount={toCoins(box!.price, PRICE_UNIT_MODE)}
+                                amount={totalOpenCost}
                                 formatOptions={{ maximumFractionDigits: 0 }}
                                 className="text-white"
                                 iconClassName="w-4 h-4"
@@ -1698,13 +1709,27 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                  </button>
                 {!isFreeOpening && !isRewardOpen && (
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleTryFree}
-                      disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-white/10 bg-[#303741] px-3 py-3 text-[11px] font-semibold text-white transition hover:bg-[#39424d] disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
+                    <div
+                      role="group"
+                      aria-label="Pack quantity"
+                      className="flex items-center gap-0.5 rounded-lg border border-white/10 bg-[#303741] p-1"
                     >
-                      Demo Spin
-                    </button>
+                      {[1, 2, 3, 4, 5].map((qty) => (
+                        <button
+                          key={qty}
+                          type="button"
+                          onClick={() => {
+                            playSound('click');
+                            setPackQuantity(qty);
+                          }}
+                          disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isSpinnerAssetsLoading}
+                          aria-pressed={packQuantity === qty}
+                          className={`flex h-9 w-8 items-center justify-center rounded-md text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:w-9 sm:text-sm ${packQuantity === qty ? 'bg-[#6f4dff] text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+                        >
+                          {qty}
+                        </button>
+                      ))}
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
@@ -1748,6 +1773,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               </div>
             )}
 
+            {/* Brief beat between packs in a multi-pack batch: the stage is
+                idle again but still mid-spin, waiting to charge the next pack. */}
+            {isSpinning && animationPhase === 'idle' && (
+              <div className="relative z-20 flex items-center justify-center px-4 pb-3 pt-1 text-xs font-semibold text-white/60">
+                Next pack opening...
+              </div>
+            )}
+
             {/* Result Panel: replaces the Action Bar in place once the reveal
                 settles, showing price + keep/sell/share right on this same
                 screen instead of a separate slide-up sheet. */}
@@ -1760,8 +1793,14 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         <Check className="h-4 w-4 text-emerald-400" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-bold text-white">{isDemoSpin ? 'Demo Spin Result' : 'Item Unboxed'}</h3>
-                        <p className="text-[11px] text-gray-400">{isDemoSpin ? 'Rewards are not granted in demo mode.' : 'Choose what to do with your item.'}</p>
+                        <h3 className="text-sm font-bold text-white">
+                          {isBatchOpen ? `${wonBatch.length} Items Unboxed` : 'Item Unboxed'}
+                        </h3>
+                        <p className="text-[11px] text-gray-400">
+                          {isBatchOpen
+                            ? `Item ${focusedWonIndex + 1} of ${wonBatch.length} — keep, sell, or sell all.`
+                            : 'Choose what to do with your item.'}
+                        </p>
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-1.5">
@@ -1785,6 +1824,61 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     </div>
                   </div>
 
+                  {isBatchOpen && (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setFocusedWonIndex((idx) => (idx - 1 + wonBatch.length) % wonBatch.length);
+                        }}
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:text-white"
+                        aria-label="Previous item"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {wonBatch.map((entry, idx) => {
+                          const dotColor = rarityIndicatorStyle[normalizeRarityKey(entry.item.rarity)]?.color ?? rarityIndicatorStyle.common.color;
+                          return (
+                            <button
+                              key={entry.inventoryItem?.instanceId ?? `${entry.item.id}-${idx}`}
+                              type="button"
+                              onClick={() => {
+                                playSound('click');
+                                setFocusedWonIndex(idx);
+                              }}
+                              aria-label={`View item ${idx + 1}${entry.resolved ? ', resolved' : ''}`}
+                              aria-current={idx === focusedWonIndex}
+                              className="flex h-6 w-6 flex-none items-center justify-center"
+                            >
+                              <span
+                                className={`block rounded-full transition-all ${idx === focusedWonIndex ? 'h-2.5 w-2.5' : 'h-2 w-2 opacity-50'}`}
+                                style={{
+                                  backgroundColor: dotColor,
+                                  boxShadow: idx === focusedWonIndex ? `0 0 6px ${dotColor}` : 'none',
+                                  outline: entry.resolved ? '1px solid rgba(255,255,255,0.4)' : 'none',
+                                  outlineOffset: 2
+                                }}
+                              />
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          setFocusedWonIndex((idx) => (idx + 1) % wonBatch.length);
+                        }}
+                        className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:text-white"
+                        aria-label="Next item"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className="mt-4 flex items-center justify-center">
                     <CoinAmount
                       amount={toCoins(wonItem.price, PRICE_UNIT_MODE)}
@@ -1795,28 +1889,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   </div>
 
                   <div className="mt-4">
-                    {isDemoSpin ? (
+                    {focusedWonEntry?.resolved ? (
                       <div className="flex flex-col gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            closeWinModal();
-                            void handleSpin({ isQuick: isQuickSpinEnabled });
-                          }}
-                          disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
-                          className="h-12 w-full rounded-xl bg-gradient-to-r from-[#6f4dff] to-[#4f63ff] px-4 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <span className="inline-flex items-center justify-center gap-2">
-                            Open for
-                            <CoinAmount
-                              amount={toCoins(box?.price ?? 0, PRICE_UNIT_MODE)}
-                              formatOptions={{ maximumFractionDigits: 0 }}
-                              className="text-white"
-                              iconClassName="h-4 w-4"
-                            />
-                          </span>
-                        </button>
-                        <button onClick={closeWinModal} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10">Close</button>
+                        <div className="flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-gray-300">
+                          <Check className="h-4 w-4 text-emerald-400" />
+                          Already resolved
+                        </div>
+                        {unresolvedWonCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playSound('click');
+                              const nextIndex = wonBatch.findIndex((entry) => !entry.resolved);
+                              if (nextIndex !== -1) setFocusedWonIndex(nextIndex);
+                            }}
+                            className="h-12 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold text-white transition hover:bg-white/10"
+                          >
+                            Next unresolved item
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2.5">
@@ -1826,7 +1917,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                         {wonItem.redeemable !== false && (
                           <button
                             onClick={handleSell}
-                            disabled={isSellingItem}
+                            disabled={isSellingItem || isSellingAll}
                             className="h-12 w-full rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-60"
                           >
                             <span className="inline-flex flex-wrap items-center justify-center gap-2 rounded-md px-3 py-2 sm:flex-nowrap sm:px-0 sm:py-0">
@@ -1847,15 +1938,28 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                             </span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => void handleShareUnboxing()}
-                          className="mx-auto min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
-                        >
-                          <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
-                        </button>
+                        {isBatchOpen && unresolvedWonCount > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => void handleSellAll()}
+                            disabled={isSellingItem || isSellingAll}
+                            className="h-12 w-full rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:opacity-60"
+                          >
+                            <span className="inline-flex items-center justify-center gap-2">
+                              <Wallet className="h-4 w-4 flex-none" />
+                              {isSellingAll ? 'Selling all...' : `Sell All Remaining (${unresolvedWonCount})`}
+                            </span>
+                          </button>
+                        )}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => void handleShareUnboxing()}
+                      className="mx-auto mt-2.5 min-h-10 px-4 text-xs font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 transition hover:text-cyan-100"
+                    >
+                      <span className="inline-flex items-center justify-center gap-2"><Share2 className="h-3.5 w-3.5" />Share Pull</span>
+                    </button>
                   </div>
                 </div>
               </div>
