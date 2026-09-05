@@ -27,6 +27,7 @@ import pullzHorizontalLogo from '../assets/png/pullz-horizontal-dark-2400.png';
 import { lockPageScroll } from '../utils/scrollLock';
 import { coinsToUsd, trackBoxOpen, trackBoxOpenStart, trackFreeBoxClaim, trackItemKept, trackItemWon, trackSellBack, trackViewBox } from '../services/analytics';
 import { PackTearReveal } from './PackTearReveal';
+import { SlideToOpenBar } from './SlideToOpenBar';
 
 interface CaseOpeningProps {
   boxId: string;
@@ -344,6 +345,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const [isSpinning, setIsSpinning] = useState(false);
   const [isSpinnerAssetsLoading, setIsSpinnerAssetsLoading] = useState(true);
   const [revealStageItem, setRevealStageItem] = useState<CaseItem | null>(null);
+  const [chargeRequiresSlide, setChargeRequiresSlide] = useState(false);
   const [wonItem, setWonItem] = useState<CaseItem | null>(null);
   const [wonInventoryItem, setWonInventoryItem] = useState<InventoryItem | null>(null);
   const [showWinModal, setShowWinModal] = useState(false);
@@ -395,6 +397,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const winSoundTimerRef = useRef<number | null>(null);
   const confettiTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(true);
+  const slideResolverRef = useRef<(() => void) | null>(null);
   const topUpLockTimerRef = useRef<number | null>(null);
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
@@ -813,11 +816,16 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     return () => { isMounted = false; };
   }, [box?.image]);
 
-  // Plays the charge -> burst -> reveal sequence for one item, ending with it
-  // settled on stage. Callers await this, then decide what happens next
-  // (open the win modal, or — for the gold bonus — chain a second reveal).
-  const playPackReveal = useCallback(async (revealItem: CaseItem, isQuick: boolean) => {
+  // Plays the zoom/slide-to-open -> burst -> reveal sequence for one item,
+  // ending with it settled on stage. Callers await this, then decide what
+  // happens next (open the win modal, or — for the gold bonus — chain a
+  // second reveal). `requireSlide` gates whether the user has to complete
+  // the SlideToOpenBar gesture (the main, first reveal) or the charge is
+  // just a short timed beat (quick spin, and the gold bonus's second stage,
+  // where the user already committed once).
+  const playPackReveal = useCallback(async (revealItem: CaseItem, isQuick: boolean, options?: { requireSlide?: boolean }) => {
     const useQuick = isQuick || prefersReducedMotion;
+    const requireSlide = (options?.requireSlide ?? true) && !useQuick;
     const chargeMs = useQuick ? PACK_MOTION.quickChargeDurationMs : PACK_MOTION.chargeDurationMs;
     const burstMs = useQuick ? PACK_MOTION.quickBurstDurationMs : PACK_MOTION.burstDurationMs;
     const revealMs = useQuick ? PACK_MOTION.quickRevealDurationMs : PACK_MOTION.revealDurationMs;
@@ -827,8 +835,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     setRevealStageItem(revealItem);
     setAnimationPhase('charging');
+    setChargeRequiresSlide(requireSlide);
     playSound('spin-start');
-    await wait(chargeMs);
+
+    if (requireSlide) {
+      await new Promise<void>((resolve) => { slideResolverRef.current = resolve; });
+      slideResolverRef.current = null;
+    } else {
+      await wait(chargeMs);
+    }
     if (!isMountedRef.current) return;
 
     setAnimationPhase('bursting');
@@ -1173,16 +1188,17 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
     if (triggerGold) {
         // --- GOLD BONUS FLOW: pack opens to reveal a golden ticket first, then
-        // reopens onto the actual legendary winner. ---
+        // reopens onto the actual legendary winner. Only the first reveal asks
+        // for a slide — the user already committed once. ---
         await playPackReveal(GOLDEN_TICKET_ITEM, isQuick);
+        if (!isMountedRef.current) return;
         setIsGoldMode(true);
 
         const goldStageDelay = isQuick ? PACK_MOTION.quickGoldStageDelayMs : PACK_MOTION.goldStageDelayMs;
         await wait(goldStageDelay);
         if (!isMountedRef.current) return;
 
-        setAnimationPhase('idle');
-        await playPackReveal(winner, isQuick);
+        await playPackReveal(winner, isQuick, { requireSlide: false });
         if (!isMountedRef.current) return;
         finishSpin(winner);
     } else {
@@ -1462,7 +1478,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       ) : (
         <>
         {/* Breadcrumb */}
-        <div className="mb-6 flex items-center justify-between gap-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => { playSound('click'); setView({ type: 'BOXES' }); }}
@@ -1505,7 +1521,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     </div>
 
         {/* SPINNER AREA */}
-        <div className="relative mb-3 w-full overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_28%,rgba(111,77,255,0.16),transparent_42%),linear-gradient(180deg,rgba(17,24,39,0.8),rgba(8,12,20,0.35))] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.32)] sm:mb-5">
+        <div className="relative mb-3 w-full overflow-visible rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_50%_28%,rgba(111,77,255,0.16),transparent_42%),linear-gradient(180deg,rgba(17,24,39,0.8),rgba(8,12,20,0.35))] p-0 shadow-[0_24px_70px_rgba(0,0,0,0.32)]">
 
             {/* Ambient rarity aura: the pack's "energy field" recolors to match whatever
                 item is currently on stage, so the field feels alive through the reveal. */}
@@ -1538,25 +1554,25 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               />
             ))}
 
-            <div className="relative z-20 px-2 pb-3 pt-2 text-center sm:px-3 sm:pb-4 sm:pt-3">
-              <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-2xl font-black leading-tight tracking-tight text-white sm:text-4xl">
+            <div className="relative z-20 px-2 pb-1.5 pt-2 text-center sm:px-3 sm:pb-2 sm:pt-2.5">
+              <h1 className="mx-auto max-w-[min(92vw,48rem)] truncate px-2 text-xl font-black leading-tight tracking-tight text-white sm:text-3xl">
                 {box?.name ?? 'Mystery Pack'}
               </h1>
               {copyStatusMessage && (
-                <p className="mx-auto mt-2 max-w-[92vw] text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
+                <p className="mx-auto mt-1 max-w-[92vw] text-center text-[10px] text-cyan-200 sm:text-xs" role="status" aria-live="polite">
                   {copyStatusMessage}
                 </p>
               )}
             </div>
 
             {/* Pack Stage: the main-stage hero. Fluidly sized (not fixed px) so
-                the pack/reward art stays large on every screen without ever
-                stretching — both the idle pack and PackTearReveal fill this
-                exact box via object-fit: contain. */}
-            <div className="relative z-20 mx-auto w-full px-4 pb-14 pt-2 sm:pb-16">
+                the pack/reward art stays large without ever stretching, and
+                capped by viewport height so the whole opening flow — title,
+                stage, and the button/slider below it — fits one screen. */}
+            <div className="relative z-20 mx-auto w-full px-4 pb-2 pt-1">
               <div
                 className="relative mx-auto"
-                style={{ width: 'min(84vw, 58vh, 460px)', aspectRatio: '5 / 6' }}
+                style={{ width: 'min(72vw, 40vh, 340px)', aspectRatio: '5 / 6' }}
               >
                 {isSpinnerAssetsLoading && (
                   <div className="absolute inset-0 z-40 flex items-center justify-center rounded-2xl bg-[#0a0f19]/60">
@@ -1564,9 +1580,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   </div>
                 )}
 
-                {animationPhase === 'idle' && (
+                {(animationPhase === 'idle' || animationPhase === 'charging') && (
                   <div
-                    className={`pullz-gpu-layer absolute inset-0 flex items-center justify-center ${richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
+                    className={`pullz-gpu-layer absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${animationPhase === 'charging' ? 'scale-[1.1]' : 'scale-100'} ${animationPhase === 'idle' && richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
                   >
                     <BlurImage
                       src={box?.image ?? ''}
@@ -1575,7 +1591,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       loading="eager"
                       fetchPriority="high"
                       staticRender
-                      className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
+                      className={`h-full w-full object-contain transition-[filter] duration-500 ${animationPhase === 'charging' ? 'drop-shadow-[0_26px_50px_rgba(0,0,0,0.6)]' : 'drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]'}`}
                     />
                   </div>
                 )}
@@ -1583,10 +1599,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 <PackTearReveal
                   packImageUrl={box?.image ?? ''}
                   phase={
-                    animationPhase === 'idle' ? 'idle'
-                    : animationPhase === 'charging' ? 'anticipation'
-                    : animationPhase === 'bursting' ? 'tearing'
-                    : 'revealed'
+                    animationPhase === 'bursting' ? 'tearing'
+                    : (animationPhase === 'revealing' || animationPhase === 'settled') ? 'revealed'
+                    : 'idle'
                   }
                   item={stageDisplayItem}
                   glowColor={stageRarityIndicator.glow}
@@ -1596,11 +1611,12 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
               </div>
             </div>
 
-            {/* Action Bar (hidden while a result is on stage — see the inline
-                Result Panel below, which takes over the same spot). */}
-            {!(showWinModal && wonItem) && (
+            {/* Action Bar — only while truly idle. Mid-reveal it's replaced by
+                the SlideToOpenBar, then by the inline Result Panel, so only
+                one control ever occupies this spot at a time. */}
+            {animationPhase === 'idle' && !(showWinModal && wonItem) && (
             <>
-            <div className="relative z-20 mt-1 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-4 pt-3 sm:mt-2 sm:gap-3 sm:px-4">
+            <div className="relative z-20 mt-0.5 flex flex-wrap items-center justify-center gap-2 bg-transparent px-3 pb-3 pt-1 sm:gap-3 sm:px-4">
                  <button
                     onClick={() => handleSpin({ isQuick: isQuickSpinEnabled })}
                     disabled={isSpinning || spinRequestLockRef.current || isSyncingFair || isRotatingSeed || isBalanceLoading || isSpinnerAssetsLoading}
@@ -1669,7 +1685,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 )}
             </div>
             {spinFeedbackMessage && (
-              <div className="px-2 pb-4">
+              <div className="px-2 pb-3">
                 <div
                   role="status"
                   aria-live="polite"
@@ -1682,11 +1698,24 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
             </>
             )}
 
+            {/* Slide-to-open: takes over the Action Bar's spot once the pack
+                has zoomed up, waiting for the tap-or-drag that kicks off the
+                tear/reveal. */}
+            {animationPhase === 'charging' && chargeRequiresSlide && (
+              <div className="relative z-20 mx-auto w-full max-w-xs px-4 pb-3 pt-1 sm:max-w-sm">
+                <SlideToOpenBar
+                  key={stageDisplayItem?.id ?? 'slide'}
+                  onComplete={() => slideResolverRef.current?.()}
+                  accentColor={stageRarityIndicator.color}
+                />
+              </div>
+            )}
+
             {/* Result Panel: replaces the Action Bar in place once the reveal
                 settles, showing price + keep/sell/share right on this same
                 screen instead of a separate slide-up sheet. */}
             {showWinModal && wonItem && (
-              <div className="relative z-20 mx-auto w-full max-w-md px-4 pb-6 pt-1 sm:px-6 sm:pb-8">
+              <div className="relative z-20 mx-auto w-full max-w-md px-4 pb-4 pt-1 sm:px-6 sm:pb-5">
                 <div className="bet-case-modal-bar rounded-2xl border border-white/10 bg-black/30 p-4 text-center sm:p-5">
                   <div className="flex items-center justify-between gap-3 text-left">
                     <div className="flex items-center gap-2.5">

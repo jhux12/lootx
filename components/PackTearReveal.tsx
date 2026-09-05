@@ -1,7 +1,7 @@
 import React from 'react';
 import { CaseItem } from '../types';
 
-export type PackTearPhase = 'idle' | 'anticipation' | 'tearing' | 'revealed';
+export type PackTearPhase = 'idle' | 'tearing' | 'revealed';
 
 interface PackTearRevealProps {
   /** Artwork for the unopened pack (falls back gracefully if empty). */
@@ -23,19 +23,17 @@ interface PackTearRevealProps {
 }
 
 /**
- * Replaces the pack's charge/burst visual with a "tear open the pack" reveal:
- * the pack shakes, splits in half and flies apart, then the item art springs
- * in large and unboxed (no card frame) with a soft rarity glow and a holo
- * glint. Purely presentational — driven entirely by `phase`, so it never
- * touches spin timing, provably-fair locking, or win-modal logic. Renders as
- * an absolute overlay; the caller is responsible for showing the idle
- * (unopened) pack art before `phase` leaves 'idle'.
- *
- * Fills whatever box the caller sizes (see the stage container in
- * CaseOpening.tsx) rather than using fixed pixels, so it can be a large
- * "main stage" hero on every screen size without stretching the artwork —
- * every layer uses `object-fit: contain` / `background-size: contain` and
- * percentage-based transforms.
+ * The pack-open payoff: splits in half and flies apart with a radial burst,
+ * then the item art springs in large and unboxed (no card frame) with a soft
+ * rarity glow, a holo glint, and a name label anchored over the bottom of the
+ * art. Purely presentational — driven entirely by `phase`, so it never
+ * touches spin timing, provably-fair locking, or win-modal logic. Mounts
+ * only once the caller is ready to tear (there's no separate "anticipation"
+ * phase here — that lives in the caller as the pack zoom + slide-to-open);
+ * renders as an absolute overlay filling whatever box the caller sizes, so
+ * it can be a large "main stage" hero on every screen size without
+ * stretching the artwork — every layer uses `object-fit: contain` /
+ * `background-size: contain` and percentage-based transforms.
  */
 export const PackTearReveal: React.FC<PackTearRevealProps> = ({
   packImageUrl,
@@ -47,8 +45,6 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
 }) => {
   if (phase === 'idle') return null;
 
-  const isTornStage = phase === 'tearing' || phase === 'revealed';
-
   return (
     <div
       className={`pullz-tear-overlay absolute inset-0 z-50 flex items-center justify-center ${reduceMotion ? 'pullz-tear-reduced' : ''}`}
@@ -58,18 +54,18 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
     >
       <div className="pullz-tear-scene">
         <div
-          className={`pullz-tear-burst ${isTornStage ? 'go' : ''}`}
+          className="pullz-tear-burst go"
           style={{ background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)` }}
           aria-hidden="true"
         />
 
         <div
-          className={`pullz-tear-half top ${isTornStage ? 'torn' : phase === 'anticipation' ? 'shaking' : ''}`}
+          className="pullz-tear-half top torn"
           style={{ backgroundImage: packImageUrl ? `url(${packImageUrl})` : undefined }}
           aria-hidden="true"
         />
         <div
-          className={`pullz-tear-half bottom ${isTornStage ? 'torn' : phase === 'anticipation' ? 'shaking' : ''}`}
+          className="pullz-tear-half bottom torn"
           style={{ backgroundImage: packImageUrl ? `url(${packImageUrl})` : undefined }}
           aria-hidden="true"
         />
@@ -84,16 +80,15 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
             <img src={item.image} alt={item.name} className="pullz-tear-card-img" draggable={false} />
           ) : null}
           <div className="pullz-tear-holo" aria-hidden="true" />
+          {phase === 'revealed' && item ? (
+            <div className="pullz-tear-label">
+              {rarityLabel ? (
+                <span className="pullz-tear-label-tier" style={{ color: glowColor }}>{rarityLabel}</span>
+              ) : null}
+              <span className="pullz-tear-label-name">{item.name}</span>
+            </div>
+          ) : null}
         </div>
-
-        {phase === 'revealed' && item ? (
-          <div className="pullz-tear-label">
-            {rarityLabel ? (
-              <span className="pullz-tear-label-tier" style={{ color: glowColor }}>{rarityLabel}</span>
-            ) : null}
-            <span className="pullz-tear-label-name">{item.name}</span>
-          </div>
-        ) : null}
       </div>
 
       <style>{`
@@ -103,13 +98,14 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           position: relative;
           width: 100%;
           height: 100%;
+          transform: translateZ(0);
         }
         .pullz-tear-burst {
           position: absolute; left: 50%; top: 50%; width: 55%; height: 55%;
           border-radius: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; pointer-events: none;
           will-change: transform, opacity;
         }
-        .pullz-tear-burst.go { animation: pullzTearBurst 900ms cubic-bezier(.2,.9,.3,1) forwards; }
+        .pullz-tear-burst.go { animation: pullzTearBurst 800ms cubic-bezier(.2,.9,.3,1) forwards; }
         @keyframes pullzTearBurst {
           0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
           35% { opacity: 1; }
@@ -123,14 +119,8 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
         }
         .pullz-tear-half.top { clip-path: polygon(0 0, 100% 0, 100% 48%, 0 52%); }
         .pullz-tear-half.bottom { clip-path: polygon(0 52%, 100% 48%, 100% 100%, 0 100%); }
-        .pullz-tear-half.shaking { animation: pullzTearShake 420ms ease-in-out infinite; }
-        @keyframes pullzTearShake {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          25% { transform: translate(-3px, 1px) rotate(-1.5deg); }
-          75% { transform: translate(3px, 1px) rotate(1.5deg); }
-        }
-        .pullz-tear-half.top.torn { animation: pullzTearTop 560ms cubic-bezier(.4,0,.2,1) forwards; }
-        .pullz-tear-half.bottom.torn { animation: pullzTearBottom 560ms cubic-bezier(.4,0,.2,1) forwards; }
+        .pullz-tear-half.top.torn { animation: pullzTearTop 480ms cubic-bezier(.4,0,.2,1) forwards; }
+        .pullz-tear-half.bottom.torn { animation: pullzTearBottom 480ms cubic-bezier(.4,0,.2,1) forwards; }
         @keyframes pullzTearTop {
           0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
           100% { transform: translate(0, -95%) rotate(-26deg); opacity: 0; }
@@ -140,15 +130,15 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           100% { transform: translate(0, 95%) rotate(18deg); opacity: 0; }
         }
         .pullz-tear-card {
-          position: absolute; inset: 6%;
+          position: absolute; inset: 4%;
           transform: scale(0.4); opacity: 0;
           display: flex; align-items: center; justify-content: center;
           will-change: transform, opacity;
         }
-        .pullz-tear-card.show { animation: pullzTearCardIn 560ms cubic-bezier(.2,.8,.25,1.15) forwards; }
+        .pullz-tear-card.show { animation: pullzTearCardIn 480ms cubic-bezier(.2,.8,.25,1.15) forwards; }
         @keyframes pullzTearCardIn {
           0% { transform: scale(0.3) rotate(-6deg); opacity: 0; }
-          60% { transform: scale(1.06) rotate(2deg); opacity: 1; }
+          62% { transform: scale(1.06) rotate(2deg); opacity: 1; }
           100% { transform: scale(1) rotate(0deg); opacity: 1; }
         }
         .pullz-tear-glow {
@@ -167,28 +157,30 @@ export const PackTearReveal: React.FC<PackTearRevealProps> = ({
           background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
           transform: translateX(0);
         }
-        .pullz-tear-card.show .pullz-tear-holo::after { animation: pullzTearSheen 1100ms 380ms ease-in-out; }
+        .pullz-tear-card.show .pullz-tear-holo::after { animation: pullzTearSheen 1000ms 320ms ease-in-out; }
         @keyframes pullzTearSheen {
           from { transform: translateX(0); }
           to { transform: translateX(220%); }
         }
         .pullz-tear-label {
-          position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 100%);
-          display: flex; flex-direction: column; align-items: center; gap: 4px;
-          white-space: nowrap; text-align: center; padding-top: 14px;
-          opacity: 0; animation: pullzTearLabelIn 360ms 500ms ease forwards;
+          position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+          display: flex; flex-direction: column; align-items: center; gap: 2px;
+          text-align: center; padding: 28px 10px 12px;
+          background: linear-gradient(to top, rgba(5,8,14,0.75), transparent);
+          border-radius: 0 0 14px 14px;
+          opacity: 0; animation: pullzTearLabelIn 320ms 420ms ease forwards;
         }
         .pullz-tear-label-tier {
-          font-size: 11px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
+          font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase;
         }
         .pullz-tear-label-name {
-          font-size: 16px; font-weight: 700; letter-spacing: 0.2px; color: #fff;
+          font-size: 15px; font-weight: 700; letter-spacing: 0.2px; color: #fff;
+          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
         @keyframes pullzTearLabelIn { to { opacity: 1; } }
         .pullz-tear-reduced .pullz-tear-half.torn,
         .pullz-tear-reduced .pullz-tear-card.show,
         .pullz-tear-reduced .pullz-tear-burst.go,
-        .pullz-tear-reduced .pullz-tear-half.shaking,
         .pullz-tear-reduced .pullz-tear-card.show .pullz-tear-holo::after,
         .pullz-tear-reduced .pullz-tear-label {
           animation-duration: 1ms !important;
