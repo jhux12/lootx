@@ -1,6 +1,7 @@
 import { sendJson } from './_lib/http.js';
 
 const CONTACT_EMAIL = 'contact@ripza.gg';
+const DEFAULT_EMAIL_FROM = 'Ripza <verify@ripza.gg>';
 const MAX_LENGTHS = { firstName: 60, lastName: 60, email: 254, subject: 120, message: 3000 };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -27,8 +28,11 @@ export default async function handler(req, res) {
   }
 
   const resendApiKey = process.env.RESEND_API_KEY;
-  const emailFrom = process.env.EMAIL_FROM;
-  if (!resendApiKey || !emailFrom) {
+  // EMAIL_FROM is also used by account verification. Keep support mail working
+  // when only the Resend key has been configured, while allowing a dedicated
+  // sender to be supplied later without changing the endpoint.
+  const emailFrom = process.env.SUPPORT_EMAIL_FROM || process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM;
+  if (!resendApiKey) {
     console.error('Support email configuration is invalid.');
     return sendJson(res, 500, { error: 'EMAIL_CONFIG_INVALID', message: 'Email is temporarily unavailable. Please try again later.' });
   }
