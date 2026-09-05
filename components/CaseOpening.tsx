@@ -147,6 +147,25 @@ const preloadImage = (src?: string, timeoutMs = 1500): Promise<void> => new Prom
 
 const wait = (ms: number) => new Promise<void>((resolve) => { window.setTimeout(resolve, ms); });
 
+const HAPTIC_PATTERNS_MS: Record<string, number | number[]> = {
+  common: 12,
+  uncommon: 16,
+  rare: 22,
+  epic: [24, 40, 24],
+  legendary: [30, 40, 30, 40, 70]
+};
+
+// Cheap, mobile-only tactile punch for the burst moment. No-op everywhere else
+// (desktop browsers, or when the user's device declines the Vibration API).
+const triggerHaptic = (rarityKey: string) => {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+  try {
+    navigator.vibrate(HAPTIC_PATTERNS_MS[rarityKey] ?? HAPTIC_PATTERNS_MS.common);
+  } catch {
+    // Some browsers throw when vibration is blocked (e.g. no user gesture); ignore.
+  }
+};
+
 const createShareImageFile = async (item: CaseItem, caseName: string): Promise<File | null> => {
   if (typeof window === 'undefined') return null;
 
@@ -378,6 +397,11 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
   const canFreeSpin = !user.lastFreeBoxClaim;
   const prefersReducedMotion = performanceMode.prefersReducedMotion;
   const reduceMobileEffects = performanceMode.isMobile || performanceMode.isLowPower;
+  // The pack-reveal effects (aura, shake, shockwave, holo sweep) are one or two
+  // GPU-cheap transform/opacity layers at a time — nothing like the old reel's
+  // dozens of simultaneous card glows. Gate them on actual device capability
+  // (isLowPower) rather than "is a touchscreen," so phones still get the show.
+  const richEffectsEnabled = !performanceMode.isLowPower;
   const visibleDropItems = useMemo(() => displayItems.slice(0, visibleDropItemCount), [displayItems, visibleDropItemCount]);
   const hasMoreDropItems = visibleDropItemCount < displayItems.length;
   const caseCurrencyType = box?.currencyType === 'XP' ? 'XP' : 'COIN';
@@ -809,6 +833,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
     if (!isMountedRef.current) return;
 
     setAnimationPhase('bursting');
+    triggerHaptic(normalizeRarityKey(revealItem.rarity));
     await wait(burstMs);
     if (!isMountedRef.current) return;
 
@@ -1239,13 +1264,13 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
       const palette = winnerRarityKey === 'legendary'
         ? [displayedWinner.color, '#fde047', '#ffffff']
         : [displayedWinner.color, '#ffffff'];
-      const particles = createMicroConfetti(reduceMobileEffects ? Math.round(particleCount * 0.6) : particleCount, palette);
+      const particles = createMicroConfetti(richEffectsEnabled ? particleCount : Math.round(particleCount * 0.6), palette);
       setConfetti(particles);
       if (confettiTimerRef.current !== null) window.clearTimeout(confettiTimerRef.current);
       confettiTimerRef.current = window.setTimeout(() => {
         setConfetti([]);
         confettiTimerRef.current = null;
-      }, reduceMobileEffects ? 620 : 900);
+      }, richEffectsEnabled ? 900 : 620);
     }
     setWonItem(displayedWinner);
     setRewardResolved(false);
@@ -1486,7 +1511,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
 
             {/* Ambient rarity aura: the pack's "energy field" recolors to match whatever
                 item is currently on stage, so the field feels alive through the reveal. */}
-            {!reduceMobileEffects && (
+            {richEffectsEnabled && (
               <div
                 className="pointer-events-none absolute inset-0 z-0 rounded-3xl opacity-70 transition-[background] duration-500 ease-out"
                 style={{ background: `radial-gradient(circle at 50% 32%, ${stageRarityIndicator.glow.replace(/0\.\d+\)/, '0.16)')}, transparent 60%)` }}
@@ -1516,10 +1541,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                 </div>
               )}
 
-              {animationPhase === 'charging' && !reduceMobileEffects && (
+              {animationPhase === 'charging' && richEffectsEnabled && (
                 <div
-                  className="pointer-events-none absolute h-40 w-40 rounded-full blur-3xl sm:h-52 sm:w-52"
-                  style={{ background: stageRarityIndicator.color, opacity: 0.4 }}
+                  className="pullz-charge-glow pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 rounded-full sm:h-52 sm:w-52"
+                  style={{ background: stageRarityIndicator.color }}
                   aria-hidden="true"
                 />
               )}
@@ -1532,12 +1557,15 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 1.06 }}
                     transition={{ duration: 0.22 }}
-                    className={`relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56 ${animationPhase === 'charging' && !reduceMobileEffects ? 'pullz-pack-shake' : ''} ${animationPhase === 'idle' && !reduceMobileEffects && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
+                    className={`pullz-gpu-layer relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56 ${animationPhase === 'charging' && richEffectsEnabled ? 'pullz-pack-shake' : ''} ${animationPhase === 'idle' && richEffectsEnabled && !prefersReducedMotion ? 'pullz-pack-idle-float' : ''}`}
                   >
                     <BlurImage
                       src={box?.image ?? ''}
                       alt={box?.name ?? 'Mystery pack'}
                       showPlaceholder={false}
+                      loading="eager"
+                      fetchPriority="high"
+                      staticRender
                       className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
                     />
                   </motion.div>
@@ -1547,10 +1575,10 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                     initial={{ opacity: 0, scale: 0.4, rotate: -6 }}
                     animate={{ opacity: 1, scale: 1, rotate: 0 }}
                     transition={prefersReducedMotion ? { duration: 0.15 } : { type: 'spring', stiffness: 260, damping: 18 }}
-                    className="relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56"
+                    className="pullz-gpu-layer relative flex h-48 w-48 items-center justify-center sm:h-56 sm:w-56"
                     style={{ '--rarity-color': stageDisplayItem?.color } as React.CSSProperties}
                   >
-                    {(animationPhase === 'bursting' || animationPhase === 'revealing') && !reduceMobileEffects && !prefersReducedMotion && (
+                    {(animationPhase === 'bursting' || animationPhase === 'revealing') && richEffectsEnabled && !prefersReducedMotion && (
                       <>
                         <span className="pullz-pack-shockwave-ring" aria-hidden="true" />
                         {stageRarityKey === 'legendary' && <span className="pullz-pack-flash" aria-hidden="true" />}
@@ -1560,6 +1588,9 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                       src={stageDisplayItem?.image ?? ''}
                       alt={stageDisplayItem?.name ?? 'Revealed item'}
                       showPlaceholder={false}
+                      loading="eager"
+                      fetchPriority="high"
+                      staticRender
                       className="h-full w-full object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.55)]"
                     />
                   </motion.div>
@@ -1809,7 +1840,7 @@ export const CaseOpening: React.FC<CaseOpeningProps> = ({ boxId, isFree = false,
                   )}
                   <div className={`win-rarity-card__inner relative flex w-full flex-col items-center overflow-hidden rounded-[calc(1rem-1px)] border border-white/10 bg-black/40 p-4 transition-all duration-300 ${isWinImageZoomed ? 'py-6 sm:py-8' : ''}`}>
                     <div className="absolute inset-0 rounded-2xl opacity-25" style={{ background: `radial-gradient(circle at top, ${wonItem.color}88 0%, transparent 72%)` }} />
-                    {wonItemIsTopTier && !prefersReducedMotion && !reduceMobileEffects && (
+                    {wonItemIsTopTier && !prefersReducedMotion && richEffectsEnabled && (
                       <div className="pullz-holo-sweep rounded-2xl" aria-hidden="true" />
                     )}
                     <button
